@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.67.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.68.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 77 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 78 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -109,6 +109,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 66. A grown-up yes on a hire/settle ticket satisfies `ladder.min_level` for that command. L0/L1 may hire after a human signs the paused bytes. Caps, freeze, KYA, and nonce still bind. Issuing a sub-intent below L4 stays a deny — that verb does not escalate, and a velocity ticket is not a rung.
 67. A leftover `nonce` on a transfer (or any verb that is not `envelope.submit`) is not a settled payment. `idempotency.nonce` binds submit. Reuse on submit stays a deny. Additional properties stay allowed; they do not steal first deny.
 68. A handshake cannot be born dead (`kya.mint_fresh`). `kya.attest` with `expiresAt` ≤ now, or an unparseable Instant, is a refuse, not a written corpse that then fails spend as `kya.attestation_fresh` while still occupying the pair. Omit `expiresAt` is one year. Ghost, self, party, a second live hop, and an over-grant keep first deny. An expired hop still occupies the pair until revoke.
+69. A handshake cannot outlive one year (`kya.mint_window`). The omit default is the ceiling, not a suggestion. Year 9999 is not standing identity. A corpse mint stays `kya.mint_fresh`. Ghost, self, party, a second live hop, and an over-grant keep first deny.
 
 ## Autonomy
 

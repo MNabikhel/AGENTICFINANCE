@@ -633,6 +633,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.mint_window") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a handshake that outlives one year`,
+          body: "Omit expiresAt for one year, or name a sooner Instant. Year 9999 is not standing identity.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

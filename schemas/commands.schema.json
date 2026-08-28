@@ -37,7 +37,7 @@
         "issuerKind": { "enum": ["aether.self", "tap.http-sig", "skyfire.kya", "erc8004.agent"] },
         "expiresAt": {
           "type": "string",
-          "description": "ISO Instant. Must be strictly after now. Omit for one year. A dead or unparseable window is kya.mint_fresh."
+          "description": "ISO Instant. Must be strictly after now and at most one year. Omit for one year. A dead window is kya.mint_fresh. A year-9999 hop is kya.mint_window."
         }
       }
     },

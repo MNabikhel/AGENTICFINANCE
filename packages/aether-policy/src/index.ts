@@ -1155,6 +1155,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.mint_fresh", "deny", "handshake would be born expired");
     },
   },
+  {
+    id: "kya.mint_window",
+    evaluate: (ctx) => {
+      if (ctx.kyaMintWindowOk === undefined) return v("kya.mint_window", "allow", "not a handshake mint");
+      return ctx.kyaMintWindowOk
+        ? v("kya.mint_window", "allow", "handshake expires within one year")
+        : v("kya.mint_window", "deny", "handshake would outlive one year");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1389,6 +1398,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.mint_fresh": {
     kind: "none",
     hint: "A handshake cannot be born dead. Name an expiresAt strictly after now, or omit it for one year. An unparseable Instant is not a window. Ghost, self, party, a second live hop, and an over-grant keep first deny.",
+  },
+  "kya.mint_window": {
+    kind: "none",
+    hint: "A handshake cannot outlive one year. Omit expiresAt for that ceiling, or name a sooner Instant. Year 9999 is not standing identity. A corpse mint stays kya.mint_fresh.",
   },
   "payment.execution_date": {
     kind: "none",

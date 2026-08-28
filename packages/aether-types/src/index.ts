@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.67.0",
+  version: "0.68.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -190,6 +190,8 @@ export const DAY_MS = 86_400_000;
 export const DAY_SEC = 86_400;
 /** One hour in milliseconds. Quote `expiresAt`. */
 export const HOUR_MS = 3_600_000;
+/** One year in milliseconds. KYA hop omit and ceiling (`kya.mint_window`). */
+export const KYA_TTL_MS = 365 * DAY_MS;
 
 /** Minimum gap between funded occurrences. `ON_DEMAND` has no gap. Monthly is 30 × 24h on the sim clock. */
 export const RECURRENCE_GAP_MS: Record<RecurrenceFrequency, number> = {
@@ -865,6 +867,13 @@ export interface PolicyContext {
    * over-grant keep first deny.
    */
   kyaMintFresh?: boolean;
+  /**
+   * False when kya.attest would write expiresAt after now + one year.
+   * Absent = not a kya.attest. Omit is exactly one year — the ceiling, not a
+   * suggestion. A year-9999 hop is not standing identity. Past stays
+   * `kya.mint_fresh`. Ghost, self, party, unique_live, and over-grant keep first deny.
+   */
+  kyaMintWindowOk?: boolean;
   /**
    * False when issue_cart names a live hire that already has a cartId.
    * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).

@@ -65,7 +65,7 @@ import type {
   WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, KYA_TTL_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -905,7 +905,10 @@ export class Runtime {
       );
     }
     if (cmd.type === "kya.attest") {
-      ctx.kyaMintFresh = Date.parse(this.kyaExpiresAt(body)) > Date.parse(this.clock.now());
+      const exp = Date.parse(this.kyaExpiresAt(body));
+      const now = Date.parse(this.clock.now());
+      ctx.kyaMintFresh = exp > now;
+      ctx.kyaMintWindowOk = Number.isFinite(exp) && exp <= now + KYA_TTL_MS;
     }
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
@@ -1555,6 +1558,9 @@ export class Runtime {
     };
     if (!(Date.parse(att.expiresAt) > Date.parse(att.createdAt))) {
       throw new Error("kya hop already expired");
+    }
+    if (Date.parse(att.expiresAt) > Date.parse(att.createdAt) + KYA_TTL_MS) {
+      throw new Error("kya hop outlives one year");
     }
     if (typeof body.parentId === "string") {
       if (!this.kya.attestations.has(body.parentId as DelegationId)) throw new Error("unknown parent hop");
@@ -2386,7 +2392,7 @@ export class Runtime {
   private kyaExpiresAt(body: Record<string, unknown>): string {
     return typeof body.expiresAt === "string"
       ? body.expiresAt
-      : new Date(Date.parse(this.clock.now()) + 365 * DAY_MS).toISOString();
+      : new Date(Date.parse(this.clock.now()) + KYA_TTL_MS).toISOString();
   }
 
   /** Omitted maxAutonomy is L5. An agent may not grant a ceiling above its own rung. */

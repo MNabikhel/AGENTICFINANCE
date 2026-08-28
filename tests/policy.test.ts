@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 77 rules", () => {
-    expect(RULE_IDS).toHaveLength(77);
+  it("has 78 rules", () => {
+    expect(RULE_IDS).toHaveLength(78);
   });
 
   it("denies frozen actors", () => {
@@ -1871,6 +1871,7 @@ describe("policy catalog", () => {
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
@@ -1915,6 +1916,87 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.unique_live");
+  });
+
+  it("denies a handshake that outlives one year as kya.mint_window", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaMintWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.mint_window");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name kya.mint_window when the hop expires within one year", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaMintWindowOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.mint_window when the speaker is not attesting", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.mint_fresh first when a corpse would also fail the year ceiling", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: false,
+        kyaMintWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.mint_fresh");
+  });
+
+  it("still names kya.unique_live first when a second hop would also outlive one year", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: false,
+        kyaMintFresh: true,
+        kyaMintWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("kya.unique_live");
   });
 });

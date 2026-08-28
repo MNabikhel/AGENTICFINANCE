@@ -89,7 +89,7 @@
     {
       "name": "aether_kya_attest",
       "commandType": "kya.attest",
-      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped. expiresAt must be after now; omit for one year."
+      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped. expiresAt must be after now and at most one year; omit for one year."
     },
     {
       "name": "aether_kya_revoke",
