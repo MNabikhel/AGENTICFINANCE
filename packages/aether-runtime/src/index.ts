@@ -38,6 +38,7 @@ import type {
   AutonomyLevel,
   CartMandate,
   CartStatus,
+  PaymentStatus,
   Command,
   CommandType,
   CurrencyCode,
@@ -438,6 +439,7 @@ export class Runtime {
       intents: [...this.intents.values()].map((s) => s.payload),
       spentByIntent: Object.fromEntries(this.spentByIntent),
       carts: [...this.carts.values()].map((c) => this.cartView(c)),
+      payments: [...this.payments.values()].map((p) => this.paymentView(p)),
       hires: [...this.hires.values()],
       rfqs: [...this.rfqs.values()],
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
@@ -528,6 +530,20 @@ export class Runtime {
     return { ...cart, status: "live" };
   }
 
+  /**
+   * Payment view for other agents. A payment whose hire has moved escrow is
+   * `funded`, not `live`. Funded wins over expired (refunded and released still
+   * funded — the mandate was drawn). A cart this payment occupies is not funded
+   * — that occupancy lives on the cart (`bound`). The store stays raw (`exp` only).
+   */
+  paymentView(payment: Signed<PaymentMandate>): Signed<PaymentMandate> & { status: PaymentStatus } {
+    if (this.hireDrawnPayment(payment)) return { ...payment, status: "funded" };
+    if (payment.payload.exp <= unixSeconds(this.clock.now())) {
+      return { ...payment, status: "expired" };
+    }
+    return { ...payment, status: "live" };
+  }
+
   protocolCard() {
     return {
       ...PROTOCOL,
@@ -542,8 +558,10 @@ export class Runtime {
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
    * aid_ agent, hid_ hire, mid_ mandate (carts include derived live | expired | bound;
-   * bound is unique_payment occupancy and wins over expired), rid_ receipt, apd_ approval,
-   * rfq_ / qte_ market (qte_ includes derived live | expired | spent | held; expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
+   * bound is unique_payment occupancy and wins over expired; payments include derived
+   * live | expired | funded; funded is escrow-moved occupancy and wins over expired),
+   * rid_ receipt, apd_ approval, rfq_ / qte_ market (qte_ includes derived live | expired | spent | held;
+   * expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -562,7 +580,7 @@ export class Runtime {
       const cart = this.carts.get(id as MandateId);
       if (cart) return { type: "cart", id, value: this.cartView(cart) };
       const payment = this.payments.get(id as MandateId);
-      if (payment) return { type: "payment", id, value: payment };
+      if (payment) return { type: "payment", id, value: this.paymentView(payment) };
       return undefined;
     }
     if (id.startsWith("rid_")) {
@@ -2505,6 +2523,26 @@ export class Runtime {
       if (p.payload.transaction_id === hash) return p;
     }
     return undefined;
+  }
+
+  /** Escrow moved using this payment. Refunded and released still count — the mandate was drawn. */
+  private hireDrawnPayment(payment: Signed<PaymentMandate>): boolean {
+    for (const hire of this.hires.values()) {
+      if (
+        hire.state !== "funded" &&
+        hire.state !== "delivered" &&
+        hire.state !== "released" &&
+        hire.state !== "refunded"
+      ) {
+        continue;
+      }
+      if (!hire.cartId) continue;
+      const cart = this.carts.get(hire.cartId);
+      if (!cart) continue;
+      const bound = this.paymentMatchingCart(cart);
+      if (bound?.payload.id === payment.payload.id) return true;
+    }
+    return false;
   }
 
   /** Live hire holds a cart, and that cart has a payment. A body cartId is not a bind. */

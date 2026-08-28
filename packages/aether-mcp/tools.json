@@ -29,7 +29,7 @@
     {
       "name": "aether_mandate_issue_payment",
       "commandType": "mandate.issue_payment",
-      "description": "Issue a payment mandate whose transaction_id is sha256(cart). A cart takes one payment; inspect of that cart then labels bound."
+      "description": "Issue a payment mandate whose transaction_id is sha256(cart). A cart takes one payment; inspect of that cart then labels bound. Inspect of the payment labels live | expired | funded."
     },
     {
       "name": "aether_market_rfq",

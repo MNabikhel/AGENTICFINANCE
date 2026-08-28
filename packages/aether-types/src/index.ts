@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.86.0",
+  version: "0.87.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -292,6 +292,14 @@ export interface CartMandate {
  * The store stays raw.
  */
 export type CartStatus = "live" | "expired" | "bound";
+
+/**
+ * Inspect / snapshot view. Funded (escrow moved, including later refund/release)
+ * wins over expired. A cart that this payment occupies is not funded — that
+ * occupancy lives on the cart (`mandate.unique_payment` / bound).
+ * The store stays raw (`exp` only).
+ */
+export type PaymentStatus = "live" | "expired" | "funded";
 
 export interface PaymentMandate {
   vct: "aether.mandate.payment.1" | "aether.mandate.payment.open.1";

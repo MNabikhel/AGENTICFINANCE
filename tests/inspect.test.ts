@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import { offerHire, completeHire, inviteQuote } from "../packages/aether-runtime/src/hire-flow.ts";
+import { offerHire, completeHire, inviteQuote, fundHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
 import type { ApprovalTicket, DelegationAttestation, HireContract, MandateId, Receipt } from "@aether/types";
 
@@ -440,6 +440,169 @@ describe("cart inspect", () => {
     rt.clock.set("2026-08-29T12:00:00.000Z");
     expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
     expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+});
+
+function issuePayment(rt: Runtime, cartId: string, buyer: string) {
+  const payment = must(rt.dispatch(cmd("mandate.issue_payment", buyer, { cartId })), "payment");
+  return (payment.data as { payload: { id: string } }).payload.id;
+}
+
+describe("payment inspect", () => {
+  it("labels a live payment live and does not write status into the store", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().payments.find((p) => p.payload.id === paymentId)?.status).toBe("live");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a funded payment funded, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    const { paymentId } = fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("funded");
+    expect(rt.snapshotState().payments.find((p) => p.payload.id === paymentId)?.status).toBe("funded");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+    expect((rt.inspect(rt.hires.get(hireId)?.cartId ?? "")?.value as { status: string }).status).toBe("bound");
+  });
+
+  it("labels an accepted-but-unfunded payment live until escrow moves", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("live");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+  });
+
+  it("labels a stale unpaid payment expired, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().payments.find((p) => p.payload.id === paymentId)?.status).toBe("expired");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a funded payment funded even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    const { paymentId } = fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("funded");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+  });
+
+  it("labels a refunded payment funded — the mandate was drawn", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    const { paymentId } = fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    must(rt.dispatch(cmd("hire.refund", desk.id, { hireId })), "refund");
+    expect(rt.hires.get(hireId)?.state).toBe("refunded");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("funded");
+  });
+
+  it("still names mandate.chain_integrity when funding a stale unpaid payment", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("expired");
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.chain_integrity");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
   });
 });
 
