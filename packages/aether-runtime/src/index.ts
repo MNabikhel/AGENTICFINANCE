@@ -815,6 +815,10 @@ export class Runtime {
         }
       }
     }
+    if (cmd.type === "hire.fund" && hire && hire.id !== "hid_draft") {
+      const buyer = this.identity.get(hire.buyerId);
+      if (buyer) ctx.fundsOk = this.ledger.balance(buyer.accountId) >= hire.price.amount;
+    }
     if (cmd.type === "ledger.balances") {
       if (typeof body.name === "string") {
         ctx.accountsKnown = this.ledger.accountsByName.has(body.name);
@@ -1536,8 +1540,11 @@ export class Runtime {
 
   private mutHireFund(body: Record<string, unknown>, actor: Agent) {
     const hire = this.requireHire(body.hireId as HireId);
-    const next = transitionHire(hire, "funded");
     const buyer = this.identity.require(hire.buyerId);
+    if (this.ledger.balance(buyer.accountId) < hire.price.amount) {
+      throw new Error("insufficient funds");
+    }
+    const next = transitionHire(hire, "funded");
     this.postJournal(
       `Fund escrow ${hire.sku}`,
       [

@@ -325,6 +325,8 @@ export function autoBeat(input: {
               ? "That hire is not in this world. A missing contract is not a broken mandate chain."
               : rule?.ruleId === "hire.state"
                 ? "A hire must be accepted before escrow can lock. Offered is not funded. An illegal arrow is a refuse, not a 409 after yes."
+                : rule?.ruleId === "ledger.sufficient"
+                  ? "The buyer’s cash does not cover this hire. Escrow cannot lock on an overdraft. Allocate first."
                 : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,

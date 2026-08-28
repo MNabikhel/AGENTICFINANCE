@@ -16,7 +16,7 @@ function must<T>(r: { ok: boolean; value?: T; error?: { error: { detail: string 
   return r.value as T;
 }
 
-function economy(rt: Runtime) {
+function economy(rt: Runtime, cash = 1_500_000) {
   must(
     rt.dispatch(
       cmd("identity.register", "system", {
@@ -35,7 +35,7 @@ function economy(rt: Runtime) {
   ] as const) {
     must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
   }
-  rt.seedOpening({ "procurement:cash": { amount: 1_500_000, currency: "USD_SIM" } });
+  rt.seedOpening({ "procurement:cash": { amount: cash, currency: "USD_SIM" } });
   const desk = rt.alias("procurement");
   const vendor = rt.alias("vendor");
   const intent = must(
@@ -362,5 +362,40 @@ describe("hire state", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
     expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("funded");
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+  });
+});
+
+describe("escrow cash", () => {
+  it("refuses to fund when the buyer cannot cover escrow as ledger.sufficient, not a negative book", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 10_000);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: desk.id, seller: vendor.id, intentId });
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(10_000);
+    expect(rt.ledger.balance(rt.hires.get(hireId)!.escrowAccountId)).toBe(0);
+    expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });

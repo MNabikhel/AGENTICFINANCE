@@ -896,7 +896,7 @@ export const RULES: readonly Rule[] = [
   {
     id: "ledger.sufficient",
     evaluate: (ctx) => {
-      if (ctx.fundsOk === undefined) return v("ledger.sufficient", "allow", "not a funded transfer");
+      if (ctx.fundsOk === undefined) return v("ledger.sufficient", "allow", "not a cash-gated command");
       return ctx.fundsOk
         ? v("ledger.sufficient", "allow", "source covers the amount")
         : v("ledger.sufficient", "deny", "insufficient funds");
@@ -1047,7 +1047,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ledger.sufficient": {
     kind: "none",
-    hint: "The source book does not have that many cents. A transfer is not an overdraft. Seed or allocate first.",
+    hint: "The source book does not have that many cents. A transfer is not an overdraft. Escrow cannot lock on empty cash. Seed or allocate first.",
   },
   "payment.execution_date": {
     kind: "none",

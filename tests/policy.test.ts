@@ -777,6 +777,26 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("denies funding escrow that would overdraw the buyer as ledger.sufficient, not a negative book", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        hireKnown: true,
+        fundsOk: false,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.sufficient");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
   it("denies FX settle without a live unused FX quote", () => {
     const d = evaluate(
       ctx({
