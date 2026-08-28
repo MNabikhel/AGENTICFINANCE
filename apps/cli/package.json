@@ -1,0 +1,11 @@
+{
+  "name": "@aether/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "aether": "./src/main.ts"
+  },
+  "dependencies": {
+    "@aether/runtime": "workspace:*"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@aether/runtime-http",
+  "version": "0.0.1",
+  "type": "module",
+  "dependencies": {
+    "@aether/runtime": "workspace:*",
+    "@aether/envelope": "workspace:*"
+  }
+}

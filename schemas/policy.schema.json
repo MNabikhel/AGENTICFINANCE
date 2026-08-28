@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aether.dev/schemas/policy.schema.json",
+  "title": "PolicyDecision",
+  "type": "object",
+  "required": ["verdict", "trace"],
+  "properties": {
+    "verdict": { "enum": ["allow", "deny", "escalate"] },
+    "approvalId": { "type": "string", "pattern": "^apd_" },
+    "trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ruleId", "verdict", "message"],
+        "properties": {
+          "ruleId": { "type": "string" },
+          "verdict": { "enum": ["allow", "deny", "escalate"] },
+          "message": { "type": "string" },
+          "evidence": { "type": "object" }
+        }
+      }
+    },
+    "remediation": {
+      "type": "object",
+      "required": ["kind", "ruleId", "hint"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "issue_intent",
+            "reset_circuit",
+            "unfreeze_actor",
+            "unfreeze_principal",
+            "attest_kya",
+            "wait_approval",
+            "role_forbidden",
+            "none"
+          ]
+        },
+        "ruleId": { "type": "string" },
+        "hint": { "type": "string" },
+        "commandType": { "type": "string" }
+      }
+    }
+  }
+}

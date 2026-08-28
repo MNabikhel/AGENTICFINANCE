@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aether.dev/schemas/mandate.schema.json",
+  "title": "Mandates",
+  "description": "AP2-shaped mandate chain. vct values are Aether-namespaced. Do not import AP2 SDKs.",
+  "$defs": {
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "integer" },
+        "currency": { "enum": ["USD_SIM", "USDC_SIM"] }
+      }
+    },
+    "merchant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "website"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^aid_" },
+        "name": { "type": "string" },
+        "website": { "type": "string", "format": "uri" }
+      }
+    },
+    "instrument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "description"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "sim_ledger" },
+        "description": { "type": "string" }
+      }
+    },
+    "intent": {
+      "type": "object",
+      "required": ["vct", "id", "issuerId", "subjectId", "task", "constraints", "iat", "exp"],
+      "properties": {
+        "vct": { "enum": ["aether.mandate.intent.open.1", "aether.mandate.intent.1"] },
+        "id": { "type": "string", "pattern": "^mid_" },
+        "issuerId": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "task": { "type": "string" },
+        "constraints": { "type": "array" },
+        "parentId": { "type": "string", "pattern": "^mid_" },
+        "iat": { "type": "integer" },
+        "exp": { "type": "integer" }
+      }
+    },
+    "cart": {
+      "type": "object",
+      "required": ["vct", "id", "intentId", "intentHash", "merchant", "line_items", "total", "expiresAt", "userConfirmationRequired"],
+      "properties": {
+        "vct": { "const": "aether.mandate.cart.1" },
+        "id": { "type": "string" },
+        "intentId": { "type": "string" },
+        "intentHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "merchant": { "$ref": "#/$defs/merchant" },
+        "line_items": { "type": "array" },
+        "total": { "$ref": "#/$defs/money" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "userConfirmationRequired": { "type": "boolean" }
+      }
+    },
+    "payment": {
+      "type": "object",
+      "required": ["vct", "id", "transaction_id", "payee", "payment_amount", "payment_instrument", "iat", "exp"],
+      "properties": {
+        "vct": { "enum": ["aether.mandate.payment.1", "aether.mandate.payment.open.1"] },
+        "id": { "type": "string" },
+        "transaction_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "payee": { "$ref": "#/$defs/merchant" },
+        "payment_amount": { "$ref": "#/$defs/money" },
+        "payment_instrument": { "$ref": "#/$defs/instrument" },
+        "execution_date": { "type": "string" },
+        "iat": { "type": "integer" },
+        "exp": { "type": "integer" }
+      }
+    }
+  }
+}

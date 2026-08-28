@@ -1,0 +1,889 @@
+import type { Agent, Command, CommandType, PolicyDecision } from "@aether/types";
+
+export type StoryTone = "neutral" | "allow" | "deny" | "escalate" | "settle";
+
+export interface StoryBeat {
+  seq: number;
+  at: string;
+  headline: string;
+  body: string;
+  tone: StoryTone;
+  commandType?: CommandType;
+}
+
+export interface Analog {
+  title: string;
+  lines: string[];
+}
+
+export const IDLE_TLDR =
+  "Aether is a rulebook for software that spends money. Run a demo to see a human write a permission slip, an agent try to spend, and a referee that never guesses say yes, no, or ask a grown-up.";
+
+export const SPRINT_TLDR =
+  "A human gave an agent a $15,000 shopping list with a $5,000 per-item cap. The agent bought $800 of market data legally, was blocked on a $6,400 compute bill, got a new permission slip plus a treasury sign-off, paid, then swapped the data proceeds into USDC. An auditor confirmed the books and was not allowed to spend.";
+
+export const NIGHT_WATCH_TLDR =
+  "A founder shook hands with a night-watch agent (Know Your Agent) and gave it standing permission to buy research while everyone slept. The agent bought a cheap brief, then a $6,000 one without waking treasury — L5 skips the grown-up, not the rulebook. A $9,000 overpay was refused and blew the daily fuse, which stuck. Freezing the founder froze the agent’s spending. Revoking the handshake left the agent alive but broke. L5 is not god mode.";
+
+export const SUBHIRE_TLDR =
+  "A desk agent at L4 handed a smaller permission slip to a scout. The scout hired a vendor for $800. A $2,500 hire was refused because the child slip was tighter than the parent. Revoking the desk→scout handshake stopped the scout without deleting it. Agents hiring agents is the economy; nested slips are how authority stays bounded.";
+
+function dollars(minor: number): string {
+  return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function nameOf(actor: Agent | undefined, fallback = "an agent"): string {
+  return actor?.displayName ?? fallback;
+}
+
+export function autoBeat(input: {
+  seq: number;
+  at: string;
+  cmd: Command;
+  actor: Agent;
+  decision: PolicyDecision;
+  counterpartName?: string;
+  amountMinor?: number;
+  sku?: string;
+  task?: string;
+}): StoryBeat | undefined {
+  const { cmd, actor, decision } = input;
+  const who = nameOf(actor);
+  const amt = input.amountMinor !== undefined ? dollars(input.amountMinor) : undefined;
+  const other = input.counterpartName;
+  const sku = input.sku;
+
+  if (decision.verdict === "deny") {
+    const rule = decision.trace.find((t) => t.verdict === "deny");
+    if (rule?.ruleId === "actor.system_scope") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: "system is not a treasurer",
+        body: "System may bootstrap the first human and read the catalog, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+  }
+
+  if (cmd.type === "identity.register") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.unique_key") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not register that agent`,
+          body: "That runtime alias (or its USD/USDC operating book) is already taken. Two agents cannot share one operating book.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "ladder.birth_rung") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint L5 at birth`,
+          body: "L5 is not a birthright. Register at L0–L4, then climb with ladder.set after a freeze that was actually tested. Listing the gate names is not the test.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+    }
+    return undefined;
+  }
+  if (cmd.type === "mandate.issue_cart" || cmd.type === "mandate.issue_payment") return undefined;
+  if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "hire.state") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot move that hire`,
+          body: "A hire only walks offered → accepted → funded → delivered → released. Payment-required is only after deliver. An illegal arrow is a refuse, not a 409 after yes.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "hire.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} named a hire that is not here`,
+          body: "That hire is not in this world. A missing contract is not a broken mandate chain.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} is not the seller on that hire`,
+        body: "Accept, deliver, and payment-required belong to the vendor who quoted. A missing hire is hire.known.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return undefined;
+  }
+  if (cmd.type === "ledger.balances" || cmd.type === "receipt.get") return undefined;
+
+  if (cmd.type === "mandate.issue_intent") {
+    const parented = typeof (cmd.body as { parentId?: string }).parentId === "string";
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "mandate.known_parent") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to hand down a slip with no parent`,
+          body: "A missing parent is not a tighter child. Issue the parent permission slip first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} wrote a permission slip for nobody`,
+          body: "That subject is not in this world. A missing agent is not a permission slip.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.window_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a closed calendar`,
+          body: "A permission slip cannot be born with a window that has already closed. Name a not_after after now, or omit the window. Hire still checks the calendar when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.window_reach") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a calendar that opens after the slip dies`,
+          body: "A permission slip lives seven days. A window that opens after that is not a window. Name a not_before inside the slip, or omit it.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.occurrence_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a cadence with no slots`,
+          body: "A permission slip cannot be born with max_occurrences already exhausted. Name at least one slot, or omit the cap. Hire still checks cadence when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.parent_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot hand down a slip whose parent is dead`,
+          body: "A dead parent is not a parent. Issue a new parent permission slip, then a tighter child. Completing a funded hire after the parent dies is still legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.parent_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot hand down a slip whose handshake parent is dead`,
+          body: "A dead parent hop is not a parent. Attest a live parent, then nest. Completing a funded hire after that is still legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} tried to hand down a wider slip and was refused`,
+        body: "A sub-intent must be tighter than its parent: smaller caps, smaller budget, fewer SKUs. Delegation is not a laundering step.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: parented ? `${who} handed a smaller permission slip to another agent` : `${who} wrote a permission slip`,
+      body: input.task
+        ? `The slip says: ${input.task}`
+        : "A signed intent now bounds what an agent may spend, on whom, and how far.",
+      tone: "neutral",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "ledger.transfer") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "ledger.same_currency") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to mix currencies in one journal`,
+          body: "One journal is one currency. Convert with an FX quote and settle. A transfer is not a swap.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "ledger.sufficient") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to overdraw a book`,
+          body: "The source book does not have that many cents. A transfer is not an overdraft.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "ledger.safe_balance") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to write cents this book cannot hold`,
+          body: "A book must stay a safe integer. IEEE rounding is not a mint. Split the journal or drain the dest first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "ledger.operating_book") {
+        const from = String((cmd.body as { fromAccount?: unknown }).fromAccount ?? "");
+        const escrow = from.startsWith("escrow:");
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: escrow ? "escrow is not an allocation" : "a transfer is not a mint",
+          body: escrow
+            ? "Escrow moves through hire.fund, refund, or release. A transfer cannot pick the lock."
+            : "Opening cash is seedOpening. A transfer moves operating cash. Equity is not a source.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} tried to move money through a missing book`,
+        body: "That account name is not in this world. A missing book is not an allocation.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} moved ${amt} into an operating account`,
+        body: "Cash left treasury. The working agent can hire vendors without touching the rest of the company.",
+        tone: "allow",
+        commandType: cmd.type,
+      };
+    }
+  }
+  if (cmd.type === "market.rfq") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} invited a seller who is not in this world`,
+          body: "A closed RFQ is a guest list of live agents. A missing id is not a closed room. Register them first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} asked the market for a job the referee refused`,
+        body: rule?.message ?? "The RFQ did not pass policy.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} asked the market for ${sku ?? "a service"}`,
+      body: "This is an RFQ: a request for quotes. No money moved. An empty invite list is open; a named list is a closed room of live agents.",
+      tone: "neutral",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "market.quote") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "market.invited_seller") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a job they were not invited to`,
+          body: "An RFQ with invited sellers is not a bulletin board. Empty invite list is open; a non-empty list is the guest list.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.known_rfq") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a room that does not exist`,
+          body: "A missing RFQ is not a missing SKU. Issue the request first, then quote it.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.fx_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion window that was already closed`,
+          body: "An FX window cannot be born dead. Name a validUntil after now. Settle of a window that later lapses is still market.not_expired.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} submitted a quote the referee refused`,
+        body: rule?.message ?? "The quote did not pass policy.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} quoted ${amt}${sku ? ` for ${sku}` : ""}`,
+        body: "A quote is a promise with an expiry, not a charge. Policy still has to bless the hire.",
+        tone: "neutral",
+        commandType: cmd.type,
+      };
+    }
+  }
+  if (cmd.type === "hire.create") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      const ruleId = rule?.ruleId ?? "unknown";
+      let body = `The referee (policy kernel) said no. Rule: ${ruleId}. ${rule?.message ?? ""}`;
+      if (ruleId === "payment.amount_range") {
+        body += " Hard constraints cannot be waved through by a manager — someone has to issue a new permission slip.";
+      } else if (ruleId === "circuit.daily") {
+        body = "The daily fuse blew. Standing permission does not mean unlimited. Until a human resets the circuit, even a tiny hire is refused.";
+      } else if (ruleId === "kya.principal_not_frozen") {
+        body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move.";
+      } else if (ruleId === "kya.chain_intact") {
+        body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists.";
+      } else if (ruleId === "actor.not_frozen") {
+        body = "This agent is frozen. Freeze is a kill switch: autonomy drops to L0 and spend is denied.";
+      } else if (ruleId === "market.invited_seller") {
+        body = "That seller was not on the RFQ. A named invite list is a closed room.";
+      } else if (ruleId === "market.known_rfq") {
+        body = "That quote or RFQ is not in this world. A missing room is not a missing SKU.";
+      } else if (ruleId === "hire.quote_unspent") {
+        body = "That quote already produced a hire, an FX settle, or is held by an open approval. A price promise is used once. A deny does not consume it; a void does not restore it.";
+      } else if (ruleId === "mandate.known_intent") {
+        body = "That permission slip is not in this world. A missing slip is not a missing handshake.";
+      } else if (ruleId === "payment.recurrence") {
+        body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
+      } else if (ruleId === "mandate.parent_fresh") {
+        body = "The parent permission slip has expired. A dead parent is not a parent. Completing a funded hire after that is legal; a new hire is not.";
+      } else if (ruleId === "kya.parent_fresh") {
+        body = "The parent handshake has expired. A nested hop does not outlive its parent. Completing a funded hire after that is legal; a new hire is not.";
+      } else if (ruleId === "kya.attestation_fresh") {
+        body = "The handshake expired. Revoke it, then attest again. A dead hop still occupies the pair. Completing a funded hire after that is legal; a new hire is not.";
+      } else if (ruleId === "kya.capability_subset") {
+        body = "This agent sits above the handshake ceiling. Completing a funded hire after a climb is legal; a new hire is not.";
+      } else if (ruleId === "ladder.max_autonomy_constraint") {
+        body = "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not.";
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+        body,
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (decision.verdict === "escalate") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `Paused. ${amt ?? "This hire"} needs a grown-up`,
+        body: `${who} is allowed to try, but the amount sits above the auto-approve threshold. Treasury (or a human) must sign the ticket. The books do not change until they do.`,
+        tone: "escalate",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} hired${other ? ` ${other}` : ""}${amt ? ` for ${amt}` : ""}`,
+      body: "A hire contract now exists with an empty escrow account. Work must not start until that escrow is funded.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "approval.resolve") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not resolve that ticket`,
+        body:
+          rule?.ruleId === "approval.known"
+            ? "That approval is not in this world. A missing ticket is not a late yes."
+            : rule?.ruleId === "approval.pending"
+              ? "That ticket is expired or already resolved. Resolving it is a refuse, not a late yes."
+              : (rule?.message ?? "The referee refused this ticket."),
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} approved the exception`,
+      body: "The original command is replayed byte-for-byte. Policy runs again. The threshold and the hire/settle rung are waived — caps, freezes, KYA, and the audit chain still bind.",
+      tone: "escalate",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "hire.fund") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not lock escrow${amt ? ` (${amt})` : ""}`,
+        body:
+          rule?.ruleId === "hire.cart_matches"
+            ? "The cart must equal the hire. Escrow moves the quoted price. A cheaper cart is not a discount."
+            : rule?.ruleId === "hire.known"
+              ? "That hire is not in this world. A missing contract is not a broken mandate chain."
+              : rule?.ruleId === "hire.state"
+                ? "A hire must be accepted before escrow can lock. Offered is not funded. An illegal arrow is a refuse, not a 409 after yes."
+                : rule?.ruleId === "ledger.sufficient"
+                  ? "The buyer’s cash does not cover this hire. Escrow cannot lock on an overdraft. Allocate first."
+                  : rule?.ruleId === "hire.bound_cart"
+                    ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
+                  : rule?.ruleId === "ledger.safe_balance"
+                    ? "The escrow (or the buyer’s remaining cash) cannot hold this many cents. IEEE rounding is not a mint."
+                  : rule?.ruleId === "kya.parent_fresh"
+                    ? "The parent handshake has expired. A nested hop does not outlive its parent. Completing a funded hire after that is legal; a new fund is not."
+                  : rule?.ruleId === "kya.attestation_fresh"
+                    ? "The handshake expired. Revoke it, then attest again. A dead hop still occupies the pair. Completing a funded hire after that is legal; a new fund is not."
+                  : rule?.ruleId === "kya.capability_subset"
+                    ? "This agent sits above the handshake ceiling. Completing a funded hire after a climb is legal; a new fund is not."
+                  : rule?.ruleId === "ladder.max_autonomy_constraint"
+                    ? "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new fund is not."
+                : (rule?.message ?? "The referee refused to fund this hire."),
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${amt} moved into escrow`,
+        body: "The buyer’s cash is locked. The vendor can now do the work knowing they will be paid if they deliver. If they don’t, the money can be refunded.",
+        tone: "settle",
+        commandType: cmd.type,
+      };
+    }
+  }
+  if (cmd.type === "hire.refund") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not unwind escrow${amt ? ` (${amt})` : ""}`,
+        body:
+          rule?.ruleId === "hire.state"
+            ? "Refund is only from funded. After deliver, escrow can only be released to the vendor. Delivered work cannot be unwound."
+            : rule?.ruleId === "ledger.safe_balance"
+              ? "The buyer’s book cannot hold the returned cents. IEEE rounding is not a mint."
+            : "Refund is the buyer or treasury, and only while the hire is funded. The other side of the table does not unwind escrow.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `Escrow returned${amt ? ` (${amt})` : ""} to the buyer`,
+      body: "The hire was unwound before delivery. Mandate spend goes back. The daily fuse stays sticky if it already blew — refund is not a circuit reset.",
+      tone: "settle",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "envelope.submit") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} tried to spend and was refused`,
+        body:
+          rule?.ruleId === "hire.state"
+            ? "Escrow releases only after the vendor has delivered. Funded is not released. An illegal arrow is a refuse, not a 409 after yes."
+            : rule?.ruleId === "hire.bound_cart"
+              ? "That hire has not bound a cart. Issue the cart with hireId. A loose cart on the command is not this hire’s check."
+            : rule?.ruleId === "ledger.safe_balance"
+              ? "The vendor’s book cannot hold these cents. IEEE rounding is not a mint."
+            : `Role ${actor.role} is not allowed to move money. Rule: ${rule?.ruleId ?? "actor.role_capability"}. An auditor who can spend is not an auditor.`,
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `Escrow released${amt ? ` (${amt})` : ""}. A receipt was written.`,
+      body: "The vendor is paid. The receipt’s reference is the hash of the payment mandate, so anyone can prove which permission this settlement fulfilled.",
+      tone: "settle",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "market.fx_settle") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not swap${amt ? ` ${amt}` : ""} into USDC`,
+        body:
+          rule?.ruleId === "market.fx_quote"
+            ? "An FX quote is a one-shot window. A missing quote, a research quote, or a spent quote is not a second settle."
+            : rule?.ruleId === "ledger.known_account"
+              ? "The vendor has no USDC book. An FX settle is not a journal throw. A compute vendor’s USD cash is not a USDC wallet."
+            : rule?.ruleId === "ledger.sufficient"
+              ? "The vendor’s USD book does not cover this window. An FX settle is not an overdraft. The market maker’s USDC inventory is a different rule."
+              : rule?.ruleId === "mm.known"
+                ? "There is no market maker in this world. Register one before settling FX. A window is not a journal against missing books."
+                : rule?.ruleId === "ledger.safe_balance"
+                  ? "A book on this window cannot hold the resulting cents. IEEE rounding is not a mint. The market maker’s USDC inventory is a different rule."
+              : (rule?.message ?? "The referee refused the FX settle."),
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} swapped ${amt} into USDC`,
+        body: "The market maker is a dumb window (±2%), not a trading desk. Two balanced journal entries, two currencies, one audit trail.",
+        tone: "settle",
+        commandType: cmd.type,
+      };
+    }
+  }
+  if (cmd.type === "identity.freeze") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not freeze anyone`,
+          body: "That agent is not in this world. A missing agent is not a kill switch.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "identity.freeze_state") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not freeze that agent again`,
+          body: "That agent is already frozen. A second pull is not a notary line after yes.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not freeze anyone`,
+        body: "Freeze is a kill switch. The referee still checks who is allowed to pull it.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} pulled the freeze`,
+      body: "The target drops to L0 and cannot spend. Anyone they had shaken hands with also cannot spend in their name.",
+      tone: "deny",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "identity.unfreeze") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.freeze_state") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not lift a freeze`,
+          body: "That agent is not frozen. Lifting a freeze that was never pulled is not a kill-switch test.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not lift a freeze`,
+        body: "That agent is not in this world. A missing agent is not a thawed kill switch.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} lifted the freeze`,
+      body: "The agent returns to the rung it held before the freeze. This is also how we prove the kill switch works before standing permission (L5).",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "kya.attest") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "kya.not_self") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot shake hands with themselves`,
+          body: "A handshake is with another agent. Know Your Agent is a grant, not a mirror.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.known_parent") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to nest a handshake under nobody`,
+          body: "A missing parent hop is not a live nested handshake. Attest the parent first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.parent_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot nest a handshake under a dead parent`,
+          body: "A dead parent hop is not a parent. Attest a live parent, then nest. An expired hop still occupies its pair until you revoke.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot shake hands in someone else’s name`,
+          body: "You can only mint a handshake for which you are the principal. A human or treasury may attest any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.unique_live") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} already shook hands with that agent`,
+          body: "One live handshake per pair. Revoke it, then attest again. A second live hop is not a tighter grant.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.capability_subset") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot grant a ceiling they do not hold`,
+          body: "Omitted maxAutonomy is L5. An agent may not grant standing-mandate ceiling above its own rung. Name a ceiling you hold. A human or treasury may grant L5.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.mint_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a dead handshake`,
+          body: "A handshake cannot be born expired. Name an expiresAt after now, or omit it for one year. An expired hop still occupies the pair until you revoke.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.mint_window") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a handshake that outlives one year`,
+          body: "Omit expiresAt for one year, or name a sooner Instant. Year 9999 is not standing identity.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not shake hands`,
+        body: "That agent is not in this world. A missing agent is not a handshake.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} shook hands with an agent`,
+      body: "Know Your Agent: a signed handshake that says this software may spend in a human’s name, up to a listed autonomy, until revoked. TAP, Skyfire, and ERC-8004 can hang off this object later. The kernel already consults it.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "kya.revoke") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not revoke that handshake`,
+        body:
+          rule?.ruleId === "kya.known_attestation"
+            ? "That handshake is not in this world for this principal. A missing attestation is not a tombstone. You cannot tombstone someone else’s handshake by guessing its id."
+            : rule?.ruleId === "kya.party"
+              ? "You can only tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 desk cannot revoke a founder’s handshake by filling in the ids."
+              : "That agent is not in this world. A missing agent is not a tombstone.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} revoked the handshake`,
+      body: "The agent still exists. Its keys still work. It still cannot spend — implicit supervisor grants die with the tombstone. Revoke cascades to anyone it had hired underneath.",
+      tone: "deny",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "ladder.set") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "ladder.legal") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot skip a rung`,
+          body: "Rungs cannot be skipped. L5 also requires a working circuit breaker and a freeze that was actually tested. Listing the gate names is not the test.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not move that agent`,
+        body: "That agent is not in this world. A missing agent is not a ladder rung.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    const to = (cmd.body as { to?: number }).to;
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} moved an agent to L${to ?? "?"}`,
+      body: "Rungs cannot be skipped. L5 also requires a working circuit breaker and a tested freeze. The human is stepping back, not disappearing.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "circuit.reset") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} reset the daily fuse`,
+      body: "The circuit breaker is sticky: once it blows, even a tiny spend is refused until a human or treasury resets it. Mandate budgets are unchanged.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "clearing.settle_window") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} closed a settlement window`,
+      body: "Gross exposure is photographed and archived. Money already moved at escrow — this is the clearing photo, not a second payment. Live net-settle of open credit comes later as an adapter.",
+      tone: "settle",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "audit.verify") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} read the notary book`,
+      body: "Every mutation is a hash-chained line. If anyone alters a past event, verify() fails at that line. The auditor can read this. They cannot spend.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  return undefined;
+}
+
+export function analog(): Analog {
+  return {
+    title: "The kitchen-table version",
+    lines: [
+      "A human writes a permission slip (a mandate): what may be bought, from whom, and the max price.",
+      "Software agents go shopping with that slip. They ask vendors for prices. They do not get a blank check.",
+      "A referee that never gets tired and never guesses (the policy kernel) says yes, no, or ask a grown-up.",
+      "If yes, money sits in escrow until the work is done, then a receipt is written that points back at the slip.",
+      "A notary (the audit log) writes every decision in ink that smudges if you try to rewrite yesterday.",
+      "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
+    ],
+  };
+}
+
+export function nightWatchAnalog(): Analog {
+  return {
+    title: "Standing permission, in English",
+    lines: [
+      "A handshake (Know Your Agent) is not a password. It is a revocable permission to spend in a human’s name.",
+      "Standing permission (L5) means nobody clicks yes on each purchase. The slip, the daily fuse, and the freeze still bind.",
+      "If the founder’s account is frozen, agents holding their handshake cannot spend either. Authority is a graph, not a token sitting in a bot.",
+      "Revoke the handshake and the agent is still there — it just cannot move money. That is how you fire software without deleting it.",
+      "A tested freeze is required before L5. We do not give standing permission to something we have never paused.",
+    ],
+  };
+}

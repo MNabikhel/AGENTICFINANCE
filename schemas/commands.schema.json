@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aether.dev/schemas/commands.schema.json",
+  "title": "Aether command bodies",
+  "description": "Body fields for each CommandType. MCP/HTTP merge actor + idempotencyKey on top. additionalProperties stay allowed so aliases can evolve; listed properties are what the kernel reads.",
+  "commands": {
+    "identity.register": {
+      "type": "object",
+      "required": ["displayName", "role"],
+      "properties": {
+        "key": { "type": "string", "description": "Runtime alias (ops-human, desk, scout)." },
+        "displayName": { "type": "string" },
+        "role": {
+          "enum": ["treasury", "procurement", "data_vendor", "compute_vendor", "market_maker", "auditor", "human_operator"]
+        },
+        "autonomyLevel": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "identity.freeze": {
+      "type": "object",
+      "required": ["agentId"],
+      "properties": { "agentId": { "type": "string" } }
+    },
+    "identity.unfreeze": {
+      "type": "object",
+      "required": ["agentId"],
+      "properties": { "agentId": { "type": "string" } }
+    },
+    "kya.attest": {
+      "type": "object",
+      "required": ["delegateId"],
+      "properties": {
+        "delegateId": { "type": "string" },
+        "principalId": { "type": "string" },
+        "maxAutonomy": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "parentId": {
+          "type": "string",
+          "description": "A missing parent hop is kya.known_parent. A parent that exists but is expired or revoked is kya.parent_fresh."
+        },
+        "issuerKind": { "enum": ["aether.self", "tap.http-sig", "skyfire.kya", "erc8004.agent"] },
+        "expiresAt": {
+          "type": "string",
+          "description": "ISO Instant. Must be strictly after now and at most one year. Omit for one year. A dead window is kya.mint_fresh. A year-9999 hop is kya.mint_window."
+        }
+      }
+    },
+    "kya.revoke": {
+      "type": "object",
+      "properties": {
+        "principalId": { "type": "string" },
+        "delegateId": { "type": "string" },
+        "attestationId": { "type": "string" }
+      }
+    },
+    "circuit.reset": { "type": "object", "properties": {} },
+    "mandate.issue_intent": {
+      "type": "object",
+      "required": ["subjectId", "task", "constraints"],
+      "properties": {
+        "subjectId": { "type": "string" },
+        "task": { "type": "string" },
+        "parentId": {
+          "type": "string",
+          "description": "A missing parent is mandate.known_parent. A parent past exp is mandate.parent_fresh."
+        },
+        "constraints": {
+          "type": "array",
+          "description": "An execution_date that has already closed, is inverted, or is unparseable is mandate.window_fresh. A not_before at or after the slip's seven-day exp is mandate.window_reach. A recurrence max_occurrences that cannot admit a first hire is mandate.occurrence_fresh.",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "payment.amount_range",
+                  "payment.budget",
+                  "payment.allowed_payees",
+                  "payment.allowed_payment_instruments",
+                  "payment.agent_recurrence",
+                  "payment.execution_date",
+                  "payment.reference",
+                  "aether.allowed_skus",
+                  "aether.max_autonomy"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "mandate.issue_cart": {
+      "type": "object",
+      "required": ["intentId", "merchantId", "line_items"],
+      "properties": {
+        "intentId": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "hireId": { "type": "string" },
+        "line_items": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Must total the hire price. Same seller, same SKU, integer cents.",
+          "items": {
+            "type": "object",
+            "required": ["sku", "description", "quantity", "unitAmount"],
+            "properties": {
+              "sku": { "type": "string" },
+              "description": { "type": "string" },
+              "quantity": { "type": "integer", "minimum": 1 },
+              "unitAmount": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    "mandate.issue_payment": {
+      "type": "object",
+      "required": ["cartId"],
+      "properties": { "cartId": { "type": "string" } }
+    },
+    "market.rfq": {
+      "type": "object",
+      "required": ["sku", "spec"],
+      "properties": {
+        "sku": { "type": "string" },
+        "spec": { "type": "string" },
+        "invitedSellerIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Closed RFQ if non-empty — only these sellers may quote. Empty or omitted is an open RFQ. A guest id that is not in this world is identity.known."
+        }
+      }
+    },
+    "market.quote": {
+      "type": "object",
+      "required": ["rfqId", "price"],
+      "properties": {
+        "rfqId": { "type": "string" },
+        "price": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM." },
+        "fx": {
+          "type": "object",
+          "description": "FX window. Nested rateE6 is what the 200bps band binds and what settle uses.",
+          "properties": {
+            "from": { "enum": ["USD_SIM", "USDC_SIM"] },
+            "to": { "enum": ["USD_SIM", "USDC_SIM"] },
+            "rateE6": { "type": "integer", "minimum": 0 },
+            "validUntil": { "type": "string", "description": "ISO Instant. Must be strictly after now. A dead or unparseable window is market.fx_fresh. Settle of a later lapse is market.not_expired." }
+          }
+        }
+      }
+    },
+    "market.fx_settle": {
+      "type": "object",
+      "required": ["quoteId"],
+      "properties": { "quoteId": { "type": "string" } }
+    },
+    "market.catalog": { "type": "object", "properties": {} },
+    "hire.create": {
+      "type": "object",
+      "required": ["quoteId", "intentId"],
+      "properties": {
+        "quoteId": { "type": "string" },
+        "intentId": { "type": "string" }
+      }
+    },
+    "hire.accept": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "hire.fund": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": { "type": "string" },
+        "paymentMandateId": { "type": "string" }
+      }
+    },
+    "hire.deliver": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": { "type": "string" },
+        "deliverable": {}
+      }
+    },
+    "hire.release": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "hire.refund": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "envelope.require": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "envelope.submit": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": { "type": "string" },
+        "paymentMandateId": { "type": "string" },
+        "nonce": { "type": "string" }
+      }
+    },
+    "approval.resolve": {
+      "type": "object",
+      "required": ["approvalId", "decision"],
+      "properties": {
+        "approvalId": { "type": "string" },
+        "decision": { "enum": ["approved", "rejected"] }
+      }
+    },
+    "ladder.set": {
+      "type": "object",
+      "required": ["agentId", "to"],
+      "properties": {
+        "agentId": { "type": "string" },
+        "to": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "ledger.transfer": {
+      "type": "object",
+      "required": ["fromAccount", "toAccount", "amount"],
+      "properties": {
+        "fromAccount": { "type": "string" },
+        "toAccount": { "type": "string" },
+        "amount": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM." }
+      }
+    },
+    "ledger.balances": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "accountId": { "type": "string" }
+      }
+    },
+    "clearing.settle_window": {
+      "type": "object",
+      "properties": { "currency": { "enum": ["USD_SIM", "USDC_SIM"] } }
+    },
+    "audit.verify": { "type": "object", "properties": {} },
+    "audit.query": {
+      "type": "object",
+      "properties": {
+        "subjectId": { "type": "string", "description": "hid_, mid_, qte_, rfq_, aid_, rid_…" },
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 }
+      }
+    },
+    "receipt.get": {
+      "type": "object",
+      "required": ["receiptId"],
+      "properties": { "receiptId": { "type": "string" } }
+    }
+  }
+}

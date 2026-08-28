@@ -1,0 +1,223 @@
+openapi: 3.1.0
+info:
+  title: Aether Agent Economic Runtime
+  version: 0.85.0
+  description: |
+    Machine-first HTTP face of the same command bus as MCP.
+    402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
+    All amounts are integer minor units. Rail is sim:aether-1 only.
+servers:
+  - url: http://127.0.0.1:8787
+paths:
+  /v1/identities:
+    post:
+      operationId: identityRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterAgent"
+      responses:
+        "201": { description: Agent created }
+  /v1/mandates/intent:
+    post:
+      operationId: mandateIssueIntent
+      responses:
+        "201": { description: Signed intent }
+        "422": { description: Policy deny }
+  /v1/mandates/cart:
+    post:
+      operationId: mandateIssueCart
+      responses:
+        "201": { description: Signed cart }
+  /v1/mandates/payment:
+    post:
+      operationId: mandateIssuePayment
+      responses:
+        "201": { description: Signed payment mandate }
+  /v1/rfqs:
+    post:
+      operationId: marketRfq
+      responses:
+        "201": { description: RFQ created }
+  /v1/quotes:
+    post:
+      operationId: marketQuote
+      responses:
+        "201": { description: Quote created }
+  /v1/hires:
+    post:
+      operationId: hireCreate
+      responses:
+        "201": { description: Hire offered }
+        "422": { description: Policy deny }
+  /v1/hires/{id}/accept:
+    post:
+      operationId: hireAccept
+      responses:
+        "200": { description: Hire accepted }
+  /v1/hires/{id}/fund:
+    post:
+      operationId: hireFund
+      responses:
+        "200": { description: Escrow funded }
+        "422": { description: Policy deny or escalate }
+  /v1/hires/{id}/refund:
+    post:
+      operationId: hireRefund
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Escrow returned to buyer. Mandate spend restored. Circuit stays sticky. }
+        "409": { description: Illegal hire transition (already delivered/released) }
+        "422": { description: Policy deny }
+  /v1/payments/require:
+    post:
+      operationId: envelopeRequire
+      responses:
+        "402":
+          description: Payment required
+          headers:
+            PAYMENT-REQUIRED:
+              schema: { type: string }
+              description: Base64 JSON PaymentRequired
+  /v1/payments/submit:
+    post:
+      operationId: envelopeSubmit
+      parameters:
+        - in: header
+          name: PAYMENT-SIGNATURE
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Settled
+          headers:
+            PAYMENT-RESPONSE:
+              schema: { type: string }
+        "409": { description: Nonce reuse }
+        "422": { description: Policy deny }
+  /v1/approvals/{id}/resolve:
+    post:
+      operationId: approvalResolve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { enum: [approved, rejected] }
+      responses:
+        "200": { description: Resolved and command replayed if approved }
+  /v1/agents/{id}/autonomy:
+    post:
+      operationId: ladderSet
+      responses:
+        "200": { description: Level changed }
+        "422": { description: Illegal rung skip }
+  /v1/accounts/{id}:
+    get:
+      operationId: ledgerBalances
+      responses:
+        "200": { description: Balances }
+  /v1/receipts/{id}:
+    get:
+      operationId: receiptGet
+      responses:
+        "200": { description: Receipt }
+  /v1/demo/sub-hire:
+    post:
+      operationId: demoSubHire
+      responses:
+        "200": { description: Nested-slip TAP report }
+        "500": { description: Assertions failed }
+  /v1/protocol:
+    get:
+      operationId: protocolCard
+      responses:
+        "200": { description: Pin-able aether.protocol.1 card. liveMoney is false until adapters exist. }
+  /v1/catalog:
+    get:
+      operationId: marketCatalog
+      responses:
+        "200": { description: SKUs that may be hired. Not a storefront. }
+  /v1/audit:
+    get:
+      operationId: auditQuery
+      parameters:
+        - in: query
+          name: subject
+          schema: { type: string }
+        - in: query
+          name: action
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200": { description: Notary lines for one subject. Does not mutate. }
+  /v1/commands:
+    get:
+      operationId: commandSchemas
+      responses:
+        "200": { description: JSON Schema for every CommandType body }
+  /v1/objects/{id}:
+    get:
+      operationId: inspect
+      responses:
+        "200": { description: One object by id or alias. A cart includes derived live | expired | bound. }
+        "404": { description: Unknown id }
+  /v1/hires/{id}:
+    get:
+      operationId: hireGet
+      responses:
+        "200": { description: Hire contract }
+        "404": { description: Unknown hire }
+  /v1/clearing/windows:
+    post:
+      operationId: clearingSettleWindow
+      responses:
+        "200": { description: Settlement window archived. Not a second payment. }
+  /v1/snapshot:
+    get:
+      operationId: snapshot
+      responses:
+        "200": { description: Runtime snapshot }
+  /v1/audit/verify:
+    post:
+      operationId: auditVerify
+      responses:
+        "200": { description: Chain ok or first failure }
+  /openapi.json:
+    get:
+      operationId: openapi
+      responses:
+        "200": { description: This document }
+components:
+  schemas:
+    RegisterAgent:
+      type: object
+      required: [displayName, role]
+      properties:
+        displayName: { type: string }
+        role:
+          enum: [treasury, procurement, data_vendor, compute_vendor, market_maker, auditor, human_operator]
+        autonomyLevel: { type: integer, minimum: 0, maximum: 5 }
+    Problem:
+      type: object
+      required: [type, title, status, detail, instance]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }

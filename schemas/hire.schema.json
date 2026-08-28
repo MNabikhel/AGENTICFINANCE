@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aether.dev/schemas/hire.schema.json",
+  "title": "HireContract",
+  "type": "object",
+  "required": ["id", "buyerId", "sellerId", "sku", "price", "state", "escrowAccountId"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^hid_" },
+    "state": { "enum": ["offered", "accepted", "funded", "delivered", "released", "refunded", "void"] },
+    "sku": { "type": "string" }
+  }
+}

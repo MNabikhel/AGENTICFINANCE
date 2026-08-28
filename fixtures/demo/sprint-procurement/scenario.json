@@ -1,0 +1,58 @@
+{
+  "id": "sprint-procurement",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "stepMs": 1000,
+  "genesisNonce": "01J6AETHERGENESIS0000000001",
+  "opening": {
+    "treasury:cash": { "amount": 5000000, "currency": "USD_SIM" },
+    "market_maker:cash_usd": { "amount": 1000000, "currency": "USD_SIM" },
+    "market_maker:cash_usdc": { "amount": 1000000, "currency": "USDC_SIM" }
+  },
+  "agents": [
+    { "key": "ops-human", "role": "human_operator", "autonomyLevel": 0, "displayName": "Ops Human" },
+    { "key": "treasury", "role": "treasury", "autonomyLevel": 3, "displayName": "Treasury Agent" },
+    { "key": "procurement", "role": "procurement", "autonomyLevel": 3, "displayName": "Procurement Agent" },
+    { "key": "data-vendor", "role": "data_vendor", "autonomyLevel": 2, "displayName": "Data Vendor" },
+    { "key": "compute-vendor", "role": "compute_vendor", "autonomyLevel": 2, "displayName": "Compute Vendor" },
+    { "key": "mm", "role": "market_maker", "autonomyLevel": 2, "displayName": "Market Maker" },
+    { "key": "auditor", "role": "auditor", "autonomyLevel": 0, "displayName": "Auditor" }
+  ],
+  "circuit": { "dailyLimit": 10000000 },
+  "intentI1": {
+    "task": "Buy Q1 market ticks and 200 GPU-hours for the sprint.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 1500000 },
+      { "type": "aether.allowed_skus", "allowed": ["data.ticks.2026Q1", "compute.gpu.hours", "fx.usd_sim.usdc_sim"] },
+      { "type": "payment.agent_recurrence", "frequency": "ON_DEMAND", "max_occurrences": 8 },
+      { "type": "aether.max_autonomy", "max": 4 }
+    ]
+  },
+  "intentI2": {
+    "task": "One-shot compute hire exception for 200 GPU-hours.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 700000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 700000 },
+      { "type": "aether.allowed_skus", "allowed": ["compute.gpu.hours"] },
+      { "type": "aether.max_autonomy", "max": 4 }
+    ]
+  },
+  "quotes": {
+    "data.ticks.2026Q1": { "amount": 80000, "currency": "USD_SIM" },
+    "compute.gpu.hours": { "amount": 640000, "currency": "USD_SIM" },
+    "fx.usd_sim.usdc_sim": { "amount": 80000, "currency": "USD_SIM", "rateE6": 998004 }
+  },
+  "allocation": { "amount": 1500000, "currency": "USD_SIM" },
+  "assertions": [
+    { "id": 1, "check": "audit.verify.ok", "minLength": 25 },
+    { "id": 2, "check": "hire.state", "sku": "data.ticks.2026Q1", "state": "released" },
+    { "id": 3, "check": "step.verdict", "step": 13, "verdict": "deny", "ruleId": "payment.amount_range" },
+    { "id": 4, "check": "step.verdict", "step": 17, "verdict": "escalate", "ruleId": "approval.threshold" },
+    { "id": 5, "check": "hire.state", "sku": "compute.gpu.hours", "state": "released" },
+    { "id": 6, "check": "balance", "account": "procurement:cash", "amount": 780000, "currency": "USD_SIM" },
+    { "id": 7, "check": "balance", "account": "data-vendor:usdc", "amount": 79840, "currency": "USDC_SIM" },
+    { "id": 8, "check": "auditor.spend", "verdict": "deny", "ruleId": "actor.role_capability" },
+    { "id": 9, "check": "receipt.binds", "count": 2 },
+    { "id": 10, "check": "fx.rateE6", "rateE6": 998004, "payout": 79840 }
+  ]
+}

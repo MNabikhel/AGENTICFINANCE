@@ -1,0 +1,1266 @@
+/**
+ * Aether canonical object model.
+ * If DESIGN.md and these types disagree, these types win.
+ *
+ * Money is always integer minor units. Never IEEE floats.
+ * Instant is ISO-8601 milliseconds with Z.
+ * HexSha256 is 64 lowercase hex chars.
+ */
+
+export type CurrencyCode = "USD_SIM" | "USDC_SIM";
+export type Instant = string;
+export type HexSha256 = string;
+export type Ulid = string;
+
+export const CURRENCY_DECIMALS: Record<CurrencyCode, 2> = {
+  USD_SIM: 2,
+  USDC_SIM: 2,
+};
+
+export const SIM_RAIL_ID = "sim:aether-1" as const;
+export const AUDIT_DOMAIN = "aether-audit-v1" as const;
+export const AUDIT_GENESIS_PREV = "0".repeat(64);
+export const RECEIPT_ISSUER = "did:aether:runtime" as const;
+
+/**
+ * Pin this. There is no finish date for the kernel.
+ * `liveMoney: false` until adapters exist. Public protocol ≠ live bank.
+ */
+export const PROTOCOL = {
+  spec: "aether.protocol.1",
+  version: "0.85.0",
+  rail: SIM_RAIL_ID,
+  liveMoney: false,
+  currencies: ["USD_SIM", "USDC_SIM"] as const,
+} as const;
+
+export interface Money {
+  /** Integer minor units. */
+  amount: number;
+  currency: CurrencyCode;
+}
+
+export interface Rail {
+  id: typeof SIM_RAIL_ID;
+  scheme: "exact" | "upto";
+  asset: CurrencyCode;
+}
+
+export type Result<T, E = AetherError> =
+  | { ok: true; value: T }
+  | { ok: false; error: E };
+
+export interface AetherError {
+  type: `https://aether.dev/errors/${string}`;
+  title: string;
+  status: 400 | 401 | 403 | 402 | 409 | 422 | 500;
+  detail: string;
+  instance: string;
+  extra?: { ruleId?: string; seq?: number; remediation?: Remediation };
+}
+
+// ---------------------------------------------------------------------------
+// Identity + autonomy ladder
+// ---------------------------------------------------------------------------
+
+export type AgentRole =
+  | "treasury"
+  | "procurement"
+  | "data_vendor"
+  | "compute_vendor"
+  | "market_maker"
+  | "auditor"
+  | "human_operator";
+
+/**
+ * L0 human-executes     — agent drafts; human signs every payment mandate
+ * L1 human-approves     — agent issues carts; human confirms each cart
+ * L2 constrained-auto   — close payments that satisfy an open intent
+ * L3 budget-auto        — L2 + recurrence / remaining-budget
+ * L4 delegated-hire     — L3 + sub-intents (delegate budget). Vendor hires against an existing intent are L3.
+ * L5 human-out-of-loop  — L4 + standing mandate; humans hold kill switch
+ */
+export type AutonomyLevel = 0 | 1 | 2 | 3 | 4 | 5;
+
+export interface PublicKeyRef {
+  kid: string;
+  kty: "OKP";
+  crv: "Ed25519";
+  x: string;
+}
+
+export type AgentId = `aid_${Ulid}`;
+export type AccountId = `acct_${Ulid}`;
+export type MandateId = `mid_${Ulid}`;
+export type WindowId = `win_${Ulid}`;
+export type HireId = `hid_${Ulid}`;
+export type TransferId = `tid_${Ulid}`;
+export type ReceiptId = `rid_${Ulid}`;
+export type ApprovalId = `apd_${Ulid}`;
+export type JournalId = `jnl_${Ulid}`;
+export type RfqId = `rfq_${Ulid}`;
+export type QuoteId = `qte_${Ulid}`;
+export type DelegationId = `dlg_${Ulid}`;
+export type Did = `did:aether:${string}`;
+
+export interface Agent {
+  id: AgentId;
+  did: Did;
+  displayName: string;
+  role: AgentRole;
+  autonomyLevel: AutonomyLevel;
+  keys: PublicKeyRef[];
+  accountId: AccountId;
+  supervisors: AgentId[];
+  createdAt: Instant;
+  frozen: boolean;
+  /** Captured on freeze so unfreeze restores the rung, not a silent demotion. */
+  autonomyBeforeFreeze?: AutonomyLevel;
+}
+
+export type LadderExtraGate =
+  | "auditor_ack"
+  | "clean_audit_7d"
+  | "circuit_breaker_configured"
+  | "kill_switch_tested";
+
+export interface LadderTransition {
+  from: AutonomyLevel;
+  to: AutonomyLevel;
+  requiredApproverRoles: AgentRole[];
+  extraGates: LadderExtraGate[];
+}
+
+/** Illegal to skip rungs. any→0 is always allowed (kill / demote). */
+export const LADDER_TRANSITIONS: readonly LadderTransition[] = [
+  { from: 0, to: 1, requiredApproverRoles: ["human_operator"], extraGates: [] },
+  { from: 1, to: 2, requiredApproverRoles: ["human_operator"], extraGates: ["auditor_ack"] },
+  { from: 2, to: 3, requiredApproverRoles: ["human_operator"], extraGates: ["clean_audit_7d"] },
+  { from: 3, to: 4, requiredApproverRoles: ["human_operator", "treasury"], extraGates: [] },
+  { from: 4, to: 5, requiredApproverRoles: ["human_operator", "treasury"], extraGates: ["circuit_breaker_configured", "kill_switch_tested"] },
+];
+
+export const MIN_LEVEL_FOR_ACTION = {
+  draft: 0,
+  closePaymentWithHuman: 0,
+  closePaymentAutonomous: 2,
+  /** L3 may hire a vendor against an existing intent (demo: procurement). */
+  hireAgainstIntent: 3,
+  recurringPayment: 3,
+  /** L4 issues a *sub-intent* that delegates budget to another agent. */
+  issueSubIntent: 4,
+  autoAcceptHire: 5,
+} as const satisfies Record<string, AutonomyLevel>;
+
+// ---------------------------------------------------------------------------
+// Mandates (AP2-shaped, Aether-namespaced)
+// ---------------------------------------------------------------------------
+
+export type MandateVct =
+  | "aether.mandate.intent.open.1"
+  | "aether.mandate.intent.1"
+  | "aether.mandate.cart.1"
+  | "aether.mandate.payment.open.1"
+  | "aether.mandate.payment.1";
+
+export interface Merchant {
+  id: AgentId;
+  name: string;
+  website: string;
+}
+
+export interface PaymentInstrument {
+  id: string;
+  type: "sim_ledger";
+  description: string;
+}
+
+export interface LineItem {
+  sku: string;
+  description: string;
+  quantity: number;
+  unitAmount: Money;
+}
+
+export type RecurrenceFrequency = "ON_DEMAND" | "DAILY" | "WEEKLY" | "MONTHLY";
+
+/** One day in milliseconds. ISO `expiresAt` windows (cart, RFQ, approval ticket). */
+export const DAY_MS = 86_400_000;
+/** One day in unix seconds. Mandate `iat`/`exp` are seconds, not milliseconds. */
+export const DAY_SEC = 86_400;
+/** One hour in milliseconds. Quote `expiresAt`. */
+export const HOUR_MS = 3_600_000;
+/** One year in milliseconds. KYA hop omit and ceiling (`kya.mint_window`). */
+export const KYA_TTL_MS = 365 * DAY_MS;
+/** Seven days in unix seconds. Intent mandate `exp` from `iat`. */
+export const INTENT_TTL_SEC = 7 * DAY_SEC;
+/** Seven days in milliseconds. Execution windows must open before the slip dies. */
+export const INTENT_TTL_MS = 7 * DAY_MS;
+
+/** Minimum gap between funded occurrences. `ON_DEMAND` has no gap. Monthly is 30 × 24h on the sim clock. */
+export const RECURRENCE_GAP_MS: Record<RecurrenceFrequency, number> = {
+  ON_DEMAND: 0,
+  DAILY: DAY_MS,
+  WEEKLY: 7 * DAY_MS,
+  MONTHLY: 30 * DAY_MS,
+};
+
+export type MandateConstraint =
+  | {
+      type: "payment.amount_range";
+      currency: CurrencyCode;
+      min?: number;
+      max: number;
+    }
+  | {
+      type: "payment.budget";
+      currency: CurrencyCode;
+      max: number;
+    }
+  | {
+      type: "payment.allowed_payees";
+      allowed: Merchant[];
+    }
+  | {
+      type: "payment.allowed_payment_instruments";
+      allowed: PaymentInstrument[];
+    }
+  | {
+      type: "payment.agent_recurrence";
+      frequency: RecurrenceFrequency;
+      max_occurrences?: number;
+    }
+  | {
+      type: "payment.execution_date";
+      not_before?: Instant;
+      not_after?: Instant;
+    }
+  | {
+      type: "payment.reference";
+      conditional_transaction_id: HexSha256;
+    }
+  | {
+      type: "aether.allowed_skus";
+      allowed: string[];
+    }
+  | {
+      type: "aether.max_autonomy";
+      max: AutonomyLevel;
+    };
+
+/** Closed catalog. An unknown `type` is syntax, not a silent no-op constraint. */
+export const MANDATE_CONSTRAINT_TYPES = [
+  "payment.amount_range",
+  "payment.budget",
+  "payment.allowed_payees",
+  "payment.allowed_payment_instruments",
+  "payment.agent_recurrence",
+  "payment.execution_date",
+  "payment.reference",
+  "aether.allowed_skus",
+  "aether.max_autonomy",
+] as const satisfies ReadonlyArray<MandateConstraint["type"]>;
+
+export interface IntentMandate {
+  vct: "aether.mandate.intent.open.1" | "aether.mandate.intent.1";
+  id: MandateId;
+  issuerId: AgentId;
+  subjectId: AgentId;
+  task: string;
+  constraints: MandateConstraint[];
+  /** Parent intent when an L4+ agent hands a smaller slip to another agent. */
+  parentId?: MandateId;
+  iat: number;
+  exp: number;
+}
+
+export interface CartMandate {
+  vct: "aether.mandate.cart.1";
+  id: MandateId;
+  intentId: MandateId;
+  intentHash: HexSha256;
+  merchant: Merchant;
+  line_items: LineItem[];
+  total: Money;
+  expiresAt: Instant;
+  userConfirmationRequired: boolean;
+}
+
+/**
+ * Inspect / snapshot view. Bound (unique_payment occupies) wins over expired.
+ * A hire that points at this cart is not bound — that occupancy lives on the hire.
+ * The store stays raw.
+ */
+export type CartStatus = "live" | "expired" | "bound";
+
+export interface PaymentMandate {
+  vct: "aether.mandate.payment.1" | "aether.mandate.payment.open.1";
+  id: MandateId;
+  /** sha256(canonicalJson(cart.payload)) — AP2 checkout-hash role. */
+  transaction_id: HexSha256;
+  payee: Merchant;
+  payment_amount: { amount: number; currency: CurrencyCode };
+  payment_instrument: PaymentInstrument;
+  execution_date?: Instant;
+  iat: number;
+  /** Unix seconds. One day from `iat`, matching the cart window. Not milliseconds. */
+  exp: number;
+}
+
+export interface Signed<T> {
+  payload: T;
+  issuer: Did;
+  kid: string;
+  alg: "EdDSA";
+  jws: string;
+}
+
+// ---------------------------------------------------------------------------
+// x402-shaped envelopes
+// ---------------------------------------------------------------------------
+
+export interface PaymentResource {
+  url: string;
+  description: string;
+  mimeType: "application/json";
+}
+
+export interface AcceptedPayment {
+  scheme: "exact" | "upto";
+  network: typeof SIM_RAIL_ID;
+  amount: string;
+  asset: CurrencyCode;
+  payTo: AccountId;
+  maxTimeoutSeconds: number;
+  extra?: {
+    hireId?: HireId;
+    cartId?: MandateId;
+    paymentMandateId?: MandateId;
+  };
+}
+
+export interface PaymentRequired {
+  x402Version: 2;
+  resource: PaymentResource;
+  accepted: AcceptedPayment[];
+}
+
+export interface PaymentPayloadInner {
+  payerAccountId: AccountId;
+  paymentMandateId: MandateId;
+  nonce: string;
+  authorizedAmount: string;
+  asset: CurrencyCode;
+  validBefore: Instant;
+  /** Ed25519 over canonicalJson of this object without `signature`. */
+  signature: string;
+}
+
+export interface PaymentPayload {
+  x402Version: 2;
+  scheme: "exact" | "upto";
+  network: typeof SIM_RAIL_ID;
+  payload: PaymentPayloadInner;
+}
+
+export interface SettlementResponse {
+  success: boolean;
+  transaction: TransferId | null;
+  network: typeof SIM_RAIL_ID;
+  payer: AccountId | null;
+  errorReason?: string;
+  receiptId?: ReceiptId;
+}
+
+export const X402_HEADERS = {
+  required: "PAYMENT-REQUIRED",
+  signature: "PAYMENT-SIGNATURE",
+  response: "PAYMENT-RESPONSE",
+} as const;
+
+// ---------------------------------------------------------------------------
+// Market + hire
+// ---------------------------------------------------------------------------
+
+export type HireState =
+  | "offered"
+  | "accepted"
+  | "funded"
+  | "delivered"
+  | "released"
+  | "refunded"
+  | "void";
+
+export const HIRE_TRANSITIONS: Readonly<Record<HireState, readonly HireState[]>> = {
+  offered: ["accepted", "void"],
+  accepted: ["funded", "void"],
+  funded: ["delivered", "refunded"],
+  delivered: ["released"],
+  released: [],
+  refunded: [],
+  void: [],
+};
+
+/** Commands that walk the hire. Absent from this table = not a transition command. */
+export const HIRE_COMMAND_TARGET = {
+  "hire.accept": "accepted",
+  "hire.fund": "funded",
+  "hire.deliver": "delivered",
+  "hire.refund": "refunded",
+  "hire.release": "released",
+  "envelope.submit": "released",
+} as const satisfies Record<string, HireState>;
+
+/** Commands that do not walk the hire but are only legal in one state. */
+export const HIRE_COMMAND_REQUIRED_STATE = {
+  "envelope.require": "delivered",
+} as const satisfies Record<string, HireState>;
+
+export interface HireContract {
+  id: HireId;
+  buyerId: AgentId;
+  sellerId: AgentId;
+  sku: string;
+  spec: string;
+  price: Money;
+  /** Current lifecycle state. Illegal arrows are `hire.state`, not a mutate throw. */
+  state: HireState;
+  rfqId: RfqId;
+  quoteId: QuoteId;
+  intentId: MandateId;
+  cartId?: MandateId;
+  escrowAccountId: AccountId;
+  deliverableHash?: HexSha256;
+  createdAt: Instant;
+}
+
+export interface Rfq {
+  id: RfqId;
+  buyerId: AgentId;
+  sku: string;
+  spec: string;
+  invitedSellerIds: AgentId[];
+  expiresAt: Instant;
+}
+
+export interface Quote {
+  id: QuoteId;
+  rfqId: RfqId;
+  sellerId: AgentId;
+  price: Money;
+  fx?: {
+    from: CurrencyCode;
+    to: CurrencyCode;
+    /** `to_minor = floor(from_minor * rateE6 / 1_000_000)` */
+    rateE6: number;
+    validUntil: Instant;
+  };
+  expiresAt: Instant;
+}
+
+/**
+ * Inspect / snapshot view. Spent and held win over expired. Expired includes the
+ * quote envelope and a lapsed FX `validUntil`. The store stays raw.
+ */
+export type QuoteStatus = "live" | "expired" | "spent" | "held";
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+export type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
+
+export interface Account {
+  id: AccountId;
+  ownerId: AgentId | "system";
+  name: string;
+  type: AccountType;
+  currency: CurrencyCode;
+}
+
+export interface JournalLine {
+  accountId: AccountId;
+  debit: number;
+  credit: number;
+}
+
+export interface JournalEntry {
+  id: JournalId;
+  timestamp: Instant;
+  description: string;
+  hireId?: HireId;
+  paymentMandateId?: MandateId;
+  lines: JournalLine[];
+}
+
+export interface LedgerSnapshot {
+  accounts: Account[];
+  entries: JournalEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Policy
+// ---------------------------------------------------------------------------
+
+export type Verdict = "allow" | "deny" | "escalate";
+
+export type RemediationKind =
+  | "issue_intent"
+  | "reset_circuit"
+  | "unfreeze_actor"
+  | "unfreeze_principal"
+  | "attest_kya"
+  | "wait_approval"
+  | "role_forbidden"
+  | "none";
+
+export interface RuleVerdict {
+  ruleId: string;
+  verdict: Verdict;
+  message: string;
+  evidence?: Record<string, unknown>;
+}
+
+export interface PolicyDecision {
+  verdict: Verdict;
+  trace: RuleVerdict[];
+  approvalId?: ApprovalId;
+  remediation?: Remediation;
+}
+
+export interface ApprovalTicket {
+  id: ApprovalId;
+  createdAt: Instant;
+  expiresAt: Instant;
+  commandType: string;
+  commandHash: HexSha256;
+  reason: string;
+  ruleIds: string[];
+  requiredApproverRoles: AgentRole[];
+  status: "pending" | "approved" | "rejected" | "expired";
+  resolvedBy?: AgentId;
+  resolvedAt?: Instant;
+}
+
+export interface VelocityWindow {
+  windowSeconds: number;
+  count: number;
+  volume: number;
+}
+
+export interface CircuitState {
+  dailySpend: number;
+  dailyLimit: number;
+  tripped: boolean;
+}
+
+export interface SettlementWindow {
+  id: WindowId;
+  currency: CurrencyCode;
+  at: Instant;
+  nets: Array<{ from: AgentId; to: AgentId; currency: CurrencyCode; net: number }>;
+  legsConsumed: number;
+  grossVolume: number;
+  netVolume: number;
+}
+
+// ---------------------------------------------------------------------------
+// KYA — Know Your Agent (runtime graph the kernel consults)
+// ---------------------------------------------------------------------------
+
+export type KyaIssuerKind = "aether.self" | "tap.http-sig" | "skyfire.kya" | "erc8004.agent";
+
+export const KYA_MAX_DEPTH = 3;
+
+export interface DelegationAttestation {
+  id: DelegationId;
+  vct: "aether.kya.delegation.1";
+  issuerKind: KyaIssuerKind;
+  /** Money owner at the root of this chain. */
+  principalId: AgentId;
+  /** Who signed this hop. */
+  grantorId: AgentId;
+  delegateId: AgentId;
+  parentId?: DelegationId;
+  maxAutonomy: AutonomyLevel;
+  maxDepth: number;
+  createdAt: Instant;
+  expiresAt: Instant;
+  revokedAt?: Instant;
+}
+
+/** Graph and inspect view. Revoked wins over expired. The store stays raw. */
+export type KyaHopStatus = "live" | "expired" | "revoked";
+
+export interface KyaResolution {
+  required: boolean;
+  pathOk: boolean;
+  implicit: boolean;
+  depth: number;
+  maxDepth: number;
+  /**
+   * On `kya.attest`, omitted `principalId` is the speaker (`actor.id`), not the
+   * supervisor. Spend commands still resolve from the intent issuer.
+   */
+  principalId?: AgentId;
+  principalFrozen: boolean;
+  expired: boolean;
+  revoked: boolean;
+  grantedMaxAutonomy?: AutonomyLevel;
+  /**
+   * Ceiling this attest would write. Omitted `maxAutonomy` is 5 (standing mandate).
+   * An agent may not propose above its own rung (`kya.capability_subset`).
+   * Humans and treasury may grant L5. Absent = not an attest, or an earlier
+   * refuse (`kya.unique_live` / `kya.party` / `kya.not_self`) keeps first deny.
+   */
+  proposedMaxAutonomy?: AutonomyLevel;
+  hops: DelegationAttestation[];
+}
+
+export interface PolicyContext {
+  clock: Instant;
+  actor: Agent;
+  counterparties: Agent[];
+  intent?: Signed<IntentMandate>;
+  cart?: Signed<CartMandate>;
+  payment?: Signed<PaymentMandate>;
+  hire?: HireContract;
+  commandType: string;
+  amount?: Money;
+  payeeId?: AgentId;
+  spentAgainstIntent: number;
+  occurrenceCount: number;
+  /** Instant of the last funded occurrence under this intent. Absent = never spent. */
+  lastOccurrenceAt?: Instant;
+  velocity: VelocityWindow;
+  circuit: CircuitState;
+  /** Market-maker FX rate in millionths. Absent unless quoting/settling FX. */
+  fxRateE6?: number;
+  /**
+   * True when envelope.submit’s nonce was already settled.
+   * Absent = not a payment submit, or the body omitted nonce (mutate mints one).
+   * A leftover `nonce` on another verb is not this flag.
+   */
+  nonceSeen?: boolean;
+  /** False when MM cannot pay the `to` currency. */
+  mmInventoryOk?: boolean;
+  /**
+   * False when `market.fx_settle` would journal against a world with no market maker
+   * (or missing `market_maker:cash_usd` / `market_maker:cash_usdc` books).
+   * Absent = not a live FX settle (`market.fx_quote` handles missing/non-FX/spent quotes).
+   * A window is not a journal against nobody.
+   */
+  mmKnown?: boolean;
+  /** False when the audit chain fails verify(). */
+  auditHealthy?: boolean;
+  /** False when verifyChain failed for the attached mandate triple. */
+  chainOk?: boolean;
+  /** True when replaying a command after a matching ApprovalTicket. Waives threshold and the hire/settle rung, not caps. */
+  thresholdWaived?: boolean;
+  /** Current + this command’s amount vs bilateral exposure limit. */
+  projectedExposure?: number;
+  exposureLimit?: number;
+  /** Know-Your-Agent resolution. Absent means the command is not KYA-gated. */
+  kya?: KyaResolution;
+  /** Parent intent when spending against a sub-slip, or when issuing one. */
+  parentIntent?: Signed<IntentMandate>;
+  parentSpent?: number;
+  parentOccurrenceCount?: number;
+  parentLastOccurrenceAt?: Instant;
+  /** Child constraints when issuing a sub-intent. */
+  proposedConstraints?: MandateConstraint[];
+  /** False when SKU is not in the market catalog. Absent = command is not catalog-gated. */
+  skuListed?: boolean;
+  /**
+   * False when a quote or hire.create prices a listed SKU in a currency the catalog
+   * does not list for that SKU. Absent = not a priced catalog command, or the SKU/RFQ
+   * is unknown (`market.known_sku` / `market.known_rfq` handle those).
+   * Research is USD_SIM. Convert with `market.fx_settle`.
+   */
+  skuCurrencyOk?: boolean;
+  /** False when RFQ/quote/FX window is past expiresAt. Absent = not a market-time command. */
+  marketFresh?: boolean;
+  /**
+   * False when the quoting/hired seller is not on `Rfq.invitedSellerIds`.
+   * Absent = command is not invite-gated. Empty invite list is an open RFQ (true).
+   */
+  sellerInvited?: boolean;
+  /**
+   * False when a cart bound to a hire disagrees with that hire (price, seller, SKU, or non-integer cents).
+   * Absent = command is not cart-gated.
+   */
+  cartMatchesHire?: boolean;
+  /** False when the RFQ (or the quote’s RFQ) does not exist. Absent = not an RFQ-gated command. */
+  rfqKnown?: boolean;
+  /**
+   * False when `market.fx_settle` has no quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket.
+   * Absent = not an FX-settle command. An FX quote is a one-shot window.
+   */
+  fxQuoteLive?: boolean;
+  /**
+   * False when an FX window is on the wrong SKU, the price is not in `from`,
+   * or `from`/`to` is not USD_SIM → USDC_SIM (the pair this rail actually journals).
+   * Absent = not a quote/settle with an FX window, or the quote is not a live FX window
+   * (`market.fx_quote` / `market.known_rfq` handle those).
+   */
+  fxPairOk?: boolean;
+  /**
+   * False when `hire.create` would treat an FX window (`quote.fx`) or an FX SKU as a hireable good.
+   * Absent = not a hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * FX windows settle (`market.fx_settle`). They are not hires.
+   */
+  hireNotFx?: boolean;
+  /**
+   * False when `market.quote` prices an FX SKU without an `fx` window.
+   * Absent = not quoting a listed FX SKU (`market.known_sku` / `market.known_rfq` handle those).
+   * An FX SKU is a conversion window, not a good.
+   */
+  fxWindowOk?: boolean;
+  /**
+   * False when `market.quote` would write an FX `validUntil` ≤ now (or unparseable).
+   * Absent = not quoting with an `fx` object. A missing window stays `market.fx_window`.
+   * Settle of a window that lapses after mint still names `market.not_expired`.
+   * Ghost RFQ stays `market.known_rfq`. A swapped pair stays `market.fx_pair`.
+   */
+  fxMintFresh?: boolean;
+  /**
+   * False when `hire.create` would reuse a quote that already produced a hire, an FX settle,
+   * or is held by an open approval ticket.
+   * Absent = not a hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * A deny does not consume the quote. An escalate *reserves* it until
+   * the ticket is approved, rejected, or expired. A void/refund does not restore it.
+   */
+  quoteUnspent?: boolean;
+  /**
+   * False when a hireId command points at a hire that is not in this world.
+   * Absent = command does not require a live hire (`hire.create` uses a draft).
+   */
+  hireKnown?: boolean;
+  /**
+   * False when hire.create or issue_cart points at an intent that is not in this world.
+   * Absent = command does not require a live intent.
+   */
+  intentKnown?: boolean;
+  /**
+   * False when issue_payment points at a cart that is not in this world.
+   * Absent = command does not require a live cart.
+   */
+  cartKnown?: boolean;
+  /**
+   * False when approval.resolve points at a ticket that is not in this world.
+   * Absent = not an approval.resolve.
+   */
+  approvalKnown?: boolean;
+  /**
+   * False when the ticket exists but is expired or already resolved.
+   * Absent = not an approval.resolve, or the ticket is unknown (`approvalKnown` handles that).
+   */
+  approvalPending?: boolean;
+  /**
+   * False when `approval.resolve` would approve a ticket whose paused command
+   * is no longer an allow (stale quote, expired intent, missing pending command).
+   * Absent = not approving a live ticket (`approval.pending` / `approval.known` handle those).
+   * Reject does not set this flag — you can always refuse a dead pause.
+   */
+  replayOk?: boolean;
+  /**
+   * False when the actor is not the counterparty this hire command belongs to.
+   * Accept / deliver / envelope.require are the seller. Refund / release are the buyer or treasury.
+   * Absent = not a party-gated command, or the hire is unknown (`hireKnown` handles that).
+   */
+  hirePartyOk?: boolean;
+  /**
+   * False when issue_intent points at a parentId that is not in this world.
+   * Absent = not a sub-intent (no parentId).
+   */
+  parentKnown?: boolean;
+  /**
+   * False when freeze / unfreeze / ladder.set / kya.attest / kya.revoke / issue_cart / issue_intent /
+   * market.rfq names an agent that is not in this world (delegate, principal, merchant, subject,
+   * freeze target, or RFQ invitee). Absent = command does not require a registered target agent.
+   * An empty or omitted invite list is an open RFQ and does not set this flag.
+   */
+  targetKnown?: boolean;
+  /**
+   * False when ladder.set would skip a rung, lack a required gate, or use the wrong approver.
+   * Listing `kill_switch_tested` is not the test — freeze then unfreeze is.
+   * Absent = not a ladder.set, or the target agent is unknown (`identity.known` handles that).
+   */
+  ladderLegal?: boolean;
+  /**
+   * False when kya.attest would make the grantor the delegate.
+   * Absent = not a kya.attest, or the delegate is unknown (`identity.known` handles that).
+   */
+  kyaNotSelf?: boolean;
+  /**
+   * False when kya.attest points at a parentId that is not in this world’s graph.
+   * Absent = not a nested hop (no parentId). Do not reuse `parentKnown` —
+   * that flag is for issue_intent and would steal first deny as mandate.known_parent.
+   * A parent that exists but is expired or revoked is `kya.parent_fresh`, not this flag.
+   */
+  kyaParentKnown?: boolean;
+  /**
+   * False when kya.attest names a parent hop that exists but is not live
+   * (`hopStatus` is expired or revoked), or when hire.create / hire.fund /
+   * mandate.issue_intent would spend along a nested hop whose parent is not live.
+   * Set on attest when `kyaParentKnown === true`. Set on those spend verbs when
+   * the resolved path contains a hop with parentId.
+   * Absent = no parentId, or not those verbs (completing a funded hire after the
+   * parent hop dies is legal). Ghost parent stays `kya.known_parent`.
+   * Do not reuse `parentFresh` — that flag is for intent slips.
+   * Do not add this to `proposedKyaGrant` or omit→L5 would steal `kya.capability_subset`.
+   * Graph `attest()` still writes a nested hop under a corpse; dispatch does not.
+   */
+  kyaParentFresh?: boolean;
+  /**
+   * False when kya.revoke points at an attestationId that is not in this world’s graph,
+   * or that belongs to a different principal. Absent = not a named-attestation revoke.
+   * Do not reuse `kyaParentKnown` — that flag is for nested attest and would steal first deny.
+   * Revoke by principal+delegate with no attestationId still tombstones implicit grants.
+   */
+  kyaAttestationKnown?: boolean;
+  /**
+   * False when kya.attest or kya.revoke names a principal that is not the actor,
+   * and the actor is not a human or treasury. Absent = not a handshake command.
+   * Omitted principalId is the speaker, not the supervisor. An L4 desk cannot mint
+   * or tombstone a founder’s handshake by filling in the ids.
+   */
+  kyaPartyOk?: boolean;
+  /**
+   * False when identity.register would reuse a runtime alias or its operating book
+   * (USD cash, and USDC for data_vendor / market_maker).
+   * Absent = not a register. Two agents cannot share one operating book.
+   * A second market maker collides on `market_maker:cash_usd` even with a new alias.
+   * A stray `key:usdc` is the same refuse — not `account exists` after opening USD cash.
+   */
+  aliasFree?: boolean;
+  /**
+   * False when ledger.transfer, a named ledger.balances, or market.fx_settle points at a book
+   * that is not in this world. FX settle needs the actor’s USDC book (compute vendors and
+   * treasury are registered with USD only). Absent = not an account-name command
+   * (full balance listing has no name).
+   */
+  accountsKnown?: boolean;
+  /**
+   * False when ledger.transfer would post two currencies in one journal, or the stated
+   * amount currency disagrees with the books, or hire.fund would lock a cash book into
+   * an escrow of a different currency. Absent = not a transfer or fund, or a book is
+   * missing (`ledger.known_account` handles that). FX is market.fx_settle, not a transfer.
+   */
+  accountsSameCurrency?: boolean;
+  /**
+   * False when ledger.transfer, hire.fund, or market.fx_settle would overdraw the source book.
+   * Absent = not a cash-gated command, or a book is missing / mixed (`ledger.known_account` /
+   * `ledger.same_currency` handle those). A transfer is not an overdraft. Escrow cannot lock on empty
+   * cash, and cannot mix USD cash into a USDC hire. An FX settle cannot spend USD the vendor does
+   * not hold (`mm.inventory` is the MM’s USDC).
+   */
+  fundsOk?: boolean;
+  /**
+   * False when a journal would leave a touched book outside `Number.isSafeInteger`
+   * (dest + amount, or the matching source/equity leg).
+   * Absent = not a cash-moving command, or a book is missing / mixed / overdrawn
+   * (`ledger.known_account` / `ledger.same_currency` / `ledger.sufficient` handle those).
+   * Also set on hire.refund / hire.release / envelope.submit when a live hire’s dest
+   * (buyer on refund, seller on release) would overflow. IEEE rounding is not a mint.
+   */
+  balancesSafe?: boolean;
+  /**
+   * False when ledger.transfer would journal against equity or escrow
+   * (or any non-asset book). Absent = not a transfer, or a book is missing / mixed / overdrawn
+   * (`ledger.known_account` / `ledger.same_currency` / `ledger.sufficient` handle those).
+   * Dest overflow of operating cash stays `ledger.safe_balance`.
+   * Opening cash is `seedOpening`. Escrow moves through hire.fund / refund / release.
+   * A transfer is not a mint, and it cannot pick the escrow lock.
+   */
+  operatingBooksOk?: boolean;
+  /**
+   * False when identity.register would mint L5.
+   * Absent = not a register. L0–L4 at birth are legal.
+   * L5 skips per-tx humans. That rung is a climb (`ladder.set` 4→5) after a freeze
+   * that was actually tested — not a field on the birth certificate.
+   * A reused alias stays `identity.unique_key`. System minting a second agent stays
+   * `actor.system_scope`. Skipping a rung on an existing agent stays `ladder.legal`.
+   */
+  birthRungOk?: boolean;
+  /**
+   * False when receipt.get names a receipt that is not in this world.
+   * Absent = not a receipt.get. A missing receipt is not an empty success.
+   * `aether_get` / inspect of a miss still returns nothing; the command bus does not pretend yes.
+   */
+  receiptKnown?: boolean;
+  /**
+   * False when identity.freeze targets an already-frozen agent, or identity.unfreeze
+   * targets an agent that is not frozen. Absent = not a freeze/unfreeze, or the target
+   * is unknown (`identity.known` handles that). A no-op freeze is not a notary line after yes.
+   */
+  freezeStateOk?: boolean;
+  /**
+   * False when kya.attest would mint a second live (non-revoked) hop for the same
+   * principal→delegate pair. Absent = not an attest, or the delegate is unknown / self
+   * (`identity.known` / `kya.not_self` handle those). Revoke, then attest again.
+   */
+  kyaLiveFree?: boolean;
+  /**
+   * False when kya.attest would write expiresAt ≤ now (or an unparseable Instant).
+   * Absent = not a kya.attest. Omit expiresAt is one year from now.
+   * A handshake cannot be born dead. New spends still name `kya.attestation_fresh`
+   * when a live hop later expires. Completing a funded hire after that window is
+   * legal. Ghost, self, party, unique_live, and over-grant keep first deny.
+   */
+  kyaMintFresh?: boolean;
+  /**
+   * False when kya.attest would write expiresAt after now + one year.
+   * Absent = not a kya.attest. Omit is exactly one year — the ceiling, not a
+   * suggestion. A year-9999 hop is not standing identity. Past stays
+   * `kya.mint_fresh`. Ghost, self, party, unique_live, and over-grant keep first deny.
+   */
+  kyaMintWindowOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an execution_date window that
+   * cannot contain now (already closed, inverted, or unparseable Instant).
+   * Absent = not issue_intent, or the slip has no execution_date constraint.
+   * Hire/fund still names `payment.execution_date`. A future not_before still mints
+   * if it opens before the slip dies (`mandate.window_reach`). Ghost subject,
+   * missing parent, and a wider child keep first deny.
+   */
+  windowMintFresh?: boolean;
+  /**
+   * False when mandate.issue_intent would write a not_before at or after the
+   * slip's seven-day exp. Absent = not issue_intent, or no execution_date constraint.
+   * A closed calendar stays `mandate.window_fresh`. Ghost, parent, and wider child
+   * keep first deny.
+   */
+  windowReachOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write a recurrence cap that cannot
+   * admit a first hire (`max_occurrences` ≤ 0, or not a finite number).
+   * Absent = not issue_intent, or the slip has no agent_recurrence constraint.
+   * Omit max_occurrences is unlimited and still mints. Hire/fund still names
+   * `payment.recurrence`. Ghost subject, missing parent, and a wider child
+   * keep first deny.
+   */
+  occurrenceMintOk?: boolean;
+  /**
+   * False when the parent intent is past `exp` (unix seconds).
+   * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
+   * Absent = no parent, or not those verbs (completing a funded hire after the parent
+   * dies is legal). Ghost parent stays `mandate.known_parent`. The child's own
+   * expiry stays `mandate.not_expired` on a new spend. Completing a funded hire after that is legal.
+   */
+  parentFresh?: boolean;
+  /**
+   * False when issue_cart names a live hire that already has a cartId.
+   * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).
+   * A hire takes one cart. A second cart is not a pointer swap.
+   */
+  cartUnbound?: boolean;
+  /**
+   * False when issue_payment points at a cart that already has a payment mandate
+   * (same cart hash / transaction_id).
+   * Absent = not issue_payment, or the cart is unknown (`mandate.known_cart` handles that).
+   * A cart takes one payment. A second payment is not a second check.
+   */
+  paymentUnbound?: boolean;
+  /**
+   * False when hire.fund / hire.release / envelope.submit would move escrow
+   * against a live hire that has not bound a cart (and that cart’s payment).
+   * Absent = not those commands, or the hire is unknown (`hire.known` handles that).
+   * Passing cartId on fund is not a pointer. Issue the cart with hireId.
+   */
+  cartBound?: boolean;
+  /**
+   * False when the command’s actorId is not `system` and is not a registered agent.
+   * Absent = the speaker is system or a live agent (`identity.known` is for *named targets*, not the speaker).
+   * A missing speaker is not a 500 after yes. HTTP/MCP unknown alias becomes this string, not silent system.
+   */
+  actorKnown?: boolean;
+  /**
+   * False when Command.actorId is `system` and the command is not a bootstrap of the
+   * first human or a read (catalog / audit.query / balances / receipt.get).
+   * Absent = speaker is not system. System is the runtime, not a treasurer.
+   * HTTP/MCP omitting actor still becomes system; this rule is the fence.
+   * A provided name that is not a live alias is `actor.known`, not silent system.
+   */
+  systemOk?: boolean;
+}
+
+export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
+  procurement: 500_000,
+  treasury: 2_000_000,
+  data_vendor: 50_000,
+  compute_vendor: 50_000,
+  market_maker: 50_000,
+  auditor: 0,
+  human_operator: 0,
+};
+
+export const VELOCITY_CAPS = {
+  windowSeconds: 3600,
+  maxCount: 20,
+  maxVolume: 2_000_000,
+} as const;
+
+export const MM_RATE_BAND_E6 = {
+  min: 980_000,
+  max: 1_020_000,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Receipt + audit
+// ---------------------------------------------------------------------------
+
+export interface Receipt {
+  id: ReceiptId;
+  status: "Success" | "Error";
+  iss: typeof RECEIPT_ISSUER;
+  iat: number;
+  /** sha256(canonicalJson(closed PaymentMandate)) */
+  reference: HexSha256;
+  payment_id: TransferId;
+  journalId: JournalId;
+  hireId?: HireId;
+  network_confirmation_id: HexSha256;
+  error?: string;
+  error_description?: string;
+}
+
+export type AuditAction =
+  | "GENESIS"
+  | "IDENTITY_REGISTER"
+  | "LADDER_SET"
+  | "MANDATE_ISSUE"
+  | "RFQ_CREATE"
+  | "QUOTE_SUBMIT"
+  | "HIRE_TRANSITION"
+  | "POLICY_DECISION"
+  | "APPROVAL_RESOLVE"
+  | "PAYMENT_REQUIRED"
+  | "PAYMENT_SUBMIT"
+  | "JOURNAL_POST"
+  | "RECEIPT_ISSUE"
+  | "FREEZE"
+  | "UNFREEZE"
+  | "KYA_ATTEST"
+  | "KYA_REVOKE"
+  | "CIRCUIT_RESET"
+  | "CLEARING_WINDOW"
+  | "AUDIT_VERIFY";
+
+export interface AuditSubject {
+  type: string;
+  id: string;
+}
+
+export interface AuditRecord {
+  v: 1;
+  seq: number;
+  prevHash: HexSha256;
+  recordedAt: Instant;
+  actorId: AgentId | "system";
+  action: AuditAction;
+  subjects: AuditSubject[];
+  payload: unknown;
+  payloadHash: HexSha256;
+  hash: HexSha256;
+}
+
+export interface AuditVerifyOk {
+  ok: true;
+  head: HexSha256;
+  length: number;
+}
+
+export interface AuditVerifyFail {
+  ok: false;
+  seq: number;
+  reason: string;
+}
+
+export type AuditVerifyResult = AuditVerifyOk | AuditVerifyFail;
+
+// ---------------------------------------------------------------------------
+// Command bus
+// ---------------------------------------------------------------------------
+
+export type CommandType =
+  | "identity.register"
+  | "identity.freeze"
+  | "identity.unfreeze"
+  | "kya.attest"
+  | "kya.revoke"
+  | "circuit.reset"
+  | "mandate.issue_intent"
+  | "mandate.issue_cart"
+  | "mandate.issue_payment"
+  | "market.rfq"
+  | "market.quote"
+  | "market.fx_settle"
+  | "market.catalog"
+  | "hire.create"
+  | "hire.accept"
+  | "hire.fund"
+  | "hire.deliver"
+  | "hire.release"
+  | "hire.refund"
+  | "envelope.require"
+  | "envelope.submit"
+  | "approval.resolve"
+  | "ladder.set"
+  | "ledger.transfer"
+  | "ledger.balances"
+  | "clearing.settle_window"
+  | "audit.verify"
+  | "audit.query"
+  | "receipt.get";
+
+/**
+ * What another agent should do next. English is for humans; `kind` is for machines.
+ * `commandType` is a hint for a follow-up Command, not a guaranteed second dispatch.
+ */
+export interface Remediation {
+  kind: RemediationKind;
+  ruleId: string;
+  hint: string;
+  commandType?: CommandType;
+}
+
+export interface Command<T extends CommandType = CommandType, B = unknown> {
+  type: T;
+  actorId: AgentId | "system";
+  body: B;
+  /** Client-supplied or auto-hashed for money-moving verbs. Denies are never keyed. */
+  idempotencyKey?: string;
+}
+
+/** Commands that spend, close, or hand down authority. The kernel consults KYA.
+ *  Hop expiry does not trap funded escrow (`kya.attestation_fresh` allows complete-after-fund).
+ *  Freeze and revoke still bind on those verbs. Do not drop them from this list.
+ */
+export const KYA_GATED_COMMANDS: readonly CommandType[] = [
+  "hire.create",
+  "hire.fund",
+  "hire.release",
+  "hire.refund",
+  "envelope.submit",
+  "mandate.issue_intent",
+  "kya.attest",
+];
+
+/**
+ * Commands `system` may run besides bootstrapping the first human_operator.
+ * System is the runtime, not a treasurer. HTTP/MCP omitting actor still becomes system.
+ * A provided name that is not a live alias is `actor.known`, not silent system.
+ */
+export const SYSTEM_READ_COMMANDS: readonly CommandType[] = [
+  "market.catalog",
+  "audit.query",
+  "ledger.balances",
+  "receipt.get",
+];
+
+export const ROLE_CAPABILITY: Record<
+  AgentRole,
+  readonly CommandType[]
+> = {
+  treasury: [
+    "identity.register",
+    "identity.freeze",
+    "identity.unfreeze",
+    "kya.attest",
+    "kya.revoke",
+    "circuit.reset",
+    "mandate.issue_intent",
+    "mandate.issue_cart",
+    "mandate.issue_payment",
+    "market.rfq",
+    "market.fx_settle",
+    "hire.create",
+    "hire.accept",
+    "hire.fund",
+    "hire.release",
+    "hire.refund",
+    "envelope.require",
+    "envelope.submit",
+    "approval.resolve",
+    "ladder.set",
+    "ledger.transfer",
+    "ledger.balances",
+    "clearing.settle_window",
+    "audit.verify",
+    "audit.query",
+    "market.catalog",
+    "receipt.get",
+  ],
+  procurement: [
+    "mandate.issue_intent",
+    "kya.attest",
+    "kya.revoke",
+    "mandate.issue_cart",
+    "mandate.issue_payment",
+    "market.rfq",
+    "hire.create",
+    "hire.accept",
+    "hire.fund",
+    "hire.release",
+    "hire.refund",
+    "envelope.require",
+    "envelope.submit",
+    "ledger.balances",
+    "audit.query",
+    "market.catalog",
+    "receipt.get",
+  ],
+  data_vendor: [
+    "market.quote",
+    "market.fx_settle",
+    "hire.accept",
+    "hire.deliver",
+    "envelope.require",
+    "envelope.submit",
+    "ledger.balances",
+    "audit.query",
+    "market.catalog",
+    "receipt.get",
+  ],
+  compute_vendor: [
+    "market.quote",
+    "market.fx_settle",
+    "hire.accept",
+    "hire.deliver",
+    "envelope.require",
+    "envelope.submit",
+    "ledger.balances",
+    "audit.query",
+    "market.catalog",
+    "receipt.get",
+  ],
+  market_maker: [
+    "market.quote",
+    "market.fx_settle",
+    "envelope.require",
+    "envelope.submit",
+    "ledger.balances",
+    "audit.query",
+    "market.catalog",
+    "receipt.get",
+  ],
+  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog"],
+  human_operator: [
+    "identity.register",
+    "identity.freeze",
+    "identity.unfreeze",
+    "kya.attest",
+    "kya.revoke",
+    "circuit.reset",
+    "mandate.issue_intent",
+    "approval.resolve",
+    "ladder.set",
+    "audit.verify",
+    "audit.query",
+    "market.catalog",
+    "ledger.balances",
+    "clearing.settle_window",
+    "receipt.get",
+  ],
+};

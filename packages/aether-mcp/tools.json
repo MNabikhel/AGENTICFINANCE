@@ -1,0 +1,155 @@
+{
+  "description": "MCP tool surface. Each tool is a CommandType. inputSchema mirrors /schemas.",
+  "tools": [
+    {
+      "name": "aether_identity_register",
+      "commandType": "identity.register",
+      "description": "Register an agent identity, DID, Ed25519 key, and cash account."
+    },
+    {
+      "name": "aether_identity_freeze",
+      "commandType": "identity.freeze",
+      "description": "Freeze an agent: autonomy drops to L0, spend denied. Unfreeze restores the prior rung."
+    },
+    {
+      "name": "aether_identity_unfreeze",
+      "commandType": "identity.unfreeze",
+      "description": "Lift a freeze. Counts as a kill-switch test required before L5."
+    },
+    {
+      "name": "aether_mandate_issue_intent",
+      "commandType": "mandate.issue_intent",
+      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused. A child of an expired parent is refused."
+    },
+    {
+      "name": "aether_mandate_issue_cart",
+      "commandType": "mandate.issue_cart",
+      "description": "Issue a merchant-bound cart hashed to an intent. Completing a funded hire after the cart window is legal; fund of a stale cart is not."
+    },
+    {
+      "name": "aether_mandate_issue_payment",
+      "commandType": "mandate.issue_payment",
+      "description": "Issue a payment mandate whose transaction_id is sha256(cart). A cart takes one payment; inspect of that cart then labels bound."
+    },
+    {
+      "name": "aether_market_rfq",
+      "commandType": "market.rfq",
+      "description": "Create an RFQ. Non-empty invitedSellerIds is a closed room of live agents; empty/omitted is open. A missing guest is identity.known."
+    },
+    {
+      "name": "aether_market_quote",
+      "commandType": "market.quote",
+      "description": "Submit a quote or FX rate. MM rates must stay inside 200bps. An FX validUntil already past or unparseable is refused."
+    },
+    {
+      "name": "aether_hire_create",
+      "commandType": "hire.create",
+      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire; completing funded work after that is legal."
+    },
+    {
+      "name": "aether_hire_accept",
+      "commandType": "hire.accept",
+      "description": "Seller accepts a hire. Escrow must already exist."
+    },
+    {
+      "name": "aether_hire_fund",
+      "commandType": "hire.fund",
+      "description": "Buyer funds escrow. Budget is consumed here, not at deliver/submit. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new fund; completing funded work after that is legal."
+    },
+    {
+      "name": "aether_hire_deliver",
+      "commandType": "hire.deliver",
+      "description": "Seller marks work delivered. Hire must be funded. Completing after the cart, handshake, or grant window is legal."
+    },
+    {
+      "name": "aether_hire_refund",
+      "commandType": "hire.refund",
+      "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release. Completing after the cart, handshake, or grant window is legal; freeze and revoke still bind."
+    },
+    {
+      "name": "aether_hire_release",
+      "commandType": "hire.release",
+      "description": "Release funded+delivered escrow to the seller without an x402 envelope. Same books as envelope.submit. Completing after the cart, handshake, or grant window is legal; freeze and revoke still bind."
+    },
+    {
+      "name": "aether_payment_require",
+      "commandType": "envelope.require",
+      "description": "Return an x402-shaped PaymentRequired envelope (HTTP 402)."
+    },
+    {
+      "name": "aether_payment_submit",
+      "commandType": "envelope.submit",
+      "description": "Submit a signed PaymentPayload. Settles via sim facilitator. Completing after the cart, handshake, or grant window is legal; hashes still verify. Freeze and revoke still bind."
+    },
+    {
+      "name": "aether_approval_resolve",
+      "commandType": "approval.resolve",
+      "description": "Approve or reject an escalation ticket. Replay uses commandHash."
+    },
+    {
+      "name": "aether_kya_attest",
+      "commandType": "kya.attest",
+      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped. expiresAt must be after now and at most one year; omit for one year. A nested hop under an expired or revoked parent is refused."
+    },
+    {
+      "name": "aether_kya_revoke",
+      "commandType": "kya.revoke",
+      "description": "Revoke a handshake. Cascades to sub-delegates. Blocks implicit supervisor grants."
+    },
+    {
+      "name": "aether_circuit_reset",
+      "commandType": "circuit.reset",
+      "description": "Reset a tripped daily circuit breaker. Mandate budgets are unchanged."
+    },
+    {
+      "name": "aether_ladder_set",
+      "commandType": "ladder.set",
+      "description": "Move an agent one rung. Skipping rungs is illegal. any→L0 always allowed."
+    },
+    {
+      "name": "aether_clearing_settle_window",
+      "commandType": "clearing.settle_window",
+      "description": "Close a settlement window: archive net exposure for a currency. Money already moved at escrow."
+    },
+    {
+      "name": "aether_ledger_balances",
+      "commandType": "ledger.balances",
+      "description": "Read account balances. Does not mutate."
+    },
+    {
+      "name": "aether_audit_verify",
+      "commandType": "audit.verify",
+      "description": "Replay the hash-chained audit log from genesis."
+    },
+    {
+      "name": "aether_audit_query",
+      "commandType": "audit.query",
+      "description": "Read notary lines for one subject id (hire, mandate, quote, agent). Does not mutate."
+    },
+    {
+      "name": "aether_market_catalog",
+      "commandType": "market.catalog",
+      "description": "List SKUs that may be hired. This is not a storefront."
+    },
+    {
+      "name": "aether_receipt_get",
+      "commandType": "receipt.get",
+      "description": "Fetch a receipt. reference must equal sha256(payment mandate)."
+    },
+    {
+      "name": "aether_demo_sprint",
+      "commandType": "demo.sprint",
+      "description": "Run the Sprint Procurement TAP demo on sim:aether-1."
+    },
+    {
+      "name": "aether_demo_night_watch",
+      "commandType": "demo.night-watch",
+      "description": "Run the Night Watch standing-mandate TAP demo: KYA, L5, circuit, freeze, revoke."
+    },
+    {
+      "name": "aether_demo_sub_hire",
+      "commandType": "demo.sub-hire",
+      "description": "Run the L4 sub-intent TAP demo: nested slips, parent budget, revoke child handshake."
+    }
+  ]
+}

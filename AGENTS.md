@@ -1,0 +1,152 @@
+# AGENTS.md — how another agent uses Aether
+
+Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
+
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.85.0`.
+
+Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
+
+## There is no finish date
+
+This is a kernel. You extend it. Public protocol and live money are different switches.
+
+- **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch.
+- **Live money (later):** adapters on these objects (x402 / MPP / AP2 / TAP) plus credentials that never enter `evaluate()`. Until then `instrument.sim_only` denies anything else.
+
+## Speak to it
+
+```
+pnpm mcp                 # stdio MCP (Content-Length JSON-RPC)
+POST /v1/*               # same commands over HTTP
+GET  /v1/protocol        # pin-able card
+AETHER_DATA_DIR=./data pnpm mcp   # durable world.json + audit.jsonl
+```
+
+Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. HTTP, CLI, and MCP construct that object and call `Runtime.dispatch`. Policy runs first. Deny never mutates. A deny includes a typed `remediation` (`kind` is for machines). Money-moving allows are replayed by key so a retry cannot double-spend. Denies are never cached.
+
+MCP tools map 1:1 onto `CommandType` plus:
+
+- `aether_snapshot` / resource `aether://snapshot`
+- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `dlg_` hop includes derived status (`live | expired | revoked`).
+- `aether_protocol` / resource `aether://protocol`
+- `aether://commands` — JSON Schema for every command body
+- `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
+- `aether_audit_query` / `GET /v1/audit?subject=` — notary lines for one id
+- `aether_reset` (wipes `AETHER_DATA_DIR` if set)
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
+
+`tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
+
+Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A name that is not an alias yet is a missing speaker (`actor.known`), not system. Omit `actor` or pass `system` to bootstrap the first human.
+
+## Invariants the kernel will enforce
+
+1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
+2. Intent → Cart → Payment chain must verify on fund (`hire.fund`). Submit verifies signatures and hashes; expiry was checked at fund. Completing a funded hire after the cart or payment window is legal.
+3. 84 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`). Completing a funded hire after the hop expires, or after a climb above the grant, is legal; freeze and revoke still bind.
+5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
+6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
+7. Freeze sets L0. Unfreeze restores the prior rung. `any → L0` is always legal. Skipping rungs is `ladder.legal`, not a mutate throw after an allow. Listing L5 gate names is not the freeze test.
+8. Auditor can `audit.verify` and freeze. Auditor cannot spend.
+9. Receipt.reference === sha256(JCS(payment mandate)).
+10. Durable boot: `world.json` and `audit.jsonl` must agree on length. Mismatch is a refuse, not a guess.
+11. `clearing.settle_window` archives net exposure. It is not a second payment. Money already moved at escrow.
+12. Idempotency: same key (or auto-hash of a money-moving command) + prior **allow/escalate** = replay, no second mutation, no extra clock step, no extra audit. **Denies are not cached.** An escalate whose ticket is past `expiresAt` is not a live hit — sweep it, free the quote, let the original command retry. Unfreeze / new intent / circuit reset must be retryable with the same body. Approval replay (`thresholdWaived`) bypasses the lookup so the books can actually change.
+13. `PolicyDecision.remediation.kind` is a machine enum (`issue_intent`, `wait_approval`, `attest_kya`, `unfreeze_actor`, `unfreeze_principal`, `reset_circuit`, `role_forbidden`, `none`). Do not parse English `hint`.
+14. `hire.refund` is legal only from `funded` (not after deliver/release) — that is `hire.state`. It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
+15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
+16. Approval tickets expire (`approval.pending`). Resolving an expired or already-resolved ticket is a policy deny, not a late yes. The original command may be retried (new ticket) if it is still legal. Approving a live ticket whose paused command is no longer an allow is `approval.replay` — not a mutate throw after writing yes. Reject still releases the quote.
+17. Only catalog SKUs may be RFQ’d or hired (`market.catalog`). A listed SKU may only be priced in a currency the catalog names (`market.sku_currency`). Stale quotes/RFQs cannot be hired (`market.not_expired`).
+18. `audit.query` reads notary lines for one subject. It does not mutate. Verify is a separate command.
+19. Non-empty `invitedSellerIds` is a closed RFQ (`market.invited_seller`). Empty or omitted is open; any listed seller role may quote. A guest id that is not in this world is `identity.known`, not a closed room nobody can quote.
+20. Missing required body fields, non-integer cents, an unsafe integer, a non-sim currency, mixed currencies in one cart, a cart line whose cents overflow, a listed enum miss (role, decision, issuer kind, clearing currency), an integer outside its schema range (ladder rung, autonomy), a listed field with the wrong JSON type (a number where a string id belongs, a string where an array belongs), a nested cart line / intent constraint missing its fields, an unknown constraint type, a listed constraint missing its value fields (an `amount_range` without `max`), or an FX window missing from/to/rateE6/validUntil are `command.malformed` (HTTP 400). That is syntax, not policy. The clock does not step. The notary does not write. `evaluate()` does not run.
+21. `payment.agent_recurrence` binds. `max_occurrences` and the frequency gap are checked on `hire.create` and `hire.fund`. Completing a funded hire is not a new occurrence. A refund does not restore a slot. Child slips may not be more frequent than the parent. Minting a slip whose cap cannot admit a first hire is `mandate.occurrence_fresh`.
+22. A cart bound to a hire must match it (`hire.cart_matches`): same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount. A hire takes one cart (`hire.unique_cart`). A second cart is not a pointer swap. A cart takes one payment (`mandate.unique_payment`). A second payment is not a second check. Funding, releasing, or submitting envelope against a live hire that has not bound that cart (and its payment) is `hire.bound_cart`. Passing `cartId` on fund is not a pointer.
+23. `payment.execution_date` binds on new spends (`hire.create`, `hire.fund`). Completing a funded hire after `not_after` is legal. Cart and payment windows bind the same way: fund of a stale cart still names `mandate.chain_integrity`; deliver, release, refund, and submit after that window are legal. Child windows may not outlive the parent. Minting a slip whose window is already closed, inverted, or unparseable is `mandate.window_fresh`. A window that opens after the slip's seven-day life is `mandate.window_reach` — not a written corpse that then fails hire.
+24. Quoting or hiring against an unknown RFQ or quote is `market.known_rfq`. It is not a missing SKU. SKU, expiry, and invite flags are only set once the room exists.
+25. An FX quote is a one-shot window (`market.fx_quote`). Settling a missing quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket is a policy deny, not a mutate throw after an allow. A retry of the same command still replays. The 200bps band (`mm.spread_bound`) binds the nested `fx.rateE6` that is stored and settled — a decoy top-level `rateE6` does not. This rail’s window is USD_SIM → USDC_SIM with the price in `from` (`market.fx_pair`). An FX object on a research SKU is not a dual-use quote. Settling with no market maker (or missing MM books) is `mm.known`.
+26. A hire quote is used once (`hire.quote_unspent`). The same set is consumed by `hire.create` and `market.fx_settle`. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void or refund does not restore it. An FX window is not a hire (`hire.not_fx`). Settle it. A denied hire does not hold the window.
+27. A hireId that is not in this world is `hire.known`. It is not a broken mandate chain. Policy denies; mutate does not throw after an allow.
+28. An intentId that is not in this world is `mandate.known_intent`. It is not a missing handshake. A deny does not consume the quote.
+29. A cartId that is not in this world is `mandate.known_cart`. It is not a broken payment chain. A cart that already has a payment is `mandate.unique_payment`. It is not a second check.
+30. An approvalId that is not in this world is `approval.known`. It is not a late yes. Policy denies; mutate does not throw after an allow.
+31. Accept, deliver, and payment-required belong to the seller. Refund and release belong to the buyer or treasury (`hire.party`). The other side of the table is a policy deny, not a mutate throw.
+32. A parentId that is not in this world is `mandate.known_parent`. It is not a tighter child. Policy denies; mutate does not write a ghost parent. A parent that exists but is past `exp` is `mandate.parent_fresh`.
+33. An agentId that is not in this world is `identity.known`. Freeze, unfreeze, ladder, handshake (delegate *and* principal), revoke, cart merchant, intent subject, and RFQ invitees do not throw after an allow, and do not write a handshake, tombstone, or closed room for nobody. The *speaker* (`Command.actorId`) is `actor.known`. A missing speaker is not a 500.
+34. An illegal hire arrow is `hire.state`. Second accept, fund from offered, refund after deliver, release before deliver, and payment-required before deliver are policy denies, not a 409 or 402 after an allow. Refund is only from funded. Payment-required is only after deliver. The escrow table still throws if policy ever lies.
+35. An illegal ladder climb is `ladder.legal`. Skipping rungs, omitting a gate, listing `kill_switch_tested` without actually freezing, or the wrong approver are policy denies, not a mutate throw. `any→L0` stays legal.
+36. Attesting yourself is `kya.not_self`. A handshake is with another agent. The graph still throws if policy ever lies.
+37. A KYA `parentId` that is not in this world is `kya.known_parent`. It is not a live nested handshake. Policy denies; mutate does not mint a hop under a ghost parent. A parent hop that exists but is expired or revoked is `kya.parent_fresh`. This flag is not `mandate.known_parent`.
+38. An account name that is not in this world is `ledger.known_account`. Treasury cannot allocate through a missing book. A named balance of a missing book is not a zero. An FX settle without a USDC book is a missing book, not a journal throw. Policy denies; mutate does not throw after an allow.
+39. One journal is one currency (`ledger.same_currency`). USD_SIM and USDC_SIM do not mix in a transfer, and the stated amount must match the books. Escrow cannot lock USD cash into a USDC hire. Convert with `market.fx_settle`.
+40. A transfer cannot overdraw the source book (`ledger.sufficient`). Neither can `hire.fund` or `market.fx_settle` (the vendor’s USD leg). Draining to zero is legal. Negative cash is not. Escrow cannot lock on empty operating cash. MM USDC inventory is `mm.inventory`. A transfer of operating cash is not a mint; equity and escrow are `ledger.operating_book`.
+41. A KYA `attestationId` that is not in this world (or that belongs to another principal) is `kya.known_attestation`. It is not a silent tombstone. Revoke by principal+delegate with no id still kills implicit grants. Policy denies; mutate does not write `KYA_REVOKE` for a ghost or foreign handshake.
+42. Minting or tombstoning a handshake in someone else’s name is `kya.party`. You are the principal, or you are a human/treasury kill switch. Omitted `principalId` is you, not your supervisor. An L4 desk cannot write a founder’s handshake by filling in the ids.
+43. A reused register alias (or a second market maker sharing `market_maker:cash_usd`, or a data vendor whose `key:usdc` is already open) is `identity.unique_key`. Two agents cannot share one operating book. Same-body retries still replay. Policy denies; mutate does not throw `account exists` after an allow.
+44. A receiptId that is not in this world is `receipt.known`. It is not an empty success. Policy denies; mutate does not return nothing after an allow. Inspect of a miss still returns nothing.
+45. Unfreezing someone who is not frozen, or freezing someone who is already frozen, is `identity.freeze_state`. A no-op freeze is not a notary line after yes. Ghost freeze stays `identity.known`. Freeze then unfreeze is still the kill-switch test.
+46. A second live handshake for the same principal→delegate pair is `kya.unique_live`. One live hop per pair. Revoke, then attest again. A second live hop is not a tighter grant. The graph still throws if policy ever lies.
+47. A hire takes one cart (`hire.unique_cart`). Binding a second cart to a live hire is a policy deny, not a silent pointer swap. Mutate does not throw `hire already has a cart` after an allow.
+48. A cart takes one payment (`mandate.unique_payment`). Minting a second payment for the same cart is a policy deny, not a second check. Ghost cart stays `mandate.known_cart`. Mutate does not throw `cart already has a payment` after an allow.
+49. A listed SKU priced in a currency the catalog does not name is `market.sku_currency`. Research is USD_SIM. Convert with `market.fx_settle`. Ghost SKU stays `market.known_sku`. Funding a USDC hire from USD cash is `ledger.same_currency`, not a mixed journal after yes.
+50. An FX window that is not this rail’s USD_SIM → USDC_SIM pair, or whose price is not in `from`, is `market.fx_pair`. An FX object on a research SKU is not a dual-use quote. A swapped pair is not a silent journal of the books this rail actually posts. Ghost RFQ stays `market.known_rfq`. Spent window stays `market.fx_quote`.
+51. Hiring an FX window as a good is `hire.not_fx`. So is hiring an FX SKU. Windows settle (`market.fx_settle`). A deny does not consume or reserve the window. Ghost quote stays `market.known_rfq`. Spent window stays `hire.quote_unspent` first. Quoting an FX SKU without a window is `market.fx_window`.
+52. Approving a live ticket whose paused command is no longer legal is `approval.replay`. A stale quote, an expired slip, or a missing held command is a refuse, not a yes that throws. Ghost ticket stays `approval.known`. Expired ticket stays `approval.pending`. Reject of a dead pause stays legal.
+53. An FX SKU quoted without an `fx` window is `market.fx_window`. It is a conversion, not a good. Ghost SKU stays `market.known_sku`. A swapped pair on a real window stays `market.fx_pair`. A `validUntil` already past or unparseable is `market.fx_fresh`.
+54. Funding, releasing, or submitting envelope against a live hire that has not bound a cart (and that cart’s payment) is `hire.bound_cart`. Passing `cartId` on the fund command is not a pointer. Ghost hire stays `hire.known`. A second cart on a hire that already has one stays `hire.unique_cart`. Policy denies; mutate does not throw `hire has no cart` after an allow.
+55. Settling FX with no market maker (or missing `market_maker:cash_usd` / `market_maker:cash_usdc`) is `mm.known`. A window is not a journal against nobody. Ghost quote stays `market.fx_quote`. Vendor without a USDC book stays `ledger.known_account`. Empty MM USDC stays `mm.inventory`.
+56. A command whose `actorId` is not `system` and is not a registered agent is `actor.known`. A missing speaker is not a 500. Named *targets* (freeze, handshake, merchant, subject, RFQ invitee) stay `identity.known`.
+57. A journal that would leave a touched book outside `Number.isSafeInteger` is `ledger.safe_balance`. IEEE rounding is not a mint. Overdraft stays `ledger.sufficient`. Ghost book stays `ledger.known_account`. Restore of old worlds still applies historical journals; a new post does not.
+58. `system` is the runtime, not a treasurer (`actor.system_scope`). It may bootstrap the first human and read the catalog, the notary, balances, and receipts. It cannot spend, freeze, or mint further agents. HTTP/MCP omitting actor still becomes system; this rule is the fence.
+59. A transfer that would journal against equity or escrow is `ledger.operating_book`. Opening cash is `seedOpening`. Escrow moves through `hire.fund` / refund / release. Overdraft stays `ledger.sufficient`. Dest overflow of operating cash stays `ledger.safe_balance`. Ghost book stays `ledger.known_account`. A transfer is not a mint, and it cannot pick the escrow lock.
+60. A data vendor’s `key:usdc` and a market maker’s `market_maker:cash_usdc` belong to that agent, not system. Register writes `ownerId` after the id exists. A USDC name collision is `identity.unique_key`, not `account exists` after opening USD cash. Restore of old worlds may still show system as owner; a new register does not.
+61. L5 is not a birthright (`ladder.birth_rung`). `identity.register` may mint L0–L4. L5 is a climb (`ladder.set` 4→5) after a freeze that was actually tested. Listing the gate names is not the test. A reused alias stays `identity.unique_key`. Skipping a rung on an existing agent stays `ladder.legal`. System minting a second agent stays `actor.system_scope`.
+62. Omitted `maxAutonomy` on `kya.attest` is L5. An agent may not grant a standing-mandate ceiling above its own rung, or spend above the handshake ceiling (`kya.capability_subset`). Name a ceiling you hold. A human or treasury may grant L5. A second live hop stays `kya.unique_live`. Writing someone else’s handshake stays `kya.party`. Completing a funded hire after a climb above the grant is legal.
+63. A payment mandate’s `exp` is unix seconds, one day from `iat` — the same window as the cart’s ISO `expiresAt`. Milliseconds are not seconds. `mandate.not_expired` reads both on new spends. Completing a funded hire after that window is legal. Restore of old worlds may still show a ~1000-day payment `exp`; a new payment does not.
+64. Omitted `principalId` on `kya.attest` / `kya.revoke` is the speaker, not the supervisor. Policy and mutate share that default. Filling in someone else’s id stays `kya.party`. Omitting the ceiling still writes L5 (`kya.capability_subset`). A frozen founder does not freeze a desk’s own handshake.
+65. A provided HTTP/MCP `actor` that is not a live alias is `actor.known`, not silent system. Omit actor or pass `system` to bootstrap. A live alias still maps. Spend as `system` stays `actor.system_scope`.
+66. A grown-up yes on a hire/settle ticket satisfies `ladder.min_level` for that command. L0/L1 may hire after a human signs the paused bytes. Caps, freeze, KYA, and nonce still bind. Issuing a sub-intent below L4 stays a deny — that verb does not escalate, and a velocity ticket is not a rung.
+67. A leftover `nonce` on a transfer (or any verb that is not `envelope.submit`) is not a settled payment. `idempotency.nonce` binds submit. Reuse on submit stays a deny. Additional properties stay allowed; they do not steal first deny.
+68. A handshake cannot be born dead (`kya.mint_fresh`). `kya.attest` with `expiresAt` ≤ now, or an unparseable Instant, is a refuse, not a written corpse that then fails spend as `kya.attestation_fresh` while still occupying the pair. Omit `expiresAt` is one year. Ghost, self, party, a second live hop, and an over-grant keep first deny. An expired hop still occupies the pair until revoke. Completing a funded hire after a live hop later expires is legal.
+69. A handshake cannot outlive one year (`kya.mint_window`). The omit default is the ceiling, not a suggestion. Year 9999 is not standing identity. A corpse mint stays `kya.mint_fresh`. Ghost, self, party, a second live hop, and an over-grant keep first deny.
+70. The KYA graph view (`GET /v1/kya`, snapshot `kya.edges`) labels an expired hop `expired`, not `live`. Revoked wins over expired. An expired hop still occupies the pair until revoke (`kya.unique_live`). New spends still name `kya.attestation_fresh`. Completing a funded hire after that window is legal.
+71. An expired pause is not a live escalate. `hire.create` is auto-idempotent; a leftover ticket must not replay as `escalated` after `expiresAt` and trap the quote until some other command arrives. Inspect / snapshot label that ticket `expired`, not `pending`. Resolve of a dead pause stays `approval.pending`. The original command may be retried (new ticket) if it is still legal.
+72. A permission slip cannot be born with a closed calendar (`mandate.window_fresh`). `mandate.issue_intent` with `not_after` already past, an inverted window, or an unparseable Instant is a refuse, not a written corpse that then fails hire as `payment.execution_date`. A future `not_before` still mints if it opens while the slip lives. Ghost subject, missing parent, and a wider child keep first deny. Hire/fund still names `payment.execution_date`.
+73. A window that opens after the slip dies is not a window (`mandate.window_reach`). Intent `exp` is seven days. `not_before` at or after that Instant never overlaps a live slip. A closed calendar stays `mandate.window_fresh`. Ghost subject, missing parent, and a wider child keep first deny.
+74. A cadence with no slots is not a cadence (`mandate.occurrence_fresh`). `mandate.issue_intent` with `max_occurrences` ≤ 0, or a non-number cap, is a refuse, not a written corpse that then fails hire as `payment.recurrence`. Omit `max_occurrences` is unlimited and still mints. One slot still mints; a second hire still names `payment.recurrence`. Ghost subject, missing parent, and a wider child keep first deny.
+75. Fetching one hop by id (`aether_get` / `GET /v1/objects/dlg_*`) labels it `live`, `expired`, or `revoked` — the same derivation as the graph. The store stays raw. Unique_live still occupies. New spends still name `kya.attestation_fresh`. Completing a funded hire after that window is legal.
+76. A dead parent is not a parent (`mandate.parent_fresh`). `mandate.issue_intent` with a parent past `exp`, or a new hire/fund against a child of that parent, is a refuse. Completing a funded hire after the parent dies is legal. Ghost parent stays `mandate.known_parent`. The child's own expiry stays `mandate.not_expired`.
+77. A dead parent hop is not a parent (`kya.parent_fresh`). `kya.attest` with a parentId whose hop is expired or revoked is a refuse, not a nested grant that occupies a new pair while spend skips the corpse. A new hire or fund against a nested hop whose parent died is the same refuse. Completing a funded hire after the parent hop dies is legal. Ghost parent stays `kya.known_parent`. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny. Graph `attest()` still writes a nested hop under a corpse so path-freshness tests can inject; dispatch does not.
+78. Fetching one quote by id (`aether_get` / `GET /v1/objects/qte_*`) labels it `live`, `expired`, `spent`, or `held`. Spent (consumed) and held (a live reserved ticket) win over expired. Expired includes the quote envelope and a lapsed FX `validUntil`. A reservation whose ticket is past `expiresAt` is not held. The store stays raw. Snapshot uses the same derivation. Hire still names `hire.quote_unspent` / `market.not_expired`.
+79. An FX window cannot be born dead (`market.fx_fresh`). `market.quote` with `validUntil` ≤ now, or an unparseable Instant, is a refuse, not a written corpse that then fails settle as `market.not_expired`. A window that lapses after mint is still `market.not_expired` at settle, and inspect labels it `expired`. Ghost RFQ stays `market.known_rfq`. A missing window stays `market.fx_window`. A swapped pair stays `market.fx_pair`. An expired RFQ stays `market.not_expired`. Off-band stays `mm.spread_bound`.
+80. Inviting a missing agent onto an RFQ is `identity.known`, not a closed room nobody can quote. Empty or omitted is still open. A missing SKU stays `market.known_sku`. A live guest list still binds (`market.invited_seller`).
+81. Fetching one cart by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `bound`. Bound (unique_payment occupies) wins over expired. A hire that points at this cart is not bound — that occupancy lives on the hire. The store stays raw. Snapshot uses the same derivation. A second payment still names `mandate.unique_payment`. Fund of a stale cart still names `mandate.chain_integrity` / `mandate.not_expired`.
+82. Completing a funded hire after the cart or payment window is legal. `mandate.not_expired` binds new spends (`hire.create`, `hire.fund`, `mandate.issue_cart`, `mandate.issue_payment`). Deliver, release, refund, require, and submit after that window are not a trapped escrow. Fund of a stale cart still names `mandate.chain_integrity` first. A first payment on a stale unpaid cart still names `mandate.not_expired`. Refund of delivered work still names `hire.state`.
+83. Completing a funded hire after the KYA hop expires is legal. `kya.attestation_fresh` binds new spends (`hire.create`, `hire.fund`, `mandate.issue_intent`). Deliver, release, refund, require, and submit after that window are not a trapped escrow. Freeze of the principal and revoke still bind. Unique_live still occupies. A nested hop whose parent died still names `kya.parent_fresh` on a new hire.
+84. Completing a funded hire after a climb above the handshake ceiling is legal. `kya.capability_subset` binds new spends (`hire.create`, `hire.fund`, `kya.attest`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. Freeze and revoke still bind. An expired hop still names `kya.attestation_fresh` first on a new hire.
+85. Completing a funded hire after a climb above the permission-slip ceiling is legal. `ladder.max_autonomy_constraint` binds new spends (`hire.create`, `hire.fund`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. A handshake grant below the climb still names `kya.capability_subset` on a new hire, but the slip ceiling is first.
+
+## Autonomy
+
+| L | May |
+|---|---|
+| 0 | Draft. Human signs. |
+| 1 | Prepare. Human confirms each cart. |
+| 2 | Close a payment that still fits an open intent. |
+| 3 | Hire a vendor against an existing intent. |
+| 4 | Issue a **sub-intent** (smaller slip) to another agent. |
+| 5 | Standing mandate. Skips per-tx humans. Does not skip caps, fuse, freeze, KYA, nonce. |
+
+## What this is not
+
+A trading bot. A storefront. A wallet. A copied AP2/x402 SDK. Live rails belong later as adapters on these objects.
+
+## Proofs
+
+```
+pnpm test
+pnpm demo
+pnpm demo night-watch
+pnpm demo sub-hire
+```

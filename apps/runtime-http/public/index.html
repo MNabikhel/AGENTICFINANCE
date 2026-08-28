@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aether — a rulebook for software that spends money</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #081018;
+      --panel: #101820;
+      --ink: #eef3f8;
+      --muted: #94a3b8;
+      --line: #1e2a38;
+      --allow: #3dd68c;
+      --deny: #ff6b81;
+      --escalate: #f5c542;
+      --settle: #7dd3fc;
+      --gold: #e4c27a;
+      --btn: #f4f1ea;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+    body { min-height: 100vh; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 36px 22px 80px; }
+    .eyebrow { color: var(--gold); letter-spacing: 0.16em; font-size: 11px; text-transform: uppercase; }
+    h1 { font-size: clamp(28px, 5vw, 44px); font-weight: 600; line-height: 1.15; margin: 10px 0 14px; }
+    .lede { font-size: 18px; line-height: 1.55; color: var(--muted); max-width: 40rem; }
+    .lede strong { color: var(--ink); font-weight: 500; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 28px 0 10px; }
+    button {
+      border: 0; border-radius: 999px; padding: 12px 18px; font: 600 14px/1 "IBM Plex Sans", system-ui, sans-serif;
+      cursor: pointer;
+    }
+    #run { background: var(--btn); color: #111; }
+    #run-night { background: #e4c27a; color: #111; }
+    .ghost { background: transparent; color: var(--ink); border: 1px solid var(--line) !important; }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    .tldr {
+      margin-top: 28px; padding: 20px 22px; background: var(--panel); border: 1px solid var(--line);
+      border-radius: 16px; font-size: 16px; line-height: 1.6;
+    }
+    .analog { margin-top: 16px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .analog li { margin: 6px 0; }
+    h2 { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin: 36px 0 12px; }
+    .beat {
+      display: grid; grid-template-columns: 72px 1fr; gap: 12px;
+      padding: 14px 0; border-bottom: 1px solid var(--line);
+    }
+    .beat:last-child { border-bottom: 0; }
+    .tag {
+      font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 8px;
+      border-radius: 999px; height: fit-content; text-align: center;
+    }
+    .neutral { background: #1b2530; color: var(--muted); }
+    .allow { background: #123226; color: var(--allow); }
+    .deny { background: #3a1520; color: var(--deny); }
+    .escalate { background: #3a3014; color: var(--escalate); }
+    .settle { background: #0c2a3a; color: var(--settle); }
+    .headline { font-size: 16px; font-weight: 500; }
+    .body { color: var(--muted); font-size: 14px; line-height: 1.5; margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .beat { grid-template-columns: 1fr; } }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+    .row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .row:last-child { border-bottom: 0; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+    .hidden { display: none; }
+    .proof { font-size: 13px; }
+    .ok { color: var(--allow); }
+    .status { color: var(--muted); font-size: 14px; min-height: 1.4em; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">Aether · sim:aether-1 · no live money</div>
+    <h1>A rulebook for software that spends money.</h1>
+    <p class="lede">
+      A human writes a permission slip. Agents go shopping.
+      A referee that never guesses says <strong>yes</strong>, <strong>no</strong>, or <strong>ask a grown-up</strong>.
+      A notary writes it down. An auditor may read the book — and may not spend.
+    </p>
+    <div class="actions">
+      <button id="run">Shopping trip</button>
+      <button id="run-night">Night watch (standing permission)</button>
+      <button class="ghost" id="toggle">Show the machinery</button>
+    </div>
+    <p class="status" id="status">Two stories. The shopping trip is a human in the loop. Night watch is standing permission — L5 — with a handshake, a daily fuse, and a freeze that actually works.</p>
+
+    <div class="tldr" id="tldr">The story appears here after you run it. Nothing is connected to a bank. These are simulated dollars, on purpose.</div>
+
+    <h2>How to think about it</h2>
+    <ul class="analog" id="analog">
+      <li>Permission slip = mandate (what the human allowed).</li>
+      <li>Referee = policy kernel (yes / no / ask a grown-up). It does not use an AI to “feel” risk.</li>
+      <li>Escrow = money locked until the work is done.</li>
+      <li>Notary = hash-chained audit log. Rewrite yesterday and it breaks.</li>
+      <li>Ladder L0→L5 = how far the human steps back. Freeze still works at the top.</li>
+    </ul>
+
+    <h2>What just happened</h2>
+    <div id="story"><p class="body">Waiting for the sprint.</p></div>
+
+    <div class="grid" style="margin-top:28px">
+      <div class="card">
+        <h2 style="margin-top:0">Who sat at the table</h2>
+        <div id="agents"></div>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">Who ended up with the money</h2>
+        <div id="balances"></div>
+      </div>
+    </div>
+
+    <h2>Who is allowed to spend for whom (KYA)</h2>
+    <div class="card" id="kya"><p class="body">After Night Watch, this is the handshake graph — live or revoked.</p></div>
+
+    <h2>Who owes whom (clearing)</h2>
+    <div class="card" id="clearing"><p class="body">After the sprint, this is the net picture — the seed of a clearing house for agents.</p></div>
+
+    <div id="machinery" class="hidden">
+      <h2>The machinery (for the curious)</h2>
+      <div class="card proof" id="tap"></div>
+      <div class="card" style="margin-top:12px" id="hires"></div>
+      <pre class="mono card" style="margin-top:12px; white-space:pre-wrap" id="audit"></pre>
+    </div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const money = (n) => (n / 100).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+    function render(report) {
+      const s = report.snapshot || report;
+      $("tldr").textContent = s.tldr || report.tldr || $("tldr").textContent;
+      if (s.analog?.lines) {
+        $("analog").innerHTML = s.analog.lines.map((l) => `<li>${l}</li>`).join("");
+      }
+      const beats = s.story || [];
+      $("story").innerHTML = beats.length
+        ? beats.map((b) => `
+            <div class="beat">
+              <div class="tag ${b.tone}">${b.tone}</div>
+              <div>
+                <div class="headline">${b.headline}</div>
+                <div class="body">${b.body}</div>
+              </div>
+            </div>`).join("")
+        : `<p class="body">No story yet.</p>`;
+
+      $("agents").innerHTML = (s.agents || []).map((a) => `
+        <div class="row"><div>${a.displayName}<div class="mono">${a.role} · autonomy L${a.autonomyLevel}</div></div>
+        <div class="mono">${a.frozen ? "FROZEN" : "active"}</div></div>`).join("") || "<div class='mono'>None yet.</div>";
+
+      const cash = (s.accounts || []).filter((a) => a.name.includes("cash") && !a.name.startsWith("escrow"));
+      $("balances").innerHTML = cash.map((a) => `
+        <div class="row"><div>${a.name.replace(":cash", "").replace(":usdc", " USDC")}</div>
+        <div>${a.currency === "USDC_SIM" ? "USDC" : "USD"} ${money(a.balance)}</div></div>`).join("");
+
+      const nets = [...(s.clearing?.usd?.netting || []), ...(s.clearing?.usdc?.netting || [])];
+      const names = Object.fromEntries((s.agents || []).map((a) => [a.id, a.displayName]));
+      $("clearing").innerHTML = nets.length
+        ? nets.map((n) => `<div class="row"><div>${names[n.from] || n.from} → ${names[n.to] || n.to}</div>
+            <div>${n.currency === "USDC_SIM" ? "USDC" : "USD"} ${money(n.net)}</div></div>`).join("")
+        : "<p class='body'>No net exposure yet.</p>";
+
+      const edges = s.kya?.edges || [];
+      const fuse = s.circuit
+        ? `<div class="row"><div>Daily fuse</div><div class="${s.circuit.tripped ? "deny" : "ok"}">${s.circuit.tripped ? "TRIPPED" : "intact"} · spent ${money(s.circuit.dailySpend)} / ${money(s.circuit.dailyLimit)}</div></div>`
+        : "";
+      $("kya").innerHTML =
+        fuse +
+        (edges.length
+          ? edges.map((e) => `<div class="row"><div>${names[e.from] || e.from} → ${names[e.to] || e.to}
+              <div class="mono">max L${e.maxAutonomy}</div></div>
+              <div class="tag ${e.status === "live" ? "allow" : "deny"}">${e.status}</div></div>`).join("")
+          : "<p class='body'>No handshakes yet. Run Night Watch to see Know Your Agent.</p>");
+
+      $("tap").innerHTML = (report.results || []).map((r) =>
+        `<div class="${r.ok ? "ok" : "deny"}">${r.ok ? "ok" : "not ok"}  ${r.name}</div>`
+      ).join("") || "<div class='mono'>Proof lines appear after a run.</div>";
+
+      $("hires").innerHTML = (s.hires || []).map((h) =>
+        `<div class="row"><div>${h.sku}</div><div class="tag ${h.state === "released" ? "allow" : "escalate"}">${h.state}</div></div>`
+      ).join("") || "";
+      $("audit").textContent = s.audit ? `audit length ${s.audit.length}\nverify ${JSON.stringify(s.audit.verify)}\nhead ${s.audit.head}` : "";
+    }
+
+    $("toggle").onclick = () => {
+      const el = $("machinery");
+      const hidden = el.classList.toggle("hidden");
+      $("toggle").textContent = hidden ? "Show the machinery" : "Hide the machinery";
+    };
+
+    async function runDemo(path, label) {
+      $("run").disabled = true;
+      $("run-night").disabled = true;
+      $("status").textContent = label;
+      try {
+        const res = await fetch(path, { method: "POST" });
+        const report = await res.json();
+        render(report);
+        $("status").textContent = report.ok
+          ? "That is the whole loop. The English is the product. The hashes underneath are how agents will trust each other."
+          : "Something in the proof failed. Open the machinery.";
+        if (!report.ok) $("machinery").classList.remove("hidden");
+      } catch (e) {
+        $("status").textContent = String(e);
+      } finally {
+        $("run").disabled = false;
+        $("run-night").disabled = false;
+      }
+    }
+
+    $("run").onclick = () => runDemo("/v1/demo/sprint-procurement", "Running the shopping trip on simulated dollars…");
+    $("run-night").onclick = () => runDemo("/v1/demo/night-watch", "Running night watch — standing permission, handshake, fuse, freeze…");
+  </script>
+</body>
+</html>

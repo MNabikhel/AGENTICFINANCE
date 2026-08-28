@@ -1,0 +1,515 @@
+import { describe, expect, it } from "vitest";
+import { Runtime, cmd } from "@aether/runtime";
+import { offerHire, completeHire, inviteQuote } from "../packages/aether-runtime/src/hire-flow.ts";
+import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
+import type { ApprovalTicket, DelegationAttestation, HireContract, MandateId, Receipt } from "@aether/types";
+
+function boot() {
+  return new Runtime({
+    startIso: "2026-08-28T00:00:00.000Z",
+    genesisNonce: "01J6AETHERGENESISGET00000001",
+    dailyLimit: 10_000_000,
+  });
+}
+
+function must<T>(r: { ok: boolean; value?: T; error?: { error: { detail: string } } }, label: string): T {
+  if (!r.ok) throw new Error(`${label}: ${(r as { error: { error: { detail: string } } }).error.error.detail}`);
+  return r.value as T;
+}
+
+function economy(rt: Runtime, max = 700_000) {
+  must(
+    rt.dispatch(
+      cmd("identity.register", "system", {
+        key: "ops-human",
+        displayName: "Founder",
+        role: "human_operator",
+        autonomyLevel: 0,
+      }),
+    ),
+    "founder",
+  );
+  const founder = rt.alias("ops-human");
+  for (const a of [
+    { key: "treasury", displayName: "Treasury", role: "treasury", autonomyLevel: 3 },
+    { key: "procurement", displayName: "Desk", role: "procurement", autonomyLevel: 3 },
+    { key: "vendor", displayName: "Vendor", role: "data_vendor", autonomyLevel: 2 },
+  ] as const) {
+    must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
+  }
+  rt.seedOpening({
+    "procurement:cash": { amount: 2_000_000, currency: "USD_SIM" },
+    "treasury:cash": { amount: 5_000_000, currency: "USD_SIM" },
+  });
+  const desk = rt.alias("procurement");
+  const vendor = rt.alias("vendor");
+  const intent = must(
+    rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy research",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max },
+          { type: "payment.budget", currency: "USD_SIM", max: 2_000_000 },
+          {
+            type: "payment.allowed_payees",
+            allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+          },
+        ],
+      }),
+    ),
+    "intent",
+  );
+  return {
+    founder,
+    desk,
+    vendor,
+    treasury: rt.alias("treasury"),
+    intentId: (intent.data as { payload: { id: MandateId } }).payload.id,
+  };
+}
+
+function issueCart(
+  rt: Runtime,
+  input: { buyer: string; seller: string; intentId: MandateId; hireId?: string },
+) {
+  const cart = must(
+    rt.dispatch(
+      cmd("mandate.issue_cart", input.buyer, {
+        intentId: input.intentId,
+        merchantId: input.seller,
+        ...(input.hireId ? { hireId: input.hireId } : {}),
+        line_items: [
+          {
+            sku: "research.brief",
+            description: "page 1",
+            quantity: 1,
+            unitAmount: { amount: 80_000, currency: "USD_SIM" },
+          },
+        ],
+      }),
+    ),
+    "cart",
+  );
+  return (cart.data as { payload: { id: string } }).payload.id;
+}
+
+describe("inspect", () => {
+  it("fetches a hire by id and an agent by alias", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    const hire = rt.inspect(hireId);
+    expect(hire?.type).toBe("hire");
+    expect((hire?.value as HireContract).state).toBe("offered");
+    const agent = rt.inspect("procurement");
+    expect(agent?.type).toBe("agent");
+    expect((agent?.value as { displayName: string }).displayName).toBe("Desk");
+  });
+});
+
+describe("approval expiry", () => {
+  it("refuses to resolve a ticket after expiresAt and does not trap retries", () => {
+    const rt = boot();
+    const { desk, vendor, treasury, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect(offered.attempt.value.kind).toBe("escalated");
+    const ticket = offered.attempt.value.ticket as ApprovalTicket;
+    expect(ticket.status).toBe("pending");
+    expect(rt.inspect(ticket.id)?.type).toBe("approval");
+
+    rt.clock.set("2026-08-30T00:00:00.000Z");
+    const late = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "approved" }));
+    expect(late.ok).toBe(false);
+    if (late.ok) return;
+    expect(late.error.error.status).toBe(422);
+    expect(late.error.error.type).toContain("policy.deny");
+    expect(late.error.decision?.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("deny");
+    expect(late.error.decision?.remediation?.ruleId).toBe("approval.pending");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("expired");
+
+    const retry = rt.dispatch(cmd("hire.create", desk.id, { quoteId: offered.quoteId, intentId }));
+    expect(retry.ok).toBe(false);
+    if (retry.ok) return;
+    expect(retry.error.decision.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("expired");
+  });
+
+  it("labels an expired ticket expired in inspect, not pending", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const ticket = offered.attempt.value.ticket as ApprovalTicket;
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("pending");
+    rt.approvals.set(ticket.id, { ...ticket, expiresAt: rt.clock.now() });
+    expect(rt.approvals.get(ticket.id)?.status).toBe("pending");
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("expired");
+    expect(rt.snapshotState().approvals.find((a) => a.id === ticket.id)?.status).toBe("expired");
+  });
+});
+
+describe("delegation inspect", () => {
+  it("labels an expired hop expired in inspect, not live, and does not write status into the store", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const issued = must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, {
+          delegateId: desk.id,
+          maxAutonomy: 3,
+          expiresAt: "2026-08-28T12:00:00.000Z",
+        }),
+      ),
+      "attest",
+    );
+    const hop = issued.data as DelegationAttestation;
+    expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("live");
+    expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("live");
+    expect("status" in (rt.kya.attestations.get(hop.id) ?? {})).toBe(false);
+
+    rt.clock.set("2026-08-29T00:00:00.000Z");
+    expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("expired");
+    expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("expired");
+    expect(rt.kya.attestations.get(hop.id)?.revokedAt).toBeUndefined();
+    expect("status" in (rt.kya.attestations.get(hop.id) ?? {})).toBe(false);
+
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+  });
+
+  it("labels a revoked hop revoked even after the window has closed", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const issued = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const hop = issued.data as DelegationAttestation;
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: hop.id })), "revoke");
+    rt.clock.set("2027-09-01T00:00:00.000Z");
+    expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("revoked");
+  });
+});
+
+describe("quote inspect", () => {
+  it("labels a live quote live and does not write status into the store", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().quotes.find((q) => q.id === invited.quoteId)?.status).toBe("live");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a hired quote spent, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("spent");
+    expect(rt.snapshotState().quotes.find((q) => q.id === offered.quoteId)?.status).toBe("spent");
+    expect("status" in (rt.quotes.get(offered.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a quote held by an open hire ticket held, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect(offered.attempt.value.kind).toBe("escalated");
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("held");
+    expect(rt.snapshotState().quotes.find((q) => q.id === offered.quoteId)?.status).toBe("held");
+    expect("status" in (rt.quotes.get(offered.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a stale quote expired, not live", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().quotes.find((q) => q.id === invited.quoteId)?.status).toBe("expired");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a spent quote spent even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("spent");
+  });
+
+  it("does not label a quote held when the pause is already dead", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const ticket = offered.attempt.value.ticket as ApprovalTicket;
+    rt.approvals.set(ticket.id, { ...ticket, expiresAt: rt.clock.now() });
+    expect(rt.reservedQuotes.has(offered.quoteId)).toBe(true);
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("live");
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("expired");
+    expect("status" in (rt.quotes.get(offered.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels an FX quote expired when validUntil lapses inside the quote envelope", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "mm",
+          displayName: "Market Maker",
+          role: "market_maker",
+          autonomyLevel: 2,
+        }),
+      ),
+      "mm",
+    );
+    const mm = rt.alias("mm");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [mm.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-28T00:30:00.000Z",
+          },
+        }),
+      ),
+      "fx quote",
+    );
+    const quoteId = (quoted.data as { id: string }).id;
+    expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("live");
+    rt.clock.set("2026-08-28T00:45:00.000Z");
+    expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().quotes.find((q) => q.id === quoteId)?.status).toBe("expired");
+    expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
+  });
+});
+
+describe("cart inspect", () => {
+  it("labels a live cart live and does not write status into the store", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("live");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a paid cart bound, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+    const again = rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId }));
+    expect(again.ok).toBe(false);
+    if (again.ok) return;
+    expect(again.error.decision?.remediation?.ruleId).toBe("mandate.unique_payment");
+  });
+
+  it("labels a hire-attached cart live until a payment occupies it", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
+    expect(rt.hires.get(hireId)?.cartId).toBe(cartId);
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+  });
+
+  it("labels a stale unpaid cart expired, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("expired");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a bound cart bound even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+});
+
+describe("MCP command schemas", () => {
+  it("lists real body fields so agents do not guess additionalProperties", () => {
+    const mcp = new AetherMcp();
+    const listed = mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+    const tools = (listed as { result: { tools: { name: string; inputSchema: { properties: Record<string, unknown> } }[] } })
+      .result.tools;
+    const hire = tools.find((t) => t.name === "aether_hire_create");
+    expect(hire?.inputSchema.properties.quoteId).toBeTruthy();
+    expect(hire?.inputSchema.properties.intentId).toBeTruthy();
+    expect(hire?.inputSchema.properties.actor).toBeTruthy();
+    expect(tools.some((t) => t.name === "aether_get")).toBe(true);
+
+    mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    });
+    const got = mcp.callTool("aether_get", { id: "ops-human" }) as { type: string; value: { displayName: string } };
+    expect(got.type).toBe("agent");
+    expect(got.value.displayName).toBe("Founder");
+
+    const cmds = mcp.handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: "aether://commands" } });
+    const text = (cmds as { result: { contents: { text: string }[] } }).result.contents[0]?.text ?? "";
+    expect(text).toContain("hire.create");
+  });
+});
+
+const GHOST_RECEIPT = "rid_01J6AETHERGHOSTRECEIPT00001";
+
+describe("receipt.known", () => {
+  it("refuses a missing receipt as receipt.known, not an empty success", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("receipt.get", founder.id, { receiptId: GHOST_RECEIPT }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "receipt.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("receipt.known");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.inspect(GHOST_RECEIPT)).toBeUndefined();
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still fetches a live receipt", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    completeHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+      qty: 1,
+      deliverable: { n: 1 },
+    });
+    const live = [...rt.receipts.values()][0];
+    expect(live).toBeTruthy();
+    if (!live) return;
+    const r = must(rt.dispatch(cmd("receipt.get", founder.id, { receiptId: live.id })), "receipt.get");
+    expect((r.data as Receipt).id).toBe(live.id);
+    expect((r.data as Receipt).reference).toBe(live.reference);
+  });
+});

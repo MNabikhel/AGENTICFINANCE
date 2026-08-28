@@ -1,0 +1,13 @@
+{
+  "name": "@aether/settlement",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aether/envelope": "workspace:*",
+    "@aether/kernel": "workspace:*",
+    "@aether/types": "workspace:*"
+  }
+}

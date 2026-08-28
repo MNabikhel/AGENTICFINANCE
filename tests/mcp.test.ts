@@ -1,0 +1,124 @@
+import { describe, expect, it } from "vitest";
+import { resolve } from "node:path";
+import { loadSubHire, runSubHire } from "@aether/sub-hire";
+import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
+
+describe("sub-hire demo", () => {
+  it("passes TAP assertions for nested slips", () => {
+    const report = runSubHire(loadSubHire(resolve("fixtures/demo/sub-hire/scenario.json")));
+    const failed = report.results.filter((r) => !r.ok);
+    expect(failed, JSON.stringify(failed, null, 2)).toEqual([]);
+    expect(report.ok).toBe(true);
+  });
+});
+
+describe("MCP host", () => {
+  it("lists tools and dispatches identity.register", () => {
+    const mcp = new AetherMcp();
+    const listed = mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+    const names = ((listed as { result: { tools: { name: string }[] } }).result.tools).map((t) => t.name);
+    expect(names).toContain("aether_identity_register");
+    expect(names).toContain("aether_snapshot");
+    expect(names).toContain("aether_demo_sub_hire");
+    expect(names).toContain("aether_hire_refund");
+    expect(names).toContain("aether_protocol");
+    const hireTool = ((listed as { result: { tools: { name: string; inputSchema?: { required?: string[] } }[] } }).result.tools).find(
+      (t) => t.name === "aether_hire_create",
+    );
+    expect(hireTool?.inputSchema?.required).toEqual(["quoteId", "intentId"]);
+
+    const reg = mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    }) as { ok: boolean; data: { displayName: string; id: string }; replayed: boolean };
+    expect(reg.ok).toBe(true);
+    expect(reg.data.displayName).toBe("Founder");
+    expect(reg.replayed).toBe(false);
+
+    const again = mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    }) as { ok: boolean; data: { id: string }; replayed: boolean };
+    expect(again.ok).toBe(true);
+    expect(again.replayed).toBe(true);
+    expect(again.data.id).toBe(reg.data.id);
+
+    const snap = mcp.callTool("aether_snapshot", {}) as { agents: { displayName: string }[] };
+    expect(snap.agents.some((a) => a.displayName === "Founder")).toBe(true);
+
+    const protocol = mcp.callTool("aether_protocol", {}) as { spec: string; liveMoney: boolean };
+    expect(protocol.spec).toBe("aether.protocol.1");
+    expect(protocol.liveMoney).toBe(false);
+
+    const malformed = mcp.callTool("aether_hire_create", { actor: "system", intentId: "mid_x" }) as {
+      ok: boolean;
+      verdict: string;
+      error: { status: number; type: string };
+    };
+    expect(malformed.ok).toBe(false);
+    expect(malformed.verdict).toBe("malformed");
+    expect(malformed.error.status).toBe(400);
+    expect(malformed.error.type).toContain("command.malformed");
+  });
+
+  it("runs the sub-hire demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_sub_hire", {}) as { ok: boolean; results: { ok: boolean }[] };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+  });
+
+  it("refuses an unknown actor alias as actor.known, not silent system", () => {
+    const mcp = new AetherMcp();
+    const ghost = mcp.callTool("aether_market_catalog", { actor: "ghost-desk" }) as {
+      ok: boolean;
+      remediation: { ruleId: string } | null;
+    };
+    expect(ghost.ok).toBe(false);
+    expect(ghost.remediation?.ruleId).toBe("actor.known");
+    expect(mcp.runtime.identity.all()).toHaveLength(0);
+
+    const premature = mcp.callTool("aether_identity_register", {
+      actor: "ops-human",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    }) as { ok: boolean; remediation: { ruleId: string } | null };
+    expect(premature.ok).toBe(false);
+    expect(premature.remediation?.ruleId).toBe("actor.known");
+    expect(mcp.runtime.aliases.has("ops-human")).toBe(false);
+
+    const omit = mcp.callTool("aether_market_catalog", {}) as { ok: boolean };
+    expect(omit.ok).toBe(true);
+
+    const boot = mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    }) as { ok: boolean };
+    expect(boot.ok).toBe(true);
+    expect(mcp.runtime.aliases.has("ops-human")).toBe(true);
+
+    const live = mcp.callTool("aether_market_catalog", { actor: "ops-human" }) as { ok: boolean };
+    expect(live.ok).toBe(true);
+
+    const asSystem = mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "extra",
+      displayName: "Extra",
+      role: "treasury",
+      autonomyLevel: 3,
+    }) as { ok: boolean; remediation: { ruleId: string } | null };
+    expect(asSystem.ok).toBe(false);
+    expect(asSystem.remediation?.ruleId).toBe("actor.system_scope");
+  });
+});

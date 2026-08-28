@@ -1,0 +1,24 @@
+{
+  "name": "aether",
+  "private": true,
+  "type": "module",
+  "description": "Aether — Agent Economic Runtime. Machine-first policy, mandates, simulated settlement.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "demo": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo",
+    "demo:night-watch": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo night-watch",
+    "demo:sub-hire": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo sub-hire",
+    "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
+    "test": "vitest run",
+    "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8"
+  }
+}
