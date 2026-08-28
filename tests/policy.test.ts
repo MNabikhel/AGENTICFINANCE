@@ -2705,6 +2705,150 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
   });
 
+  it("does not name kya.attestation_fresh on release after the hop dies", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.release",
+        hire: hire({ state: "delivered" }),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: true,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.message).toBe("handshake checked at fund");
+  });
+
+  it("does not name kya.attestation_fresh on refund, submit, require, or deliver after the hop dies", () => {
+    for (const commandType of ["hire.refund", "envelope.submit", "envelope.require", "hire.deliver"] as const) {
+      const d = evaluate(
+        ctx({
+          commandType,
+          hire: hire({ state: commandType === "hire.refund" ? "funded" : "delivered" }),
+          kya: {
+            required: true,
+            pathOk: true,
+            implicit: false,
+            depth: 1,
+            maxDepth: 3,
+            principalFrozen: false,
+            expired: true,
+            revoked: false,
+            hops: [],
+          },
+        }),
+      );
+      expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    }
+  });
+
+  it("still names kya.attestation_fresh on a new hire after the hop dies", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: true,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.attestation_fresh");
+  });
+
+  it("still names kya.attestation_fresh on fund after the hop dies", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        cart: signedCart(),
+        payment: signedPayment(),
+        intent: signedIntent([]),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: true,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.attestation_fresh");
+  });
+
+  it("still names kya.chain_intact first on release when the hop is revoked", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.release",
+        hire: hire({ state: "delivered" }),
+        kya: {
+          required: true,
+          pathOk: false,
+          implicit: false,
+          depth: 0,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: true,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.chain_intact");
+  });
+
+  it("still names kya.principal_not_frozen first on release when the principal is frozen", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.release",
+        hire: hire({ state: "delivered" }),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: true,
+          expired: true,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.principal_not_frozen")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.principal_not_frozen");
+  });
+
   it("still names kya.attestation_fresh first when the nested hop is also expired", () => {
     const d = evaluate(
       ctx({

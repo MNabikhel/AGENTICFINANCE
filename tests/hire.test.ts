@@ -469,6 +469,188 @@ describe("kya parent hop freshness on spend", () => {
   });
 });
 
+describe("kya hop freshness on complete after fund", () => {
+  const NOON = "2026-08-28T12:00:00.000Z";
+  const AFTER_NOON = "2026-08-28T18:00:00.000Z";
+
+  function timedDesk(rt: ReturnType<typeof boot>) {
+    const { desk, vendor, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3, expiresAt: NOON })),
+      "timed hop",
+    );
+    return { founder, desk, vendor, intentId };
+  }
+
+  function fundedTimed(rt: ReturnType<typeof boot>) {
+    const { founder, desk, vendor, intentId } = timedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    if (!live.attempt.ok) throw new Error("expected hire.create allow while hop lives");
+    const hireId = (live.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    return { founder, desk, vendor, intentId, hireId };
+  }
+
+  it("still hires against a timed hop while it lives", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = timedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    expect(live.attempt.value.decision.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+  });
+
+  it("refuses a new hire after the hop dies as kya.attestation_fresh", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = timedDesk(rt);
+    rt.clock.set(AFTER_NOON);
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "too late",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("deny");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("kya.attestation_fresh");
+  });
+
+  it("refuses to fund after the hop dies as kya.attestation_fresh", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = timedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: desk.id, seller: vendor.id, intentId });
+    rt.clock.set(AFTER_NOON);
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.attestation_fresh");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+  });
+
+  it("lets a funded hire finish after the hop dies", () => {
+    const rt = boot();
+    const { desk, vendor, hireId } = fundedTimed(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    rt.clock.set(AFTER_NOON);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    if (!delivered.ok) return;
+    expect(delivered.value.decision.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    const released = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(released.ok).toBe(true);
+    if (!released.ok) return;
+    expect(released.value.decision.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(released.value.decision.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(80_000);
+  });
+
+  it("refunds a funded hire after the hop dies", () => {
+    const rt = boot();
+    const { desk, hireId } = fundedTimed(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    rt.clock.set(AFTER_NOON);
+    const refund = rt.dispatch(cmd("hire.refund", desk.id, { hireId }));
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    expect(refund.value.decision.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("refunded");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash + 80_000);
+  });
+
+  it("submits envelope after the hop dies", () => {
+    const rt = boot();
+    const { desk, vendor, hireId } = fundedTimed(rt);
+    rt.clock.set(AFTER_NOON);
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
+    const submitted = rt.dispatch(cmd("envelope.submit", desk.id, { hireId, nonce: `nonce-${hireId}-late-kya` }));
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    expect(submitted.value.decision.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(submitted.value.decision.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+  });
+
+  it("still names kya.chain_intact on release after revoke", () => {
+    const rt = boot();
+    const { founder, desk, vendor, hireId } = fundedTimed(rt);
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id })), "revoke");
+    rt.clock.set(AFTER_NOON);
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    const vendorCash = rt.ledger.balanceByName("vendor:cash").amount;
+    const r = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.chain_intact");
+    expect(rt.hires.get(hireId)?.state).toBe("delivered");
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(vendorCash);
+  });
+
+  it("still names kya.principal_not_frozen on release after the founder is frozen", () => {
+    const rt = boot();
+    const { founder, desk, vendor, hireId } = fundedTimed(rt);
+    must(rt.dispatch(cmd("identity.freeze", founder.id, { agentId: founder.id })), "freeze founder");
+    rt.clock.set(AFTER_NOON);
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    const vendorCash = rt.ledger.balanceByName("vendor:cash").amount;
+    const r = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.principal_not_frozen")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.not_frozen")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.principal_not_frozen");
+    expect(rt.hires.get(hireId)?.state).toBe("delivered");
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(vendorCash);
+  });
+});
+
 function offered(rt: ReturnType<typeof boot>) {
   const { desk, vendor, intentId } = economy(rt);
   const live = offerHire(rt, {

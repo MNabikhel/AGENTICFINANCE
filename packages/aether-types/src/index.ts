@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.82.0",
+  version: "0.83.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -904,9 +904,9 @@ export interface PolicyContext {
   /**
    * False when kya.attest would write expiresAt ≤ now (or an unparseable Instant).
    * Absent = not a kya.attest. Omit expiresAt is one year from now.
-   * A handshake cannot be born dead. Spend still names `kya.attestation_fresh`
-   * when a live hop later expires. Ghost, self, party, unique_live, and
-   * over-grant keep first deny.
+   * A handshake cannot be born dead. New spends still name `kya.attestation_fresh`
+   * when a live hop later expires. Completing a funded hire after that window is
+   * legal. Ghost, self, party, unique_live, and over-grant keep first deny.
    */
   kyaMintFresh?: boolean;
   /**
@@ -1133,7 +1133,10 @@ export interface Command<T extends CommandType = CommandType, B = unknown> {
   idempotencyKey?: string;
 }
 
-/** Commands that spend, close, or hand down authority. The kernel consults KYA. */
+/** Commands that spend, close, or hand down authority. The kernel consults KYA.
+ *  Hop expiry does not trap funded escrow (`kya.attestation_fresh` allows complete-after-fund).
+ *  Freeze and revoke still bind on those verbs. Do not drop them from this list.
+ */
 export const KYA_GATED_COMMANDS: readonly CommandType[] = [
   "hire.create",
   "hire.fund",

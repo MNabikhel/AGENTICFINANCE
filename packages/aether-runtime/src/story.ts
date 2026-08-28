@@ -404,6 +404,8 @@ export function autoBeat(input: {
         body = "The parent permission slip has expired. A dead parent is not a parent. Completing a funded hire after that is legal; a new hire is not.";
       } else if (ruleId === "kya.parent_fresh") {
         body = "The parent handshake has expired. A nested hop does not outlive its parent. Completing a funded hire after that is legal; a new hire is not.";
+      } else if (ruleId === "kya.attestation_fresh") {
+        body = "The handshake expired. Revoke it, then attest again. A dead hop still occupies the pair. Completing a funded hire after that is legal; a new hire is not.";
       }
       return {
         seq: input.seq,
@@ -481,6 +483,8 @@ export function autoBeat(input: {
                     ? "The escrow (or the buyer’s remaining cash) cannot hold this many cents. IEEE rounding is not a mint."
                   : rule?.ruleId === "kya.parent_fresh"
                     ? "The parent handshake has expired. A nested hop does not outlive its parent. Completing a funded hire after that is legal; a new fund is not."
+                  : rule?.ruleId === "kya.attestation_fresh"
+                    ? "The handshake expired. Revoke it, then attest again. A dead hop still occupies the pair. Completing a funded hire after that is legal; a new fund is not."
                 : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,
