@@ -221,6 +221,148 @@ describe("kya.known_parent", () => {
     );
     expect((r.data as { parentId?: string }).parentId).toBe(parentId);
     expect(rt.kya.attestations.size).toBe(before + 1);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+  });
+});
+
+describe("kya.parent_fresh", () => {
+  const DEAD = "2020-01-01T00:00:00.000Z";
+  const FAR = "2099-01-01T00:00:00.000Z";
+  const NOON = "2026-08-28T12:00:00.000Z";
+
+  function expireParent(rt: Runtime) {
+    const { founder, desk, vendor } = economy(rt);
+    const parent = must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3, expiresAt: NOON }),
+      ),
+      "parent hop",
+    );
+    rt.clock.set("2026-08-29T00:00:00.000Z");
+    return { founder, desk, vendor, parentId: (parent.data as { id: string }).id };
+  }
+
+  it("refuses a nested handshake under an expired parent hop as kya.parent_fresh, not a live mint", () => {
+    const rt = boot();
+    const { founder, vendor, parentId } = expireParent(rt);
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId, maxAutonomy: 2 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.parent_fresh");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("dead parent"))).toBe(true);
+  });
+
+  it("refuses a nested handshake under a revoked parent hop as kya.parent_fresh", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const parent = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "parent hop",
+    );
+    const parentId = (parent.data as { id: string }).id;
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: parentId })), "revoke parent");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId, maxAutonomy: 2 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.parent_fresh");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.unique_live first when the same pair also occupies under a dead parent", () => {
+    const rt = boot();
+    const { founder, desk, parentId } = expireParent(rt);
+    const liveBefore = [...rt.kya.attestations.values()].filter((a) => !a.revokedAt).length;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: desk.id, parentId, maxAutonomy: 2 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(liveBefore);
+  });
+
+  it("still names kya.mint_fresh first when the child hop is also born dead", () => {
+    const rt = boot();
+    const { founder, vendor, parentId } = expireParent(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId, maxAutonomy: 2, expiresAt: DEAD }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.mint_fresh");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.mint_window first when the child hop would also outlive one year", () => {
+    const rt = boot();
+    const { founder, vendor, parentId } = expireParent(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId, maxAutonomy: 2, expiresAt: FAR }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.mint_window");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.capability_subset first when L4 omit would also write L5 under a dead parent", () => {
+    const rt = boot();
+    const { founder, vendor, parentId } = expireParent(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id, parentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.capability_subset");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.known_parent first when the parent hop is missing", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: desk.id, parentId: GHOST_PARENT, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.known_parent");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
   });
 });
 

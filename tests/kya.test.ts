@@ -133,6 +133,21 @@ describe("delegation graph", () => {
     ).toThrow(/unknown parent hop/);
   });
 
+  it("still writes a nested hop under an expired parent in the graph; dispatch refuses", () => {
+    const g = new DelegationGraph();
+    g.attest(att({ id: "dlg_1" as DelegationId, grantorId: founder, delegateId: watch, expiresAt: expiredAt }));
+    const child = g.attest(
+      att({
+        id: "dlg_2" as DelegationId,
+        grantorId: founder,
+        delegateId: scout,
+        parentId: "dlg_1" as DelegationId,
+      }),
+    );
+    expect(child.parentId).toBe("dlg_1");
+    expect(g.attestations.size).toBe(2);
+  });
+
   it("forbids revoking an attestation that is not in the graph", () => {
     const g = new DelegationGraph();
     expect(() =>

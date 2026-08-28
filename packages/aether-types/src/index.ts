@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.75.0",
+  version: "0.76.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -775,8 +775,18 @@ export interface PolicyContext {
    * False when kya.attest points at a parentId that is not in this world’s graph.
    * Absent = not a nested hop (no parentId). Do not reuse `parentKnown` —
    * that flag is for issue_intent and would steal first deny as mandate.known_parent.
+   * A parent that exists but is expired or revoked is `kya.parent_fresh`, not this flag.
    */
   kyaParentKnown?: boolean;
+  /**
+   * False when kya.attest names a parent hop that exists but is not live
+   * (`hopStatus` is expired or revoked). Set only when `kyaParentKnown === true`.
+   * Absent = no parentId, or the parent is missing (`kya.known_parent` handles that).
+   * Do not reuse `parentFresh` — that flag is for intent slips.
+   * Do not add this to `proposedKyaGrant` or omit→L5 would steal `kya.capability_subset`.
+   * Graph `attest()` still writes a nested hop under a corpse; dispatch does not.
+   */
+  kyaParentFresh?: boolean;
   /**
    * False when kya.revoke points at an attestationId that is not in this world’s graph,
    * or that belongs to a different principal. Absent = not a named-attestation revoke.

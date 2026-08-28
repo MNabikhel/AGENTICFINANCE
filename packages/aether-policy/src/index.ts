@@ -1200,6 +1200,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.parent_fresh", "deny", "parent intent expired");
     },
   },
+  {
+    id: "kya.parent_fresh",
+    evaluate: (ctx) => {
+      if (ctx.kyaParentFresh === undefined) return v("kya.parent_fresh", "allow", "not a nested hop with a known parent");
+      return ctx.kyaParentFresh
+        ? v("kya.parent_fresh", "allow", "parent hop still lives")
+        : v("kya.parent_fresh", "deny", "parent hop is not live");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1455,6 +1464,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "issue_intent",
     commandType: "mandate.issue_intent",
     hint: "A dead parent is not a parent. Issue a new parent slip, then a tighter child. Completing a funded hire after the parent dies is legal. Ghost parent stays mandate.known_parent. The child's own expiry stays mandate.not_expired.",
+  },
+  "kya.parent_fresh": {
+    kind: "none",
+    hint: "A dead parent hop is not a parent. Attest a live parent, then nest. Ghost parent stays kya.known_parent. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
   },
   "payment.execution_date": {
     kind: "none",

@@ -635,6 +635,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.parent_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot nest a handshake under a dead parent`,
+          body: "A dead parent hop is not a parent. Attest a live parent, then nest. An expired hop still occupies its pair until you revoke.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "kya.party") {
         return {
           seq: input.seq,

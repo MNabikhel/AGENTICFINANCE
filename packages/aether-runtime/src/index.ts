@@ -995,7 +995,9 @@ export class Runtime {
       ctx.kyaMintWindowOk = Number.isFinite(exp) && exp <= now + KYA_TTL_MS;
     }
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
-      ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
+      const parentHop = this.kya.attestations.get(body.parentId as DelegationId);
+      ctx.kyaParentKnown = Boolean(parentHop);
+      if (parentHop) ctx.kyaParentFresh = hopStatus(parentHop, this.clock.now()) === "live";
     }
     if (cmd.type === "kya.attest" || cmd.type === "kya.revoke") {
       const principalId = this.kyaPrincipalId(body, actor);
@@ -1647,7 +1649,9 @@ export class Runtime {
       throw new Error("kya hop outlives one year");
     }
     if (typeof body.parentId === "string") {
-      if (!this.kya.attestations.has(body.parentId as DelegationId)) throw new Error("unknown parent hop");
+      const parentHop = this.kya.attestations.get(body.parentId as DelegationId);
+      if (!parentHop) throw new Error("unknown parent hop");
+      if (hopStatus(parentHop, this.clock.now()) !== "live") throw new Error("kya parent hop not live");
       att.parentId = body.parentId as DelegationId;
     }
     this.kya.attest(att);

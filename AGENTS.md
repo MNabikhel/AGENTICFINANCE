@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.75.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.76.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 82 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 83 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -77,7 +77,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 34. An illegal hire arrow is `hire.state`. Second accept, fund from offered, refund after deliver, release before deliver, and payment-required before deliver are policy denies, not a 409 or 402 after an allow. Refund is only from funded. Payment-required is only after deliver. The escrow table still throws if policy ever lies.
 35. An illegal ladder climb is `ladder.legal`. Skipping rungs, omitting a gate, listing `kill_switch_tested` without actually freezing, or the wrong approver are policy denies, not a mutate throw. `any→L0` stays legal.
 36. Attesting yourself is `kya.not_self`. A handshake is with another agent. The graph still throws if policy ever lies.
-37. A KYA `parentId` that is not in this world is `kya.known_parent`. It is not a live nested handshake. Policy denies; mutate does not mint a hop under a ghost parent. This flag is not `mandate.known_parent`.
+37. A KYA `parentId` that is not in this world is `kya.known_parent`. It is not a live nested handshake. Policy denies; mutate does not mint a hop under a ghost parent. A parent hop that exists but is expired or revoked is `kya.parent_fresh`. This flag is not `mandate.known_parent`.
 38. An account name that is not in this world is `ledger.known_account`. Treasury cannot allocate through a missing book. A named balance of a missing book is not a zero. An FX settle without a USDC book is a missing book, not a journal throw. Policy denies; mutate does not throw after an allow.
 39. One journal is one currency (`ledger.same_currency`). USD_SIM and USDC_SIM do not mix in a transfer, and the stated amount must match the books. Escrow cannot lock USD cash into a USDC hire. Convert with `market.fx_settle`.
 40. A transfer cannot overdraw the source book (`ledger.sufficient`). Neither can `hire.fund` or `market.fx_settle` (the vendor’s USD leg). Draining to zero is legal. Negative cash is not. Escrow cannot lock on empty operating cash. MM USDC inventory is `mm.inventory`. A transfer of operating cash is not a mint; equity and escrow are `ledger.operating_book`.
@@ -117,6 +117,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 74. A cadence with no slots is not a cadence (`mandate.occurrence_fresh`). `mandate.issue_intent` with `max_occurrences` ≤ 0, or a non-number cap, is a refuse, not a written corpse that then fails hire as `payment.recurrence`. Omit `max_occurrences` is unlimited and still mints. One slot still mints; a second hire still names `payment.recurrence`. Ghost subject, missing parent, and a wider child keep first deny.
 75. Fetching one hop by id (`aether_get` / `GET /v1/objects/dlg_*`) labels it `live`, `expired`, or `revoked` — the same derivation as the graph. The store stays raw. Unique_live still occupies. Spend still names `kya.attestation_fresh`.
 76. A dead parent is not a parent (`mandate.parent_fresh`). `mandate.issue_intent` with a parent past `exp`, or a new hire/fund against a child of that parent, is a refuse. Completing a funded hire after the parent dies is legal. Ghost parent stays `mandate.known_parent`. The child's own expiry stays `mandate.not_expired`.
+77. A dead parent hop is not a parent (`kya.parent_fresh`). `kya.attest` with a parentId whose hop is expired or revoked is a refuse, not a nested grant that occupies a new pair while spend skips the corpse. Ghost parent stays `kya.known_parent`. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny. Graph `attest()` still writes a nested hop under a corpse so path-freshness tests can inject; dispatch does not.
 
 ## Autonomy
 
