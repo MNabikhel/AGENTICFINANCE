@@ -8,13 +8,16 @@ import {
   DEFAULT_APPROVAL_THRESHOLDS,
   MIN_LEVEL_FOR_ACTION,
   MM_RATE_BAND_E6,
+  RECURRENCE_GAP_MS,
   ROLE_CAPABILITY,
   VELOCITY_CAPS,
   type AutonomyLevel,
   type CommandType,
+  type Instant,
   type MandateConstraint,
   type PolicyContext,
   type PolicyDecision,
+  type RecurrenceFrequency,
   type Remediation,
   type RuleVerdict,
   type Verdict,
@@ -70,6 +73,43 @@ const ESCALATABLE = new Set<CommandType>([
   "hire.fund",
   "hire.release",
 ]);
+
+/** Recurrence consumes a slot at fund. Create is fail-fast. Completing a funded hire is not a new occurrence. */
+const RECURRENCE_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund"]);
+
+const FREQ_RANK: Record<RecurrenceFrequency, number> = {
+  ON_DEMAND: 0,
+  DAILY: 1,
+  WEEKLY: 2,
+  MONTHLY: 3,
+};
+
+function recurrenceDeny(
+  c: Extract<MandateConstraint, { type: "payment.agent_recurrence" }>,
+  occurrenceCount: number,
+  lastOccurrenceAt: Instant | undefined,
+  clock: Instant,
+  prefix: string,
+): RuleVerdict | undefined {
+  if (c.max_occurrences !== undefined && occurrenceCount >= c.max_occurrences) {
+    return v("payment.recurrence", "deny", `${prefix}max_occurrences exceeded`, {
+      count: occurrenceCount,
+      max: c.max_occurrences,
+    });
+  }
+  const gap = RECURRENCE_GAP_MS[c.frequency];
+  if (gap > 0 && lastOccurrenceAt) {
+    const elapsed = Date.parse(clock) - Date.parse(lastOccurrenceAt);
+    if (elapsed < gap) {
+      return v("payment.recurrence", "deny", `${prefix}recurrence gap (${c.frequency})`, {
+        frequency: c.frequency,
+        elapsedMs: elapsed,
+        gapMs: gap,
+      });
+    }
+  }
+  return undefined;
+}
 
 export const RULES: readonly Rule[] = [
   {
@@ -221,11 +261,28 @@ export const RULES: readonly Rule[] = [
   {
     id: "payment.recurrence",
     evaluate: (ctx) => {
-      const c = findConstraint(ctx, "payment.agent_recurrence");
-      if (!c) return v("payment.recurrence", "allow", "no recurrence constraint");
-      if (c.max_occurrences !== undefined && ctx.occurrenceCount >= c.max_occurrences) {
-        return v("payment.recurrence", "deny", "max_occurrences exceeded");
+      if (!RECURRENCE_COMMANDS.has(ctx.commandType as CommandType)) {
+        return v("payment.recurrence", "allow", "recurrence counted at fund");
       }
+      const own = findConstraint(ctx, "payment.agent_recurrence");
+      if (own) {
+        const hit = recurrenceDeny(own, ctx.occurrenceCount, ctx.lastOccurrenceAt, ctx.clock, "");
+        if (hit) return hit;
+      }
+      const parentC = ctx.parentIntent
+        ? listed(ctx.parentIntent.payload.constraints, "payment.agent_recurrence")
+        : undefined;
+      if (parentC) {
+        const hit = recurrenceDeny(
+          parentC,
+          ctx.parentOccurrenceCount ?? 0,
+          ctx.parentLastOccurrenceAt,
+          ctx.clock,
+          "parent ",
+        );
+        if (hit) return hit;
+      }
+      if (!own && !parentC) return v("payment.recurrence", "allow", "no recurrence constraint");
       return v("payment.recurrence", "allow", "recurrence ok");
     },
   },
@@ -535,6 +592,20 @@ export const RULES: readonly Rule[] = [
       if (parentMax && (!childMax || childMax.max > parentMax.max)) {
         return v("mandate.child_tighter", "deny", "child max autonomy wider than parent");
       }
+      const parentRec = listed(parent, "payment.agent_recurrence");
+      const childRec = listed(child, "payment.agent_recurrence");
+      if (parentRec) {
+        if (!childRec) return v("mandate.child_tighter", "deny", "child missing recurrence constraint");
+        if (
+          parentRec.max_occurrences !== undefined &&
+          (childRec.max_occurrences === undefined || childRec.max_occurrences > parentRec.max_occurrences)
+        ) {
+          return v("mandate.child_tighter", "deny", "child max_occurrences wider than parent");
+        }
+        if (FREQ_RANK[childRec.frequency] < FREQ_RANK[parentRec.frequency]) {
+          return v("mandate.child_tighter", "deny", "child recurrence more frequent than parent");
+        }
+      }
       return v("mandate.child_tighter", "allow", "sub-intent tighter than parent");
     },
   },
@@ -654,6 +725,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.invited_seller": {
     kind: "none",
     hint: "This RFQ named its sellers. Only invitedSellerIds may quote. An empty invite list is an open RFQ.",
+  },
+  "payment.recurrence": {
+    kind: "none",
+    hint: "Cadence is spent. If the frequency gap has not elapsed, wait. If max_occurrences is exhausted, issue a new intent. Refund does not restore a slot.",
   },
 };
 

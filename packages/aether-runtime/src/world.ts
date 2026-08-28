@@ -19,6 +19,7 @@ import type {
   DelegationAttestation,
   HireContract,
   IntentMandate,
+  Instant,
   JournalEntry,
   MandateId,
   PaymentMandate,
@@ -65,6 +66,7 @@ export interface WorldState {
   nonces: string[];
   spentByIntent: Array<[MandateId, number]>;
   occurrences: Array<[MandateId, number]>;
+  lastOccurrence?: Array<[MandateId, Instant]>;
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];

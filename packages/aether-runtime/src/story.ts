@@ -151,6 +151,8 @@ export function autoBeat(input: {
         body = "This agent is frozen. Freeze is a kill switch: autonomy drops to L0 and spend is denied.";
       } else if (ruleId === "market.invited_seller") {
         body = "That seller was not on the RFQ. A named invite list is a closed room.";
+      } else if (ruleId === "payment.recurrence") {
+        body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
       }
       return {
         seq: input.seq,

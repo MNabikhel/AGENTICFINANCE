@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.7.0",
+  version: "0.8.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -183,6 +183,14 @@ export interface LineItem {
 }
 
 export type RecurrenceFrequency = "ON_DEMAND" | "DAILY" | "WEEKLY" | "MONTHLY";
+
+/** Minimum gap between funded occurrences. `ON_DEMAND` has no gap. Monthly is 30 × 24h on the sim clock. */
+export const RECURRENCE_GAP_MS: Record<RecurrenceFrequency, number> = {
+  ON_DEMAND: 0,
+  DAILY: 86_400_000,
+  WEEKLY: 7 * 86_400_000,
+  MONTHLY: 30 * 86_400_000,
+};
 
 export type MandateConstraint =
   | {
@@ -553,6 +561,8 @@ export interface PolicyContext {
   payeeId?: AgentId;
   spentAgainstIntent: number;
   occurrenceCount: number;
+  /** Instant of the last funded occurrence under this intent. Absent = never spent. */
+  lastOccurrenceAt?: Instant;
   velocity: VelocityWindow;
   circuit: CircuitState;
   /** Market-maker FX rate in millionths. Absent unless quoting/settling FX. */
@@ -575,6 +585,8 @@ export interface PolicyContext {
   /** Parent intent when spending against a sub-slip, or when issuing one. */
   parentIntent?: Signed<IntentMandate>;
   parentSpent?: number;
+  parentOccurrenceCount?: number;
+  parentLastOccurrenceAt?: Instant;
   /** Child constraints when issuing a sub-intent. */
   proposedConstraints?: MandateConstraint[];
   /** False when SKU is not in the market catalog. Absent = command is not catalog-gated. */

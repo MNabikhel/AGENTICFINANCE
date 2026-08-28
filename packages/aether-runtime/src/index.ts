@@ -43,6 +43,7 @@ import type {
   DelegationId,
   HireContract,
   HireId,
+  Instant,
   IntentMandate,
   JournalEntry,
   KyaIssuerKind,
@@ -126,6 +127,7 @@ export class Runtime {
   readonly nonces = new Set<string>();
   readonly spentByIntent = new Map<MandateId, number>();
   readonly occurrences = new Map<MandateId, number>();
+  readonly lastOccurrence = new Map<MandateId, Instant>();
   readonly settleEvents: { at: string; volume: number }[] = [];
   dailySpend = 0;
   dailyLimit: number;
@@ -467,6 +469,7 @@ export class Runtime {
       nonces: [...this.nonces],
       spentByIntent: [...this.spentByIntent.entries()],
       occurrences: [...this.occurrences.entries()],
+      lastOccurrence: [...this.lastOccurrence.entries()],
       settleEvents: [...this.settleEvents],
       decisions: [...this.decisions],
       story: [...this.story],
@@ -531,6 +534,8 @@ export class Runtime {
     for (const [id, n] of world.spentByIntent) this.spentByIntent.set(id, n);
     this.occurrences.clear();
     for (const [id, n] of world.occurrences) this.occurrences.set(id, n);
+    this.lastOccurrence.clear();
+    for (const [id, at] of world.lastOccurrence ?? []) this.lastOccurrence.set(id, at);
     this.settleEvents.splice(0, this.settleEvents.length, ...world.settleEvents);
     this.decisions.splice(0, this.decisions.length, ...world.decisions);
     this.story.splice(0, this.story.length, ...world.story);
@@ -689,6 +694,10 @@ export class Runtime {
       auditHealthy: audit.ok,
     };
     if (intent) ctx.intent = intent;
+    if (intent) {
+      const last = this.lastOccurrence.get(intent.payload.id);
+      if (last) ctx.lastOccurrenceAt = last;
+    }
     if (cart) ctx.cart = cart;
     if (payment) ctx.payment = payment;
     if (hire) ctx.hire = hire;
@@ -709,6 +718,9 @@ export class Runtime {
     if (parentIntent) {
       ctx.parentIntent = parentIntent;
       ctx.parentSpent = this.spentByIntent.get(parentIntent.payload.id) ?? 0;
+      ctx.parentOccurrenceCount = this.occurrences.get(parentIntent.payload.id) ?? 0;
+      const parentLast = this.lastOccurrence.get(parentIntent.payload.id);
+      if (parentLast) ctx.parentLastOccurrenceAt = parentLast;
     }
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
@@ -1612,14 +1624,16 @@ export class Runtime {
   }
 
   private noteSpend(hire: HireContract) {
+    const now = this.clock.now();
     let cursor: MandateId | undefined = hire.intentId;
     const seen = new Set<MandateId>();
     while (cursor && !seen.has(cursor)) {
       seen.add(cursor);
       this.spentByIntent.set(cursor, (this.spentByIntent.get(cursor) ?? 0) + hire.price.amount);
+      this.occurrences.set(cursor, (this.occurrences.get(cursor) ?? 0) + 1);
+      this.lastOccurrence.set(cursor, now);
       cursor = this.intents.get(cursor)?.payload.parentId;
     }
-    this.occurrences.set(hire.intentId, (this.occurrences.get(hire.intentId) ?? 0) + 1);
     this.clearing.record(hire.buyerId, hire.sellerId, hire.price.amount, hire.price.currency);
     this.noteVolume(hire.price.amount);
   }

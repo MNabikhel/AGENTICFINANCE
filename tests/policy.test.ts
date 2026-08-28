@@ -289,6 +289,50 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
   });
 
+  it("denies a child recurrence that is more frequent than the parent", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      { type: "payment.agent_recurrence", frequency: "DAILY", max_occurrences: 4 },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 200000 },
+          { type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 4 },
+        ],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+  });
+
+  it("denies a new hire when the DAILY gap has not elapsed", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        occurrenceCount: 1,
+        lastOccurrenceAt: "2026-08-28T00:00:00.000Z",
+        clock: "2026-08-28T01:00:00.000Z",
+        intent: signedIntent([{ type: "payment.agent_recurrence", frequency: "DAILY", max_occurrences: 8 }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not treat completing a funded hire as a new occurrence", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.deliver",
+        occurrenceCount: 8,
+        intent: signedIntent([{ type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 8 }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("allow");
+  });
+
   it("denies child spend that exhausts the parent budget", () => {
     const parent = signedIntent([{ type: "payment.budget", currency: "USD_SIM", max: 100000 }]);
     const d = evaluate(

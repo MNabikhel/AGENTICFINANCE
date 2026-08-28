@@ -306,6 +306,8 @@ export type MandateConstraint =
       frequency: "ON_DEMAND" | "DAILY" | "WEEKLY" | "MONTHLY";
       max_occurrences?: number;
     }
+    // DAILY = 24h, WEEKLY = 7d, MONTHLY = 30 × 24h. ON_DEMAND has no gap.
+    // Checked on hire.create and hire.fund. Refund does not restore a slot.
   | {
       type: "payment.execution_date";
       not_before?: Instant;
@@ -608,10 +610,13 @@ export interface PolicyContext {
   payeeId?: `aid_${Ulid}`;
   spentAgainstIntent: number;       // minor units already settled under this intent
   occurrenceCount: number;
+  lastOccurrenceAt?: Instant;       // last fund under this intent
   velocity: { windowSeconds: number; count: number; volume: number };
   circuit: { dailySpend: number; dailyLimit: number; tripped: boolean };
   parentIntent?: Signed<IntentMandate>;
   parentSpent?: number;
+  parentOccurrenceCount?: number;
+  parentLastOccurrenceAt?: Instant;
   proposedConstraints?: MandateConstraint[];
   skuListed?: boolean;
   marketFresh?: boolean;
@@ -724,7 +729,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 08 | `payment.budget` | settle if constraint present | `spentAgainstIntent + amount > max` | — | remaining ≥ amount |
 | 09 | `payment.allowed_payees` | settle if constraint present | payee not in list | — | listed |
 | 10 | `payment.allowed_skus` | settle/hire if constraint present | sku not listed | — | listed |
-| 11 | `payment.recurrence` | settle if constraint present | occurrence gap too small or `occurrenceCount >= max` | — | ok |
+| 11 | `payment.recurrence` | hire.create / hire.fund if constraint present | `occurrenceCount >= max` or last fund inside the frequency gap (`DAILY` 24h, `WEEKLY` 7d, `MONTHLY` 30d). `ON_DEMAND` has no gap. Completing a funded hire is not a new occurrence. | — | under cap and past the gap |
 | 12 | `payment.execution_date` | settle if constraint present | now outside `[not_before, not_after]` | — | in window |
 | 13 | `ladder.min_level` | settle/hire/sub-intent | actor.level < required **and** no pending human signature path | actor.level < required **and** command is escalatable | level ≥ required |
 | 14 | `ladder.max_autonomy_constraint` | settle if `aether.max_autonomy` present | actor.level > max (over-autonomy abuse) | — | actor.level ≤ max |
