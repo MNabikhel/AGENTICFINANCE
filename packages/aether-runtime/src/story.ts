@@ -57,6 +57,27 @@ export function autoBeat(input: {
   if (cmd.type === "mandate.issue_cart" || cmd.type === "mandate.issue_payment") return undefined;
   if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "hire.state") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot move that hire`,
+          body: "A hire only walks offered → accepted → funded → delivered → released. An illegal arrow is a refuse, not a 409 after yes.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "hire.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} named a hire that is not here`,
+          body: "That hire is not in this world. A missing contract is not a broken mandate chain.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -269,7 +290,9 @@ export function autoBeat(input: {
             ? "The cart must equal the hire. Escrow moves the quoted price. A cheaper cart is not a discount."
             : rule?.ruleId === "hire.known"
               ? "That hire is not in this world. A missing contract is not a broken mandate chain."
-              : (rule?.message ?? "The referee refused to fund this hire."),
+              : rule?.ruleId === "hire.state"
+                ? "A hire must be accepted before escrow can lock. Offered is not funded. An illegal arrow is a refuse, not a 409 after yes."
+                : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,
       };
@@ -287,11 +310,15 @@ export function autoBeat(input: {
   }
   if (cmd.type === "hire.refund") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
       return {
         seq: input.seq,
         at: input.at,
         headline: `${who} could not unwind escrow${amt ? ` (${amt})` : ""}`,
-        body: "Refund is the buyer or treasury, and only while the hire is funded. The other side of the table does not unwind escrow.",
+        body:
+          rule?.ruleId === "hire.state"
+            ? "Refund is only from funded. After deliver, escrow can only be released to the vendor. Delivered work cannot be unwound."
+            : "Refund is the buyer or treasury, and only while the hire is funded. The other side of the table does not unwind escrow.",
         tone: "deny",
         commandType: cmd.type,
       };
@@ -312,7 +339,10 @@ export function autoBeat(input: {
         seq: input.seq,
         at: input.at,
         headline: `${who} tried to spend and was refused`,
-        body: `Role ${actor.role} is not allowed to move money. Rule: ${rule?.ruleId ?? "actor.role_capability"}. An auditor who can spend is not an auditor.`,
+        body:
+          rule?.ruleId === "hire.state"
+            ? "Escrow releases only after the vendor has delivered. Funded is not released. An illegal arrow is a refuse, not a 409 after yes."
+            : `Role ${actor.role} is not allowed to move money. Rule: ${rule?.ruleId ?? "actor.role_capability"}. An auditor who can spend is not an auditor.`,
         tone: "deny",
         commandType: cmd.type,
       };

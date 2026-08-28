@@ -498,9 +498,9 @@ export interface Quote {
 }
 ```
 
-RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. A cartId that is not in this world is `mandate.known_cart` — not a broken payment chain. An approvalId that is not in this world is `approval.known` — not a late yes. An expired or already-resolved ticket is `approval.pending`. Accept, deliver, and payment-required belong to the seller; refund and release belong to the buyer or treasury (`hire.party`). A parentId that is not in this world is `mandate.known_parent` — not a tighter child. An agentId that is not in this world is `identity.known` — not a freeze, handshake, merchant, or slip subject. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. A cartId that is not in this world is `mandate.known_cart` — not a broken payment chain. An approvalId that is not in this world is `approval.known` — not a late yes. An expired or already-resolved ticket is `approval.pending`. Accept, deliver, and payment-required belong to the seller; refund and release belong to the buyer or treasury (`hire.party`). A parentId that is not in this world is `mandate.known_parent` — not a tighter child. An agentId that is not in this world is `identity.known` — not a freeze, handshake, merchant, or slip subject. An illegal hire arrow is `hire.state` — not a 409 after an allow. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
 
-Hire state machine (illegal arrows throw `HIRE_ILLEGAL_TRANSITION`):
+Hire state machine (illegal arrows are `hire.state`; mutate still throws `HIRE_ILLEGAL_TRANSITION` if policy ever lies):
 
 ```
 offered → accepted → funded → delivered → released
@@ -781,6 +781,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 47 | `hire.party` | accept / deliver / envelope.require / refund / release | actor is not the seller (accept/deliver/require) or not the buyer/treasury (refund/release) | — | right party |
 | 48 | `mandate.known_parent` | issue_intent with parentId | parentId not in this world | — | parent exists |
 | 49 | `identity.known` | freeze / unfreeze / ladder.set / kya.attest / issue_cart / issue_intent | named agentId / delegateId / merchantId / subjectId not in this world | — | agent registered |
+| 50 | `hire.state` | accept / fund / deliver / refund / release / envelope.submit | command is not a legal arrow from the hire’s current state | — | legal transition |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -954,7 +955,7 @@ export interface AetherError {
 }
 ```
 
-`422` = policy deny. `402` = payment required (envelope.require). `409` = illegal state transition or nonce reuse.
+`422` = policy deny. `402` = payment required (envelope.require). `409` = mutate backstop (illegal hire arrow that policy missed, or nonce reuse). Illegal hire arrows are `hire.state` (422) first.
 
 ---
 
@@ -967,7 +968,7 @@ export interface AetherError {
 | `mandate.test.ts` | Wrong cart hash / swapped payee / amount mismatch denied |
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
 | `ladder.test.ts` | Skip 2→4 illegal; freeze forces deny; L5 still hits amount_range |
-| `hire.test.ts` | deliver before funded denied; self-deal denied |
+| `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows are `hire.state` (422), not a 409 after allow |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |

@@ -6,6 +6,8 @@
 
 import {
   DEFAULT_APPROVAL_THRESHOLDS,
+  HIRE_COMMAND_TARGET,
+  HIRE_TRANSITIONS,
   MIN_LEVEL_FOR_ACTION,
   MM_RATE_BAND_E6,
   RECURRENCE_GAP_MS,
@@ -13,6 +15,7 @@ import {
   VELOCITY_CAPS,
   type AutonomyLevel,
   type CommandType,
+  type HireState,
   type Instant,
   type MandateConstraint,
   type PolicyContext,
@@ -48,6 +51,13 @@ function listed<T extends MandateConstraint["type"]>(
   type: T,
 ): Extract<MandateConstraint, { type: T }> | undefined {
   return list?.find((c): c is Extract<MandateConstraint, { type: T }> => c.type === type);
+}
+
+function nextHireState(commandType: string): HireState | undefined {
+  if (commandType in HIRE_COMMAND_TARGET) {
+    return HIRE_COMMAND_TARGET[commandType as keyof typeof HIRE_COMMAND_TARGET];
+  }
+  return undefined;
 }
 
 function minLevelFor(ctx: PolicyContext): AutonomyLevel {
@@ -810,6 +820,17 @@ export const RULES: readonly Rule[] = [
         : v("identity.known", "deny", "agent not found");
     },
   },
+  {
+    id: "hire.state",
+    evaluate: (ctx) => {
+      const to = nextHireState(ctx.commandType);
+      if (to === undefined) return v("hire.state", "allow", "not a hire-transition command");
+      if (!ctx.hire || ctx.hire.id === "hid_draft") return v("hire.state", "allow", "no live hire");
+      return HIRE_TRANSITIONS[ctx.hire.state].includes(to)
+        ? v("hire.state", "allow", `${ctx.hire.state} -> ${to}`)
+        : v("hire.state", "deny", `illegal ${ctx.hire.state} -> ${to}`, { from: ctx.hire.state, to });
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -928,6 +949,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "identity.known": {
     kind: "none",
     hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, or a permission-slip subject.",
+  },
+  "hire.state": {
+    kind: "none",
+    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. An illegal arrow is a refuse. Delivered work cannot be unwound.",
   },
   "payment.execution_date": {
     kind: "none",

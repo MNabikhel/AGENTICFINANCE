@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import { inviteQuote } from "../packages/aether-runtime/src/hire-flow.ts";
+import { fundHire, inviteQuote, offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
+import type { HireContract, MandateId } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -37,7 +38,7 @@ function economy(rt: Runtime) {
   rt.seedOpening({ "procurement:cash": { amount: 1_500_000, currency: "USD_SIM" } });
   const desk = rt.alias("procurement");
   const vendor = rt.alias("vendor");
-  must(
+  const intent = must(
     rt.dispatch(
       cmd("mandate.issue_intent", founder.id, {
         subjectId: desk.id,
@@ -47,7 +48,7 @@ function economy(rt: Runtime) {
     ),
     "intent",
   );
-  return { desk, vendor };
+  return { desk, vendor, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
 }
 
 describe("known hire", () => {
@@ -184,5 +185,155 @@ describe("known parent", () => {
     expect(rt.intents.size).toBe(before);
     expect(rt.clock.now()).not.toBe(clockBefore);
     expect(rt.audit.length).toBeGreaterThan(auditBefore);
+  });
+});
+
+function offered(rt: ReturnType<typeof boot>) {
+  const { desk, vendor, intentId } = economy(rt);
+  const live = offerHire(rt, {
+    buyer: desk.id,
+    seller: vendor.id,
+    sku: "research.brief",
+    spec: "one pager",
+    price: { amount: 80_000, currency: "USD_SIM" },
+    intentId,
+  });
+  if (!live.attempt.ok) throw new Error("expected hire.create allow");
+  return { desk, vendor, intentId, hireId: (live.attempt.value.data as HireContract).id };
+}
+
+function cartAndPay(rt: ReturnType<typeof boot>, input: { hireId: string; buyer: string; seller: string; intentId: string }) {
+  const cart = must(
+    rt.dispatch(
+      cmd("mandate.issue_cart", input.buyer, {
+        intentId: input.intentId,
+        merchantId: input.seller,
+        hireId: input.hireId,
+        line_items: [
+          {
+            sku: "research.brief",
+            description: "one pager",
+            quantity: 1,
+            unitAmount: { amount: 80_000, currency: "USD_SIM" },
+          },
+        ],
+      }),
+    ),
+    "cart",
+  );
+  const payment = must(
+    rt.dispatch(cmd("mandate.issue_payment", input.buyer, { cartId: (cart.data as { payload: { id: string } }).payload.id })),
+    "payment",
+  );
+  return { paymentId: (payment.data as { payload: { id: string } }).payload.id };
+}
+
+describe("hire state", () => {
+  it("refuses a second accept as hire.state, not a mutate throw", () => {
+    const rt = boot();
+    const { vendor, hireId } = offered(rt);
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("hire.accept", vendor.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.escrow_required")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.state");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("accepted");
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses to fund an offered hire as hire.state, not a 409 after allow", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, hireId } = offered(rt);
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: desk.id, seller: vendor.id, intentId });
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.state");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("offered");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+  });
+
+  it("refuses to refund after deliver as hire.state, and does not unwind escrow", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, hireId } = offered(rt);
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { ok: true } })), "deliver");
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    const r = rt.dispatch(cmd("hire.refund", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.state");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("delivered");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.spentByIntent.get(intentId)).toBe(80_000);
+  });
+
+  it("refuses to release before deliver as hire.state", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, hireId } = offered(rt);
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const vendorCash = rt.ledger.balanceByName("vendor:cash").amount;
+    const r = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.state");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("funded");
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(vendorCash);
+    expect(rt.receipts.size).toBe(0);
+  });
+
+  it("refuses a second fund with a new key as hire.state, and still replays the first", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, hireId } = offered(rt);
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: desk.id, seller: vendor.id, intentId });
+    const body = { hireId, paymentMandateId: paymentId };
+    must(rt.dispatch(cmd("hire.fund", desk.id, body)), "fund");
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+
+    const replay = rt.dispatch(cmd("hire.fund", desk.id, body));
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.replayed).toBe(true);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+
+    const r = rt.dispatch(cmd("hire.fund", desk.id, body, "second-fund"));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("funded");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
   });
 });

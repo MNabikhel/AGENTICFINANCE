@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.22.0",
+  version: "0.23.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -367,6 +367,16 @@ export const HIRE_TRANSITIONS: Readonly<Record<HireState, readonly HireState[]>>
   void: [],
 };
 
+/** Commands that walk the hire. Absent from this table = not a transition command. */
+export const HIRE_COMMAND_TARGET = {
+  "hire.accept": "accepted",
+  "hire.fund": "funded",
+  "hire.deliver": "delivered",
+  "hire.refund": "refunded",
+  "hire.release": "released",
+  "envelope.submit": "released",
+} as const satisfies Record<string, HireState>;
+
 export interface HireContract {
   id: HireId;
   buyerId: AgentId;
@@ -374,6 +384,7 @@ export interface HireContract {
   sku: string;
   spec: string;
   price: Money;
+  /** Current lifecycle state. Illegal arrows are `hire.state`, not a mutate throw. */
   state: HireState;
   rfqId: RfqId;
   quoteId: QuoteId;

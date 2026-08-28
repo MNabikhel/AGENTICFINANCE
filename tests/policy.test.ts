@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluate, remediationFor } from "@aether/policy";
 import { RULE_IDS } from "@aether/policy";
-import type { Agent, IntentMandate, MandateConstraint, PolicyContext, Signed } from "@aether/types";
+import type { Agent, HireContract, IntentMandate, MandateConstraint, PolicyContext, Signed } from "@aether/types";
 
 function agent(over: Partial<Agent> = {}): Agent {
   return {
@@ -35,6 +35,24 @@ function ctx(over: Partial<PolicyContext> = {}): PolicyContext {
   };
 }
 
+function hire(over: Partial<HireContract> = {}): HireContract {
+  return {
+    id: "hid_01J6AETHERHIRE00000000001",
+    buyerId: "aid_01J6AETHERAGENT00000000001",
+    sellerId: "aid_01J6AETHERAGENT00000000002",
+    sku: "research.brief",
+    spec: "one pager",
+    price: { amount: 80_000, currency: "USD_SIM" },
+    state: "offered",
+    rfqId: "rfq_01J6AETHERRFQ000000000001",
+    quoteId: "qte_01J6AETHERQTE000000000001",
+    intentId: "mid_01J6AETHERMAND00000000001",
+    escrowAccountId: "acct_01J6AETHERACCT00000000002",
+    createdAt: "2026-08-28T00:00:00.000Z",
+    ...over,
+  };
+}
+
 function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMandate> = {}): Signed<IntentMandate> {
   return {
     issuer: "did:aether:human",
@@ -56,8 +74,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 49 rules", () => {
-    expect(RULE_IDS).toHaveLength(49);
+  it("has 50 rules", () => {
+    expect(RULE_IDS).toHaveLength(50);
   });
 
   it("denies frozen actors", () => {
@@ -581,6 +599,55 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("identity.known");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a second accept as hire.state, not a mutate throw", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "hire.accept",
+        hire: hire({ state: "accepted" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.escrow_required")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a refund after deliver as hire.state, not a missing party", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.refund",
+        hire: hire({ state: "delivered" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows an accept from offered", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "hire.accept",
+        hire: hire({ state: "offered" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
   });
 
   it("denies FX settle without a live unused FX quote", () => {
