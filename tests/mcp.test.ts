@@ -121,4 +121,39 @@ describe("MCP host", () => {
     expect(asSystem.ok).toBe(false);
     expect(asSystem.remediation?.ruleId).toBe("actor.system_scope");
   });
+
+  it("lets omit-actor verify the notary, and names actor.role_capability when a vendor tries", () => {
+    const mcp = new AetherMcp();
+    const asSystem = mcp.callTool("aether_audit_verify", {}) as {
+      ok: boolean;
+      kind: string;
+      data: { ok: boolean };
+    };
+    expect(asSystem.ok).toBe(true);
+    expect(asSystem.kind).toBe("allow");
+    expect(asSystem.data.ok).toBe(true);
+    expect(mcp.runtime.audit.query({ action: "AUDIT_VERIFY" }).matched).toBe(1);
+
+    mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    });
+    mcp.callTool("aether_identity_register", {
+      actor: "ops-human",
+      key: "vendor",
+      displayName: "Vendor",
+      role: "data_vendor",
+      autonomyLevel: 2,
+    });
+    const asVendor = mcp.callTool("aether_audit_verify", { actor: "vendor" }) as {
+      ok: boolean;
+      remediation: { ruleId: string } | null;
+    };
+    expect(asVendor.ok).toBe(false);
+    expect(asVendor.remediation?.ruleId).toBe("actor.role_capability");
+    expect(mcp.runtime.audit.query({ action: "AUDIT_VERIFY" }).matched).toBe(1);
+  });
 });

@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, `GET /.well-known/aether.json`, resource `aether://protocol` / `aether://host`, tool `aether_protocol` / `aether_host_card`). `liveMoney` is `false` until adapters exist. `evaluateLlm` is `false`. `hosted` is `false` on this public kernel. Current card: `0.91.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, `GET /.well-known/aether.json`, resource `aether://protocol` / `aether://host`, tool `aether_protocol` / `aether_host_card`). `liveMoney` is `false` until adapters exist. `evaluateLlm` is `false`. `hosted` is `false` on this public kernel. Current card: `0.92.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -34,6 +34,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether://commands` — JSON Schema for every command body
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
 - `aether_audit_query` / `GET /v1/audit?subject=` — notary lines for one id
+- `aether_audit_verify` / `GET /v1/audit/verify` — replay the hash chain. System may. A vendor cannot. Writes POLICY_DECISION. Not a silent peek.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
 - `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
 
@@ -100,7 +101,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 55. Settling FX with no market maker (or missing `market_maker:cash_usd` / `market_maker:cash_usdc`) is `mm.known`. A window is not a journal against nobody. Ghost quote stays `market.fx_quote`. Vendor without a USDC book stays `ledger.known_account`. Empty MM USDC stays `mm.inventory`.
 56. A command whose `actorId` is not `system` and is not a registered agent is `actor.known`. A missing speaker is not a 500. Named *targets* (freeze, handshake, merchant, subject, RFQ invitee) stay `identity.known`.
 57. A journal that would leave a touched book outside `Number.isSafeInteger` is `ledger.safe_balance`. IEEE rounding is not a mint. Overdraft stays `ledger.sufficient`. Ghost book stays `ledger.known_account`. Restore of old worlds still applies historical journals; a new post does not.
-58. `system` is the runtime, not a treasurer (`actor.system_scope`). It may bootstrap the first human and read the catalog, the notary, balances, and receipts. It cannot spend, freeze, or mint further agents. HTTP/MCP omitting actor still becomes system; this rule is the fence.
+58. `system` is the runtime, not a treasurer (`actor.system_scope`). It may bootstrap the first human and read the catalog, the notary (query and verify), balances, receipts, and the host card. It cannot spend, freeze, or mint further agents. HTTP/MCP omitting actor still becomes system; this rule is the fence.
 59. A transfer that would journal against equity or escrow is `ledger.operating_book`. Opening cash is `seedOpening`. Escrow moves through `hire.fund` / refund / release. Overdraft stays `ledger.sufficient`. Dest overflow of operating cash stays `ledger.safe_balance`. Ghost book stays `ledger.known_account`. A transfer is not a mint, and it cannot pick the escrow lock.
 60. A data vendor’s `key:usdc` and a market maker’s `market_maker:cash_usdc` belong to that agent, not system. Register writes `ownerId` after the id exists. A USDC name collision is `identity.unique_key`, not `account exists` after opening USD cash. Restore of old worlds may still show system as owner; a new register does not.
 61. L5 is not a birthright (`ladder.birth_rung`). `identity.register` may mint L0–L4. L5 is a climb (`ladder.set` 4→5) after a freeze that was actually tested. Listing the gate names is not the test. A reused alias stays `identity.unique_key`. Skipping a rung on an existing agent stays `ladder.legal`. System minting a second agent stays `actor.system_scope`.
@@ -134,6 +135,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 89. Other agents discover this referee by pinning the host card (`host.card` / `GET /v1/protocol` / `GET /.well-known/aether.json`). `evaluateLlm` is false. `hosted` is false on this public kernel. Self-host is free. `host.subscribe` is `host.not_hosted`. System may read the card. A vendor subscribe stays `actor.role_capability`. System subscribe stays `actor.system_scope`. GitHub is not a checkout. Live adapters (AP2 / x402 / MPP) are shape-only until `liveMoney`. Humans establish identity, budget, and authority first.
 90. A hosted operator (`Runtime({ hosted: true })` / `AETHER_HOSTED=true`) records `host.subscribe` as a unique subscriber (`hsb_`) against a live intent issued by a human_operator or treasury. The speaker must be the intent subject. Ghost slip is `mandate.known_intent`. Expired slip is `mandate.not_expired`. Agent-issued slip is `host.human_authority`. A second row is `host.unique_subscriber`. System subscribe stays `actor.system_scope`. The public kernel pin stays `hosted: false`. Spend is not gated on the row. The store stays raw. Old worlds boot without `subscriptions` (`WORLD_VERSION` stays 1).
 91. Fetching one RFQ by id (`aether_get` / `GET /v1/objects/rfq_*`) labels it `live` or `expired`. A dead room is not an open room. The store stays raw (`expiresAt` only). Snapshot uses the same derivation. A hire quote whose parent RFQ died is `expired` even if the quote envelope still lives (spent and held still win). An FX quote is a window on the quote, not the room — RFQ death does not expire it. Quoting or hiring against a stale room still names `market.not_expired`.
+92. `GET /v1/audit/verify` is `audit.verify` on the command bus. System may verify the notary (same as catalog / audit.query). A vendor POST stays `actor.role_capability`. The check writes `POLICY_DECISION` and `AUDIT_VERIFY`. There is no anonymous bypass of `evaluate()`. MCP omit-actor is the same speaker as HTTP GET.
 
 ## Autonomy
 

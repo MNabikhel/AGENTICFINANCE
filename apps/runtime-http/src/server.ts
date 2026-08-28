@@ -143,6 +143,10 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         handleDispatch(res, "audit.query", { ...q, actor: "system" });
         return;
       }
+      if (req.method === "GET" && path === "/v1/audit/verify") {
+        handleDispatch(res, "audit.verify", { actor: "system" });
+        return;
+      }
       if (req.method === "GET" && path === "/v1/commands") {
         const spec = join(process.cwd(), "schemas/commands.schema.json");
         json(res, 200, JSON.parse(readFileSync(spec, "utf8")));
@@ -251,10 +255,6 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, 200, { format: "yaml", path: spec, note: "see packages/aether-openapi/openapi.yaml" });
         return;
       }
-      if (req.method === "GET" && path === "/v1/audit/verify") {
-        json(res, 200, runtime.audit.verify());
-        return;
-      }
 
       const bodyText = req.method === "POST" ? await readBody(req) : "{}";
       const body = bodyText ? (JSON.parse(bodyText) as Record<string, unknown>) : {};
@@ -354,4 +354,4 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
   return server;
 }
 
-start();
+if (!process.env.VITEST) start();

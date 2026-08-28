@@ -119,7 +119,7 @@
     {
       "name": "aether_audit_verify",
       "commandType": "audit.verify",
-      "description": "Replay the hash-chained audit log from genesis."
+      "description": "Replay the hash-chained audit log from genesis. System may. A vendor cannot. HTTP GET is the same command, not a silent peek."
     },
     {
       "name": "aether_audit_query",

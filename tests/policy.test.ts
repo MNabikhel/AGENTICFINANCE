@@ -1705,6 +1705,11 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
   });
 
+  it("allows system to verify the notary", () => {
+    const d = evaluate(ctx({ commandType: "audit.verify", systemOk: true }));
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+  });
+
   it("does not name actor.system_scope when the speaker is a registered agent", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");

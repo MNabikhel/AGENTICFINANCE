@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.91.0
+  version: 0.92.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -209,10 +209,15 @@ paths:
       responses:
         "200": { description: Runtime snapshot }
   /v1/audit/verify:
+    get:
+      operationId: auditVerifyGet
+      responses:
+        "200": { description: Chain ok or first failure. Same command as POST. System speaker. Writes POLICY_DECISION and AUDIT_VERIFY. Not a silent peek. }
     post:
       operationId: auditVerify
       responses:
-        "200": { description: Chain ok or first failure }
+        "200": { description: Chain ok or first failure. Same command as GET. Auditor, treasury, human_operator, and system may verify. }
+        "422": { description: actor.role_capability for a vendor. }
   /openapi.json:
     get:
       operationId: openapi

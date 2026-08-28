@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.91.0",
+  version: "0.92.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
@@ -1014,10 +1014,11 @@ export interface PolicyContext {
   actorKnown?: boolean;
   /**
    * False when Command.actorId is `system` and the command is not a bootstrap of the
-   * first human or a read (catalog / audit.query / balances / receipt.get / host.card).
+   * first human or a read (catalog / audit.query / audit.verify / balances / receipt.get / host.card).
    * Absent = speaker is not system. System is the runtime, not a treasurer.
    * HTTP/MCP omitting actor still becomes system; this rule is the fence.
    * A provided name that is not a live alias is `actor.known`, not silent system.
+   * `GET /v1/audit/verify` is this read, not a bypass of evaluate().
    */
   systemOk?: boolean;
   /**
@@ -1219,10 +1220,12 @@ export const KYA_GATED_COMMANDS: readonly CommandType[] = [
  * Commands `system` may run besides bootstrapping the first human_operator.
  * System is the runtime, not a treasurer. HTTP/MCP omitting actor still becomes system.
  * A provided name that is not a live alias is `actor.known`, not silent system.
+ * `audit.verify` is a notary read: `GET /v1/audit/verify` is this command, not a bypass.
  */
 export const SYSTEM_READ_COMMANDS: readonly CommandType[] = [
   "market.catalog",
   "audit.query",
+  "audit.verify",
   "ledger.balances",
   "receipt.get",
   "host.card",
