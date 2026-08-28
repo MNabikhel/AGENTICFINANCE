@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.78.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.79.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -27,7 +27,7 @@ Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. 
 MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
-- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). A `dlg_` hop includes derived status (`live | expired | revoked`).
+- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `dlg_` hop includes derived status (`live | expired | revoked`).
 - `aether_protocol` / resource `aether://protocol`
 - `aether://commands` — JSON Schema for every command body
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
@@ -93,7 +93,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 50. An FX window that is not this rail’s USD_SIM → USDC_SIM pair, or whose price is not in `from`, is `market.fx_pair`. An FX object on a research SKU is not a dual-use quote. A swapped pair is not a silent journal of the books this rail actually posts. Ghost RFQ stays `market.known_rfq`. Spent window stays `market.fx_quote`.
 51. Hiring an FX window as a good is `hire.not_fx`. So is hiring an FX SKU. Windows settle (`market.fx_settle`). A deny does not consume or reserve the window. Ghost quote stays `market.known_rfq`. Spent window stays `hire.quote_unspent` first. Quoting an FX SKU without a window is `market.fx_window`.
 52. Approving a live ticket whose paused command is no longer legal is `approval.replay`. A stale quote, an expired slip, or a missing held command is a refuse, not a yes that throws. Ghost ticket stays `approval.known`. Expired ticket stays `approval.pending`. Reject of a dead pause stays legal.
-53. An FX SKU quoted without an `fx` window is `market.fx_window`. It is a conversion, not a good. Ghost SKU stays `market.known_sku`. A swapped pair on a real window stays `market.fx_pair`.
+53. An FX SKU quoted without an `fx` window is `market.fx_window`. It is a conversion, not a good. Ghost SKU stays `market.known_sku`. A swapped pair on a real window stays `market.fx_pair`. A `validUntil` already past or unparseable is `market.fx_fresh`.
 54. Funding, releasing, or submitting envelope against a live hire that has not bound a cart (and that cart’s payment) is `hire.bound_cart`. Passing `cartId` on the fund command is not a pointer. Ghost hire stays `hire.known`. A second cart on a hire that already has one stays `hire.unique_cart`. Policy denies; mutate does not throw `hire has no cart` after an allow.
 55. Settling FX with no market maker (or missing `market_maker:cash_usd` / `market_maker:cash_usdc`) is `mm.known`. A window is not a journal against nobody. Ghost quote stays `market.fx_quote`. Vendor without a USDC book stays `ledger.known_account`. Empty MM USDC stays `mm.inventory`.
 56. A command whose `actorId` is not `system` and is not a registered agent is `actor.known`. A missing speaker is not a 500. Named *targets* (freeze, handshake, merchant, subject) stay `identity.known`.
@@ -118,7 +118,8 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 75. Fetching one hop by id (`aether_get` / `GET /v1/objects/dlg_*`) labels it `live`, `expired`, or `revoked` — the same derivation as the graph. The store stays raw. Unique_live still occupies. Spend still names `kya.attestation_fresh`.
 76. A dead parent is not a parent (`mandate.parent_fresh`). `mandate.issue_intent` with a parent past `exp`, or a new hire/fund against a child of that parent, is a refuse. Completing a funded hire after the parent dies is legal. Ghost parent stays `mandate.known_parent`. The child's own expiry stays `mandate.not_expired`.
 77. A dead parent hop is not a parent (`kya.parent_fresh`). `kya.attest` with a parentId whose hop is expired or revoked is a refuse, not a nested grant that occupies a new pair while spend skips the corpse. A new hire or fund against a nested hop whose parent died is the same refuse. Completing a funded hire after the parent hop dies is legal. Ghost parent stays `kya.known_parent`. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny. Graph `attest()` still writes a nested hop under a corpse so path-freshness tests can inject; dispatch does not.
-78. Fetching one quote by id (`aether_get` / `GET /v1/objects/qte_*`) labels it `live`, `expired`, `spent`, or `held`. Spent (consumed) and held (a live reserved ticket) win over expired. A reservation whose ticket is past `expiresAt` is not held. The store stays raw. Snapshot uses the same derivation. Hire still names `hire.quote_unspent` / `market.not_expired`.
+78. Fetching one quote by id (`aether_get` / `GET /v1/objects/qte_*`) labels it `live`, `expired`, `spent`, or `held`. Spent (consumed) and held (a live reserved ticket) win over expired. Expired includes the quote envelope and a lapsed FX `validUntil`. A reservation whose ticket is past `expiresAt` is not held. The store stays raw. Snapshot uses the same derivation. Hire still names `hire.quote_unspent` / `market.not_expired`.
+79. An FX window cannot be born dead (`market.fx_fresh`). `market.quote` with `validUntil` ≤ now, or an unparseable Instant, is a refuse, not a written corpse that then fails settle as `market.not_expired`. A window that lapses after mint is still `market.not_expired` at settle, and inspect labels it `expired`. Ghost RFQ stays `market.known_rfq`. A missing window stays `market.fx_window`. A swapped pair stays `market.fx_pair`. An expired RFQ stays `market.not_expired`. Off-band stays `mm.spread_bound`.
 
 ## Autonomy
 

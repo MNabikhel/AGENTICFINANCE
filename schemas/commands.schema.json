@@ -144,7 +144,7 @@
             "from": { "enum": ["USD_SIM", "USDC_SIM"] },
             "to": { "enum": ["USD_SIM", "USDC_SIM"] },
             "rateE6": { "type": "integer", "minimum": 0 },
-            "validUntil": { "type": "string" }
+            "validUntil": { "type": "string", "description": "ISO Instant. Must be strictly after now. A dead or unparseable window is market.fx_fresh. Settle of a later lapse is market.not_expired." }
           }
         }
       }

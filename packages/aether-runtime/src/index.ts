@@ -154,6 +154,14 @@ function recurrenceMintable(c: { max_occurrences?: unknown }): boolean {
   return c.max_occurrences > 0;
 }
 
+/** Closed when validUntil ≤ now (same exclusive end as quote expiresAt). Unparseable is not a window. */
+function fxWindowMintable(fx: { validUntil?: unknown }, nowIso: Instant): boolean {
+  if (typeof fx.validUntil !== "string") return false;
+  const until = Date.parse(fx.validUntil);
+  const now = Date.parse(nowIso);
+  return Number.isFinite(until) && until > now;
+}
+
 /** New spend (not completing funded work). Nested hops on these verbs must have a live parent. */
 const KYA_NESTED_SPEND: ReadonlySet<CommandType> = new Set([
   "mandate.issue_intent",
@@ -474,8 +482,9 @@ export class Runtime {
 
   /**
    * Quote view for other agents. Spent (consumed) and held (live reserved ticket)
-   * win over expired. A reservation whose ticket is past expiresAt is not held.
-   * The store stays raw (expiresAt only).
+   * win over expired. Expired includes the quote envelope and a lapsed FX validUntil.
+   * A reservation whose ticket is past expiresAt is not held.
+   * The store stays raw (expiresAt / validUntil only).
    */
   quoteView(quote: Quote): Quote & { status: QuoteStatus } {
     if (this.consumedQuotes.has(quote.id)) return { ...quote, status: "spent" };
@@ -490,8 +499,15 @@ export class Runtime {
         return { ...quote, status: "held" };
       }
     }
-    if (Date.parse(quote.expiresAt) <= Date.parse(this.clock.now())) {
+    const now = Date.parse(this.clock.now());
+    if (Date.parse(quote.expiresAt) <= now) {
       return { ...quote, status: "expired" };
+    }
+    if (quote.fx) {
+      const until = Date.parse(quote.fx.validUntil);
+      if (!Number.isFinite(until) || until <= now) {
+        return { ...quote, status: "expired" };
+      }
     }
     return { ...quote, status: "live" };
   }
@@ -510,7 +526,7 @@ export class Runtime {
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
    * aid_ agent, hid_ hire, mid_ mandate, rid_ receipt, apd_ approval,
-   * rfq_ / qte_ market (qte_ includes derived live | expired | spent | held), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
+   * rfq_ / qte_ market (qte_ includes derived live | expired | spent | held; expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -1151,6 +1167,7 @@ export class Runtime {
     if (market.fxPairOk !== undefined) ctx.fxPairOk = market.fxPairOk;
     if (market.hireNotFx !== undefined) ctx.hireNotFx = market.hireNotFx;
     if (market.fxWindowOk !== undefined) ctx.fxWindowOk = market.fxWindowOk;
+    if (market.fxMintFresh !== undefined) ctx.fxMintFresh = market.fxMintFresh;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
@@ -1267,6 +1284,7 @@ export class Runtime {
     fxPairOk?: boolean;
     hireNotFx?: boolean;
     fxWindowOk?: boolean;
+    fxMintFresh?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -1289,6 +1307,7 @@ export class Runtime {
       fxPairOk?: boolean;
       hireNotFx?: boolean;
       fxWindowOk?: boolean;
+      fxMintFresh?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -1296,6 +1315,9 @@ export class Runtime {
     }
     if (cmd.type === "market.quote") {
       out.rfqKnown = Boolean(rfq);
+      if (body.fx && typeof body.fx === "object" && !Array.isArray(body.fx)) {
+        out.fxMintFresh = fxWindowMintable(body.fx as { validUntil?: unknown }, this.clock.now());
+      }
       if (rfq) {
         out.skuListed = typeof sku === "string" && isCatalogSku(sku);
         out.marketFresh = Date.parse(rfq.expiresAt) > now;
@@ -1944,6 +1966,9 @@ export class Runtime {
       expiresAt: new Date(Date.parse(this.clock.now()) + HOUR_MS).toISOString(),
     };
     if (body.fx) quote.fx = body.fx as Quote["fx"];
+    if (quote.fx && !fxWindowMintable(quote.fx, this.clock.now())) {
+      throw new Error("fx window already closed");
+    }
     this.quotes.set(quote.id, quote);
     this.audit.append({
       clock: this.clock,

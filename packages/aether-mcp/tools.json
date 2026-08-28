@@ -39,7 +39,7 @@
     {
       "name": "aether_market_quote",
       "commandType": "market.quote",
-      "description": "Submit a quote or FX rate. MM rates must stay inside 200bps."
+      "description": "Submit a quote or FX rate. MM rates must stay inside 200bps. An FX validUntil already past or unparseable is refused."
     },
     {
       "name": "aether_hire_create",

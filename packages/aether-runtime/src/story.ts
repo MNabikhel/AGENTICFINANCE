@@ -324,6 +324,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "market.fx_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion window that was already closed`,
+          body: "An FX window cannot be born dead. Name a validUntil after now. Settle of a window that later lapses is still market.not_expired.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

@@ -1209,6 +1209,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.parent_fresh", "deny", "parent hop is not live");
     },
   },
+  {
+    id: "market.fx_fresh",
+    evaluate: (ctx) => {
+      if (ctx.fxMintFresh === undefined) return v("market.fx_fresh", "allow", "not an FX window mint");
+      return ctx.fxMintFresh
+        ? v("market.fx_fresh", "allow", "FX window still open at mint")
+        : v("market.fx_fresh", "deny", "FX window already closed");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1468,6 +1477,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.parent_fresh": {
     kind: "none",
     hint: "A dead parent hop is not a parent. Attest a live parent, then nest. A new hire or fund against a nested hop whose parent died is a refuse. Completing a funded hire after that is legal. Ghost parent stays kya.known_parent. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
+  },
+  "market.fx_fresh": {
+    kind: "none",
+    hint: "An FX window cannot be born dead. Name a validUntil strictly after now. An unparseable Instant is not a window. Settle of a window that lapses after mint stays market.not_expired. Ghost RFQ stays market.known_rfq. A missing window stays market.fx_window. A swapped pair stays market.fx_pair.",
   },
   "payment.execution_date": {
     kind: "none",

@@ -593,3 +593,255 @@ describe("FX needs a market maker", () => {
     expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
+
+describe("market.fx_fresh", () => {
+  it("refuses an FX window born already closed as fx_fresh, not a written corpse", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-27T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_fresh");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.quotes.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.audit.length).toBeGreaterThan(auditBefore);
+  });
+
+  it("refuses a validUntil equal to now as fx_fresh", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: rt.clock.now(),
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_fresh");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("refuses an unparseable validUntil as fx_fresh", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const clockBefore = rt.clock.now();
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "not-a-window",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_fresh");
+    expect(rt.quotes.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still names known_rfq first when the room is missing", () => {
+    const rt = boot();
+    const { mm } = economy(rt);
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: "rfq_01J6AETHERGHOSTFXWIN000001",
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-27T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("still names not_expired first when the RFQ is already stale", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    rt.clock.set("2026-08-29T01:00:00.000Z");
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-27T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+  });
+
+  it("still names fx_pair first when a research SKU wears a dead window", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "research.brief", spec: "one pager", invitedSellerIds: [vendor.id] }),
+      ),
+      "research rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-27T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_pair");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("still names spread_bound first when the nested rate is off-band", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 500_000,
+          validUntil: "2026-08-27T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mm.spread_bound");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("still names not_expired at settle when a live window later lapses", () => {
+    const rt = boot();
+    const { desk, vendor, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-28T00:30:00.000Z",
+          },
+        }),
+      ),
+      "fx quote",
+    );
+    const quoteId = (quoted.data as { id: string }).id;
+    expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("live");
+    rt.clock.set("2026-08-28T00:45:00.000Z");
+    expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("expired");
+    expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
+    const r = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+    expect(rt.consumedQuotes.has(quoteId)).toBe(false);
+  });
+});
+

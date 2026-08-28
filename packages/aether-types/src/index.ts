@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.78.0",
+  version: "0.79.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -451,7 +451,10 @@ export interface Quote {
   expiresAt: Instant;
 }
 
-/** Inspect / snapshot view. Spent and held win over expired. The store stays raw. */
+/**
+ * Inspect / snapshot view. Spent and held win over expired. Expired includes the
+ * quote envelope and a lapsed FX `validUntil`. The store stays raw.
+ */
 export type QuoteStatus = "live" | "expired" | "spent" | "held";
 
 // ---------------------------------------------------------------------------
@@ -706,6 +709,13 @@ export interface PolicyContext {
    * An FX SKU is a conversion window, not a good.
    */
   fxWindowOk?: boolean;
+  /**
+   * False when `market.quote` would write an FX `validUntil` ≤ now (or unparseable).
+   * Absent = not quoting with an `fx` object. A missing window stays `market.fx_window`.
+   * Settle of a window that lapses after mint still names `market.not_expired`.
+   * Ghost RFQ stays `market.known_rfq`. A swapped pair stays `market.fx_pair`.
+   */
+  fxMintFresh?: boolean;
   /**
    * False when `hire.create` would reuse a quote that already produced a hire, an FX settle,
    * or is held by an open approval ticket.
