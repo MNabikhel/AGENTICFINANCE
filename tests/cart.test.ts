@@ -378,7 +378,7 @@ describe("payment exp", () => {
     expect(payment.payload.exp - payment.payload.iat).not.toBe(DAY_MS);
   });
 
-  it("refuses to fund after the one-day window as mandate.not_expired", () => {
+  it("refuses to fund after the one-day window; chain_integrity names it first", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
     const offered = offerHire(rt, {
@@ -420,11 +420,12 @@ describe("payment exp", () => {
     if (r.ok) return;
     expect(r.error.error.status).toBe(422);
     expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.bound_cart")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
-    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.chain_integrity");
     expect(rt.hires.get(hireId)?.state).toBe("accepted");
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
   });
