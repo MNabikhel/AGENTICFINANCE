@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.38.0",
+  version: "0.39.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -738,6 +738,12 @@ export interface PolicyContext {
    * `aether_get` / inspect of a miss still returns nothing; the command bus does not pretend yes.
    */
   receiptKnown?: boolean;
+  /**
+   * False when identity.freeze targets an already-frozen agent, or identity.unfreeze
+   * targets an agent that is not frozen. Absent = not a freeze/unfreeze, or the target
+   * is unknown (`identity.known` handles that). A no-op freeze is not a notary line after yes.
+   */
+  freezeStateOk?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

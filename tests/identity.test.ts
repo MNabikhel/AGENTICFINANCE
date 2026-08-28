@@ -462,3 +462,46 @@ describe("identity.unique_key", () => {
     expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
+
+describe("identity.freeze_state", () => {
+  it("refuses to unfreeze a live unfrozen agent as identity.freeze_state, not a notary line after yes", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("identity.unfreeze", founder.id, { agentId: desk.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.freeze_state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.freeze_state");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.identity.get(desk.id)?.frozen).toBe(false);
+    expect(rt.killSwitchTested.has(desk.id)).toBe(false);
+    expect(rt.audit.query({ action: "UNFREEZE", subjectId: desk.id }).matched).toBe(0);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses a second freeze as identity.freeze_state, not a second FREEZE line", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(rt.dispatch(cmd("identity.freeze", founder.id, { agentId: desk.id })), "freeze");
+    expect(rt.identity.get(desk.id)?.frozen).toBe(true);
+    expect(rt.audit.query({ action: "FREEZE", subjectId: desk.id }).matched).toBe(1);
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("identity.freeze", founder.id, { agentId: desk.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.freeze_state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.freeze_state");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.identity.get(desk.id)?.frozen).toBe(true);
+    expect(rt.audit.query({ action: "FREEZE", subjectId: desk.id }).matched).toBe(1);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});

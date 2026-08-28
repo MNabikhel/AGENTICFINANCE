@@ -792,6 +792,13 @@ export class Runtime {
     if (namedIds.length > 0) {
       ctx.targetKnown = namedIds.every((id) => Boolean(this.identity.get(id)));
     }
+    if (
+      (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze") &&
+      ctx.targetKnown === true
+    ) {
+      const target = this.identity.get(body.agentId as AgentId);
+      if (target) ctx.freezeStateOk = cmd.type === "identity.freeze" ? !target.frozen : target.frozen;
+    }
     if (cmd.type === "kya.attest" && typeof body.delegateId === "string") {
       const delegate = this.identity.get(body.delegateId as AgentId);
       if (delegate) ctx.kyaNotSelf = actor.id !== delegate.id;
@@ -1277,6 +1284,8 @@ export class Runtime {
   }
 
   private mutFreeze(body: Record<string, unknown>, actor: Agent) {
+    const before = this.identity.require(body.agentId as AgentId);
+    if (before.frozen) throw new Error("already frozen");
     const agent = this.identity.freeze(body.agentId as AgentId);
     this.audit.append({
       clock: this.clock,
@@ -1290,15 +1299,15 @@ export class Runtime {
 
   private mutUnfreeze(body: Record<string, unknown>, actor: Agent) {
     const before = this.identity.require(body.agentId as AgentId);
-    const wasFrozen = before.frozen;
+    if (!before.frozen) throw new Error("not frozen");
     const agent = this.identity.unfreeze(body.agentId as AgentId);
-    if (wasFrozen) this.killSwitchTested.add(agent.id);
+    this.killSwitchTested.add(agent.id);
     this.audit.append({
       clock: this.clock,
       actorId: actor.id,
       action: "UNFREEZE",
       subjects: [{ type: "agent", id: agent.id }],
-      payload: { id: agent.id, restored: agent.autonomyLevel, killSwitchTested: wasFrozen },
+      payload: { id: agent.id, restored: agent.autonomyLevel, killSwitchTested: true },
     });
     return agent;
   }

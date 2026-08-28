@@ -940,6 +940,16 @@ export const RULES: readonly Rule[] = [
         : v("receipt.known", "deny", "receipt not found");
     },
   },
+  {
+    id: "identity.freeze_state",
+    evaluate: (ctx) => {
+      if (ctx.freezeStateOk === undefined) return v("identity.freeze_state", "allow", "not a freeze delta");
+      if (ctx.freezeStateOk) return v("identity.freeze_state", "allow", "freeze delta matches state");
+      return ctx.commandType === "identity.unfreeze"
+        ? v("identity.freeze_state", "deny", "target is not frozen")
+        : v("identity.freeze_state", "deny", "target is already frozen");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1102,6 +1112,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "receipt.known": {
     kind: "none",
     hint: "That receipt is not in this world. A missing receipt is not an empty success. Release escrow first.",
+  },
+  "identity.freeze_state": {
+    kind: "none",
+    hint: "Freeze someone who is live and unfrozen. Unfreeze someone who is actually frozen. A no-op freeze is not a notary line after yes.",
   },
   "payment.execution_date": {
     kind: "none",

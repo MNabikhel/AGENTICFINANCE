@@ -449,6 +449,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "identity.freeze_state") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not freeze that agent again`,
+          body: "That agent is already frozen. A second pull is not a notary line after yes.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -469,6 +479,17 @@ export function autoBeat(input: {
   }
   if (cmd.type === "identity.unfreeze") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.freeze_state") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not lift a freeze`,
+          body: "That agent is not frozen. Lifting a freeze that was never pulled is not a kill-switch test.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

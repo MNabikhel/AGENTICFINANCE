@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 60 rules", () => {
-    expect(RULE_IDS).toHaveLength(60);
+  it("has 61 rules", () => {
+    expect(RULE_IDS).toHaveLength(61);
   });
 
   it("denies frozen actors", () => {
@@ -855,6 +855,40 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("receipt.known");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies unfreeze of a live unfrozen agent as identity.freeze_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "identity.unfreeze",
+        targetKnown: true,
+        freezeStateOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.freeze_state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.freeze_state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies freeze of an already-frozen agent as identity.freeze_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "identity.freeze",
+        targetKnown: true,
+        freezeStateOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.freeze_state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.freeze_state");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
