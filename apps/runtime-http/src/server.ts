@@ -333,12 +333,12 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       }
       const account = path.match(/^\/v1\/accounts\/([^/]+)$/);
       if (req.method === "GET" && account) {
-        handleDispatch(res, "ledger.balances", { name: decodeURIComponent(account[1]!), actor: "ops-human" });
+        handleDispatch(res, "ledger.balances", { name: decodeURIComponent(account[1]!), actor: "system" });
         return;
       }
       const receipt = path.match(/^\/v1\/receipts\/([^/]+)$/);
       if (req.method === "GET" && receipt) {
-        handleDispatch(res, "receipt.get", { receiptId: receipt[1], actor: "ops-human" });
+        handleDispatch(res, "receipt.get", { receiptId: receipt[1], actor: "system" });
         return;
       }
 

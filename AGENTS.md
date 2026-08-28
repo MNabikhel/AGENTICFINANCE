@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, `GET /.well-known/aether.json`, resource `aether://protocol` / `aether://host`, tool `aether_protocol` / `aether_host_card`). `liveMoney` is `false` until adapters exist. `evaluateLlm` is `false`. `hosted` is `false` on this public kernel. Current card: `0.94.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, `GET /.well-known/aether.json`, resource `aether://protocol` / `aether://host`, tool `aether_protocol` / `aether_host_card`). `liveMoney` is `false` until adapters exist. `evaluateLlm` is `false`. `hosted` is `false` on this public kernel. Current card: `0.95.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -35,6 +35,8 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
 - `aether_audit_query` / `GET /v1/audit?subject=` — notary lines for one id
 - `aether_audit_verify` / `GET /v1/audit/verify` — replay the hash chain. System may. A vendor cannot. Writes POLICY_DECISION. Not a silent peek.
+- `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
+- `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
 - `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
 
@@ -138,6 +140,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 92. `GET /v1/audit/verify` is `audit.verify` on the command bus. System may verify the notary (same as catalog / audit.query). A vendor POST stays `actor.role_capability`. The check writes `POLICY_DECISION` and `AUDIT_VERIFY`. There is no anonymous bypass of `evaluate()`. MCP omit-actor is the same speaker as HTTP GET.
 93. A payment whose parent cart died is not live. Inspect and snapshot label that unpaid check `expired` even when its own `exp` still lives. Funded still wins (complete-after-fund). Bound occupancy still lives on the cart. The store stays raw. Fund of that unpaid chain still names `mandate.chain_integrity`.
 94. A child slip whose parent died is not live. Inspect and snapshot label that unpaid child `expired` even when its own `exp` still lives. Funded still wins (complete-after-fund). A child hire does not occupy the parent. The store stays raw. Hire or fund against that unpaid child still names `mandate.parent_fresh`. The child's own expiry stays `mandate.not_expired` when the parent still lives.
+95. `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}` are `ledger.balances` and `receipt.get` on the command bus as system. They are not `ops-human`. System may read the books and receipts (same as catalog / audit). A missing founder is not `actor.known` on those GETs. A frozen founder is not `actor.not_frozen`. A ghost book is `ledger.known_account`. A ghost receipt is `receipt.known`. The check writes `POLICY_DECISION`. MCP omit-actor is the same speaker as HTTP GET.
 
 ## Autonomy
 

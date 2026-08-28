@@ -114,7 +114,7 @@
     {
       "name": "aether_ledger_balances",
       "commandType": "ledger.balances",
-      "description": "Read account balances. Does not mutate."
+      "description": "Read account balances. Does not mutate. HTTP GET is the same system speaker, not ops-human."
     },
     {
       "name": "aether_audit_verify",
@@ -134,7 +134,7 @@
     {
       "name": "aether_receipt_get",
       "commandType": "receipt.get",
-      "description": "Fetch a receipt. reference must equal sha256(payment mandate)."
+      "description": "Fetch a receipt. reference must equal sha256(payment mandate). HTTP GET is the same system speaker, not ops-human."
     },
     {
       "name": "aether_host_card",

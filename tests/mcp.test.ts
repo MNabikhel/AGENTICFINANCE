@@ -156,4 +156,23 @@ describe("MCP host", () => {
     expect(asVendor.remediation?.ruleId).toBe("actor.role_capability");
     expect(mcp.runtime.audit.query({ action: "AUDIT_VERIFY" }).matched).toBe(1);
   });
+
+  it("lets omit-actor read a named book and names receipt.known on a miss", () => {
+    const mcp = new AetherMcp();
+    const book = mcp.callTool("aether_ledger_balances", { name: "system:equity" }) as {
+      ok: boolean;
+      kind: string;
+      data: { amount: number; currency: string };
+    };
+    expect(book.ok).toBe(true);
+    expect(book.kind).toBe("allow");
+    expect(book.data.currency).toBe("USD_SIM");
+
+    const ghost = mcp.callTool("aether_receipt_get", { receiptId: "rid_ghost" }) as {
+      ok: boolean;
+      remediation: { ruleId: string } | null;
+    };
+    expect(ghost.ok).toBe(false);
+    expect(ghost.remediation?.ruleId).toBe("receipt.known");
+  });
 });

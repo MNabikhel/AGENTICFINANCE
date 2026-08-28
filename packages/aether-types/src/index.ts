@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.94.0",
+  version: "0.95.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
@@ -1021,6 +1021,7 @@ export interface PolicyContext {
    * HTTP/MCP omitting actor still becomes system; this rule is the fence.
    * A provided name that is not a live alias is `actor.known`, not silent system.
    * `GET /v1/audit/verify` is this read, not a bypass of evaluate().
+   * `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}` are this read as system, not ops-human.
    */
   systemOk?: boolean;
   /**
@@ -1223,6 +1224,8 @@ export const KYA_GATED_COMMANDS: readonly CommandType[] = [
  * System is the runtime, not a treasurer. HTTP/MCP omitting actor still becomes system.
  * A provided name that is not a live alias is `actor.known`, not silent system.
  * `audit.verify` is a notary read: `GET /v1/audit/verify` is this command, not a bypass.
+ * `ledger.balances` / `receipt.get`: `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}`
+ * are these commands as system, not ops-human.
  */
 export const SYSTEM_READ_COMMANDS: readonly CommandType[] = [
   "market.catalog",

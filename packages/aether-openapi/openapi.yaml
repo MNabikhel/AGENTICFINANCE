@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.94.0
+  version: 0.95.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -128,12 +128,14 @@ paths:
     get:
       operationId: ledgerBalances
       responses:
-        "200": { description: Balances }
+        "200": { description: Named book. Same command as MCP aether_ledger_balances. System speaker. Writes POLICY_DECISION. Not ops-human. }
+        "422": { description: ledger.known_account for a missing book. }
   /v1/receipts/{id}:
     get:
       operationId: receiptGet
       responses:
-        "200": { description: Receipt }
+        "200": { description: One receipt. Same command as MCP aether_receipt_get. System speaker. Writes POLICY_DECISION. Not ops-human. }
+        "422": { description: receipt.known for a missing receipt. }
   /v1/demo/sub-hire:
     post:
       operationId: demoSubHire

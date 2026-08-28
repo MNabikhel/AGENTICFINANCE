@@ -80,7 +80,7 @@ describe("SIM_RAIL", () => {
     expect(PROTOCOL.liveMoney).toBe(false);
     expect(PROTOCOL.evaluateLlm).toBe(false);
     expect(PROTOCOL.hosted).toBe(false);
-    expect(PROTOCOL.version).toBe("0.94.0");
+    expect(PROTOCOL.version).toBe("0.95.0");
   });
 });
 
