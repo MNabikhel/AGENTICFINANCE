@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 70 rules", () => {
-    expect(RULE_IDS).toHaveLength(70);
+  it("has 71 rules", () => {
+    expect(RULE_IDS).toHaveLength(71);
   });
 
   it("denies frozen actors", () => {
@@ -1383,5 +1383,41 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "hire.bound_cart")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("hire.known");
+  });
+
+  it("denies an FX settle with no market maker", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: true,
+        fxPairOk: true,
+        accountsKnown: true,
+        fundsOk: true,
+        mmKnown: false,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("mm.known");
+  });
+
+  it("does not name mm.known when the quote itself is missing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: false,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_quote");
   });
 });

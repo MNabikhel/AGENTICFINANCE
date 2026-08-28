@@ -1080,6 +1080,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.bound_cart", "deny", "hire has not bound a cart");
     },
   },
+  {
+    id: "mm.known",
+    evaluate: (ctx) => {
+      if (ctx.mmKnown === undefined) return v("mm.known", "allow", "not a live FX settle");
+      return ctx.mmKnown
+        ? v("mm.known", "allow", "market maker and books exist")
+        : v("mm.known", "deny", "no market maker");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1282,6 +1291,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.bound_cart": {
     kind: "none",
     hint: "That hire has not bound a cart (and that cart’s payment). Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer. A loose cart is not this hire’s check.",
+  },
+  "mm.known": {
+    kind: "none",
+    hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books.",
   },
   "payment.execution_date": {
     kind: "none",

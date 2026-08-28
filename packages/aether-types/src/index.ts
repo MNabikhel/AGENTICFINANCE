@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.53.0",
+  version: "0.54.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -600,6 +600,13 @@ export interface PolicyContext {
   nonceSeen?: boolean;
   /** False when MM cannot pay the `to` currency. */
   mmInventoryOk?: boolean;
+  /**
+   * False when `market.fx_settle` would journal against a world with no market maker
+   * (or missing `market_maker:cash_usd` / `market_maker:cash_usdc` books).
+   * Absent = not a live FX settle (`market.fx_quote` handles missing/non-FX/spent quotes).
+   * A window is not a journal against nobody.
+   */
+  mmKnown?: boolean;
   /** False when the audit chain fails verify(). */
   auditHealthy?: boolean;
   /** False when verifyChain failed for the attached mandate triple. */

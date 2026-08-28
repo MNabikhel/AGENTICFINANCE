@@ -99,6 +99,7 @@ describe("FX quote is a one-shot", () => {
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_quote");
     expect(rt.clock.now()).not.toBe(clockBefore);
@@ -359,6 +360,7 @@ describe("FX vendor cash", () => {
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
     expect(r.error.decision?.remediation?.kind).toBe("none");
@@ -386,6 +388,7 @@ describe("FX vendor USDC book", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.known_account");
@@ -517,5 +520,76 @@ describe("FX pair is this rail's window", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_window");
     expect(rt.quotes.size).toBe(before);
+  });
+});
+
+describe("FX needs a market maker", () => {
+  it("refuses to settle FX with no market maker as mm.known, not a journal throw", () => {
+    const rt = boot();
+    must(
+      rt.dispatch(
+        cmd("identity.register", "system", {
+          key: "ops-human",
+          displayName: "Founder",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "founder",
+    );
+    const founder = rt.alias("ops-human");
+    for (const a of [
+      { key: "procurement", displayName: "Desk", role: "procurement", autonomyLevel: 3 },
+      { key: "vendor", displayName: "Vendor", role: "data_vendor", autonomyLevel: 2 },
+    ] as const) {
+      must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
+    }
+    rt.seedOpening({ "vendor:cash": { amount: 200_000, currency: "USD_SIM" } });
+    const desk = rt.alias("procurement");
+    const vendor = rt.alias("vendor");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [vendor.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", vendor.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-29T00:00:00.000Z",
+          },
+        }),
+      ),
+      "fx quote",
+    );
+    const quoteId = (quoted.data as { id: string }).id;
+    const clockBefore = rt.clock.now();
+    const usdBefore = rt.ledger.balanceByName("vendor:cash").amount;
+    expect(rt.ledger.accountsByName.has("market_maker:cash_usd")).toBe(false);
+    const r = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mm.known");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(usdBefore);
+    expect(rt.consumedQuotes.has(quoteId)).toBe(false);
+    expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });

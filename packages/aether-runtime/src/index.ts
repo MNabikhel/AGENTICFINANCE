@@ -935,6 +935,14 @@ export class Runtime {
     ) {
       ctx.cartBound = this.hireMandateBound(hire);
     }
+    if (cmd.type === "market.fx_settle" && ctx.fxQuoteLive === true) {
+      const mmAgent = [...this.identity.all()].find((a) => a.role === "market_maker");
+      ctx.mmKnown = Boolean(
+        mmAgent &&
+          this.ledger.accountsByName.has("market_maker:cash_usd") &&
+          this.ledger.accountsByName.has("market_maker:cash_usdc"),
+      );
+    }
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire);
     return ctx;
   }
@@ -1880,6 +1888,14 @@ export class Runtime {
     if (this.consumedQuotes.has(quote.id) || this.reservedQuotes.has(quote.id)) {
       throw new Error("fx quote already settled");
     }
+    const mm = [...this.identity.all()].find((a) => a.role === "market_maker");
+    if (
+      !mm ||
+      !this.ledger.accountsByName.has("market_maker:cash_usd") ||
+      !this.ledger.accountsByName.has("market_maker:cash_usdc")
+    ) {
+      throw new Error("no market maker");
+    }
     const payout = fxPayout(quote.price.amount, quote.fx.rateE6);
     const key = this.aliasOf(actor.id);
     const usdName = actor.role === "market_maker" ? "market_maker:cash_usd" : key ? `${key}:cash` : undefined;
@@ -1900,11 +1916,8 @@ export class Runtime {
       { accountId: vendorUsdc.id, debit: payout, credit: 0 },
       { accountId: mmUsdc.id, debit: 0, credit: payout },
     ]);
-    const mm = [...this.identity.all()].find((a) => a.role === "market_maker");
-    if (mm) {
-      this.clearing.record(actor.id, mm.id, quote.price.amount, quote.fx.from);
-      this.clearing.record(mm.id, actor.id, payout, quote.fx.to);
-    }
+    this.clearing.record(actor.id, mm.id, quote.price.amount, quote.fx.from);
+    this.clearing.record(mm.id, actor.id, payout, quote.fx.to);
     this.noteVolume(quote.price.amount);
     this.consumedQuotes.add(quote.id);
     return { payout, rateE6: quote.fx.rateE6 };

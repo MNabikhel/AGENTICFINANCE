@@ -424,6 +424,8 @@ export function autoBeat(input: {
               ? "The vendor has no USDC book. An FX settle is not a journal throw. A compute vendor’s USD cash is not a USDC wallet."
             : rule?.ruleId === "ledger.sufficient"
               ? "The vendor’s USD book does not cover this window. An FX settle is not an overdraft. The market maker’s USDC inventory is a different rule."
+              : rule?.ruleId === "mm.known"
+                ? "There is no market maker in this world. Register one before settling FX. A window is not a journal against missing books."
               : (rule?.message ?? "The referee refused the FX settle."),
         tone: "deny",
         commandType: cmd.type,
