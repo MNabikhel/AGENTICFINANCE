@@ -1035,6 +1035,15 @@ export const RULES: readonly Rule[] = [
         : v("market.sku_currency", "deny", "price currency is not listed for this sku");
     },
   },
+  {
+    id: "market.fx_pair",
+    evaluate: (ctx) => {
+      if (ctx.fxPairOk === undefined) return v("market.fx_pair", "allow", "not an FX window");
+      return ctx.fxPairOk
+        ? v("market.fx_pair", "allow", "USD_SIM to USDC_SIM priced in from")
+        : v("market.fx_pair", "deny", "FX window is not this rail's USD_SIM to USDC_SIM pair");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1217,6 +1226,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.sku_currency": {
     kind: "none",
     hint: "That SKU is not priced in that currency. Read market.catalog. Convert with market.fx_settle.",
+  },
+  "market.fx_pair": {
+    kind: "none",
+    hint: "This rail settles USD_SIM → USDC_SIM. Price is in from. An FX window does not belong on a research SKU. A swapped pair or a price in to is not this window.",
   },
   "payment.execution_date": {
     kind: "none",

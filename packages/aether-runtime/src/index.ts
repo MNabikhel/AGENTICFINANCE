@@ -18,7 +18,7 @@ import {
 } from "@aether/kernel";
 import { Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
-import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPayout } from "@aether/market";
+import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
@@ -906,6 +906,7 @@ export class Runtime {
     if (market.fxQuoteLive !== undefined) ctx.fxQuoteLive = market.fxQuoteLive;
     if (market.quoteUnspent !== undefined) ctx.quoteUnspent = market.quoteUnspent;
     if (market.skuCurrencyOk !== undefined) ctx.skuCurrencyOk = market.skuCurrencyOk;
+    if (market.fxPairOk !== undefined) ctx.fxPairOk = market.fxPairOk;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
@@ -949,6 +950,7 @@ export class Runtime {
     fxQuoteLive?: boolean;
     quoteUnspent?: boolean;
     skuCurrencyOk?: boolean;
+    fxPairOk?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -968,6 +970,7 @@ export class Runtime {
       fxQuoteLive?: boolean;
       quoteUnspent?: boolean;
       skuCurrencyOk?: boolean;
+      fxPairOk?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -983,6 +986,10 @@ export class Runtime {
         if (out.skuListed) {
           const priced = body.price && typeof body.price === "object" ? (body.price as Money) : undefined;
           if (priced?.currency) out.skuCurrencyOk = skuAllowsCurrency(rfq.sku, priced.currency);
+          if (body.fx && typeof body.fx === "object" && !Array.isArray(body.fx) && priced) {
+            const fx = body.fx as { from?: CurrencyCode; to?: CurrencyCode };
+            if (fx.from && fx.to) out.fxPairOk = fxPairSettles(rfq.sku, priced, { from: fx.from, to: fx.to });
+          }
         }
       }
       return out;
@@ -1011,6 +1018,7 @@ export class Runtime {
       if (quote?.fx && live) {
         const fxOk = Date.parse(quote.fx.validUntil) > now;
         out.marketFresh = Date.parse(quote.expiresAt) > now && fxOk;
+        out.fxPairOk = Boolean(rfq && fxPairSettles(rfq.sku, quote.price, quote.fx));
       }
     }
     return out;
@@ -1575,6 +1583,12 @@ export class Runtime {
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, price.currency)) {
       throw new Error("sku currency");
     }
+    if (body.fx && typeof body.fx === "object" && !Array.isArray(body.fx)) {
+      const fx = body.fx as { from?: CurrencyCode; to?: CurrencyCode };
+      if (!fx.from || !fx.to || !fxPairSettles(rfq.sku, price, { from: fx.from, to: fx.to })) {
+        throw new Error("fx pair");
+      }
+    }
     const quote: Quote = {
       id: this.ids.next("qte") as Quote["id"],
       rfqId: rfq.id,
@@ -1822,6 +1836,10 @@ export class Runtime {
     if (!quote?.fx) throw new Error("quote is not FX");
     if (typeof quote.fx.rateE6 !== "number" || !Number.isFinite(quote.fx.rateE6)) {
       throw new Error("fx quote missing rateE6");
+    }
+    const rfq = this.rfqs.get(quote.rfqId);
+    if (!rfq || !fxPairSettles(rfq.sku, quote.price, quote.fx)) {
+      throw new Error("fx pair");
     }
     if (this.consumedQuotes.has(quote.id) || this.reservedQuotes.has(quote.id)) {
       throw new Error("fx quote already settled");

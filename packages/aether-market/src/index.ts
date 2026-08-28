@@ -1,4 +1,4 @@
-import { MM_RATE_BAND_E6, type CurrencyCode } from "@aether/types";
+import { MM_RATE_BAND_E6, type CurrencyCode, type Money } from "@aether/types";
 
 export function fxPayout(fromMinor: number, rateE6: number): number {
   return Math.floor((fromMinor * rateE6) / 1_000_000);
@@ -16,6 +16,27 @@ export function isCatalogSku(sku: string): boolean {
 export function skuAllowsCurrency(sku: string, currency: CurrencyCode): boolean {
   const row = CATALOG[sku];
   return row !== undefined && row.currencies.includes(currency);
+}
+
+export const FX_SKU = "fx.usd_sim.usdc_sim";
+export const FX_FROM: CurrencyCode = "USD_SIM";
+export const FX_TO: CurrencyCode = "USDC_SIM";
+
+export function isFxSku(sku: string): boolean {
+  const row = CATALOG[sku];
+  return row !== undefined && row.unit === "fx";
+}
+
+/**
+ * The sim rail settles USD_SIM → USDC_SIM. Price is in `from`.
+ * An FX window on a research SKU, a swapped pair, or a price in `to` is not that window.
+ */
+export function fxPairSettles(
+  sku: string,
+  price: Money,
+  fx: { from: CurrencyCode; to: CurrencyCode },
+): boolean {
+  return isFxSku(sku) && price.currency === fx.from && fx.from === FX_FROM && fx.to === FX_TO;
 }
 
 export const CATALOG: Record<

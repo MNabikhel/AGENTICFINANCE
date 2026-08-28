@@ -98,6 +98,7 @@ describe("FX quote is a one-shot", () => {
     expect(r.error.error.status).toBe(422);
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_quote");
     expect(rt.clock.now()).not.toBe(clockBefore);
@@ -119,6 +120,7 @@ describe("FX quote is a one-shot", () => {
     if (r.ok) return;
     expect(r.error.error.status).toBe(422);
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
   });
 
   it("refuses an FX window with no rate as command.malformed, not a NaN settle later", () => {
@@ -188,6 +190,7 @@ describe("FX quote is a one-shot", () => {
     if (second.ok) return;
     expect(second.error.error.status).toBe(422);
     expect(second.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(second.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
   });
 
   it("refuses a second actor settling the same FX quote", () => {
@@ -384,5 +387,102 @@ describe("FX vendor USDC book", () => {
     expect(rt.ledger.balanceByName("market_maker:cash_usdc").amount).toBe(mmUsdcBefore);
     expect(rt.consumedQuotes.has(quoteId)).toBe(false);
     expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});
+
+describe("FX pair is this rail's window", () => {
+  it("refuses a research quote wearing an FX window as fx_pair, not a dual-use settle", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const rfq = must(
+      rt.dispatch(cmd("market.rfq", desk.id, { sku: "research.brief", spec: "one pager", invitedSellerIds: [vendor.id] })),
+      "research rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_pair");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("refuses an FX SKU with swapped from/to as fx_pair, not a silent USD→USDC journal", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [vendor.id] }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USDC_SIM",
+          to: "USD_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_pair");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("refuses an FX SKU priced in to as fx_pair", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [vendor.id] }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USDC_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_pair");
+    expect(rt.quotes.size).toBe(before);
   });
 });

@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 65 rules", () => {
-    expect(RULE_IDS).toHaveLength(65);
+  it("has 66 rules", () => {
+    expect(RULE_IDS).toHaveLength(66);
   });
 
   it("denies frozen actors", () => {
@@ -1067,6 +1067,7 @@ describe("policy catalog", () => {
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
     expect(remediationFor(d)?.kind).toBe("none");
     expect(remediationFor(d)?.ruleId).toBe("market.fx_quote");
   });
@@ -1083,6 +1084,7 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
     expect(remediationFor(d)?.kind).toBe("none");
     expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
   });
@@ -1181,6 +1183,7 @@ describe("policy catalog", () => {
     const d = evaluate(ctx({ commandType: "market.rfq", skuListed: false }));
     expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("market.known_sku");
   });
 
@@ -1205,5 +1208,42 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("ledger.same_currency");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies an FX window that is not this rail's USD_SIM to USDC_SIM pair", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxPairOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_pair");
+  });
+
+  it("does not name fx_pair when the SKU itself is missing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: false,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_sku");
   });
 });

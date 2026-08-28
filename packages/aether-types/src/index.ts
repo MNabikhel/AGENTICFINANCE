@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.48.0",
+  version: "0.49.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -646,6 +646,13 @@ export interface PolicyContext {
    * Absent = not an FX-settle command. An FX quote is a one-shot window.
    */
   fxQuoteLive?: boolean;
+  /**
+   * False when an FX window is on the wrong SKU, the price is not in `from`,
+   * or `from`/`to` is not USD_SIM → USDC_SIM (the pair this rail actually journals).
+   * Absent = not a quote/settle with an FX window, or the quote is not a live FX window
+   * (`market.fx_quote` / `market.known_rfq` handle those).
+   */
+  fxPairOk?: boolean;
   /**
    * False when `hire.create` would reuse a quote that already produced a hire, an FX settle,
    * or is held by an open approval ticket.

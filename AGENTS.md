@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.48.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.49.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 65 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 66 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -65,7 +65,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 22. A cart bound to a hire must match it (`hire.cart_matches`): same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount. A hire takes one cart (`hire.unique_cart`). A second cart is not a pointer swap. A cart takes one payment (`mandate.unique_payment`). A second payment is not a second check.
 23. `payment.execution_date` binds on new spends (`hire.create`, `hire.fund`). Completing a funded hire after `not_after` is legal. Child windows may not outlive the parent.
 24. Quoting or hiring against an unknown RFQ or quote is `market.known_rfq`. It is not a missing SKU. SKU, expiry, and invite flags are only set once the room exists.
-25. An FX quote is a one-shot window (`market.fx_quote`). Settling a missing quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket is a policy deny, not a mutate throw after an allow. A retry of the same command still replays. The 200bps band (`mm.spread_bound`) binds the nested `fx.rateE6` that is stored and settled — a decoy top-level `rateE6` does not.
+25. An FX quote is a one-shot window (`market.fx_quote`). Settling a missing quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket is a policy deny, not a mutate throw after an allow. A retry of the same command still replays. The 200bps band (`mm.spread_bound`) binds the nested `fx.rateE6` that is stored and settled — a decoy top-level `rateE6` does not. This rail’s window is USD_SIM → USDC_SIM with the price in `from` (`market.fx_pair`). An FX object on a research SKU is not a dual-use quote.
 26. A hire quote is used once (`hire.quote_unspent`). The same set is consumed by `hire.create` and `market.fx_settle`. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void or refund does not restore it.
 27. A hireId that is not in this world is `hire.known`. It is not a broken mandate chain. Policy denies; mutate does not throw after an allow.
 28. An intentId that is not in this world is `mandate.known_intent`. It is not a missing handshake. A deny does not consume the quote.
@@ -90,6 +90,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 47. A hire takes one cart (`hire.unique_cart`). Binding a second cart to a live hire is a policy deny, not a silent pointer swap. Mutate does not throw `hire already has a cart` after an allow.
 48. A cart takes one payment (`mandate.unique_payment`). Minting a second payment for the same cart is a policy deny, not a second check. Ghost cart stays `mandate.known_cart`. Mutate does not throw `cart already has a payment` after an allow.
 49. A listed SKU priced in a currency the catalog does not name is `market.sku_currency`. Research is USD_SIM. Convert with `market.fx_settle`. Ghost SKU stays `market.known_sku`. Funding a USDC hire from USD cash is `ledger.same_currency`, not a mixed journal after yes.
+50. An FX window that is not this rail’s USD_SIM → USDC_SIM pair, or whose price is not in `from`, is `market.fx_pair`. An FX object on a research SKU is not a dual-use quote. A swapped pair is not a silent journal of the books this rail actually posts. Ghost RFQ stays `market.known_rfq`. Spent window stays `market.fx_quote`.
 
 ## Autonomy
 

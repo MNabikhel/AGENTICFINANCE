@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import { CATALOG } from "@aether/market";
+import { CATALOG, fxPairSettles } from "@aether/market";
 import { inviteQuote, offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import type { HireContract, MandateId } from "@aether/types";
 
@@ -348,9 +348,29 @@ describe("catalog currency", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("market.sku_currency");
     expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(rt.quotes.size).toBe(before);
     expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});
+
+describe("fxPairSettles", () => {
+  const usd = { amount: 80_000, currency: "USD_SIM" as const };
+  const usdc = { amount: 80_000, currency: "USDC_SIM" as const };
+  const window = { from: "USD_SIM" as const, to: "USDC_SIM" as const };
+
+  it("accepts the catalog FX SKU priced in from", () => {
+    expect(fxPairSettles("fx.usd_sim.usdc_sim", usd, window)).toBe(true);
+  });
+
+  it("rejects a research SKU wearing an FX window", () => {
+    expect(fxPairSettles("research.brief", usd, window)).toBe(false);
+  });
+
+  it("rejects a swapped pair or a price in to", () => {
+    expect(fxPairSettles("fx.usd_sim.usdc_sim", usd, { from: "USDC_SIM", to: "USD_SIM" })).toBe(false);
+    expect(fxPairSettles("fx.usd_sim.usdc_sim", usdc, window)).toBe(false);
   });
 });
