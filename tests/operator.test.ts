@@ -78,7 +78,7 @@ describe("SIM_RAIL", () => {
     expect(SIM_RAIL.live).toBe(false);
     expect(SIM_RAIL.id).toBe(PROTOCOL.rail);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.29.0");
+    expect(PROTOCOL.version).toBe("0.30.0");
   });
 });
 
@@ -342,5 +342,54 @@ describe("ledger.same_currency", () => {
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.same_currency");
     expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(5_000_000);
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(1_500_000);
+  });
+});
+
+describe("ledger.sufficient", () => {
+  it("refuses an overdraft as ledger.sufficient, not a negative book", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const clockBefore = rt.clock.now();
+    const journalsBefore = rt.journals.length;
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "treasury:cash",
+        toAccount: "procurement:cash",
+        amount: { amount: 5_000_001, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.journals.length).toBe(journalsBefore);
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(5_000_000);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(1_500_000);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("overdraw"))).toBe(true);
+  });
+
+  it("still drains a book to zero when the source covers the amount", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    must(
+      rt.dispatch(
+        cmd("ledger.transfer", treasury.id, {
+          fromAccount: "treasury:cash",
+          toAccount: "procurement:cash",
+          amount: { amount: 5_000_000, currency: "USD_SIM" },
+        }),
+      ),
+      "drain",
+    );
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(0);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(6_500_000);
   });
 });

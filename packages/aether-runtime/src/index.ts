@@ -806,9 +806,13 @@ export class Runtime {
       if (fromAcct && toAcct) {
         const stated =
           body.amount && typeof body.amount === "object"
-            ? (body.amount as Money).currency
+            ? (body.amount as Money)
             : undefined;
-        ctx.accountsSameCurrency = fromAcct.currency === toAcct.currency && stated === fromAcct.currency;
+        ctx.accountsSameCurrency =
+          fromAcct.currency === toAcct.currency && stated?.currency === fromAcct.currency;
+        if (ctx.accountsSameCurrency && stated && typeof stated.amount === "number") {
+          ctx.fundsOk = this.ledger.balance(fromAcct.id) >= stated.amount;
+        }
       }
     }
     if (cmd.type === "ledger.balances") {
@@ -1768,6 +1772,9 @@ export class Runtime {
     const to = this.ledger.account(String(body.toAccount));
     if (from.currency !== to.currency || amount.currency !== from.currency) {
       throw new Error("mixed currency; split FX into two entries");
+    }
+    if (this.ledger.balance(from.id) < amount.amount) {
+      throw new Error("insufficient funds");
     }
     return this.postJournal(`Transfer ${body.fromAccount} -> ${body.toAccount}`, [
       { accountId: to.id, debit: amount.amount, credit: 0 },

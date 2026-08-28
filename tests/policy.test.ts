@@ -74,8 +74,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 55 rules", () => {
-    expect(RULE_IDS).toHaveLength(55);
+  it("has 56 rules", () => {
+    expect(RULE_IDS).toHaveLength(56);
   });
 
   it("denies frozen actors", () => {
@@ -754,6 +754,26 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("ledger.same_currency");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies an overdraft as ledger.sufficient, not a negative book", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        accountsKnown: true,
+        accountsSameCurrency: true,
+        fundsOk: false,
+        amount: { amount: 5_000_001, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.sufficient");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

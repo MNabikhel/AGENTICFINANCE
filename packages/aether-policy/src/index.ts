@@ -893,6 +893,15 @@ export const RULES: readonly Rule[] = [
         : v("ledger.same_currency", "deny", "mixed currency; use market.fx_settle");
     },
   },
+  {
+    id: "ledger.sufficient",
+    evaluate: (ctx) => {
+      if (ctx.fundsOk === undefined) return v("ledger.sufficient", "allow", "not a funded transfer");
+      return ctx.fundsOk
+        ? v("ledger.sufficient", "allow", "source covers the amount")
+        : v("ledger.sufficient", "deny", "insufficient funds");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1035,6 +1044,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "ledger.same_currency": {
     kind: "none",
     hint: "One journal is one currency. USD_SIM and USDC_SIM do not mix. Convert with market.fx_settle, not a transfer.",
+  },
+  "ledger.sufficient": {
+    kind: "none",
+    hint: "The source book does not have that many cents. A transfer is not an overdraft. Seed or allocate first.",
   },
   "payment.execution_date": {
     kind: "none",

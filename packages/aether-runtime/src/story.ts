@@ -148,6 +148,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "ledger.sufficient") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to overdraw a book`,
+          body: "The source book does not have that many cents. A transfer is not an overdraft.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
