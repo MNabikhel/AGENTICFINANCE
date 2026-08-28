@@ -2849,6 +2849,137 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.ruleId).toBe("kya.principal_not_frozen");
   });
 
+  it("does not name kya.capability_subset on release after a climb above the grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.release",
+        hire: hire({ state: "delivered" }),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 3,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.message).toBe("grant checked at fund");
+  });
+
+  it("does not name kya.capability_subset on refund, submit, require, or deliver after a climb above the grant", () => {
+    for (const commandType of ["hire.refund", "envelope.submit", "envelope.require", "hire.deliver"] as const) {
+      const d = evaluate(
+        ctx({
+          actor: agent({ autonomyLevel: 4 }),
+          commandType,
+          hire: hire({ state: commandType === "hire.refund" ? "funded" : "delivered" }),
+          kya: {
+            required: true,
+            pathOk: true,
+            implicit: false,
+            depth: 1,
+            maxDepth: 3,
+            principalFrozen: false,
+            expired: false,
+            revoked: false,
+            hops: [],
+            grantedMaxAutonomy: 3,
+          },
+        }),
+      );
+      expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    }
+  });
+
+  it("still names kya.capability_subset on a new hire after a climb above the grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 3,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
+  });
+
+  it("still names kya.capability_subset on fund after a climb above the grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        cart: signedCart(),
+        payment: signedPayment(),
+        intent: signedIntent([]),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 3,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
+  });
+
+  it("still names kya.attestation_fresh first when the hop also died after the climb", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: true,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 3,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.attestation_fresh");
+  });
+
   it("still names kya.attestation_fresh first when the nested hop is also expired", () => {
     const d = evaluate(
       ctx({

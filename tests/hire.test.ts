@@ -651,6 +651,201 @@ describe("kya hop freshness on complete after fund", () => {
   });
 });
 
+describe("kya grant ceiling on complete after fund", () => {
+  function grantedDesk(rt: ReturnType<typeof boot>) {
+    const { desk, vendor, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "grant L3",
+    );
+    return { founder, desk, vendor, intentId };
+  }
+
+  function fundedGranted(rt: ReturnType<typeof boot>) {
+    const { founder, desk, vendor, intentId } = grantedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    if (!live.attempt.ok) throw new Error("expected hire.create allow under grant");
+    const hireId = (live.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    return { founder, desk, vendor, intentId, hireId };
+  }
+
+  function climb(rt: ReturnType<typeof boot>, founderId: string, deskId: string) {
+    must(rt.dispatch(cmd("ladder.set", founderId, { agentId: deskId, to: 4 })), "L4");
+    expect(rt.alias("procurement").autonomyLevel).toBe(4);
+  }
+
+  it("still hires against a grant of 3 while the desk is L3", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = grantedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    expect(live.attempt.value.decision.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+  });
+
+  it("refuses a new hire after a climb above the grant as kya.capability_subset", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = grantedDesk(rt);
+    climb(rt, founder.id, desk.id);
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "above the grant",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("kya.capability_subset");
+  });
+
+  it("refuses to fund after a climb above the grant as kya.capability_subset", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = grantedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: desk.id, seller: vendor.id, intentId });
+    climb(rt, founder.id, desk.id);
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.capability_subset");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+  });
+
+  it("lets a funded hire finish after a climb above the grant", () => {
+    const rt = boot();
+    const { founder, desk, vendor, hireId } = fundedGranted(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    climb(rt, founder.id, desk.id);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    if (!delivered.ok) return;
+    const released = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(released.ok).toBe(true);
+    if (!released.ok) return;
+    expect(released.value.decision.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(released.value.decision.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(80_000);
+  });
+
+  it("refunds a funded hire after a climb above the grant", () => {
+    const rt = boot();
+    const { founder, desk, hireId } = fundedGranted(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    climb(rt, founder.id, desk.id);
+    const refund = rt.dispatch(cmd("hire.refund", desk.id, { hireId }));
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    expect(refund.value.decision.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("refunded");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash + 80_000);
+  });
+
+  it("submits envelope after a climb above the grant", () => {
+    const rt = boot();
+    const { founder, desk, vendor, hireId } = fundedGranted(rt);
+    climb(rt, founder.id, desk.id);
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
+    const submitted = rt.dispatch(cmd("envelope.submit", desk.id, { hireId, nonce: `nonce-${hireId}-climb` }));
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    expect(submitted.value.decision.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+  });
+
+  it("still names kya.attestation_fresh first when the hop also died after the climb", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, {
+          delegateId: desk.id,
+          maxAutonomy: 3,
+          expiresAt: "2026-08-28T12:00:00.000Z",
+        }),
+      ),
+      "timed grant",
+    );
+    climb(rt, founder.id, desk.id);
+    rt.clock.set("2026-08-28T18:00:00.000Z");
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "dead hop and over grant",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("deny");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("kya.attestation_fresh");
+  });
+
+  it("still names kya.chain_intact on release after revoke, even after a climb", () => {
+    const rt = boot();
+    const { founder, desk, vendor, hireId } = fundedGranted(rt);
+    climb(rt, founder.id, desk.id);
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id })), "revoke");
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    const vendorCash = rt.ledger.balanceByName("vendor:cash").amount;
+    const r = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.chain_intact");
+    expect(rt.hires.get(hireId)?.state).toBe("delivered");
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(vendorCash);
+  });
+});
+
 function offered(rt: ReturnType<typeof boot>) {
   const { desk, vendor, intentId } = economy(rt);
   const live = offerHire(rt, {

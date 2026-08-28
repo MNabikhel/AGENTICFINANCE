@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.83.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.84.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -44,7 +44,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on fund (`hire.fund`). Submit verifies signatures and hashes; expiry was checked at fund. Completing a funded hire after the cart or payment window is legal.
 3. 84 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
-4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`). Completing a funded hire after the hop expires is legal; freeze and revoke still bind.
+4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`). Completing a funded hire after the hop expires, or after a climb above the grant, is legal; freeze and revoke still bind.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
 7. Freeze sets L0. Unfreeze restores the prior rung. `any → L0` is always legal. Skipping rungs is `ladder.legal`, not a mutate throw after an allow. Listing L5 gate names is not the freeze test.
@@ -102,7 +102,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 59. A transfer that would journal against equity or escrow is `ledger.operating_book`. Opening cash is `seedOpening`. Escrow moves through `hire.fund` / refund / release. Overdraft stays `ledger.sufficient`. Dest overflow of operating cash stays `ledger.safe_balance`. Ghost book stays `ledger.known_account`. A transfer is not a mint, and it cannot pick the escrow lock.
 60. A data vendor’s `key:usdc` and a market maker’s `market_maker:cash_usdc` belong to that agent, not system. Register writes `ownerId` after the id exists. A USDC name collision is `identity.unique_key`, not `account exists` after opening USD cash. Restore of old worlds may still show system as owner; a new register does not.
 61. L5 is not a birthright (`ladder.birth_rung`). `identity.register` may mint L0–L4. L5 is a climb (`ladder.set` 4→5) after a freeze that was actually tested. Listing the gate names is not the test. A reused alias stays `identity.unique_key`. Skipping a rung on an existing agent stays `ladder.legal`. System minting a second agent stays `actor.system_scope`.
-62. Omitted `maxAutonomy` on `kya.attest` is L5. An agent may not grant a standing-mandate ceiling above its own rung (`kya.capability_subset`). Name a ceiling you hold. A human or treasury may grant L5. A second live hop stays `kya.unique_live`. Writing someone else’s handshake stays `kya.party`.
+62. Omitted `maxAutonomy` on `kya.attest` is L5. An agent may not grant a standing-mandate ceiling above its own rung, or spend above the handshake ceiling (`kya.capability_subset`). Name a ceiling you hold. A human or treasury may grant L5. A second live hop stays `kya.unique_live`. Writing someone else’s handshake stays `kya.party`. Completing a funded hire after a climb above the grant is legal.
 63. A payment mandate’s `exp` is unix seconds, one day from `iat` — the same window as the cart’s ISO `expiresAt`. Milliseconds are not seconds. `mandate.not_expired` reads both on new spends. Completing a funded hire after that window is legal. Restore of old worlds may still show a ~1000-day payment `exp`; a new payment does not.
 64. Omitted `principalId` on `kya.attest` / `kya.revoke` is the speaker, not the supervisor. Policy and mutate share that default. Filling in someone else’s id stays `kya.party`. Omitting the ceiling still writes L5 (`kya.capability_subset`). A frozen founder does not freeze a desk’s own handshake.
 65. A provided HTTP/MCP `actor` that is not a live alias is `actor.known`, not silent system. Omit actor or pass `system` to bootstrap. A live alias still maps. Spend as `system` stays `actor.system_scope`.
@@ -124,6 +124,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 81. Fetching one cart by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `bound`. Bound (unique_payment occupies) wins over expired. A hire that points at this cart is not bound — that occupancy lives on the hire. The store stays raw. Snapshot uses the same derivation. A second payment still names `mandate.unique_payment`. Fund of a stale cart still names `mandate.chain_integrity` / `mandate.not_expired`.
 82. Completing a funded hire after the cart or payment window is legal. `mandate.not_expired` binds new spends (`hire.create`, `hire.fund`, `mandate.issue_cart`, `mandate.issue_payment`). Deliver, release, refund, require, and submit after that window are not a trapped escrow. Fund of a stale cart still names `mandate.chain_integrity` first. A first payment on a stale unpaid cart still names `mandate.not_expired`. Refund of delivered work still names `hire.state`.
 83. Completing a funded hire after the KYA hop expires is legal. `kya.attestation_fresh` binds new spends (`hire.create`, `hire.fund`, `mandate.issue_intent`). Deliver, release, refund, require, and submit after that window are not a trapped escrow. Freeze of the principal and revoke still bind. Unique_live still occupies. A nested hop whose parent died still names `kya.parent_fresh` on a new hire.
+84. Completing a funded hire after a climb above the handshake ceiling is legal. `kya.capability_subset` binds new spends (`hire.create`, `hire.fund`, `kya.attest`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. Freeze and revoke still bind. An expired hop still names `kya.attestation_fresh` first on a new hire.
 
 ## Autonomy
 

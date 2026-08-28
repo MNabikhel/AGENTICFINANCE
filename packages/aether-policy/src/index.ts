@@ -95,7 +95,7 @@ const ESCALATABLE = new Set<CommandType>([
 /** New spend starts here. Completing a funded hire is not a new spend. */
 const SPEND_START_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund"]);
 
-/** Escrow already moved. Cart, payment, intent, and handshake windows do not trap the lock. Freeze and revoke still bind. */
+/** Escrow already moved. Cart, payment, intent, handshake windows, and grant ceilings do not trap the lock. Freeze and revoke still bind. */
 const COMPLETE_AFTER_FUND = new Set<CommandType>([
   "hire.deliver",
   "hire.release",
@@ -622,6 +622,9 @@ export const RULES: readonly Rule[] = [
     id: "kya.capability_subset",
     evaluate: (ctx) => {
       if (!ctx.kya?.required) return v("kya.capability_subset", "allow", "kya not required");
+      if (COMPLETE_AFTER_FUND.has(ctx.commandType as CommandType)) {
+        return v("kya.capability_subset", "allow", "grant checked at fund");
+      }
       const proposed = ctx.kya.proposedMaxAutonomy;
       if (
         proposed !== undefined &&
@@ -1290,7 +1293,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.capability_subset": {
     kind: "none",
-    hint: "Omitted maxAutonomy is L5. An agent may not grant a standing-mandate ceiling above its own rung. Name a ceiling you hold. A human or treasury may grant L5.",
+    hint: "Omitted maxAutonomy is L5. An agent may not grant a standing-mandate ceiling above its own rung, or spend above the handshake ceiling. Name a ceiling you hold. A human or treasury may grant L5. Completing a funded hire after a climb is legal; freeze and revoke still bind.",
   },
   "market.known_sku": {
     kind: "none",
