@@ -662,6 +662,7 @@ export interface PolicyContext {
   birthRungOk?: boolean;            // false when identity.register would mint L5 (L0–L4 at birth are legal)
   kyaMintFresh?: boolean;           // false when kya.attest would write expiresAt ≤ now (or an unparseable Instant)
   kyaMintWindowOk?: boolean;        // false when kya.attest would write expiresAt after now + one year (omit is the ceiling)
+  windowMintFresh?: boolean;        // false when issue_intent would write an execution_date that cannot contain now
 }
 ```
 
@@ -771,7 +772,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 09 | `payment.allowed_payees` | settle if constraint present | payee not in list | — | listed |
 | 10 | `payment.allowed_skus` | settle/hire if constraint present | sku not listed | — | listed |
 | 11 | `payment.recurrence` | hire.create / hire.fund if constraint present | `occurrenceCount >= max` or last fund inside the frequency gap (`DAILY` 24h, `WEEKLY` 7d, `MONTHLY` 30d). `ON_DEMAND` has no gap. Completing a funded hire is not a new occurrence. | — | under cap and past the gap |
-| 12 | `payment.execution_date` | hire.create / hire.fund if constraint present | now outside `[not_before, not_after]`. Completing a funded hire is not a new spend. | — | in window |
+| 12 | `payment.execution_date` | hire.create / hire.fund if constraint present | now outside `[not_before, not_after]`. Completing a funded hire is not a new spend. Minting a already-closed window is `mandate.window_fresh`. | — | in window |
 | 13 | `ladder.min_level` | settle/hire/sub-intent | actor.level < required **and** command is not escalatable | actor.level < required **and** command is escalatable (no ticket yet) | level ≥ required, or an approved ticket waived the hire/settle rung |
 | 14 | `ladder.max_autonomy_constraint` | settle if `aether.max_autonomy` present | actor.level > max (over-autonomy abuse) | — | actor.level ≤ max |
 | 15 | `approval.threshold` | settle/fund | — | amount ≥ role threshold **and** level < 5 | below threshold or L5 with circuit intact |
@@ -838,6 +839,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 76 | `ladder.birth_rung` | identity.register | autonomyLevel is 5 | — | birth rung is L0–L4 (`ladder.set` 4→5 after a freeze test) |
 | 77 | `kya.mint_fresh` | kya.attest | expiresAt ≤ now, or unparseable Instant (omit is one year from now) | — | handshake expires after now |
 | 78 | `kya.mint_window` | kya.attest | expiresAt after now + one year (omit is that ceiling) | — | handshake expires within one year |
+| 79 | `mandate.window_fresh` | issue_intent with execution_date | not_after already past, inverted window, or unparseable Instant (a future not_before still mints) | — | window can still contain a now |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations. L5 cannot be minted at `identity.register` (`ladder.birth_rung`); that rung is a climb after a freeze that was actually tested.
 
@@ -1027,6 +1029,7 @@ export interface AetherError {
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
 | `ladder.test.ts` | Skip 2→4 is `ladder.legal`; L5 before freeze test is `ladder.legal`; minting L5 at register is `ladder.birth_rung`; freeze restores the prior rung |
 | `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows and payment-required before deliver are `hire.state`; funding without cash is `ledger.sufficient`; quoting an FX SKU without a window is `market.fx_window` |
+| `window.test.ts` | Completing a funded hire after `not_after` is legal; a new hire is `payment.execution_date`; minting a closed, inverted, or unparseable window is `mandate.window_fresh`, not a written corpse; a future `not_before` still mints; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |

@@ -114,6 +114,28 @@ function cloneResult(result: DispatchResult): DispatchResult {
   return JSON.parse(JSON.stringify(result)) as DispatchResult;
 }
 
+/** Closed when now > not_after (same exclusive end as hire). Inverted or unparseable is not a window. */
+function executionWindowMintable(c: { not_before?: unknown; not_after?: unknown }, nowIso: Instant): boolean {
+  const now = Date.parse(nowIso);
+  const before =
+    c.not_before === undefined || c.not_before === null
+      ? undefined
+      : typeof c.not_before === "string"
+        ? Date.parse(c.not_before)
+        : Number.NaN;
+  const after =
+    c.not_after === undefined || c.not_after === null
+      ? undefined
+      : typeof c.not_after === "string"
+        ? Date.parse(c.not_after)
+        : Number.NaN;
+  if (before !== undefined && !Number.isFinite(before)) return false;
+  if (after !== undefined && !Number.isFinite(after)) return false;
+  if (before !== undefined && after !== undefined && after < before) return false;
+  if (after !== undefined && now > after) return false;
+  return true;
+}
+
 const SIM_INSTRUMENT = {
   id: "sim-ledger",
   type: "sim_ledger" as const,
@@ -904,6 +926,8 @@ export class Runtime {
     }
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
+      const win = ctx.proposedConstraints.find((c) => c.type === "payment.execution_date");
+      if (win) ctx.windowMintFresh = executionWindowMintable(win, this.clock.now());
     }
     const namedIds = this.namedAgentIds(cmd, body);
     if (namedIds.length > 0) {
@@ -1662,6 +1686,11 @@ export class Runtime {
   }
 
   private mutIntent(body: Record<string, unknown>, actor: Agent) {
+    const constraints = (body.constraints as MandateConstraint[]) ?? [];
+    const win = constraints.find((c) => c.type === "payment.execution_date");
+    if (win && !executionWindowMintable(win, this.clock.now())) {
+      throw new Error("intent window already closed");
+    }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",
       id: this.ids.next("mid") as MandateId,

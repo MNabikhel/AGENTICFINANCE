@@ -1164,6 +1164,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.mint_window", "deny", "handshake would outlive one year");
     },
   },
+  {
+    id: "mandate.window_fresh",
+    evaluate: (ctx) => {
+      if (ctx.windowMintFresh === undefined) return v("mandate.window_fresh", "allow", "not a windowed mint");
+      return ctx.windowMintFresh
+        ? v("mandate.window_fresh", "allow", "execution window can still open")
+        : v("mandate.window_fresh", "deny", "execution window already closed");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1402,6 +1411,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.mint_window": {
     kind: "none",
     hint: "A handshake cannot outlive one year. Omit expiresAt for that ceiling, or name a sooner Instant. Year 9999 is not standing identity. A corpse mint stays kya.mint_fresh.",
+  },
+  "mandate.window_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with a closed calendar. Name a not_after after now, or omit the window. An inverted or unparseable Instant is not a window. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.execution_date.",
   },
   "payment.execution_date": {
     kind: "none",

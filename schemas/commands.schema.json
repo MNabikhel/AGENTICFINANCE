@@ -59,6 +59,7 @@
         "parentId": { "type": "string" },
         "constraints": {
           "type": "array",
+          "description": "An execution_date that has already closed, is inverted, or is unparseable is mandate.window_fresh, not a written corpse.",
           "items": {
             "type": "object",
             "required": ["type"],

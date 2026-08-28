@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.70.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.71.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 78 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 79 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -63,7 +63,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 20. Missing required body fields, non-integer cents, an unsafe integer, a non-sim currency, mixed currencies in one cart, a cart line whose cents overflow, a listed enum miss (role, decision, issuer kind, clearing currency), an integer outside its schema range (ladder rung, autonomy), a listed field with the wrong JSON type (a number where a string id belongs, a string where an array belongs), a nested cart line / intent constraint missing its fields, an unknown constraint type, a listed constraint missing its value fields (an `amount_range` without `max`), or an FX window missing from/to/rateE6/validUntil are `command.malformed` (HTTP 400). That is syntax, not policy. The clock does not step. The notary does not write. `evaluate()` does not run.
 21. `payment.agent_recurrence` binds. `max_occurrences` and the frequency gap are checked on `hire.create` and `hire.fund`. Completing a funded hire is not a new occurrence. A refund does not restore a slot. Child slips may not be more frequent than the parent.
 22. A cart bound to a hire must match it (`hire.cart_matches`): same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount. A hire takes one cart (`hire.unique_cart`). A second cart is not a pointer swap. A cart takes one payment (`mandate.unique_payment`). A second payment is not a second check. Funding, releasing, or submitting envelope against a live hire that has not bound that cart (and its payment) is `hire.bound_cart`. Passing `cartId` on fund is not a pointer.
-23. `payment.execution_date` binds on new spends (`hire.create`, `hire.fund`). Completing a funded hire after `not_after` is legal. Child windows may not outlive the parent.
+23. `payment.execution_date` binds on new spends (`hire.create`, `hire.fund`). Completing a funded hire after `not_after` is legal. Child windows may not outlive the parent. Minting a slip whose window is already closed, inverted, or unparseable is `mandate.window_fresh` — not a written corpse that then fails hire.
 24. Quoting or hiring against an unknown RFQ or quote is `market.known_rfq`. It is not a missing SKU. SKU, expiry, and invite flags are only set once the room exists.
 25. An FX quote is a one-shot window (`market.fx_quote`). Settling a missing quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket is a policy deny, not a mutate throw after an allow. A retry of the same command still replays. The 200bps band (`mm.spread_bound`) binds the nested `fx.rateE6` that is stored and settled — a decoy top-level `rateE6` does not. This rail’s window is USD_SIM → USDC_SIM with the price in `from` (`market.fx_pair`). An FX object on a research SKU is not a dual-use quote. Settling with no market maker (or missing MM books) is `mm.known`.
 26. A hire quote is used once (`hire.quote_unspent`). The same set is consumed by `hire.create` and `market.fx_settle`. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void or refund does not restore it. An FX window is not a hire (`hire.not_fx`). Settle it. A denied hire does not hold the window.
@@ -112,6 +112,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 69. A handshake cannot outlive one year (`kya.mint_window`). The omit default is the ceiling, not a suggestion. Year 9999 is not standing identity. A corpse mint stays `kya.mint_fresh`. Ghost, self, party, a second live hop, and an over-grant keep first deny.
 70. The KYA graph view (`GET /v1/kya`, snapshot `kya.edges`) labels an expired hop `expired`, not `live`. Revoked wins over expired. An expired hop still occupies the pair until revoke (`kya.unique_live`). Spend still names `kya.attestation_fresh`.
 71. An expired pause is not a live escalate. `hire.create` is auto-idempotent; a leftover ticket must not replay as `escalated` after `expiresAt` and trap the quote until some other command arrives. Inspect / snapshot label that ticket `expired`, not `pending`. Resolve of a dead pause stays `approval.pending`. The original command may be retried (new ticket) if it is still legal.
+72. A permission slip cannot be born with a closed calendar (`mandate.window_fresh`). `mandate.issue_intent` with `not_after` already past, an inverted window, or an unparseable Instant is a refuse, not a written corpse that then fails hire as `payment.execution_date`. A future `not_before` still mints. Ghost subject, missing parent, and a wider child keep first deny. Hire/fund still names `payment.execution_date`.
 
 ## Autonomy
 

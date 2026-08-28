@@ -154,6 +154,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "mandate.window_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a closed calendar`,
+          body: "A permission slip cannot be born with a window that has already closed. Name a not_after after now, or omit the window. Hire still checks the calendar when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

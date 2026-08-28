@@ -19,7 +19,7 @@
     {
       "name": "aether_mandate_issue_intent",
       "commandType": "mandate.issue_intent",
-      "description": "Issue a signed open or closed intent mandate with constraints."
+      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed is refused."
     },
     {
       "name": "aether_mandate_issue_cart",

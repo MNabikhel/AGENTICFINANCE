@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 78 rules", () => {
-    expect(RULE_IDS).toHaveLength(78);
+  it("has 79 rules", () => {
+    expect(RULE_IDS).toHaveLength(79);
   });
 
   it("denies frozen actors", () => {
@@ -1998,5 +1998,91 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("kya.unique_live");
+  });
+
+  it("denies a slip born with a closed calendar as mandate.window_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        windowMintFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.window_fresh");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.window_fresh when the window can still open", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        windowMintFresh: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.window_fresh when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names identity.known first when a ghost subject is also born closed", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: false,
+        windowMintFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+  });
+
+  it("still names mandate.known_parent first when a ghost parent is also born closed", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: false,
+        windowMintFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
+  });
+
+  it("still names mandate.child_tighter first when a wider child is also born closed", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 200_000 },
+          { type: "payment.execution_date", not_after: "2020-01-01T00:00:00.000Z" },
+        ],
+        windowMintFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
   });
 });

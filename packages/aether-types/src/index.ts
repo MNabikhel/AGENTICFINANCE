@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.70.0",
+  version: "0.71.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -874,6 +874,14 @@ export interface PolicyContext {
    * `kya.mint_fresh`. Ghost, self, party, unique_live, and over-grant keep first deny.
    */
   kyaMintWindowOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an execution_date window that
+   * cannot contain now (already closed, inverted, or unparseable Instant).
+   * Absent = not issue_intent, or the slip has no execution_date constraint.
+   * Hire/fund still names `payment.execution_date`. A future not_before still mints.
+   * Ghost subject, missing parent, and a wider child keep first deny.
+   */
+  windowMintFresh?: boolean;
   /**
    * False when issue_cart names a live hire that already has a cartId.
    * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).

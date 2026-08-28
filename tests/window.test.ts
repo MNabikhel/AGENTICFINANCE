@@ -59,7 +59,7 @@ function economy(rt: Runtime) {
     ),
     "intent",
   );
-  return { desk, vendor, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
+  return { founder, desk, vendor, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
 }
 
 describe("execution window", () => {
@@ -102,5 +102,160 @@ describe("execution window", () => {
     expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe(
       "deny",
     );
+  });
+
+  it("refuses a slip born with a closed calendar as mandate.window_fresh, not a written corpse", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const before = rt.intents.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy research last year",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+          {
+            type: "payment.allowed_payees",
+            allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+          },
+          { type: "payment.execution_date", not_after: "2020-01-01T00:00:00.000Z" },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.window_fresh");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.intents.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("cannot mint a closed calendar"))).toBe(true);
+  });
+
+  it("refuses an unparseable not_after as mandate.window_fresh", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy with garbage calendar",
+        constraints: [{ type: "payment.execution_date", not_after: "not-an-instant" }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.window_fresh");
+    expect(rt.intents.size).toBe(before);
+  });
+
+  it("refuses an inverted window as mandate.window_fresh", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy inside an empty interval",
+        constraints: [
+          {
+            type: "payment.execution_date",
+            not_before: "2026-09-10T00:00:00.000Z",
+            not_after: "2026-09-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.window_fresh");
+    expect(rt.intents.size).toBe(before);
+  });
+
+  it("still writes a future not_before; hire still names payment.execution_date", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const r = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy research next week",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+            {
+              type: "payment.execution_date",
+              not_before: "2026-09-01T00:00:00.000Z",
+              not_after: "2026-09-07T00:00:00.000Z",
+            },
+          ],
+        }),
+      ),
+      "future slip",
+    );
+    expect(r.decision.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("allow");
+    const intentId = (r.data as { payload: { id: MandateId } }).payload.id;
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "too soon",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe(
+      "deny",
+    );
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("payment.execution_date");
+  });
+
+  it("still names identity.known first when the subject is missing", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: "aid_01J6AETHERGHOSTWIN00000001",
+        task: "buy for nobody last year",
+        constraints: [{ type: "payment.execution_date", not_after: "2020-01-01T00:00:00.000Z" }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
+    expect(rt.intents.size).toBe(before);
+  });
+
+  it("still names mandate.known_parent first when the parent is missing", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        parentId: "mid_01J6AETHERGHOSTWIN00000001",
+        task: "child of nobody last year",
+        constraints: [{ type: "payment.execution_date", not_after: "2020-01-01T00:00:00.000Z" }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.known_parent");
+    expect(rt.intents.size).toBe(before);
   });
 });
