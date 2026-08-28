@@ -3276,4 +3276,120 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mm.spread_bound");
   });
+
+  it("does not escalate velocity.window on release after a hot settle hour", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.release",
+        hire: hire({ state: "delivered" }),
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).not.toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("not a spend");
+  });
+
+  it("does not escalate velocity.window on refund, submit, require, or deliver after a hot settle hour", () => {
+    for (const commandType of ["hire.refund", "envelope.submit", "envelope.require", "hire.deliver"] as const) {
+      const d = evaluate(
+        ctx({
+          commandType,
+          hire: hire({ state: commandType === "hire.refund" ? "funded" : "delivered" }),
+          velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+        }),
+      );
+      expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    }
+  });
+
+  it("still escalates a new hire after a hot settle hour as velocity.window", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]),
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+    expect(remediationFor(d)?.kind).toBe("wait_approval");
+  });
+
+  it("still escalates fund after a hot settle hour as velocity.window", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        cart: signedCart(),
+        payment: signedPayment(),
+        intent: signedIntent([]),
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+  });
+
+  it("still escalates an FX settle after a hot settle hour as velocity.window", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+  });
+
+  it("does not escalate a catalog read after a hot settle hour", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "market.catalog",
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("not a spend");
+  });
+
+  it("counts spend at fund so a second fund of an already-funded hire is not a velocity event", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.fund",
+        hire: hire({ state: "funded" }),
+        cart: signedCart(),
+        payment: signedPayment(),
+        intent: signedIntent([]),
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("spend counted at fund");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+  });
+
+  it("still escalates a new hire when the hour is over the volume cap", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]),
+        velocity: { windowSeconds: 3600, count: 0, volume: 2_000_001 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+  });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
 import { fundHire, inviteQuote, offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
-import type { HireContract, MandateId } from "@aether/types";
+import { VELOCITY_CAPS, type HireContract, type MandateId } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -1028,6 +1028,158 @@ describe("slip max autonomy on complete after fund", () => {
     );
     expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
     expect(late.attempt.error.decision?.remediation?.ruleId).toBe("ladder.max_autonomy_constraint");
+  });
+});
+
+describe("velocity cap on complete after fund", () => {
+  function heatHour(rt: ReturnType<typeof boot>) {
+    const at = rt.clock.now();
+    while (rt.settleEvents.length <= VELOCITY_CAPS.maxCount) {
+      rt.settleEvents.push({ at, volume: 1 });
+    }
+  }
+
+  function fundedDesk(rt: ReturnType<typeof boot>) {
+    const { desk, vendor, intentId } = economy(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    if (!live.attempt.ok) throw new Error("expected hire.create allow under a cool hour");
+    const hireId = (live.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    heatHour(rt);
+    return { desk, vendor, intentId, hireId };
+  }
+
+  it("lets a funded hire finish after a hot settle hour", () => {
+    const rt = boot();
+    const { desk, vendor, hireId } = fundedDesk(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    if (!delivered.ok) return;
+    expect(delivered.value.kind).toBe("allow");
+    expect(delivered.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(delivered.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("not a spend");
+    const released = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(released.ok).toBe(true);
+    if (!released.ok) return;
+    expect(released.value.kind).toBe("allow");
+    expect(released.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(80_000);
+  });
+
+  it("refunds a funded hire after a hot settle hour", () => {
+    const rt = boot();
+    const { desk, hireId } = fundedDesk(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    const refund = rt.dispatch(cmd("hire.refund", desk.id, { hireId }));
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    expect(refund.value.kind).toBe("allow");
+    expect(refund.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("refunded");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash + 80_000);
+  });
+
+  it("submits envelope after a hot settle hour", () => {
+    const rt = boot();
+    const { desk, vendor, hireId } = fundedDesk(rt);
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
+    const submitted = rt.dispatch(cmd("envelope.submit", desk.id, { hireId, nonce: `nonce-${hireId}-velocity` }));
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    expect(submitted.value.kind).toBe("allow");
+    expect(submitted.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+  });
+
+  it("pauses a new hire after a hot settle hour as velocity.window", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = fundedDesk(rt);
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "after the hour",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(true);
+    if (!late.attempt.ok) return;
+    expect(late.attempt.value.kind).toBe("escalated");
+    expect(late.attempt.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(late.attempt.value.decision.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe("allow");
+    expect(late.attempt.value.decision.remediation?.ruleId).toBe("velocity.window");
+    expect(late.attempt.value.decision.remediation?.kind).toBe("wait_approval");
+    expect(rt.hires.size).toBe(1);
+  });
+
+  it("pauses a new fund after a hot settle hour as velocity.window", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: desk.id, seller: vendor.id, intentId });
+    heatHour(rt);
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.kind).toBe("escalated");
+    expect(r.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(r.value.decision.remediation?.ruleId).toBe("velocity.window");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(0);
+  });
+
+  it("still reads the catalog after a hot settle hour", () => {
+    const rt = boot();
+    const { desk } = fundedDesk(rt);
+    const listed = rt.dispatch(cmd("market.catalog", desk.id, {}));
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) return;
+    expect(listed.value.kind).toBe("allow");
+    expect(listed.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(listed.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("not a spend");
+  });
+
+  it("still accepts an offered hire after a hot settle hour", () => {
+    const rt = boot();
+    const { vendor, hireId } = offered(rt);
+    heatHour(rt);
+    const accepted = rt.dispatch(cmd("hire.accept", vendor.id, { hireId }));
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.value.kind).toBe("allow");
+    expect(accepted.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(accepted.value.decision.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("not a spend");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
   });
 });
 

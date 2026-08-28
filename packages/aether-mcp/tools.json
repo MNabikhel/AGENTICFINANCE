@@ -44,32 +44,32 @@
     {
       "name": "aether_hire_create",
       "commandType": "hire.create",
-      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire; completing funded work after that is legal."
+      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire. A hot settle hour pauses a new hire for a grown-up. Completing funded work after that is legal."
     },
     {
       "name": "aether_hire_accept",
       "commandType": "hire.accept",
-      "description": "Seller accepts a hire. Escrow must already exist."
+      "description": "Seller accepts a hire. Escrow must already exist. Accept is not a spend; a hot settle hour does not pause it."
     },
     {
       "name": "aether_hire_fund",
       "commandType": "hire.fund",
-      "description": "Buyer funds escrow. Budget is consumed here, not at deliver/submit. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new fund; completing funded work after that is legal."
+      "description": "Buyer funds escrow. Budget is consumed here, not at deliver/submit. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new fund. A hot settle hour pauses a new fund for a grown-up. Completing funded work after that is legal."
     },
     {
       "name": "aether_hire_deliver",
       "commandType": "hire.deliver",
-      "description": "Seller marks work delivered. Hire must be funded. Completing after the cart, handshake, or grant window is legal."
+      "description": "Seller marks work delivered. Hire must be funded. Completing after the cart, handshake, grant, or a hot settle hour is legal."
     },
     {
       "name": "aether_hire_refund",
       "commandType": "hire.refund",
-      "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release. Completing after the cart, handshake, or grant window is legal; freeze and revoke still bind."
+      "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release. Completing after the cart, handshake, grant, or a hot settle hour is legal; freeze and revoke still bind."
     },
     {
       "name": "aether_hire_release",
       "commandType": "hire.release",
-      "description": "Release funded+delivered escrow to the seller without an x402 envelope. Same books as envelope.submit. Completing after the cart, handshake, or grant window is legal; freeze and revoke still bind."
+      "description": "Release funded+delivered escrow to the seller without an x402 envelope. Same books as envelope.submit. Completing after the cart, handshake, grant, or a hot settle hour is legal; freeze and revoke still bind."
     },
     {
       "name": "aether_payment_require",
@@ -79,7 +79,7 @@
     {
       "name": "aether_payment_submit",
       "commandType": "envelope.submit",
-      "description": "Submit a signed PaymentPayload. Settles via sim facilitator. Completing after the cart, handshake, or grant window is legal; hashes still verify. Freeze and revoke still bind."
+      "description": "Submit a signed PaymentPayload. Settles via sim facilitator. Completing after the cart, handshake, grant, or a hot settle hour is legal; hashes still verify. Freeze and revoke still bind."
     },
     {
       "name": "aether_approval_resolve",
@@ -129,7 +129,7 @@
     {
       "name": "aether_market_catalog",
       "commandType": "market.catalog",
-      "description": "List SKUs that may be hired. This is not a storefront."
+      "description": "List SKUs that may be hired. This is not a storefront. A hot settle hour is not a spend."
     },
     {
       "name": "aether_receipt_get",

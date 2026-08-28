@@ -421,11 +421,15 @@ export function autoBeat(input: {
       };
     }
     if (decision.verdict === "escalate") {
+      const rule = decision.trace.find((t) => t.verdict === "escalate");
       return {
         seq: input.seq,
         at: input.at,
         headline: `Paused. ${amt ?? "This hire"} needs a grown-up`,
-        body: `${who} is allowed to try, but the amount sits above the auto-approve threshold. Treasury (or a human) must sign the ticket. The books do not change until they do.`,
+        body:
+          rule?.ruleId === "velocity.window"
+            ? `${who} is allowed to try, but this hour already has too many settles. Completing a funded hire after that is legal; a new hire is not. Treasury (or a human) must sign the ticket. The books do not change until they do.`
+            : `${who} is allowed to try, but the amount sits above the auto-approve threshold. Treasury (or a human) must sign the ticket. The books do not change until they do.`,
         tone: "escalate",
         commandType: cmd.type,
       };
@@ -495,6 +499,20 @@ export function autoBeat(input: {
                     ? "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new fund is not."
                 : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (decision.verdict === "escalate") {
+      const rule = decision.trace.find((t) => t.verdict === "escalate");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `Paused. ${amt ?? "This fund"} needs a grown-up`,
+        body:
+          rule?.ruleId === "velocity.window"
+            ? `${who} is allowed to try, but this hour already has too many settles. Completing a funded hire after that is legal; a new fund is not. Treasury (or a human) must sign the ticket. The books do not change until they do.`
+            : `${who} is allowed to try, but the amount sits above the auto-approve threshold. Treasury (or a human) must sign the ticket. The books do not change until they do.`,
+        tone: "escalate",
         commandType: cmd.type,
       };
     }

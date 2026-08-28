@@ -95,7 +95,7 @@ const ESCALATABLE = new Set<CommandType>([
 /** New spend starts here. Completing a funded hire is not a new spend. */
 const SPEND_START_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund"]);
 
-/** Escrow already moved. Cart, payment, intent, handshake windows, grant ceilings, and slip rungs do not trap the lock. Freeze and revoke still bind. */
+/** Escrow already moved. Cart, payment, intent, handshake windows, grant ceilings, slip rungs, and a hot settle hour do not trap the lock. Freeze and revoke still bind. */
 const COMPLETE_AFTER_FUND = new Set<CommandType>([
   "hire.deliver",
   "hire.release",
@@ -103,6 +103,9 @@ const COMPLETE_AFTER_FUND = new Set<CommandType>([
   "envelope.require",
   "envelope.submit",
 ]);
+
+/** New money movement. Completing a funded hire and reads are not a velocity event. */
+const VELOCITY_SPEND_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund", "market.fx_settle"]);
 
 const FREQ_RANK: Record<RecurrenceFrequency, number> = {
   ON_DEMAND: 0,
@@ -435,6 +438,12 @@ export const RULES: readonly Rule[] = [
   {
     id: "velocity.window",
     evaluate: (ctx) => {
+      if (!VELOCITY_SPEND_COMMANDS.has(ctx.commandType as CommandType)) {
+        return v("velocity.window", "allow", "not a spend");
+      }
+      if (ctx.hire && (ctx.hire.state === "funded" || ctx.hire.state === "delivered" || ctx.hire.state === "released")) {
+        return v("velocity.window", "allow", "spend counted at fund");
+      }
       if (ctx.velocity.count > VELOCITY_CAPS.maxCount || ctx.velocity.volume > VELOCITY_CAPS.maxVolume) {
         return v("velocity.window", "escalate", "velocity cap exceeded", { ...ctx.velocity });
       }
