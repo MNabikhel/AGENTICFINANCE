@@ -1,0 +1,80 @@
+{
+  "description": "MCP tool surface. Each tool is a CommandType. inputSchema mirrors /schemas.",
+  "tools": [
+    {
+      "name": "aether_identity_register",
+      "commandType": "identity.register",
+      "description": "Register an agent identity, DID, Ed25519 key, and cash account."
+    },
+    {
+      "name": "aether_mandate_issue_intent",
+      "commandType": "mandate.issue_intent",
+      "description": "Issue a signed open or closed intent mandate with constraints."
+    },
+    {
+      "name": "aether_mandate_issue_cart",
+      "commandType": "mandate.issue_cart",
+      "description": "Issue a merchant-bound cart hashed to an intent."
+    },
+    {
+      "name": "aether_mandate_issue_payment",
+      "commandType": "mandate.issue_payment",
+      "description": "Issue a payment mandate whose transaction_id is sha256(cart)."
+    },
+    {
+      "name": "aether_market_rfq",
+      "commandType": "market.rfq",
+      "description": "Create an RFQ to invited seller agents."
+    },
+    {
+      "name": "aether_market_quote",
+      "commandType": "market.quote",
+      "description": "Submit a quote or FX rate. MM rates must stay inside 200bps."
+    },
+    {
+      "name": "aether_hire_create",
+      "commandType": "hire.create",
+      "description": "Offer a hire contract with an escrow account. Requires L4+ or escalation."
+    },
+    {
+      "name": "aether_hire_accept",
+      "commandType": "hire.accept",
+      "description": "Seller accepts a hire. Escrow must already exist."
+    },
+    {
+      "name": "aether_payment_require",
+      "commandType": "envelope.require",
+      "description": "Return an x402-shaped PaymentRequired envelope (HTTP 402)."
+    },
+    {
+      "name": "aether_payment_submit",
+      "commandType": "envelope.submit",
+      "description": "Submit a signed PaymentPayload. Settles via sim facilitator."
+    },
+    {
+      "name": "aether_approval_resolve",
+      "commandType": "approval.resolve",
+      "description": "Approve or reject an escalation ticket. Replay uses commandHash."
+    },
+    {
+      "name": "aether_ladder_set",
+      "commandType": "ladder.set",
+      "description": "Move an agent one rung. Skipping rungs is illegal. any→L0 always allowed."
+    },
+    {
+      "name": "aether_ledger_balances",
+      "commandType": "ledger.balances",
+      "description": "Read account balances. Does not mutate."
+    },
+    {
+      "name": "aether_audit_verify",
+      "commandType": "audit.verify",
+      "description": "Replay the hash-chained audit log from genesis."
+    },
+    {
+      "name": "aether_receipt_get",
+      "commandType": "receipt.get",
+      "description": "Fetch a receipt. reference must equal sha256(payment mandate)."
+    }
+  ]
+}

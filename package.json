@@ -1,0 +1,14 @@
+{
+  "name": "aether",
+  "private": true,
+  "description": "Aether — Agent Economic Runtime. Machine-first policy, mandates, simulated settlement.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

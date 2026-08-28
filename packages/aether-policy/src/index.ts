@@ -1,0 +1,384 @@
+/**
+ * Deterministic policy engine. No I/O. No LLM.
+ * Aggregation: any deny → deny; else any escalate → escalate; else allow.
+ * Every rule always runs so the trace is a complete audit artifact.
+ */
+
+import {
+  DEFAULT_APPROVAL_THRESHOLDS,
+  MIN_LEVEL_FOR_ACTION,
+  MM_RATE_BAND_E6,
+  ROLE_CAPABILITY,
+  VELOCITY_CAPS,
+  type AutonomyLevel,
+  type CommandType,
+  type MandateConstraint,
+  type PolicyContext,
+  type PolicyDecision,
+  type RuleVerdict,
+  type Verdict,
+} from "@aether/types";
+
+export type Rule = {
+  id: string;
+  evaluate(ctx: PolicyContext): RuleVerdict;
+};
+
+function v(ruleId: string, verdict: Verdict, message: string, evidence?: Record<string, unknown>): RuleVerdict {
+  return evidence ? { ruleId, verdict, message, evidence } : { ruleId, verdict, message };
+}
+
+function constraintsOf(ctx: PolicyContext): MandateConstraint[] {
+  return ctx.intent?.payload.constraints ?? [];
+}
+
+function findConstraint<T extends MandateConstraint["type"]>(
+  ctx: PolicyContext,
+  type: T,
+): Extract<MandateConstraint, { type: T }> | undefined {
+  return constraintsOf(ctx).find((c): c is Extract<MandateConstraint, { type: T }> => c.type === type);
+}
+
+function minLevelFor(commandType: string): AutonomyLevel {
+  if (commandType === "mandate.issue_intent") {
+    return MIN_LEVEL_FOR_ACTION.issueSubIntent;
+  }
+  if (commandType === "hire.create") {
+    return MIN_LEVEL_FOR_ACTION.hireAgainstIntent;
+  }
+  if (commandType === "envelope.submit" || commandType === "hire.fund" || commandType === "hire.release") {
+    return MIN_LEVEL_FOR_ACTION.closePaymentAutonomous;
+  }
+  return MIN_LEVEL_FOR_ACTION.draft;
+}
+
+const ESCALATABLE = new Set<CommandType>([
+  "envelope.submit",
+  "hire.create",
+  "hire.fund",
+  "hire.release",
+]);
+
+export const RULES: readonly Rule[] = [
+  {
+    id: "actor.not_frozen",
+    evaluate: (ctx) =>
+      ctx.actor.frozen
+        ? v("actor.not_frozen", "deny", "actor is frozen")
+        : v("actor.not_frozen", "allow", "actor not frozen"),
+  },
+  {
+    id: "actor.role_capability",
+    evaluate: (ctx) => {
+      const allowed = ROLE_CAPABILITY[ctx.actor.role];
+      const cmd = ctx.commandType as CommandType;
+      return allowed.includes(cmd)
+        ? v("actor.role_capability", "allow", `${ctx.actor.role} may ${cmd}`)
+        : v("actor.role_capability", "deny", `${ctx.actor.role} cannot ${cmd}`);
+    },
+  },
+  {
+    id: "mandate.chain_integrity",
+    evaluate: (ctx) => {
+      if (!ctx.payment || !ctx.cart || !ctx.intent) {
+        if (ctx.commandType.startsWith("envelope.") || ctx.commandType === "hire.fund") {
+          return v("mandate.chain_integrity", "deny", "settle requires intent+cart+payment");
+        }
+        return v("mandate.chain_integrity", "allow", "no chain required");
+      }
+      if (ctx.cart.payload.intentId !== ctx.intent.payload.id) {
+        return v("mandate.chain_integrity", "deny", "cart.intentId !== intent.id");
+      }
+      if (ctx.payment.payload.payee.id !== ctx.cart.payload.merchant.id) {
+        return v("mandate.chain_integrity", "deny", "payee !== cart merchant");
+      }
+      const pay = ctx.payment.payload.payment_amount;
+      const tot = ctx.cart.payload.total;
+      if (pay.amount !== tot.amount || pay.currency !== tot.currency) {
+        return v("mandate.chain_integrity", "deny", "payment_amount !== cart.total");
+      }
+      return v("mandate.chain_integrity", "allow", "chain fields consistent (hashes checked in mandate package)");
+    },
+  },
+  {
+    id: "mandate.not_expired",
+    evaluate: (ctx) => {
+      const nowSec = Math.floor(Date.parse(ctx.clock) / 1000);
+      if (ctx.intent && ctx.intent.payload.exp <= nowSec) {
+        return v("mandate.not_expired", "deny", "intent expired");
+      }
+      if (ctx.payment && ctx.payment.payload.exp <= nowSec) {
+        return v("mandate.not_expired", "deny", "payment expired");
+      }
+      if (ctx.cart && Date.parse(ctx.cart.payload.expiresAt) <= Date.parse(ctx.clock)) {
+        return v("mandate.not_expired", "deny", "cart expired");
+      }
+      return v("mandate.not_expired", "allow", "mandates in window");
+    },
+  },
+  {
+    id: "mandate.subject_is_actor",
+    evaluate: (ctx) => {
+      if (!ctx.intent) return v("mandate.subject_is_actor", "allow", "no intent");
+      if (ctx.commandType !== "envelope.submit" && ctx.commandType !== "hire.fund") {
+        return v("mandate.subject_is_actor", "allow", "not a settle");
+      }
+      return ctx.intent.payload.subjectId === ctx.actor.id
+        ? v("mandate.subject_is_actor", "allow", "actor is intent subject")
+        : v("mandate.subject_is_actor", "deny", "actor is not intent subject");
+    },
+  },
+  {
+    id: "payment.currency_match",
+    evaluate: (ctx) => {
+      if (!ctx.amount) return v("payment.currency_match", "allow", "no amount");
+      if (ctx.cart && ctx.cart.payload.total.currency !== ctx.amount.currency) {
+        return v("payment.currency_match", "deny", "cart currency mismatch");
+      }
+      if (ctx.payment && ctx.payment.payload.payment_amount.currency !== ctx.amount.currency) {
+        return v("payment.currency_match", "deny", "payment currency mismatch");
+      }
+      return v("payment.currency_match", "allow", "currencies match");
+    },
+  },
+  {
+    id: "payment.amount_range",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.amount_range");
+      if (!c || !ctx.amount) return v("payment.amount_range", "allow", "no range constraint");
+      if (ctx.amount.currency !== c.currency) {
+        return v("payment.amount_range", "deny", "currency != range currency", { currency: ctx.amount.currency });
+      }
+      if (c.min !== undefined && ctx.amount.amount < c.min) {
+        return v("payment.amount_range", "deny", `amount ${ctx.amount.amount} < min ${c.min}`);
+      }
+      if (ctx.amount.amount > c.max) {
+        return v("payment.amount_range", "deny", `amount ${ctx.amount.amount} > max ${c.max}`, {
+          amount: ctx.amount.amount,
+          max: c.max,
+        });
+      }
+      return v("payment.amount_range", "allow", "amount in range");
+    },
+  },
+  {
+    id: "payment.budget",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.budget");
+      if (!c || !ctx.amount) return v("payment.budget", "allow", "no budget constraint");
+      if (ctx.amount.currency !== c.currency) {
+        return v("payment.budget", "deny", "budget currency mismatch");
+      }
+      if (ctx.spentAgainstIntent + ctx.amount.amount > c.max) {
+        return v("payment.budget", "deny", "budget exhausted", {
+          spent: ctx.spentAgainstIntent,
+          requested: ctx.amount.amount,
+          max: c.max,
+        });
+      }
+      return v("payment.budget", "allow", "budget remaining");
+    },
+  },
+  {
+    id: "payment.allowed_payees",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.allowed_payees");
+      if (!c || !ctx.payeeId) return v("payment.allowed_payees", "allow", "no payee constraint");
+      return c.allowed.some((m) => m.id === ctx.payeeId)
+        ? v("payment.allowed_payees", "allow", "payee listed")
+        : v("payment.allowed_payees", "deny", "payee not in allow-list");
+    },
+  },
+  {
+    id: "payment.allowed_skus",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "aether.allowed_skus");
+      const sku = ctx.hire?.sku;
+      if (!c || !sku) return v("payment.allowed_skus", "allow", "no sku constraint");
+      return c.allowed.includes(sku)
+        ? v("payment.allowed_skus", "allow", "sku listed")
+        : v("payment.allowed_skus", "deny", `sku ${sku} not listed`);
+    },
+  },
+  {
+    id: "payment.recurrence",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.agent_recurrence");
+      if (!c) return v("payment.recurrence", "allow", "no recurrence constraint");
+      if (c.max_occurrences !== undefined && ctx.occurrenceCount >= c.max_occurrences) {
+        return v("payment.recurrence", "deny", "max_occurrences exceeded");
+      }
+      return v("payment.recurrence", "allow", "recurrence ok");
+    },
+  },
+  {
+    id: "payment.execution_date",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.execution_date");
+      if (!c) return v("payment.execution_date", "allow", "no execution window");
+      const now = Date.parse(ctx.clock);
+      if (c.not_before && now < Date.parse(c.not_before)) {
+        return v("payment.execution_date", "deny", "before not_before");
+      }
+      if (c.not_after && now > Date.parse(c.not_after)) {
+        return v("payment.execution_date", "deny", "after not_after");
+      }
+      return v("payment.execution_date", "allow", "in execution window");
+    },
+  },
+  {
+    id: "ladder.min_level",
+    evaluate: (ctx) => {
+      const required = minLevelFor(ctx.commandType);
+      if (ctx.actor.autonomyLevel >= required) {
+        return v("ladder.min_level", "allow", `L${ctx.actor.autonomyLevel} >= L${required}`);
+      }
+      if (ESCALATABLE.has(ctx.commandType as CommandType) && ctx.actor.autonomyLevel >= 0) {
+        return v("ladder.min_level", "escalate", `L${ctx.actor.autonomyLevel} < L${required}`, { required });
+      }
+      return v("ladder.min_level", "deny", `L${ctx.actor.autonomyLevel} < L${required}`);
+    },
+  },
+  {
+    id: "ladder.max_autonomy_constraint",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "aether.max_autonomy");
+      if (!c) return v("ladder.max_autonomy_constraint", "allow", "no max autonomy");
+      return ctx.actor.autonomyLevel <= c.max
+        ? v("ladder.max_autonomy_constraint", "allow", "within max autonomy")
+        : v("ladder.max_autonomy_constraint", "deny", `actor L${ctx.actor.autonomyLevel} > max ${c.max}`);
+    },
+  },
+  {
+    id: "approval.threshold",
+    evaluate: (ctx) => {
+      if (!ctx.amount) return v("approval.threshold", "allow", "no amount");
+      if (ctx.actor.autonomyLevel === 5 && !ctx.circuit.tripped) {
+        return v("approval.threshold", "allow", "L5 skips per-tx threshold");
+      }
+      const cap = DEFAULT_APPROVAL_THRESHOLDS[ctx.actor.role];
+      if (ctx.amount.amount >= cap && ESCALATABLE.has(ctx.commandType as CommandType)) {
+        return v("approval.threshold", "escalate", `amount ${ctx.amount.amount} >= threshold ${cap}`, {
+          threshold: cap,
+        });
+      }
+      return v("approval.threshold", "allow", "under threshold");
+    },
+  },
+  {
+    id: "velocity.window",
+    evaluate: (ctx) => {
+      if (ctx.velocity.count > VELOCITY_CAPS.maxCount || ctx.velocity.volume > VELOCITY_CAPS.maxVolume) {
+        return v("velocity.window", "escalate", "velocity cap exceeded", { ...ctx.velocity });
+      }
+      return v("velocity.window", "allow", "velocity ok");
+    },
+  },
+  {
+    id: "circuit.daily",
+    evaluate: (ctx) => {
+      if (ctx.circuit.tripped) return v("circuit.daily", "deny", "circuit tripped");
+      const next = ctx.circuit.dailySpend + (ctx.amount?.amount ?? 0);
+      if (ctx.amount && next > ctx.circuit.dailyLimit) {
+        return v("circuit.daily", "deny", "daily limit exceeded", { next, limit: ctx.circuit.dailyLimit });
+      }
+      return v("circuit.daily", "allow", "circuit intact");
+    },
+  },
+  {
+    id: "hire.escrow_required",
+    evaluate: (ctx) => {
+      if (!ctx.hire) return v("hire.escrow_required", "allow", "no hire");
+      if (ctx.commandType === "hire.deliver" && ctx.hire.state !== "funded") {
+        return v("hire.escrow_required", "deny", `deliver while hire.state=${ctx.hire.state}`);
+      }
+      if (ctx.commandType === "hire.accept" && !ctx.hire.escrowAccountId) {
+        return v("hire.escrow_required", "deny", "accept without escrow account");
+      }
+      return v("hire.escrow_required", "allow", "escrow discipline ok");
+    },
+  },
+  {
+    id: "hire.no_self_deal",
+    evaluate: (ctx) => {
+      if (!ctx.hire) return v("hire.no_self_deal", "allow", "no hire");
+      return ctx.hire.buyerId === ctx.hire.sellerId
+        ? v("hire.no_self_deal", "deny", "buyer === seller")
+        : v("hire.no_self_deal", "allow", "counterparties distinct");
+    },
+  },
+  {
+    id: "counterparty.known",
+    evaluate: (ctx) => {
+      if (!ctx.payeeId) return v("counterparty.known", "allow", "no payee");
+      const known = ctx.counterparties.some((a) => a.id === ctx.payeeId) || ctx.actor.id === ctx.payeeId;
+      return known
+        ? v("counterparty.known", "allow", "payee registered")
+        : v("counterparty.known", "deny", "payee unknown");
+    },
+  },
+  {
+    id: "instrument.sim_only",
+    evaluate: (ctx) => {
+      if (!ctx.payment) return v("instrument.sim_only", "allow", "no payment");
+      return ctx.payment.payload.payment_instrument.type === "sim_ledger"
+        ? v("instrument.sim_only", "allow", "sim instrument")
+        : v("instrument.sim_only", "deny", "live rails forbidden in v0");
+    },
+  },
+  {
+    id: "idempotency.nonce",
+    evaluate: () => v("idempotency.nonce", "allow", "nonce uniqueness enforced by settlement store"),
+  },
+  {
+    id: "mm.spread_bound",
+    evaluate: (ctx) => {
+      if (ctx.actor.role !== "market_maker" || ctx.commandType !== "market.quote") {
+        return v("mm.spread_bound", "allow", "not an MM quote");
+      }
+      // rate lives on the command; runtime must copy it onto ctx.hire.spec or amount evidence.
+      const rate = (ctx as PolicyContext & { fxRateE6?: number }).fxRateE6;
+      if (rate === undefined) return v("mm.spread_bound", "allow", "no fx rate on context");
+      if (rate < MM_RATE_BAND_E6.min || rate > MM_RATE_BAND_E6.max) {
+        return v("mm.spread_bound", "deny", `rateE6 ${rate} outside 200bps band`);
+      }
+      return v("mm.spread_bound", "allow", "rate inside band");
+    },
+  },
+  {
+    id: "mm.inventory",
+    evaluate: () => v("mm.inventory", "allow", "inventory check performed in settlement against MM cash books"),
+  },
+  {
+    id: "audit.writable",
+    evaluate: () => v("audit.writable", "allow", "runtime aborts if audit append throws"),
+  },
+  {
+    id: "human.signature_present",
+    evaluate: (ctx) => {
+      if (ctx.commandType !== "envelope.submit") {
+        return v("human.signature_present", "allow", "not a payment submit");
+      }
+      if (ctx.actor.autonomyLevel >= 2) {
+        return v("human.signature_present", "allow", "L2+ may self-sign payment");
+      }
+      const human = ctx.payment && ctx.counterparties.some(
+        (a) => a.role === "human_operator" && a.did === ctx.payment!.issuer,
+      );
+      return human
+        ? v("human.signature_present", "allow", "human supervisor signed")
+        : v("human.signature_present", "deny", "L0/L1 payment requires human JWS");
+    },
+  },
+];
+
+export const RULE_IDS = RULES.map((r) => r.id);
+
+export function evaluate(ctx: PolicyContext): PolicyDecision {
+  const trace = RULES.map((r) => r.evaluate(ctx));
+  const denied = trace.filter((t) => t.verdict === "deny");
+  const escalated = trace.filter((t) => t.verdict === "escalate");
+  if (denied.length > 0) return { verdict: "deny", trace };
+  if (escalated.length > 0) return { verdict: "escalate", trace };
+  return { verdict: "allow", trace };
+}

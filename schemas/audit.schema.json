@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aether.dev/schemas/audit.schema.json",
+  "title": "AuditRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "seq", "prevHash", "recordedAt", "actorId", "action", "subjects", "payload", "payloadHash", "hash"],
+  "properties": {
+    "v": { "const": 1 },
+    "seq": { "type": "integer", "minimum": 0 },
+    "prevHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "recordedAt": { "type": "string", "format": "date-time" },
+    "actorId": { "type": "string" },
+    "action": {
+      "enum": [
+        "GENESIS",
+        "IDENTITY_REGISTER",
+        "LADDER_SET",
+        "MANDATE_ISSUE",
+        "RFQ_CREATE",
+        "QUOTE_SUBMIT",
+        "HIRE_TRANSITION",
+        "POLICY_DECISION",
+        "APPROVAL_RESOLVE",
+        "PAYMENT_REQUIRED",
+        "PAYMENT_SUBMIT",
+        "JOURNAL_POST",
+        "RECEIPT_ISSUE",
+        "FREEZE",
+        "AUDIT_VERIFY"
+      ]
+    },
+    "subjects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "id"],
+        "properties": {
+          "type": { "type": "string" },
+          "id": { "type": "string" }
+        }
+      }
+    },
+    "payload": true,
+    "payloadHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}
