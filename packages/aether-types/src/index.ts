@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.35.0",
+  version: "0.36.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -700,6 +700,12 @@ export interface PolicyContext {
    * Revoke by principal+delegate with no attestationId still tombstones implicit grants.
    */
   kyaAttestationKnown?: boolean;
+  /**
+   * False when kya.attest or kya.revoke names a principal that is not the actor,
+   * and the actor is not a human or treasury. Absent = not a handshake command.
+   * An L4 desk cannot mint or tombstone a founder’s handshake by filling in the ids.
+   */
+  kyaPartyOk?: boolean;
   /**
    * False when ledger.transfer, a named ledger.balances, or market.fx_settle points at a book
    * that is not in this world. FX settle needs the actor’s USDC book (compute vendors and

@@ -913,6 +913,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.known_attestation", "deny", "attestation not found");
     },
   },
+  {
+    id: "kya.party",
+    evaluate: (ctx) => {
+      if (ctx.kyaPartyOk === undefined) return v("kya.party", "allow", "not a handshake command");
+      return ctx.kyaPartyOk
+        ? v("kya.party", "allow", "actor is the principal or a kill-switch role")
+        : v("kya.party", "deny", "actor is not the handshake principal");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1063,6 +1072,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.known_attestation": {
     kind: "none",
     hint: "That attestation id is not in this world’s graph for this principal. A missing handshake is not a tombstone. You cannot revoke someone else’s handshake by guessing its id.",
+  },
+  "kya.party": {
+    kind: "none",
+    hint: "You can only mint or tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
   },
   "payment.execution_date": {
     kind: "none",

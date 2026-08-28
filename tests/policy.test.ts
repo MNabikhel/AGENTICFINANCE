@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 57 rules", () => {
-    expect(RULE_IDS).toHaveLength(57);
+  it("has 58 rules", () => {
+    expect(RULE_IDS).toHaveLength(58);
   });
 
   it("denies frozen actors", () => {
@@ -786,6 +786,43 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("kya.known_attestation");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies minting a handshake in someone else’s name as kya.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies tombstoning someone else’s handshake as kya.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.revoke",
+        kyaPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.party");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

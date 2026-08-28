@@ -300,3 +300,97 @@ describe("kya.known_attestation", () => {
     expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
+
+describe("kya.party", () => {
+  it("refuses an L4 desk minting a founder handshake as kya.party", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: scout.id, principalId: founder.id, maxAutonomy: 4 })), "handshake scout");
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: founder.id, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.party");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses an L4 desk tombstoning a founder handshake as kya.party", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 3 })), "attest");
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("kya.revoke", scout.id, { principalId: founder.id, delegateId: desk.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.party");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect([...rt.kya.attestations.values()].every((a) => !a.revokedAt)).toBe(true);
+    expect(rt.kya.blocked.size).toBe(0);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still lets treasury tombstone a founder handshake by naming the principal", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "treasury",
+          displayName: "Treasury",
+          role: "treasury",
+          autonomyLevel: 3,
+        }),
+      ),
+      "treasury",
+    );
+    const treasury = rt.alias("treasury");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 3 })), "attest");
+    const r = must(
+      rt.dispatch(cmd("kya.revoke", treasury.id, { principalId: founder.id, delegateId: desk.id })),
+      "treasury kill switch",
+    );
+    expect((r.data as { revoked: Array<{ id: string }> }).revoked).toHaveLength(1);
+    expect([...rt.kya.attestations.values()].some((a) => a.revokedAt)).toBe(true);
+  });
+});

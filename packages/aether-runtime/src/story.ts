@@ -495,6 +495,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot shake hands in someone else’s name`,
+          body: "You can only mint a handshake for which you are the principal. A human or treasury may attest any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -523,7 +533,9 @@ export function autoBeat(input: {
         body:
           rule?.ruleId === "kya.known_attestation"
             ? "That handshake is not in this world for this principal. A missing attestation is not a tombstone. You cannot tombstone someone else’s handshake by guessing its id."
-            : "That agent is not in this world. A missing agent is not a tombstone.",
+            : rule?.ruleId === "kya.party"
+              ? "You can only tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 desk cannot revoke a founder’s handshake by filling in the ids."
+              : "That agent is not in this world. A missing agent is not a tombstone.",
         tone: "deny",
         commandType: cmd.type,
       };

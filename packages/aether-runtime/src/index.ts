@@ -799,6 +799,11 @@ export class Runtime {
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
     }
+    if (cmd.type === "kya.attest" || cmd.type === "kya.revoke") {
+      const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
+      ctx.kyaPartyOk =
+        actor.role === "human_operator" || actor.role === "treasury" || actor.id === principalId;
+    }
     if (cmd.type === "kya.revoke" && typeof body.attestationId === "string") {
       const named = this.kya.attestations.get(body.attestationId as DelegationId);
       const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
@@ -1288,6 +1293,9 @@ export class Runtime {
     this.identity.require(delegateId);
     if (typeof body.principalId === "string") this.identity.require(body.principalId as AgentId);
     const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
+    if (actor.role !== "human_operator" && actor.role !== "treasury" && principalId !== actor.id) {
+      throw new Error("kya party");
+    }
     const att: DelegationAttestation = {
       id: this.ids.next("dlg") as DelegationId,
       vct: "aether.kya.delegation.1",
@@ -1325,6 +1333,9 @@ export class Runtime {
     if (typeof body.principalId === "string") this.identity.require(body.principalId as AgentId);
     if (typeof body.delegateId === "string") this.identity.require(body.delegateId as AgentId);
     const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
+    if (actor.role !== "human_operator" && actor.role !== "treasury" && principalId !== actor.id) {
+      throw new Error("kya party");
+    }
     if (typeof body.attestationId === "string") {
       const named = this.kya.attestations.get(body.attestationId as DelegationId);
       if (!named || named.principalId !== principalId) throw new Error("unknown attestation");
