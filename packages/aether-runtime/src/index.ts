@@ -907,6 +907,7 @@ export class Runtime {
     if (market.quoteUnspent !== undefined) ctx.quoteUnspent = market.quoteUnspent;
     if (market.skuCurrencyOk !== undefined) ctx.skuCurrencyOk = market.skuCurrencyOk;
     if (market.fxPairOk !== undefined) ctx.fxPairOk = market.fxPairOk;
+    if (market.hireNotFx !== undefined) ctx.hireNotFx = market.hireNotFx;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
@@ -951,6 +952,7 @@ export class Runtime {
     quoteUnspent?: boolean;
     skuCurrencyOk?: boolean;
     fxPairOk?: boolean;
+    hireNotFx?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -971,6 +973,7 @@ export class Runtime {
       quoteUnspent?: boolean;
       skuCurrencyOk?: boolean;
       fxPairOk?: boolean;
+      hireNotFx?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -1005,6 +1008,7 @@ export class Runtime {
         const reserved = this.reservedQuotes.has(quote.id);
         out.quoteUnspent = thresholdWaived && reserved && !consumed ? true : !consumed && !reserved;
         if (out.skuListed) out.skuCurrencyOk = skuAllowsCurrency(rfq.sku, quote.price.currency);
+        out.hireNotFx = !quote.fx;
       }
       return out;
     }
@@ -1618,6 +1622,7 @@ export class Runtime {
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, quote.price.currency)) {
       throw new Error("sku currency");
     }
+    if (quote.fx) throw new Error("fx hire");
     const hireId = this.ids.next("hid") as HireId;
     const escrow = this.ledger.openAccount({
       id: this.ids.next("acct") as AccountId,

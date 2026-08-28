@@ -246,9 +246,11 @@ describe("FX quote is a one-shot", () => {
     expect(sneak.ok).toBe(false);
     if (sneak.ok) return;
     expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("deny");
+    expect(sneak.error.decision?.remediation?.ruleId).toBe("hire.quote_unspent");
   });
 
-  it("refuses to FX-settle a quote that already produced a hire", () => {
+  it("refuses to hire an FX window as hire.not_fx; a deny does not consume the window", () => {
     const rt = boot();
     const { desk, vendor, mm } = economy(rt);
     const founder = rt.alias("ops-human");
@@ -263,24 +265,31 @@ describe("FX quote is a one-shot", () => {
       ),
       "intent",
     );
-    must(
-      rt.dispatch(
-        cmd("hire.create", desk.id, {
-          quoteId,
-          intentId: (intent.data as { payload: { id: string } }).payload.id,
-        }),
-      ),
-      "hire fx quote",
+    const before = rt.quotes.size;
+    const sneak = rt.dispatch(
+      cmd("hire.create", desk.id, {
+        quoteId,
+        intentId: (intent.data as { payload: { id: string } }).payload.id,
+      }),
     );
-    const sneak = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
     expect(sneak.ok).toBe(false);
     if (sneak.ok) return;
-    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(sneak.error.error.status).toBe(422);
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("deny");
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(sneak.error.decision?.remediation?.ruleId).toBe("hire.not_fx");
+    expect(sneak.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.quotes.size).toBe(before);
+    expect(rt.consumedQuotes.has(quoteId)).toBe(false);
+    expect(rt.reservedQuotes.has(quoteId)).toBe(false);
+    const settled = must(rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId })), "settle after denied hire");
+    expect((settled.data as { payout: number }).payout).toBe(79_840);
   });
 
-  it("refuses to FX-settle a quote held by an open hire ticket", () => {
+  it("refuses an expensive FX hire as hire.not_fx, not an escalation that holds the window", () => {
     const rt = boot();
-    const { desk, vendor, mm } = economy(rt);
+    const { desk, mm } = economy(rt);
     const founder = rt.alias("ops-human");
     const rfq = must(
       rt.dispatch(
@@ -319,22 +328,19 @@ describe("FX quote is a one-shot", () => {
       ),
       "intent",
     );
-    const paused = must(
-      rt.dispatch(
-        cmd("hire.create", desk.id, {
-          quoteId,
-          intentId: (intent.data as { payload: { id: string } }).payload.id,
-        }),
-      ),
-      "escalate hire",
+    const paused = rt.dispatch(
+      cmd("hire.create", desk.id, {
+        quoteId,
+        intentId: (intent.data as { payload: { id: string } }).payload.id,
+      }),
     );
-    expect(paused.kind).toBe("escalated");
-    expect(rt.reservedQuotes.has(quoteId)).toBe(true);
-    const sneak = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
-    expect(sneak.ok).toBe(false);
-    if (sneak.ok) return;
-    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
-    expect(sneak.error.decision?.remediation?.ruleId).toBe("market.fx_quote");
+    expect(paused.ok).toBe(false);
+    if (paused.ok) return;
+    expect(paused.error.decision?.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("deny");
+    expect(paused.error.decision?.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe("escalate");
+    expect(paused.error.decision?.remediation?.ruleId).toBe("hire.not_fx");
+    expect(rt.reservedQuotes.has(quoteId)).toBe(false);
+    expect(rt.consumedQuotes.has(quoteId)).toBe(false);
   });
 });
 

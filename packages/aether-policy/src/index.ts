@@ -1044,6 +1044,15 @@ export const RULES: readonly Rule[] = [
         : v("market.fx_pair", "deny", "FX window is not this rail's USD_SIM to USDC_SIM pair");
     },
   },
+  {
+    id: "hire.not_fx",
+    evaluate: (ctx) => {
+      if (ctx.hireNotFx === undefined) return v("hire.not_fx", "allow", "not a hire.create");
+      return ctx.hireNotFx
+        ? v("hire.not_fx", "allow", "quote is not an FX window")
+        : v("hire.not_fx", "deny", "FX window is not a hire");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1230,6 +1239,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.fx_pair": {
     kind: "none",
     hint: "This rail settles USD_SIM → USDC_SIM. Price is in from. An FX window does not belong on a research SKU. A swapped pair or a price in to is not this window.",
+  },
+  "hire.not_fx": {
+    kind: "none",
+    hint: "An FX window settles with market.fx_settle. It is not a hire. A deny does not consume the window.",
   },
   "payment.execution_date": {
     kind: "none",

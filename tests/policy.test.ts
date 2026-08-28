@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 66 rules", () => {
-    expect(RULE_IDS).toHaveLength(66);
+  it("has 67 rules", () => {
+    expect(RULE_IDS).toHaveLength(67);
   });
 
   it("denies frozen actors", () => {
@@ -553,6 +553,7 @@ describe("policy catalog", () => {
     const d = evaluate(ctx({ commandType: "hire.create", quoteUnspent: false, rfqKnown: true, skuListed: true }));
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("allow");
     expect(remediationFor(d)?.kind).toBe("none");
     expect(remediationFor(d)?.ruleId).toBe("hire.quote_unspent");
   });
@@ -570,6 +571,7 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("mandate.known_intent");
   });
 
@@ -1245,5 +1247,34 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("market.known_sku");
+  });
+
+  it("denies hiring an FX window as a good", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        quoteUnspent: true,
+        hireNotFx: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("hire.not_fx");
+  });
+
+  it("does not name hire.not_fx when the quote itself is missing", () => {
+    const d = evaluate(ctx({ commandType: "hire.create", rfqKnown: false }));
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
   });
 });

@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.49.0",
+  version: "0.50.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -653,6 +653,13 @@ export interface PolicyContext {
    * (`market.fx_quote` / `market.known_rfq` handle those).
    */
   fxPairOk?: boolean;
+  /**
+   * False when `hire.create` would treat an FX window (`quote.fx`) as a hireable good.
+   * Absent = not a hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * FX windows settle (`market.fx_settle`). They are not hires.
+   * An FX SKU quoted without a window is still a good (USDC hire / `ledger.same_currency`).
+   */
+  hireNotFx?: boolean;
   /**
    * False when `hire.create` would reuse a quote that already produced a hire, an FX settle,
    * or is held by an open approval ticket.
