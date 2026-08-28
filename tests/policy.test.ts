@@ -171,6 +171,30 @@ describe("policy catalog", () => {
     expect(rem?.commandType).toBe("mandate.issue_intent");
   });
 
+  it("denies amount_range with no max, not an open checkbook", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM" } as MandateConstraint]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.amount_range")?.verdict).toBe("deny");
+  });
+
+  it("denies a payee constraint with no list, not a throw", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        payeeId: MERCHANT.id,
+        intent: signedIntent([{ type: "payment.allowed_payees" } as MandateConstraint]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.allowed_payees")?.verdict).toBe("deny");
+  });
+
   it("escalates procurement above $5,000", () => {
     const d = evaluate(
       ctx({

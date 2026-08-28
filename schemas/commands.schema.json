@@ -59,7 +59,22 @@
           "items": {
             "type": "object",
             "required": ["type"],
-            "properties": { "type": { "type": "string" } }
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "payment.amount_range",
+                  "payment.budget",
+                  "payment.allowed_payees",
+                  "payment.allowed_payment_instruments",
+                  "payment.agent_recurrence",
+                  "payment.execution_date",
+                  "payment.reference",
+                  "aether.allowed_skus",
+                  "aether.max_autonomy"
+                ]
+              }
+            }
           }
         }
       }

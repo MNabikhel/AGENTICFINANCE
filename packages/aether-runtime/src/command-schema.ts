@@ -1,14 +1,15 @@
 /**
  * Shape check against schemas/commands.schema.json.
  * Syntax, not economics: a miss, a float, a listed enum miss, a rung outside 0–5,
- * a listed field with the wrong JSON type, or a nested cart line / constraint
- * missing its fields is HTTP 400, not a policy deny.
+ * a listed field with the wrong JSON type, a nested cart line / constraint
+ * missing its fields, or a listed constraint missing its value fields is HTTP 400, not a policy deny.
  * Policy never sees a command that failed this gate.
  */
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { MANDATE_CONSTRAINT_TYPES, RECURRENCE_GAP_MS } from "@aether/types";
 
 type PropSchema = {
   type?: string;
@@ -32,6 +33,8 @@ const COMMAND_BODIES = (
 ).commands;
 
 const SIM_CURRENCY = new Set(["USD_SIM", "USDC_SIM"]);
+const CONSTRAINT_TYPE_SET = new Set<string>(MANDATE_CONSTRAINT_TYPES);
+const RECURRENCE_SET = new Set<string>(Object.keys(RECURRENCE_GAP_MS));
 
 export function commandBodySchema(type: string): BodySchema | undefined {
   return COMMAND_BODIES[type];
@@ -158,6 +161,85 @@ export function malformedTypeFields(type: string, body: unknown): string[] {
   return out;
 }
 
+function malformedObjectIdList(value: unknown, path: string, out: string[]): void {
+  if (!Array.isArray(value)) {
+    out.push(path);
+    return;
+  }
+  value.forEach((item, j) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      out.push(`${path}[${j}]`);
+      return;
+    }
+    const id = (item as Record<string, unknown>).id;
+    if (typeof id !== "string" || id.length === 0) out.push(`${path}[${j}].id`);
+  });
+}
+
+function malformedStringList(value: unknown, path: string, out: string[]): void {
+  if (!Array.isArray(value)) {
+    out.push(path);
+    return;
+  }
+  value.forEach((item, j) => {
+    if (typeof item !== "string") out.push(`${path}[${j}]`);
+  });
+}
+
+function malformedConstraintFields(c: Record<string, unknown>, i: number, out: string[]): void {
+  const p = (field: string) => `constraints[${i}].${field}`;
+  if (typeof c.type !== "string" || c.type.length === 0 || !CONSTRAINT_TYPE_SET.has(c.type)) {
+    out.push(p("type"));
+    return;
+  }
+  switch (c.type) {
+    case "payment.amount_range":
+    case "payment.budget":
+      if (typeof c.currency !== "string" || !SIM_CURRENCY.has(c.currency)) out.push(p("currency"));
+      if (c.max === undefined || c.max === null) out.push(p("max"));
+      break;
+    case "payment.allowed_payees":
+    case "payment.allowed_payment_instruments":
+      malformedObjectIdList(c.allowed, p("allowed"), out);
+      break;
+    case "payment.agent_recurrence":
+      if (typeof c.frequency !== "string" || !RECURRENCE_SET.has(c.frequency)) out.push(p("frequency"));
+      break;
+    case "payment.execution_date": {
+      const before = c.not_before;
+      const after = c.not_after;
+      if (before !== undefined && before !== null && typeof before !== "string") out.push(p("not_before"));
+      if (after !== undefined && after !== null && typeof after !== "string") out.push(p("not_after"));
+      if ((before === undefined || before === null) && (after === undefined || after === null)) {
+        out.push(p("not_before"));
+        out.push(p("not_after"));
+      }
+      break;
+    }
+    case "payment.reference":
+      if (typeof c.conditional_transaction_id !== "string" || c.conditional_transaction_id.length === 0) {
+        out.push(p("conditional_transaction_id"));
+      }
+      break;
+    case "aether.allowed_skus":
+      malformedStringList(c.allowed, p("allowed"), out);
+      break;
+    case "aether.max_autonomy":
+      if (
+        typeof c.max !== "number" ||
+        !Number.isInteger(c.max) ||
+        !Number.isFinite(c.max) ||
+        c.max < 0 ||
+        c.max > 5
+      ) {
+        out.push(p("max"));
+      }
+      break;
+    default:
+      out.push(p("type"));
+  }
+}
+
 /** Nested objects the kernel totals or hashes: cart lines and intent constraints. */
 export function malformedNestedFields(type: string, body: unknown): string[] {
   const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
@@ -181,8 +263,7 @@ export function malformedNestedFields(type: string, body: unknown): string[] {
         out.push(`constraints[${i}]`);
         return;
       }
-      const c = raw as Record<string, unknown>;
-      if (typeof c.type !== "string" || c.type.length === 0) out.push(`constraints[${i}].type`);
+      malformedConstraintFields(raw as Record<string, unknown>, i, out);
     });
   }
   return out;

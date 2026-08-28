@@ -109,6 +109,9 @@ function recurrenceDeny(
   clock: Instant,
   prefix: string,
 ): RuleVerdict | undefined {
+  if (!(c.frequency in RECURRENCE_GAP_MS)) {
+    return v("payment.recurrence", "deny", `${prefix}unknown frequency`);
+  }
   if (c.max_occurrences !== undefined && occurrenceCount >= c.max_occurrences) {
     return v("payment.recurrence", "deny", `${prefix}max_occurrences exceeded`, {
       count: occurrenceCount,
@@ -238,6 +241,9 @@ export const RULES: readonly Rule[] = [
     evaluate: (ctx) => {
       const c = findConstraint(ctx, "payment.amount_range");
       if (!c || !ctx.amount) return v("payment.amount_range", "allow", "no range constraint");
+      if (typeof c.max !== "number") {
+        return v("payment.amount_range", "deny", "amount_range missing max");
+      }
       if (ctx.amount.currency !== c.currency) {
         return v("payment.amount_range", "deny", "currency != range currency", { currency: ctx.amount.currency });
       }
@@ -258,6 +264,9 @@ export const RULES: readonly Rule[] = [
     evaluate: (ctx) => {
       const c = findConstraint(ctx, "payment.budget");
       if (!c || !ctx.amount) return v("payment.budget", "allow", "no budget constraint");
+      if (typeof c.max !== "number") {
+        return v("payment.budget", "deny", "budget missing max");
+      }
       if (ctx.hire && (ctx.hire.state === "funded" || ctx.hire.state === "delivered" || ctx.hire.state === "released")) {
         return v("payment.budget", "allow", "budget reserved at fund");
       }
@@ -279,6 +288,9 @@ export const RULES: readonly Rule[] = [
     evaluate: (ctx) => {
       const c = findConstraint(ctx, "payment.allowed_payees");
       if (!c || !ctx.payeeId) return v("payment.allowed_payees", "allow", "no payee constraint");
+      if (!Array.isArray(c.allowed)) {
+        return v("payment.allowed_payees", "deny", "payee list missing");
+      }
       return c.allowed.some((m) => m.id === ctx.payeeId)
         ? v("payment.allowed_payees", "allow", "payee listed")
         : v("payment.allowed_payees", "deny", "payee not in allow-list");
@@ -290,6 +302,9 @@ export const RULES: readonly Rule[] = [
       const c = findConstraint(ctx, "aether.allowed_skus");
       const sku = ctx.hire?.sku;
       if (!c || !sku) return v("payment.allowed_skus", "allow", "no sku constraint");
+      if (!Array.isArray(c.allowed)) {
+        return v("payment.allowed_skus", "deny", "sku list missing");
+      }
       return c.allowed.includes(sku)
         ? v("payment.allowed_skus", "allow", "sku listed")
         : v("payment.allowed_skus", "deny", `sku ${sku} not listed`);
@@ -363,6 +378,9 @@ export const RULES: readonly Rule[] = [
     evaluate: (ctx) => {
       const c = findConstraint(ctx, "aether.max_autonomy");
       if (!c) return v("ladder.max_autonomy_constraint", "allow", "no max autonomy");
+      if (typeof c.max !== "number") {
+        return v("ladder.max_autonomy_constraint", "deny", "max autonomy missing");
+      }
       return ctx.actor.autonomyLevel <= c.max
         ? v("ladder.max_autonomy_constraint", "allow", "within max autonomy")
         : v("ladder.max_autonomy_constraint", "deny", `actor L${ctx.actor.autonomyLevel} > max ${c.max}`);
@@ -606,7 +624,13 @@ export const RULES: readonly Rule[] = [
       const child = ctx.proposedConstraints;
       const parentRange = listed(parent, "payment.amount_range");
       const childRange = listed(child, "payment.amount_range");
-      if (parentRange && (!childRange || childRange.max > parentRange.max)) {
+      if (
+        parentRange &&
+        (typeof parentRange.max !== "number" ||
+          !childRange ||
+          typeof childRange.max !== "number" ||
+          childRange.max > parentRange.max)
+      ) {
         return v("mandate.child_tighter", "deny", "child amount_range wider than parent", {
           parentMax: parentRange.max,
           childMax: childRange?.max ?? null,
@@ -614,26 +638,40 @@ export const RULES: readonly Rule[] = [
       }
       const parentBudget = listed(parent, "payment.budget");
       const childBudget = listed(child, "payment.budget");
-      if (parentBudget && (!childBudget || childBudget.max > parentBudget.max)) {
+      if (
+        parentBudget &&
+        (typeof parentBudget.max !== "number" ||
+          !childBudget ||
+          typeof childBudget.max !== "number" ||
+          childBudget.max > parentBudget.max)
+      ) {
         return v("mandate.child_tighter", "deny", "child budget wider than parent");
       }
       const parentSkus = listed(parent, "aether.allowed_skus");
       const childSkus = listed(child, "aether.allowed_skus");
-      if (parentSkus && (!childSkus || childSkus.allowed.some((s) => !parentSkus.allowed.includes(s)))) {
+      if (
+        parentSkus &&
+        (!Array.isArray(parentSkus.allowed) ||
+          !childSkus ||
+          !Array.isArray(childSkus.allowed) ||
+          childSkus.allowed.some((s) => !parentSkus.allowed.includes(s)))
+      ) {
         return v("mandate.child_tighter", "deny", "child skus not a subset of parent");
       }
       const parentPayees = listed(parent, "payment.allowed_payees");
       const childPayees = listed(child, "payment.allowed_payees");
       if (
         parentPayees &&
-        (!childPayees ||
+        (!Array.isArray(parentPayees.allowed) ||
+          !childPayees ||
+          !Array.isArray(childPayees.allowed) ||
           childPayees.allowed.some((m) => !parentPayees.allowed.some((p) => p.id === m.id)))
       ) {
         return v("mandate.child_tighter", "deny", "child payees not a subset of parent");
       }
       const parentMax = listed(parent, "aether.max_autonomy");
       const childMax = listed(child, "aether.max_autonomy");
-      if (parentMax && (!childMax || childMax.max > parentMax.max)) {
+      if (parentMax && (!childMax || typeof childMax.max !== "number" || typeof parentMax.max !== "number" || childMax.max > parentMax.max)) {
         return v("mandate.child_tighter", "deny", "child max autonomy wider than parent");
       }
       const parentRec = listed(parent, "payment.agent_recurrence");
@@ -646,7 +684,11 @@ export const RULES: readonly Rule[] = [
         ) {
           return v("mandate.child_tighter", "deny", "child max_occurrences wider than parent");
         }
-        if (FREQ_RANK[childRec.frequency] < FREQ_RANK[parentRec.frequency]) {
+        if (
+          !(childRec.frequency in FREQ_RANK) ||
+          !(parentRec.frequency in FREQ_RANK) ||
+          FREQ_RANK[childRec.frequency] < FREQ_RANK[parentRec.frequency]
+        ) {
           return v("mandate.child_tighter", "deny", "child recurrence more frequent than parent");
         }
       }
@@ -679,6 +721,9 @@ export const RULES: readonly Rule[] = [
       }
       const c = listed(ctx.parentIntent.payload.constraints, "payment.budget");
       if (!c || !ctx.amount) return v("payment.parent_budget", "allow", "no parent budget constraint");
+      if (typeof c.max !== "number") {
+        return v("payment.parent_budget", "deny", "parent budget missing max");
+      }
       if (ctx.amount.currency !== c.currency) {
         return v("payment.parent_budget", "deny", "parent budget currency mismatch");
       }

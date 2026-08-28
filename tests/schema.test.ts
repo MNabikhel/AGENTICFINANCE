@@ -91,4 +91,44 @@ describe("command shape enums and integer ranges", () => {
       }),
     ).toBeUndefined();
   });
+
+  it("rejects an amount_range with no max", () => {
+    expect(
+      commandShapeError("mandate.issue_intent", {
+        subjectId: "aid_x",
+        task: "t",
+        constraints: [{ type: "payment.amount_range", currency: "USD_SIM" }],
+      }),
+    ).toBe("invalid nested: constraints[0].max");
+  });
+
+  it("rejects an unknown constraint type", () => {
+    expect(
+      commandShapeError("mandate.issue_intent", {
+        subjectId: "aid_x",
+        task: "t",
+        constraints: [{ type: "payment.cap" }],
+      }),
+    ).toBe("invalid nested: constraints[0].type");
+  });
+
+  it("rejects a payee constraint with no list", () => {
+    expect(
+      commandShapeError("mandate.issue_intent", {
+        subjectId: "aid_x",
+        task: "t",
+        constraints: [{ type: "payment.allowed_payees" }],
+      }),
+    ).toBe("invalid nested: constraints[0].allowed");
+  });
+
+  it("accepts a listed amount_range with currency and max", () => {
+    expect(
+      commandShapeError("mandate.issue_intent", {
+        subjectId: "aid_x",
+        task: "t",
+        constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 1 }],
+      }),
+    ).toBeUndefined();
+  });
 });

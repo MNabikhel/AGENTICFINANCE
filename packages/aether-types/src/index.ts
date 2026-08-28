@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.42.0",
+  version: "0.43.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -234,6 +234,19 @@ export type MandateConstraint =
       type: "aether.max_autonomy";
       max: AutonomyLevel;
     };
+
+/** Closed catalog. An unknown `type` is syntax, not a silent no-op constraint. */
+export const MANDATE_CONSTRAINT_TYPES = [
+  "payment.amount_range",
+  "payment.budget",
+  "payment.allowed_payees",
+  "payment.allowed_payment_instruments",
+  "payment.agent_recurrence",
+  "payment.execution_date",
+  "payment.reference",
+  "aether.allowed_skus",
+  "aether.max_autonomy",
+] as const satisfies ReadonlyArray<MandateConstraint["type"]>;
 
 export interface IntentMandate {
   vct: "aether.mandate.intent.open.1" | "aether.mandate.intent.1";

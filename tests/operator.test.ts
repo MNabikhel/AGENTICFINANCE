@@ -78,7 +78,7 @@ describe("SIM_RAIL", () => {
     expect(SIM_RAIL.live).toBe(false);
     expect(SIM_RAIL.id).toBe(PROTOCOL.rail);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.42.0");
+    expect(PROTOCOL.version).toBe("0.43.0");
   });
 });
 
@@ -391,5 +391,29 @@ describe("ledger.sufficient", () => {
     );
     expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(0);
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(6_500_000);
+  });
+});
+
+describe("constraint values at the shape gate", () => {
+  it("refuses an amount_range with no max as command.malformed, not an open checkbook", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "uncapped",
+        constraints: [{ type: "payment.amount_range", currency: "USD_SIM" }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("constraints[0].max");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.intents.size).toBe(before);
+    expect(rt.clock.now()).toBe(clockBefore);
   });
 });
