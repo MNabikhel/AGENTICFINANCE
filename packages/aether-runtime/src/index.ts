@@ -93,6 +93,16 @@ const AUTO_IDEMPOTENT = new Set<CommandType>([
   "market.fx_settle",
 ]);
 
+const HIRE_LIVE_COMMANDS = new Set<CommandType>([
+  "hire.accept",
+  "hire.fund",
+  "hire.deliver",
+  "hire.release",
+  "hire.refund",
+  "envelope.require",
+  "envelope.submit",
+]);
+
 function idempotencyKeyOf(cmd: Command): string | undefined {
   if (typeof cmd.idempotencyKey === "string" && cmd.idempotencyKey.length > 0) return cmd.idempotencyKey;
   if (!AUTO_IDEMPOTENT.has(cmd.type)) return undefined;
@@ -703,6 +713,12 @@ export class Runtime {
     if (cart) ctx.cart = cart;
     if (payment) ctx.payment = payment;
     if (hire) ctx.hire = hire;
+    if (
+      HIRE_LIVE_COMMANDS.has(cmd.type) ||
+      (cmd.type === "mandate.issue_cart" && typeof body.hireId === "string")
+    ) {
+      ctx.hireKnown = Boolean(hire && hire.id !== "hid_draft");
+    }
     if (amount) ctx.amount = amount;
     if (payeeId) ctx.payeeId = payeeId;
     if (fxRateE6 !== undefined) ctx.fxRateE6 = fxRateE6;
@@ -736,7 +752,7 @@ export class Runtime {
     if (market.quoteUnspent !== undefined) ctx.quoteUnspent = market.quoteUnspent;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
-    ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent);
+    ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire);
     return ctx;
   }
 
@@ -1733,8 +1749,9 @@ export class Runtime {
     this.settleEvents.push({ at: this.clock.now(), volume });
   }
 
-  private kyaRequired(cmd: Command, actor: Agent): boolean {
+  private kyaRequired(cmd: Command, actor: Agent, hire?: HireContract): boolean {
     if (!KYA_GATED_COMMANDS.includes(cmd.type)) return false;
+    if (HIRE_LIVE_COMMANDS.has(cmd.type) && (!hire || hire.id === "hid_draft")) return false;
     if (cmd.type === "mandate.issue_intent" || cmd.type === "kya.attest") {
       if (actor.role === "human_operator" || actor.role === "treasury") return false;
     }
@@ -1746,9 +1763,10 @@ export class Runtime {
     actor: Agent,
     intent: Signed<IntentMandate> | undefined,
     body: Record<string, unknown>,
-    parentIntent?: Signed<IntentMandate>,
+    parentIntent: Signed<IntentMandate> | undefined,
+    hire: HireContract | undefined,
   ) {
-    const required = this.kyaRequired(cmd, actor);
+    const required = this.kyaRequired(cmd, actor, hire);
     let principalId = intent?.payload.issuerId;
     if (cmd.type === "kya.attest") {
       principalId = (body.principalId as AgentId | undefined) ?? actor.supervisors[0] ?? actor.id;

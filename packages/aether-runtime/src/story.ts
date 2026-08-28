@@ -216,7 +216,9 @@ export function autoBeat(input: {
         body:
           rule?.ruleId === "hire.cart_matches"
             ? "The cart must equal the hire. Escrow moves the quoted price. A cheaper cart is not a discount."
-            : (rule?.message ?? "The referee refused to fund this hire."),
+            : rule?.ruleId === "hire.known"
+              ? "That hire is not in this world. A missing contract is not a broken mandate chain."
+              : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,
       };

@@ -148,7 +148,11 @@ export const RULES: readonly Rule[] = [
     id: "mandate.chain_integrity",
     evaluate: (ctx) => {
       if (!ctx.payment || !ctx.cart || !ctx.intent) {
-        if (ctx.commandType === "envelope.submit" || ctx.commandType === "hire.fund") {
+        if (
+          (ctx.commandType === "envelope.submit" || ctx.commandType === "hire.fund") &&
+          ctx.hire &&
+          ctx.hire.id !== "hid_draft"
+        ) {
           return v("mandate.chain_integrity", "deny", "settle requires intent+cart+payment");
         }
         return v("mandate.chain_integrity", "allow", "no chain required");
@@ -734,6 +738,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.quote_unspent", "deny", "quote already used");
     },
   },
+  {
+    id: "hire.known",
+    evaluate: (ctx) => {
+      if (ctx.hireKnown === undefined) return v("hire.known", "allow", "not a hire-id command");
+      return ctx.hireKnown
+        ? v("hire.known", "allow", "hire exists")
+        : v("hire.known", "deny", "hire not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -820,6 +833,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.quote_unspent": {
     kind: "none",
     hint: "That quote already produced a hire or an FX settle. A price promise is used once. Issue a new RFQ. A deny does not consume it; a void does not restore it.",
+  },
+  "hire.known": {
+    kind: "none",
+    hint: "That hire id is not in this world. Create the hire first. A missing contract is not a broken mandate chain.",
   },
   "payment.execution_date": {
     kind: "none",
