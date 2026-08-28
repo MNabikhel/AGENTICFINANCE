@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.63.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.64.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -37,7 +37,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
-Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
+Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A name that is not an alias yet is a missing speaker (`actor.known`), not system. Omit `actor` or pass `system` to bootstrap the first human.
 
 ## Invariants the kernel will enforce
 
@@ -105,6 +105,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 62. Omitted `maxAutonomy` on `kya.attest` is L5. An agent may not grant a standing-mandate ceiling above its own rung (`kya.capability_subset`). Name a ceiling you hold. A human or treasury may grant L5. A second live hop stays `kya.unique_live`. Writing someone else’s handshake stays `kya.party`.
 63. A payment mandate’s `exp` is unix seconds, one day from `iat` — the same window as the cart’s ISO `expiresAt`. Milliseconds are not seconds. `mandate.not_expired` reads both. Restore of old worlds may still show a ~1000-day payment `exp`; a new payment does not.
 64. Omitted `principalId` on `kya.attest` / `kya.revoke` is the speaker, not the supervisor. Policy and mutate share that default. Filling in someone else’s id stays `kya.party`. Omitting the ceiling still writes L5 (`kya.capability_subset`). A frozen founder does not freeze a desk’s own handshake.
+65. A provided HTTP/MCP `actor` that is not a live alias is `actor.known`, not silent system. Omit actor or pass `system` to bootstrap. A live alias still maps. Spend as `system` stays `actor.system_scope`.
 
 ## Autonomy
 

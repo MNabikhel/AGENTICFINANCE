@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.63.0",
+  version: "0.64.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -876,7 +876,7 @@ export interface PolicyContext {
   /**
    * False when the command’s actorId is not `system` and is not a registered agent.
    * Absent = the speaker is system or a live agent (`identity.known` is for *named targets*, not the speaker).
-   * A missing speaker is not a 500 after yes.
+   * A missing speaker is not a 500 after yes. HTTP/MCP unknown alias becomes this string, not silent system.
    */
   actorKnown?: boolean;
   /**
@@ -884,6 +884,7 @@ export interface PolicyContext {
    * first human or a read (catalog / audit.query / balances / receipt.get).
    * Absent = speaker is not system. System is the runtime, not a treasurer.
    * HTTP/MCP omitting actor still becomes system; this rule is the fence.
+   * A provided name that is not a live alias is `actor.known`, not silent system.
    */
   systemOk?: boolean;
 }
@@ -1050,6 +1051,7 @@ export const KYA_GATED_COMMANDS: readonly CommandType[] = [
 /**
  * Commands `system` may run besides bootstrapping the first human_operator.
  * System is the runtime, not a treasurer. HTTP/MCP omitting actor still becomes system.
+ * A provided name that is not a live alias is `actor.known`, not silent system.
  */
 export const SYSTEM_READ_COMMANDS: readonly CommandType[] = [
   "market.catalog",

@@ -46,11 +46,8 @@ async function readBody(req: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function actorOf(body: { actorId?: string; actor?: string }): AgentId | "system" {
-  if (body.actorId === "system" || body.actor === "system") return "system";
-  if (body.actorId) return body.actorId as AgentId;
-  if (body.actor && runtime.aliases.has(body.actor)) return runtime.aliases.get(body.actor)!;
-  return "system";
+function actorOf(body: Record<string, unknown>): AgentId | "system" {
+  return runtime.speakerOf(body);
 }
 
 function dispatchJson(type: CommandType, reqBody: Record<string, unknown>): DispatchResult {

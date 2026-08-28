@@ -73,4 +73,52 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
   });
+
+  it("refuses an unknown actor alias as actor.known, not silent system", () => {
+    const mcp = new AetherMcp();
+    const ghost = mcp.callTool("aether_market_catalog", { actor: "ghost-desk" }) as {
+      ok: boolean;
+      remediation: { ruleId: string } | null;
+    };
+    expect(ghost.ok).toBe(false);
+    expect(ghost.remediation?.ruleId).toBe("actor.known");
+    expect(mcp.runtime.identity.all()).toHaveLength(0);
+
+    const premature = mcp.callTool("aether_identity_register", {
+      actor: "ops-human",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    }) as { ok: boolean; remediation: { ruleId: string } | null };
+    expect(premature.ok).toBe(false);
+    expect(premature.remediation?.ruleId).toBe("actor.known");
+    expect(mcp.runtime.aliases.has("ops-human")).toBe(false);
+
+    const omit = mcp.callTool("aether_market_catalog", {}) as { ok: boolean };
+    expect(omit.ok).toBe(true);
+
+    const boot = mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    }) as { ok: boolean };
+    expect(boot.ok).toBe(true);
+    expect(mcp.runtime.aliases.has("ops-human")).toBe(true);
+
+    const live = mcp.callTool("aether_market_catalog", { actor: "ops-human" }) as { ok: boolean };
+    expect(live.ok).toBe(true);
+
+    const asSystem = mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "extra",
+      displayName: "Extra",
+      role: "treasury",
+      autonomyLevel: 3,
+    }) as { ok: boolean; remediation: { ruleId: string } | null };
+    expect(asSystem.ok).toBe(false);
+    expect(asSystem.remediation?.ruleId).toBe("actor.system_scope");
+  });
 });

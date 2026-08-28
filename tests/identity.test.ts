@@ -941,6 +941,41 @@ describe("known speaker", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
   });
+
+  it("does not treat a provided unknown alias as system", () => {
+    const rt = boot();
+    expect(rt.speakerOf({})).toBe("system");
+    expect(rt.speakerOf({ actor: "system" })).toBe("system");
+    expect(rt.speakerOf({ actor: "ops-human" })).toBe("ops-human");
+    const before = rt.identity.all().length;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("identity.register", rt.speakerOf({ actor: "ops-human" }), {
+        key: "ops-human",
+        displayName: "Founder",
+        role: "human_operator",
+        autonomyLevel: 0,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.known");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(rt.identity.all()).toHaveLength(before);
+    expect(rt.aliases.has("ops-human")).toBe(false);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still maps a live alias after register", () => {
+    const rt = boot();
+    economy(rt);
+    const founder = rt.alias("ops-human");
+    expect(rt.speakerOf({ actor: "ops-human" })).toBe(founder.id);
+    expect(rt.speakerOf({ actorId: founder.id, actor: "ghost-desk" })).toBe(founder.id);
+    const listed = rt.dispatch(cmd("market.catalog", rt.speakerOf({ actor: "ops-human" }), {}));
+    expect(listed.ok).toBe(true);
+  });
 });
 
 describe("system is not a treasurer", () => {

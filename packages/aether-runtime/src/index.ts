@@ -226,6 +226,24 @@ export class Runtime {
     return this.identity.require(id);
   }
 
+  /**
+   * HTTP/MCP speaker. Omitted actor is system (bootstrap and reads).
+   * A registered alias maps to its id. A provided name that is not an alias
+   * is that string — `actor.known`, not a silent system.
+   */
+  speakerOf(input: { actorId?: unknown; actor?: unknown }): AgentId | "system" {
+    const actorId = typeof input.actorId === "string" && input.actorId.length > 0 ? input.actorId : undefined;
+    const actor = typeof input.actor === "string" && input.actor.length > 0 ? input.actor : undefined;
+    if (actorId === "system" || actor === "system") return "system";
+    if (actorId) return actorId as AgentId;
+    if (actor) {
+      const mapped = this.aliases.get(actor);
+      if (mapped) return mapped;
+      return actor as AgentId;
+    }
+    return "system";
+  }
+
   merchant(agent: Agent): Merchant {
     return { id: agent.id, name: agent.displayName, website: `https://${agent.role}.aether.test` };
   }

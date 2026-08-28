@@ -10,7 +10,7 @@ import { Runtime, cmd, type DispatchResult } from "@aether/runtime";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
-import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
+import { PROTOCOL, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
 
@@ -57,7 +57,7 @@ const COMMAND_BY_TOOL = new Map(
 const DEMO_TOOLS = new Set(["aether_demo_sprint", "aether_demo_night_watch", "aether_demo_sub_hire"]);
 
 const ACTOR_PROPERTIES = {
-  actor: { type: "string", description: "Runtime alias (ops-human, desk, scout) or aid_/system" },
+  actor: { type: "string", description: "Runtime alias after register (ops-human, desk, scout), aid_, or system. Unknown names are missing speakers, not system. Omit to bootstrap." },
   actorId: { type: "string" },
   idempotencyKey: {
     type: "string",
@@ -296,20 +296,10 @@ export class AetherMcp {
     }
     const type = COMMAND_BY_TOOL.get(name);
     if (!type) throw new Error(`unknown tool ${name}`);
-    const actor = this.actorOf(args);
+    const actor = this.runtime.speakerOf(args);
     const { actor: _a, actorId: _b, idempotencyKey, ...body } = args;
     const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
     return serializeDispatch(this.runtime.dispatch(cmd(type, actor, body, key)));
-  }
-
-  private actorOf(args: Record<string, unknown>): AgentId | "system" {
-    if (args.actorId === "system" || args.actor === "system") return "system";
-    if (typeof args.actorId === "string") return args.actorId as AgentId;
-    if (typeof args.actor === "string") {
-      if (this.runtime.aliases.has(args.actor)) return this.runtime.aliases.get(args.actor)!;
-      if (args.actor.startsWith("aid_")) return args.actor as AgentId;
-    }
-    return "system";
   }
 }
 
