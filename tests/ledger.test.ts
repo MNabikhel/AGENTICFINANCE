@@ -65,4 +65,49 @@ describe("ledger", () => {
     expect(ledger.balance(cash.id)).toBe(100);
     expect(ledger.balance(equity.id)).toBe(100);
   });
+
+  it("refuses a dest that would leave Number.isSafeInteger", () => {
+    const clock = new ManualClock("2026-08-28T00:00:00.000Z");
+    const ids = new IdFactory(clock);
+    const ledger = new Ledger();
+    const cash = ledger.openAccount({
+      id: ids.next("acct") as AccountId,
+      ownerId: "system",
+      name: "cash",
+      type: "asset",
+      currency: "USD_SIM",
+    });
+    const equity = ledger.openAccount({
+      id: ids.next("acct") as AccountId,
+      ownerId: "system",
+      name: "equity",
+      type: "equity",
+      currency: "USD_SIM",
+    });
+    const opened = ledger.post({
+      id: ids.next("jnl") as JournalId,
+      clock,
+      description: "open at max",
+      lines: [
+        { accountId: cash.id, debit: Number.MAX_SAFE_INTEGER, credit: 0 },
+        { accountId: equity.id, debit: 0, credit: Number.MAX_SAFE_INTEGER },
+      ],
+    });
+    expect(opened.ok).toBe(true);
+    expect(ledger.balance(cash.id)).toBe(Number.MAX_SAFE_INTEGER);
+    const overflow = ledger.post({
+      id: ids.next("jnl") as JournalId,
+      clock,
+      description: "one more cent",
+      lines: [
+        { accountId: cash.id, debit: 1, credit: 0 },
+        { accountId: equity.id, debit: 0, credit: 1 },
+      ],
+    });
+    expect(overflow.ok).toBe(false);
+    if (overflow.ok) return;
+    expect(overflow.error.detail).toContain("safe integer");
+    expect(ledger.balance(cash.id)).toBe(Number.MAX_SAFE_INTEGER);
+    expect(ledger.balance(equity.id)).toBe(Number.MAX_SAFE_INTEGER);
+  });
 });

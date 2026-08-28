@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.55.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.56.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -41,9 +41,9 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 ## Invariants the kernel will enforce
 
-1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency.
+1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 72 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 73 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -97,6 +97,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 54. Funding, releasing, or submitting envelope against a live hire that has not bound a cart (and that cart’s payment) is `hire.bound_cart`. Passing `cartId` on the fund command is not a pointer. Ghost hire stays `hire.known`. A second cart on a hire that already has one stays `hire.unique_cart`. Policy denies; mutate does not throw `hire has no cart` after an allow.
 55. Settling FX with no market maker (or missing `market_maker:cash_usd` / `market_maker:cash_usdc`) is `mm.known`. A window is not a journal against nobody. Ghost quote stays `market.fx_quote`. Vendor without a USDC book stays `ledger.known_account`. Empty MM USDC stays `mm.inventory`.
 56. A command whose `actorId` is not `system` and is not a registered agent is `actor.known`. A missing speaker is not a 500. Named *targets* (freeze, handshake, merchant, subject) stay `identity.known`.
+57. A journal that would leave a touched book outside `Number.isSafeInteger` is `ledger.safe_balance`. IEEE rounding is not a mint. Overdraft stays `ledger.sufficient`. Ghost book stays `ledger.known_account`. Restore of old worlds still applies historical journals; a new post does not.
 
 ## Autonomy
 

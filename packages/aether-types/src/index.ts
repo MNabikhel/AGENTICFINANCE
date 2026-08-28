@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.55.0",
+  version: "0.56.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -787,6 +787,15 @@ export interface PolicyContext {
    * not hold (`mm.inventory` is the MM’s USDC).
    */
   fundsOk?: boolean;
+  /**
+   * False when a journal would leave a touched book outside `Number.isSafeInteger`
+   * (dest + amount, or the matching source/equity leg).
+   * Absent = not a cash-moving command, or a book is missing / mixed / overdrawn
+   * (`ledger.known_account` / `ledger.same_currency` / `ledger.sufficient` handle those).
+   * Also set on hire.refund / hire.release / envelope.submit when a live hire’s dest
+   * (buyer on refund, seller on release) would overflow. IEEE rounding is not a mint.
+   */
+  balancesSafe?: boolean;
   /**
    * False when receipt.get names a receipt that is not in this world.
    * Absent = not a receipt.get. A missing receipt is not an empty success.

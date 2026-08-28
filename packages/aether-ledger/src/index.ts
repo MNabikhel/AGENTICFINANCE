@@ -77,6 +77,12 @@ export class Ledger {
   }): Result<JournalEntry, AetherError> {
     const checked = this.validateLines(input.lines);
     if (!checked.ok) return checked;
+    if (!this.balancesStaySafe(input.lines)) {
+      return {
+        ok: false,
+        error: err("ledger.overflow", "Unsafe balance", 400, "resulting balance is not a safe integer"),
+      };
+    }
     const entry: JournalEntry = {
       id: input.id,
       timestamp: input.clock.now(),
@@ -129,6 +135,12 @@ export class Ledger {
           error: err("ledger.line", "Invalid line", 400, "each line must be a debit XOR a credit"),
         };
       }
+      if (!Number.isSafeInteger(line.debit) || !Number.isSafeInteger(line.credit)) {
+        return {
+          ok: false,
+          error: err("ledger.overflow", "Unsafe balance", 400, "resulting balance is not a safe integer"),
+        };
+      }
       const acct = this.accounts.get(line.accountId);
       if (!acct) {
         return { ok: false, error: err("ledger.account", "Unknown account", 400, line.accountId) };
@@ -150,6 +162,21 @@ export class Ledger {
       };
     }
     return { ok: true, value: true };
+  }
+
+  /**
+   * True when posting these lines would leave every touched book a safe integer.
+   * Missing accounts are false. Restore/apply of old worlds does not use this —
+   * only `post()` (new journals) does.
+   */
+  balancesStaySafe(lines: JournalLine[]): boolean {
+    for (const line of lines) {
+      const acct = this.accounts.get(line.accountId);
+      if (!acct) return false;
+      const next = this.balance(acct.id) + signedDelta(acct.type, line.debit, line.credit);
+      if (!Number.isSafeInteger(next)) return false;
+    }
+    return true;
   }
 
   private apply(entry: JournalEntry, persist: boolean): void {

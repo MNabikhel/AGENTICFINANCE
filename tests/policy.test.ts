@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 72 rules", () => {
-    expect(RULE_IDS).toHaveLength(72);
+  it("has 73 rules", () => {
+    expect(RULE_IDS).toHaveLength(73);
   });
 
   it("denies frozen actors", () => {
@@ -1060,6 +1060,124 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("denies a dest that cannot hold the cents as ledger.safe_balance, not silent IEEE rounding", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        accountsKnown: true,
+        accountsSameCurrency: true,
+        fundsOk: true,
+        balancesSafe: false,
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.safe_balance");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("still names ledger.sufficient first when the source cannot cover, even if dest would also overflow", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        accountsKnown: true,
+        accountsSameCurrency: true,
+        fundsOk: false,
+        amount: { amount: 5_000_001, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.sufficient");
+  });
+
+  it("denies funding escrow that would overflow a dest as ledger.safe_balance", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        hireKnown: true,
+        fundsOk: true,
+        accountsSameCurrency: true,
+        balancesSafe: false,
+        intent: signedIntent([]),
+        cart: signedCart(),
+        payment: signedPayment(),
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.safe_balance");
+  });
+
+  it("denies a refund whose buyer book cannot hold the cents as ledger.safe_balance", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "hire.refund",
+        hire: hire({ state: "funded" }),
+        hireKnown: true,
+        hirePartyOk: true,
+        balancesSafe: false,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.safe_balance");
+  });
+
+  it("denies an FX settle whose dest cannot hold the cents as ledger.safe_balance, not MM inventory", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: true,
+        mmKnown: true,
+        mmInventoryOk: true,
+        accountsKnown: true,
+        fundsOk: true,
+        balancesSafe: false,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.safe_balance");
+  });
+
+  it("does not name ledger.safe_balance when the quote itself is missing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: false,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_quote");
+  });
+
   it("denies FX settle without a live unused FX quote", () => {
     const d = evaluate(
       ctx({
@@ -1435,5 +1553,6 @@ describe("policy catalog", () => {
   it("does not name actor.known when the speaker is registered", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
   });
 });

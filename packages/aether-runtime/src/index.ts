@@ -911,6 +911,12 @@ export class Runtime {
           fromAcct.currency === toAcct.currency && stated?.currency === fromAcct.currency;
         if (ctx.accountsSameCurrency && stated && typeof stated.amount === "number") {
           ctx.fundsOk = this.ledger.balance(fromAcct.id) >= stated.amount;
+          if (ctx.fundsOk) {
+            ctx.balancesSafe = this.ledger.balancesStaySafe([
+              { accountId: toAcct.id, debit: stated.amount, credit: 0 },
+              { accountId: fromAcct.id, debit: 0, credit: stated.amount },
+            ]);
+          }
         }
       }
     }
@@ -923,6 +929,12 @@ export class Runtime {
           cash.currency === escrow.currency && hire.price.currency === cash.currency;
         if (ctx.accountsSameCurrency && buyer) {
           ctx.fundsOk = this.ledger.balance(buyer.accountId) >= hire.price.amount;
+          if (ctx.fundsOk) {
+            ctx.balancesSafe = this.ledger.balancesStaySafe([
+              { accountId: hire.escrowAccountId, debit: hire.price.amount, credit: 0 },
+              { accountId: buyer.accountId, debit: 0, credit: hire.price.amount },
+            ]);
+          }
         }
       }
     }
@@ -977,6 +989,24 @@ export class Runtime {
     ) {
       ctx.cartBound = this.hireMandateBound(hire);
     }
+    if (
+      (cmd.type === "hire.refund" || cmd.type === "hire.release" || cmd.type === "envelope.submit") &&
+      hire &&
+      hire.id !== "hid_draft"
+    ) {
+      const destAgent =
+        cmd.type === "hire.refund" ? this.identity.get(hire.buyerId) : this.identity.get(hire.sellerId);
+      if (
+        destAgent &&
+        this.ledger.accounts.has(destAgent.accountId) &&
+        this.ledger.accounts.has(hire.escrowAccountId)
+      ) {
+        ctx.balancesSafe = this.ledger.balancesStaySafe([
+          { accountId: destAgent.accountId, debit: hire.price.amount, credit: 0 },
+          { accountId: hire.escrowAccountId, debit: 0, credit: hire.price.amount },
+        ]);
+      }
+    }
     if (cmd.type === "market.fx_settle" && ctx.fxQuoteLive === true) {
       const mmAgent = [...this.identity.all()].find((a) => a.role === "market_maker");
       ctx.mmKnown = Boolean(
@@ -984,6 +1014,35 @@ export class Runtime {
           this.ledger.accountsByName.has("market_maker:cash_usd") &&
           this.ledger.accountsByName.has("market_maker:cash_usdc"),
       );
+    }
+    if (
+      cmd.type === "market.fx_settle" &&
+      ctx.fxQuoteLive === true &&
+      ctx.accountsKnown === true &&
+      ctx.mmKnown === true &&
+      ctx.fundsOk === true
+    ) {
+      const fxQuote = this.quoteOf(body);
+      const rate = fxQuote?.fx?.rateE6;
+      const key = this.aliasOf(actor.id);
+      const usdName = actor.role === "market_maker" ? "market_maker:cash_usd" : key ? `${key}:cash` : undefined;
+      const usdcName = actor.role === "market_maker" ? "market_maker:cash_usdc" : key ? `${key}:usdc` : undefined;
+      const vendorUsd = usdName ? this.ledger.accountsByName.get(usdName) : undefined;
+      const vendorUsdc = usdcName ? this.ledger.accountsByName.get(usdcName) : undefined;
+      const mmUsd = this.ledger.accountsByName.get("market_maker:cash_usd");
+      const mmUsdc = this.ledger.accountsByName.get("market_maker:cash_usdc");
+      if (fxQuote && typeof rate === "number" && vendorUsd && vendorUsdc && mmUsd && mmUsdc) {
+        const payout = fxPayout(fxQuote.price.amount, rate);
+        ctx.balancesSafe =
+          this.ledger.balancesStaySafe([
+            { accountId: mmUsd.id, debit: fxQuote.price.amount, credit: 0 },
+            { accountId: vendorUsd.id, debit: 0, credit: fxQuote.price.amount },
+          ]) &&
+          this.ledger.balancesStaySafe([
+            { accountId: vendorUsdc.id, debit: payout, credit: 0 },
+            { accountId: mmUsdc.id, debit: 0, credit: payout },
+          ]);
+      }
     }
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire);
     return ctx;
@@ -1770,6 +1829,14 @@ export class Runtime {
     ) {
       throw new Error("mixed currency; split FX into two entries");
     }
+    if (
+      !this.ledger.balancesStaySafe([
+        { accountId: hire.escrowAccountId, debit: hire.price.amount, credit: 0 },
+        { accountId: buyer.accountId, debit: 0, credit: hire.price.amount },
+      ])
+    ) {
+      throw new Error("unsafe balance");
+    }
     const next = transitionHire(hire, "funded");
     this.postJournal(
       `Fund escrow ${hire.sku}`,
@@ -1798,6 +1865,14 @@ export class Runtime {
     }
     const next = transitionHire(hire, "refunded");
     const buyer = this.identity.require(hire.buyerId);
+    if (
+      !this.ledger.balancesStaySafe([
+        { accountId: buyer.accountId, debit: hire.price.amount, credit: 0 },
+        { accountId: hire.escrowAccountId, debit: 0, credit: hire.price.amount },
+      ])
+    ) {
+      throw new Error("unsafe balance");
+    }
     this.postJournal(
       `Refund escrow ${hire.sku}`,
       [
@@ -1882,6 +1957,14 @@ export class Runtime {
     const next = transitionHire(hire, "released");
     const seller = this.identity.require(hire.sellerId);
     const payment = this.paymentForHire(hire);
+    if (
+      !this.ledger.balancesStaySafe([
+        { accountId: seller.accountId, debit: hire.price.amount, credit: 0 },
+        { accountId: hire.escrowAccountId, debit: 0, credit: hire.price.amount },
+      ])
+    ) {
+      throw new Error("unsafe balance");
+    }
     const journal = this.postJournal(
       `Release escrow ${hire.sku}`,
       [
@@ -1949,6 +2032,18 @@ export class Runtime {
     const mmUsdc = this.ledger.account("market_maker:cash_usdc");
     if (this.ledger.balance(vendorUsd.id) < quote.price.amount) {
       throw new Error("insufficient funds");
+    }
+    if (
+      !this.ledger.balancesStaySafe([
+        { accountId: mmUsd.id, debit: quote.price.amount, credit: 0 },
+        { accountId: vendorUsd.id, debit: 0, credit: quote.price.amount },
+      ]) ||
+      !this.ledger.balancesStaySafe([
+        { accountId: vendorUsdc.id, debit: payout, credit: 0 },
+        { accountId: mmUsdc.id, debit: 0, credit: payout },
+      ])
+    ) {
+      throw new Error("unsafe balance");
     }
     this.postJournal("FX USD leg", [
       { accountId: mmUsd.id, debit: quote.price.amount, credit: 0 },
@@ -2035,6 +2130,14 @@ export class Runtime {
     }
     if (this.ledger.balance(from.id) < amount.amount) {
       throw new Error("insufficient funds");
+    }
+    if (
+      !this.ledger.balancesStaySafe([
+        { accountId: to.id, debit: amount.amount, credit: 0 },
+        { accountId: from.id, debit: 0, credit: amount.amount },
+      ])
+    ) {
+      throw new Error("unsafe balance");
     }
     return this.postJournal(`Transfer ${body.fromAccount} -> ${body.toAccount}`, [
       { accountId: to.id, debit: amount.amount, credit: 0 },

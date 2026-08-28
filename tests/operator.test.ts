@@ -6,7 +6,7 @@ import { Runtime, cmd } from "@aether/runtime";
 import { fundHire, offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { SIM_RAIL } from "@aether/settlement";
 import { PROTOCOL } from "@aether/types";
-import type { HireContract, MandateId } from "@aether/types";
+import type { HireContract, JournalEntry, MandateId } from "@aether/types";
 
 function boot(dataDir?: string) {
   return new Runtime({
@@ -78,7 +78,7 @@ describe("SIM_RAIL", () => {
     expect(SIM_RAIL.live).toBe(false);
     expect(SIM_RAIL.id).toBe(PROTOCOL.rail);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.55.0");
+    expect(PROTOCOL.version).toBe("0.56.0");
   });
 });
 
@@ -391,6 +391,92 @@ describe("ledger.sufficient", () => {
     );
     expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(0);
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(6_500_000);
+  });
+});
+
+describe("ledger.safe_balance", () => {
+  it("refuses a dest that cannot hold the cents as ledger.safe_balance, not silent IEEE rounding", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    // Restore still applies historical journals without the post() gate so old worlds boot.
+    // A dest already at MAX_SAFE_INTEGER plus one more cent must be a refuse, not IEEE rounding.
+    const dest = rt.ledger.account("procurement:cash");
+    const equity = rt.ledger.account("system:equity");
+    const already = rt.ledger.balance(dest.id);
+    rt.ledger.restore([...rt.ledger.accounts.values()], [
+      ...rt.ledger.entries,
+      {
+        id: "jnl_01J6AETHEROVERFLOWSETUP00001" as JournalEntry["id"],
+        timestamp: rt.clock.now(),
+        description: "test: dest already at MAX_SAFE_INTEGER",
+        lines: [
+          { accountId: dest.id, debit: Number.MAX_SAFE_INTEGER - already, credit: 0 },
+          { accountId: equity.id, debit: 0, credit: Number.MAX_SAFE_INTEGER - already },
+        ],
+      },
+    ]);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(Number.MAX_SAFE_INTEGER);
+    const clockBefore = rt.clock.now();
+    const journalsBefore = rt.journals.length;
+    const entriesBefore = rt.ledger.entries.length;
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "treasury:cash",
+        toAccount: "procurement:cash",
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.safe_balance");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.journals.length).toBe(journalsBefore);
+    expect(rt.ledger.entries.length).toBe(entriesBefore);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(Number.MAX_SAFE_INTEGER);
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(5_000_000);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("cannot hold"))).toBe(true);
+  });
+
+  it("still names ledger.sufficient first when the source cannot cover the amount", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const dest = rt.ledger.account("procurement:cash");
+    const equity = rt.ledger.account("system:equity");
+    const already = rt.ledger.balance(dest.id);
+    rt.ledger.restore([...rt.ledger.accounts.values()], [
+      ...rt.ledger.entries,
+      {
+        id: "jnl_01J6AETHEROVERFLOWSETUP00002" as JournalEntry["id"],
+        timestamp: rt.clock.now(),
+        description: "test: dest already at MAX_SAFE_INTEGER",
+        lines: [
+          { accountId: dest.id, debit: Number.MAX_SAFE_INTEGER - already, credit: 0 },
+          { accountId: equity.id, debit: 0, credit: Number.MAX_SAFE_INTEGER - already },
+        ],
+      },
+    ]);
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "treasury:cash",
+        toAccount: "procurement:cash",
+        amount: { amount: 5_000_001, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(Number.MAX_SAFE_INTEGER);
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(5_000_000);
   });
 });
 

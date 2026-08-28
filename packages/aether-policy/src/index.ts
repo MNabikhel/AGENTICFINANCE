@@ -1101,6 +1101,15 @@ export const RULES: readonly Rule[] = [
         : v("actor.known", "deny", "actor not found");
     },
   },
+  {
+    id: "ledger.safe_balance",
+    evaluate: (ctx) => {
+      if (ctx.balancesSafe === undefined) return v("ledger.safe_balance", "allow", "not a dest-overflow journal");
+      return ctx.balancesSafe
+        ? v("ledger.safe_balance", "allow", "resulting books stay safe integers")
+        : v("ledger.safe_balance", "deny", "resulting balance is not a safe integer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1311,6 +1320,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "actor.known": {
     kind: "none",
     hint: "That actorId is not in this world. Register them first. A missing speaker is not a 500. identity.known is for named targets, not the speaker.",
+  },
+  "ledger.safe_balance": {
+    kind: "none",
+    hint: "That book cannot hold this many more cents. IEEE rounding is not a mint. Split the journal or drain the dest first. Command amounts that are already unsafe integers are command.malformed.",
   },
   "payment.execution_date": {
     kind: "none",

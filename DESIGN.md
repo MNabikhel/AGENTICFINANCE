@@ -24,7 +24,7 @@ This document is the implementation contract. Another engineer should be able to
 
 **IDs:** `aid_<ulid>` agents, `mid_<ulid>` mandates, `hid_<ulid>` hires, `tid_<ulid>` transfers, `rid_<ulid>` receipts, `apd_<ulid>` approvals, `jnl_<ulid>` journal entries, `rfq_<ulid>` RFQs, `qte_<ulid>` quotes, `dlg_<ulid>` KYA delegations, `win_<ulid>` settlement windows. ULID Crockford base32, 26 chars.
 
-**Money:** integer **minor units** only. Safe integers only (`Number.isSafeInteger`). `USD_SIM` and `USDC_SIM` both have `decimals = 2`. Never use IEEE floats for amounts. JSON encodes `amount` as integer, `currency` as string. One cart is one currency. A line whose `unitAmount × quantity` overflows, or an FX `price × rateE6` that cannot be an integer cent, is `command.malformed`.
+**Money:** integer **minor units** only. Safe integers only (`Number.isSafeInteger`). `USD_SIM` and `USDC_SIM` both have `decimals = 2`. Never use IEEE floats for amounts. JSON encodes `amount` as integer, `currency` as string. One cart is one currency. A line whose `unitAmount × quantity` overflows, or an FX `price × rateE6` that cannot be an integer cent, is `command.malformed`. A journal whose resulting book is not a safe integer is `ledger.safe_balance` — IEEE rounding is not a mint.
 
 **Canonical JSON:** RFC 8785 JCS. UTF-8. That bytestring is what you hash. If a library is missing, implement the subset we use: sorted object keys, no insignificant whitespace, integers without exponent, reject `undefined`.
 
@@ -656,6 +656,7 @@ export interface PolicyContext {
   accountsKnown?: boolean;          // false when ledger.transfer / named balances / fx_settle points at a missing book (FX needs the vendor’s USDC book)
   accountsSameCurrency?: boolean;   // false when a transfer would mix USD_SIM and USDC_SIM, the label disagrees, or hire.fund would lock USD cash into a USDC escrow
   fundsOk?: boolean;                // false when a transfer, hire.fund, or fx_settle would overdraw the source book
+  balancesSafe?: boolean;           // false when a journal would leave a touched book outside Number.isSafeInteger
 }
 ```
 
@@ -826,6 +827,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 70 | `hire.bound_cart` | fund / release / envelope.submit | live hire has not bound a cart (and that cart’s payment); a body cartId is not a pointer | — | hire holds its cart and payment |
 | 71 | `mm.known` | fx_settle (live FX quote) | no market_maker agent, or missing `market_maker:cash_usd` / `market_maker:cash_usdc` | — | MM and both books exist |
 | 72 | `actor.known` | always when actorId is not system | actorId is not a registered agent | — | speaker exists (or is system) |
+| 73 | `ledger.safe_balance` | transfer / fund / refund / release / envelope.submit / fx_settle | posting the journal would leave a book outside `Number.isSafeInteger` (dest + amount, or the matching source/equity leg) | — | resulting books stay safe integers |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -1008,7 +1010,7 @@ export interface AetherError {
 | Test file | Must prove |
 |---|---|
 | `audit.test.ts` | Tamper a JSONL byte → verify fails at that seq; reorder fails; genesis prevHash is zeros |
-| `ledger.test.ts` | Unbalanced journal rejected; replay file ≡ memory; FX keeps two books |
+| `ledger.test.ts` | Unbalanced journal rejected; replay file ≡ memory; FX keeps two books; a dest that would leave `Number.isSafeInteger` is refused at `post()` |
 | `mandate.test.ts` | Wrong cart hash / swapped payee / amount mismatch denied |
 | `cart.test.ts` | A cart must equal the hire it pays; a line with no amount is `command.malformed`, not a throw after yes; a second cart on the same hire is `hire.unique_cart`, not a pointer swap; a second payment on the same cart is `mandate.unique_payment`, not a second check; funding with a loose cartId (never bound to the hire) is `hire.bound_cart`, not a throw at release; a line whose cents overflow, or mixed USD/USDC lines, is `command.malformed` |
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
@@ -1018,7 +1020,7 @@ export interface AetherError {
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |
 | `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` replay + `aether_hire_refund` |
-| `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false`; ghost book is `ledger.known_account`; mixed-currency transfer is `ledger.same_currency`; overdraft is `ledger.sufficient`; an amount_range with no max is `command.malformed` |
+| `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false`; ghost book is `ledger.known_account`; mixed-currency transfer is `ledger.same_currency`; overdraft is `ledger.sufficient`; dest overflow is `ledger.safe_balance`; an amount_range with no max is `command.malformed` |
 | `inspect.test.ts` | `aether_get` / inspect by id; MCP command schemas; expired approval tickets refuse resolve; a missing receipt is `receipt.known`, not an empty success |
 | `approval.test.ts` | Ghost ticket is `approval.known`; expired or already-resolved is `approval.pending`; approving a stale pause or a ticket with no held command is `approval.replay`, not a mutate throw after yes; reject of a dead pause still releases the quote |
 | `identity.test.ts` | Ghost freeze / handshake principal / revoke is `identity.known`; attesting yourself is `kya.not_self`; nested handshake with a ghost parent is `kya.known_parent`; ghost or foreign attestationId revoke is `kya.known_attestation`; L4 writing a founder handshake is `kya.party`; reused alias or second market maker is `identity.unique_key`; unfreeze of a live unfrozen agent (and a second freeze) is `identity.freeze_state`; a second live handshake for the same pair is `kya.unique_live`; a missing speaker is `actor.known`, not a throw before policy |

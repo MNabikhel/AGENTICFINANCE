@@ -173,6 +173,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "ledger.safe_balance") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to write cents this book cannot hold`,
+          body: "A book must stay a safe integer. IEEE rounding is not a mint. Split the journal or drain the dest first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -344,6 +354,8 @@ export function autoBeat(input: {
                   ? "The buyer’s cash does not cover this hire. Escrow cannot lock on an overdraft. Allocate first."
                   : rule?.ruleId === "hire.bound_cart"
                     ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
+                  : rule?.ruleId === "ledger.safe_balance"
+                    ? "The escrow (or the buyer’s remaining cash) cannot hold this many cents. IEEE rounding is not a mint."
                 : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,
@@ -370,6 +382,8 @@ export function autoBeat(input: {
         body:
           rule?.ruleId === "hire.state"
             ? "Refund is only from funded. After deliver, escrow can only be released to the vendor. Delivered work cannot be unwound."
+            : rule?.ruleId === "ledger.safe_balance"
+              ? "The buyer’s book cannot hold the returned cents. IEEE rounding is not a mint."
             : "Refund is the buyer or treasury, and only while the hire is funded. The other side of the table does not unwind escrow.",
         tone: "deny",
         commandType: cmd.type,
@@ -396,6 +410,8 @@ export function autoBeat(input: {
             ? "Escrow releases only after the vendor has delivered. Funded is not released. An illegal arrow is a refuse, not a 409 after yes."
             : rule?.ruleId === "hire.bound_cart"
               ? "That hire has not bound a cart. Issue the cart with hireId. A loose cart on the command is not this hire’s check."
+            : rule?.ruleId === "ledger.safe_balance"
+              ? "The vendor’s book cannot hold these cents. IEEE rounding is not a mint."
             : `Role ${actor.role} is not allowed to move money. Rule: ${rule?.ruleId ?? "actor.role_capability"}. An auditor who can spend is not an auditor.`,
         tone: "deny",
         commandType: cmd.type,
@@ -426,6 +442,8 @@ export function autoBeat(input: {
               ? "The vendor’s USD book does not cover this window. An FX settle is not an overdraft. The market maker’s USDC inventory is a different rule."
               : rule?.ruleId === "mm.known"
                 ? "There is no market maker in this world. Register one before settling FX. A window is not a journal against missing books."
+                : rule?.ruleId === "ledger.safe_balance"
+                  ? "A book on this window cannot hold the resulting cents. IEEE rounding is not a mint. The market maker’s USDC inventory is a different rule."
               : (rule?.message ?? "The referee refused the FX settle."),
         tone: "deny",
         commandType: cmd.type,
