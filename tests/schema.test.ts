@@ -41,4 +41,26 @@ describe("command shape enums and integer ranges", () => {
   it("still reports missing required fields before enum misses", () => {
     expect(commandShapeError("identity.register", { role: "god" })).toContain("displayName");
   });
+
+  it("rejects a numeric agentId as a type miss, not a freeze after yes", () => {
+    expect(commandShapeError("identity.freeze", { agentId: 1 })).toBe("invalid type: agentId");
+  });
+
+  it("rejects a string where an invite list belongs", () => {
+    expect(commandShapeError("market.rfq", { sku: "research.brief", spec: "x", invitedSellerIds: "aid_x" })).toBe(
+      "invalid type: invitedSellerIds",
+    );
+  });
+
+  it("rejects an invite list that is not strings", () => {
+    expect(commandShapeError("market.rfq", { sku: "research.brief", spec: "x", invitedSellerIds: [1] })).toBe(
+      "invalid type: invitedSellerIds",
+    );
+  });
+
+  it("rejects an empty cart line list", () => {
+    expect(commandShapeError("mandate.issue_cart", { intentId: "mid_x", merchantId: "aid_x", line_items: [] })).toBe(
+      "invalid type: line_items",
+    );
+  });
 });

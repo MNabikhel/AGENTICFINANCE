@@ -1,7 +1,8 @@
 /**
  * Shape check against schemas/commands.schema.json.
- * Syntax, not economics: a miss, a float, a listed enum miss, or a rung outside 0–5
- * is HTTP 400, not a policy deny. Policy never sees a command that failed this gate.
+ * Syntax, not economics: a miss, a float, a listed enum miss, a rung outside 0–5,
+ * or a listed field with the wrong JSON type is HTTP 400, not a policy deny.
+ * Policy never sees a command that failed this gate.
  */
 
 import { readFileSync } from "node:fs";
@@ -13,6 +14,8 @@ type PropSchema = {
   enum?: unknown[];
   minimum?: number;
   maximum?: number;
+  minItems?: number;
+  items?: { type?: string };
 };
 
 type BodySchema = {
@@ -130,6 +133,30 @@ export function malformedIntegerFields(type: string, body: unknown): string[] {
   return out;
 }
 
+/** Listed JSON type miss when the field is present (string id, array, object). */
+export function malformedTypeFields(type: string, body: unknown): string[] {
+  const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const props = COMMAND_BODIES[type]?.properties ?? {};
+  const out: string[] = [];
+  for (const [key, prop] of Object.entries(props)) {
+    const v = rec[key];
+    if (v === undefined || v === null) continue;
+    if (prop.enum) continue;
+    if (prop.type === "integer") continue;
+    if (prop.type === "string" && typeof v !== "string") out.push(key);
+    if (prop.type === "object" && (typeof v !== "object" || Array.isArray(v))) out.push(key);
+    if (prop.type === "array") {
+      if (!Array.isArray(v)) {
+        out.push(key);
+        continue;
+      }
+      if (typeof prop.minItems === "number" && v.length < prop.minItems) out.push(key);
+      if (prop.items?.type === "string" && v.some((item) => typeof item !== "string")) out.push(key);
+    }
+  }
+  return out;
+}
+
 /** Human-readable reason, or undefined if the body is well-formed. */
 export function commandShapeError(type: string, body: unknown): string | undefined {
   const missing = missingCommandFields(type, body);
@@ -140,5 +167,7 @@ export function commandShapeError(type: string, body: unknown): string | undefin
   if (enums.length > 0) return `invalid enum: ${enums.join(", ")}`;
   const ints = malformedIntegerFields(type, body);
   if (ints.length > 0) return `invalid integer: ${ints.join(", ")}`;
+  const types = malformedTypeFields(type, body);
+  if (types.length > 0) return `invalid type: ${types.join(", ")}`;
   return undefined;
 }

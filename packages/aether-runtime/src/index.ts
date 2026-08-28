@@ -2083,4 +2083,5 @@ export {
   malformedMoneyFields,
   malformedEnumFields,
   malformedIntegerFields,
+  malformedTypeFields,
 } from "./command-schema.js";

@@ -303,4 +303,20 @@ describe("command schema", () => {
     expect(rt.clock.now()).toBe(clockBefore);
     expect(rt.audit.length).toBe(auditBefore);
   });
+
+  it("refuses a numeric agentId as command.malformed, not a mutate throw after yes", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const r = rt.dispatch(cmd("identity.freeze", founder.id, { agentId: 1 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("agentId");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.clock.now()).toBe(clockBefore);
+    expect(rt.audit.length).toBe(auditBefore);
+  });
 });
