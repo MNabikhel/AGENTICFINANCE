@@ -505,3 +505,41 @@ describe("identity.freeze_state", () => {
     expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
+
+describe("kya.unique_live", () => {
+  it("refuses a second live handshake for the same pair as kya.unique_live, not a tighter grant", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 4 })), "attest");
+    const liveBefore = [...rt.kya.attestations.values()].filter((a) => !a.revokedAt).length;
+    const attestBefore = rt.audit.query({ action: "KYA_ATTEST", subjectId: desk.id }).matched;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(liveBefore);
+    expect(rt.audit.query({ action: "KYA_ATTEST", subjectId: desk.id }).matched).toBe(attestBefore);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still attests again after revoke", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })), "attest");
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id })), "revoke");
+    const again = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 })),
+      "re-attest",
+    );
+    expect((again.data as { maxAutonomy: number }).maxAutonomy).toBe(2);
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(1);
+  });
+});

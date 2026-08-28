@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 61 rules", () => {
-    expect(RULE_IDS).toHaveLength(61);
+  it("has 62 rules", () => {
+    expect(RULE_IDS).toHaveLength(62);
   });
 
   it("denies frozen actors", () => {
@@ -889,6 +889,27 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("identity.freeze_state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a second live handshake for the same pair as kya.unique_live", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.unique_live");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

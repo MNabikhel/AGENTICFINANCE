@@ -803,6 +803,13 @@ export class Runtime {
       const delegate = this.identity.get(body.delegateId as AgentId);
       if (delegate) ctx.kyaNotSelf = actor.id !== delegate.id;
     }
+    if (cmd.type === "kya.attest" && ctx.kyaNotSelf === true) {
+      const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
+      const delegateId = body.delegateId as AgentId;
+      ctx.kyaLiveFree = ![...this.kya.attestations.values()].some(
+        (a) => a.principalId === principalId && a.delegateId === delegateId && !a.revokedAt,
+      );
+    }
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
     }

@@ -541,6 +541,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.unique_live") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} already shook hands with that agent`,
+          body: "One live handshake per pair. Revoke it, then attest again. A second live hop is not a tighter grant.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

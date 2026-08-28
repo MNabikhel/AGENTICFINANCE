@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.39.0",
+  version: "0.40.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -744,6 +744,12 @@ export interface PolicyContext {
    * is unknown (`identity.known` handles that). A no-op freeze is not a notary line after yes.
    */
   freezeStateOk?: boolean;
+  /**
+   * False when kya.attest would mint a second live (non-revoked) hop for the same
+   * principal→delegate pair. Absent = not an attest, or the delegate is unknown / self
+   * (`identity.known` / `kya.not_self` handle those). Revoke, then attest again.
+   */
+  kyaLiveFree?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

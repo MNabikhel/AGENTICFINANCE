@@ -950,6 +950,15 @@ export const RULES: readonly Rule[] = [
         : v("identity.freeze_state", "deny", "target is already frozen");
     },
   },
+  {
+    id: "kya.unique_live",
+    evaluate: (ctx) => {
+      if (ctx.kyaLiveFree === undefined) return v("kya.unique_live", "allow", "not a handshake mint");
+      return ctx.kyaLiveFree
+        ? v("kya.unique_live", "allow", "no live hop for this pair")
+        : v("kya.unique_live", "deny", "live handshake already exists for this pair");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1116,6 +1125,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "identity.freeze_state": {
     kind: "none",
     hint: "Freeze someone who is live and unfrozen. Unfreeze someone who is actually frozen. A no-op freeze is not a notary line after yes.",
+  },
+  "kya.unique_live": {
+    kind: "none",
+    hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant.",
   },
   "payment.execution_date": {
     kind: "none",

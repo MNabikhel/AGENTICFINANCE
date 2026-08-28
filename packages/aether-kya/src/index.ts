@@ -38,6 +38,11 @@ export class DelegationGraph {
     if (input.parentId && !this.attestations.has(input.parentId)) {
       throw new Error("kya unknown parent hop");
     }
+    for (const a of this.attestations.values()) {
+      if (a.principalId === input.principalId && a.delegateId === input.delegateId && !a.revokedAt) {
+        throw new Error("kya live pair already exists");
+      }
+    }
     this.attestations.set(input.id, input);
     this.blocked.delete(pairKey(input.principalId, input.delegateId));
     return input;

@@ -102,6 +102,18 @@ describe("delegation graph", () => {
     expect(resolved.implicit).toBe(true);
   });
 
+  it("forbids a second live hop for the same principal→delegate pair", () => {
+    const g = new DelegationGraph();
+    g.attest(att({ id: "dlg_1" as DelegationId, grantorId: founder, delegateId: watch }));
+    expect(() => g.attest(att({ id: "dlg_2" as DelegationId, grantorId: founder, delegateId: watch, maxAutonomy: 2 }))).toThrow(
+      /live pair/,
+    );
+    expect(g.attestations.size).toBe(1);
+    g.revoke({ principalId: founder, delegateId: watch, at: later });
+    g.attest(att({ id: "dlg_3" as DelegationId, grantorId: founder, delegateId: watch, maxAutonomy: 2 }));
+    expect([...g.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(1);
+  });
+
   it("forbids self-delegation", () => {
     const g = new DelegationGraph();
     expect(() => g.attest(att({ id: "dlg_x" as DelegationId, grantorId: extra, delegateId: extra }))).toThrow(/self-delegation/);
