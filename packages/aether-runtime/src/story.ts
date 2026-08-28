@@ -63,7 +63,7 @@ export function autoBeat(input: {
           seq: input.seq,
           at: input.at,
           headline: `${who} cannot move that hire`,
-          body: "A hire only walks offered → accepted → funded → delivered → released. An illegal arrow is a refuse, not a 409 after yes.",
+          body: "A hire only walks offered → accepted → funded → delivered → released. Payment-required is only after deliver. An illegal arrow is a refuse, not a 409 after yes.",
           tone: "deny",
           commandType: cmd.type,
         };

@@ -650,6 +650,23 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
   });
 
+  it("denies payment-required before deliver as hire.state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "envelope.require",
+        hire: hire({ state: "funded" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.escrow_required")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.state");
+  });
+
   it("denies skipping a ladder rung as ladder.legal, not a mutate throw", () => {
     const d = evaluate(
       ctx({

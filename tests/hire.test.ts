@@ -313,6 +313,33 @@ describe("hire state", () => {
     expect(rt.receipts.size).toBe(0);
   });
 
+  it("refuses payment-required before deliver as hire.state, not a 402", () => {
+    const rt = boot();
+    const { vendor, intentId, hireId, desk } = offered(rt);
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const r = rt.dispatch(cmd("envelope.require", vendor.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.state");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("funded");
+
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { ok: true } })), "deliver");
+    const required = must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
+    expect(required.kind).toBe("allow");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("delivered");
+  });
+
   it("refuses a second fund with a new key as hire.state, and still replays the first", () => {
     const rt = boot();
     const { desk, vendor, intentId, hireId } = offered(rt);

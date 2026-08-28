@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.25.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.26.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -74,7 +74,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 31. Accept, deliver, and payment-required belong to the seller. Refund and release belong to the buyer or treasury (`hire.party`). The other side of the table is a policy deny, not a mutate throw.
 32. A parentId that is not in this world is `mandate.known_parent`. It is not a tighter child. Policy denies; mutate does not write a ghost parent.
 33. An agentId that is not in this world is `identity.known`. Freeze, unfreeze, ladder, handshake (delegate *and* principal), revoke, cart merchant, and intent subject do not throw after an allow, and do not write a handshake or tombstone for nobody.
-34. An illegal hire arrow is `hire.state`. Second accept, fund from offered, refund after deliver, and release before deliver are policy denies, not a 409 after an allow. Refund is only from funded. The escrow table still throws if policy ever lies.
+34. An illegal hire arrow is `hire.state`. Second accept, fund from offered, refund after deliver, release before deliver, and payment-required before deliver are policy denies, not a 409 or 402 after an allow. Refund is only from funded. Payment-required is only after deliver. The escrow table still throws if policy ever lies.
 35. An illegal ladder climb is `ladder.legal`. Skipping rungs, omitting a gate, listing `kill_switch_tested` without actually freezing, or the wrong approver are policy denies, not a mutate throw. `any→L0` stays legal.
 36. Attesting yourself is `kya.not_self`. A handshake is with another agent. The graph still throws if policy ever lies.
 

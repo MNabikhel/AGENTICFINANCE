@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.25.0",
+  version: "0.26.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -375,6 +375,11 @@ export const HIRE_COMMAND_TARGET = {
   "hire.refund": "refunded",
   "hire.release": "released",
   "envelope.submit": "released",
+} as const satisfies Record<string, HireState>;
+
+/** Commands that do not walk the hire but are only legal in one state. */
+export const HIRE_COMMAND_REQUIRED_STATE = {
+  "envelope.require": "delivered",
 } as const satisfies Record<string, HireState>;
 
 export interface HireContract {

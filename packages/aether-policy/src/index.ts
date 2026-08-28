@@ -6,6 +6,7 @@
 
 import {
   DEFAULT_APPROVAL_THRESHOLDS,
+  HIRE_COMMAND_REQUIRED_STATE,
   HIRE_COMMAND_TARGET,
   HIRE_TRANSITIONS,
   MIN_LEVEL_FOR_ACTION,
@@ -56,6 +57,13 @@ function listed<T extends MandateConstraint["type"]>(
 function nextHireState(commandType: string): HireState | undefined {
   if (commandType in HIRE_COMMAND_TARGET) {
     return HIRE_COMMAND_TARGET[commandType as keyof typeof HIRE_COMMAND_TARGET];
+  }
+  return undefined;
+}
+
+function requiredHireState(commandType: string): HireState | undefined {
+  if (commandType in HIRE_COMMAND_REQUIRED_STATE) {
+    return HIRE_COMMAND_REQUIRED_STATE[commandType as keyof typeof HIRE_COMMAND_REQUIRED_STATE];
   }
   return undefined;
 }
@@ -824,11 +832,20 @@ export const RULES: readonly Rule[] = [
     id: "hire.state",
     evaluate: (ctx) => {
       const to = nextHireState(ctx.commandType);
-      if (to === undefined) return v("hire.state", "allow", "not a hire-transition command");
+      const required = requiredHireState(ctx.commandType);
+      if (to === undefined && required === undefined) return v("hire.state", "allow", "not a hire-state command");
       if (!ctx.hire || ctx.hire.id === "hid_draft") return v("hire.state", "allow", "no live hire");
-      return HIRE_TRANSITIONS[ctx.hire.state].includes(to)
-        ? v("hire.state", "allow", `${ctx.hire.state} -> ${to}`)
-        : v("hire.state", "deny", `illegal ${ctx.hire.state} -> ${to}`, { from: ctx.hire.state, to });
+      if (to !== undefined) {
+        return HIRE_TRANSITIONS[ctx.hire.state].includes(to)
+          ? v("hire.state", "allow", `${ctx.hire.state} -> ${to}`)
+          : v("hire.state", "deny", `illegal ${ctx.hire.state} -> ${to}`, { from: ctx.hire.state, to });
+      }
+      return ctx.hire.state === required
+        ? v("hire.state", "allow", `hire.state=${required}`)
+        : v("hire.state", "deny", `illegal ${ctx.hire.state} for ${ctx.commandType}`, {
+            from: ctx.hire.state,
+            ...(required ? { required } : {}),
+          });
     },
   },
   {
@@ -970,7 +987,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "hire.state": {
     kind: "none",
-    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. An illegal arrow is a refuse. Delivered work cannot be unwound.",
+    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. Payment-required is only after deliver. An illegal arrow is a refuse. Delivered work cannot be unwound.",
   },
   "ladder.legal": {
     kind: "none",
