@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.18.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.19.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Canonical JSON (sorted keys) is what is hashed.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 44 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 46 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -56,7 +56,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 13. `PolicyDecision.remediation.kind` is a machine enum (`issue_intent`, `wait_approval`, `attest_kya`, `unfreeze_actor`, `unfreeze_principal`, `reset_circuit`, `role_forbidden`, `none`). Do not parse English `hint`.
 14. `hire.refund` is legal only from `funded` (not after deliver/release). It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
 15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
-16. Approval tickets expire. Resolving an expired ticket is a refuse, not a late yes. The original command may be retried (new ticket).
+16. Approval tickets expire (`approval.pending`). Resolving an expired or already-resolved ticket is a policy deny, not a late yes. The original command may be retried (new ticket) if it is still legal.
 17. Only catalog SKUs may be RFQ’d or hired (`market.catalog`). Stale quotes/RFQs cannot be hired (`market.not_expired`).
 18. `audit.query` reads notary lines for one subject. It does not mutate. Verify is a separate command.
 19. Non-empty `invitedSellerIds` is a closed RFQ (`market.invited_seller`). Empty or omitted is open; any listed seller role may quote.
@@ -70,6 +70,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 27. A hireId that is not in this world is `hire.known`. It is not a broken mandate chain. Policy denies; mutate does not throw after an allow.
 28. An intentId that is not in this world is `mandate.known_intent`. It is not a missing handshake. A deny does not consume the quote.
 29. A cartId that is not in this world is `mandate.known_cart`. It is not a broken payment chain.
+30. An approvalId that is not in this world is `approval.known`. It is not a late yes. Policy denies; mutate does not throw after an allow.
 
 ## Autonomy
 

@@ -116,7 +116,10 @@ describe("approval expiry", () => {
     const late = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "approved" }));
     expect(late.ok).toBe(false);
     if (late.ok) return;
-    expect(late.error.error.detail).toMatch(/expired/);
+    expect(late.error.error.status).toBe(422);
+    expect(late.error.error.type).toContain("policy.deny");
+    expect(late.error.decision?.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("deny");
+    expect(late.error.decision?.remediation?.ruleId).toBe("approval.pending");
     expect(rt.approvals.get(ticket.id)?.status).toBe("expired");
 
     const retry = rt.dispatch(cmd("hire.create", desk.id, { quoteId: offered.quoteId, intentId }));

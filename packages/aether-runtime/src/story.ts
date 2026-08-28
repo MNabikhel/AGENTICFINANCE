@@ -199,6 +199,22 @@ export function autoBeat(input: {
     };
   }
   if (cmd.type === "approval.resolve") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not resolve that ticket`,
+        body:
+          rule?.ruleId === "approval.known"
+            ? "That approval is not in this world. A missing ticket is not a late yes."
+            : rule?.ruleId === "approval.pending"
+              ? "That ticket is expired or already resolved. Resolving it is a refuse, not a late yes."
+              : (rule?.message ?? "The referee refused this ticket."),
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
     return {
       seq: input.seq,
       at: input.at,

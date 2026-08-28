@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 44 rules", () => {
-    expect(RULE_IDS).toHaveLength(44);
+  it("has 46 rules", () => {
+    expect(RULE_IDS).toHaveLength(46);
   });
 
   it("denies frozen actors", () => {
@@ -489,6 +489,36 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
     expect(remediationFor(d)?.ruleId).toBe("mandate.known_cart");
+  });
+
+  it("denies a missing approval as approval.known, not a late yes", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "approval.resolve",
+        approvalKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("approval.known");
+  });
+
+  it("denies an expired or resolved ticket as approval.pending", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "approval.resolve",
+        approvalKnown: true,
+        approvalPending: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("approval.pending");
   });
 
   it("denies FX settle without a live unused FX quote", () => {

@@ -745,6 +745,15 @@ export class Runtime {
     if (cmd.type === "mandate.issue_payment") {
       ctx.cartKnown = Boolean(cart);
     }
+    if (cmd.type === "approval.resolve") {
+      const ticket =
+        typeof body.approvalId === "string" ? this.approvals.get(body.approvalId as ApprovalId) : undefined;
+      ctx.approvalKnown = Boolean(ticket);
+      if (ticket) {
+        ctx.approvalPending =
+          ticket.status === "pending" && Date.parse(ticket.expiresAt) > Date.parse(this.clock.now());
+      }
+    }
     if (amount) ctx.amount = amount;
     if (payeeId) ctx.payeeId = payeeId;
     if (fxRateE6 !== undefined) ctx.fxRateE6 = fxRateE6;
@@ -787,6 +796,9 @@ export class Runtime {
     if (ctx.hire && ctx.hire.id !== "hid_draft") subjects.push({ type: "hire", id: ctx.hire.id });
     if (ctx.intent) subjects.push({ type: "intent", id: ctx.intent.payload.id });
     const body = cmd.body as Record<string, unknown>;
+    if (cmd.type === "approval.resolve" && typeof body.approvalId === "string") {
+      subjects.push({ type: "approval", id: body.approvalId });
+    }
     const quote = this.quoteOf(body) ?? (ctx.hire?.quoteId ? this.quotes.get(ctx.hire.quoteId) : undefined);
     if (quote) subjects.push({ type: "quote", id: quote.id });
     const rfq = quote ? this.rfqs.get(quote.rfqId) : typeof body.rfqId === "string" ? this.rfqs.get(String(body.rfqId)) : undefined;

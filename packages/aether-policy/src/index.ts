@@ -765,6 +765,24 @@ export const RULES: readonly Rule[] = [
         : v("mandate.known_cart", "deny", "cart not found");
     },
   },
+  {
+    id: "approval.known",
+    evaluate: (ctx) => {
+      if (ctx.approvalKnown === undefined) return v("approval.known", "allow", "not an approval.resolve");
+      return ctx.approvalKnown
+        ? v("approval.known", "allow", "ticket exists")
+        : v("approval.known", "deny", "approval not found");
+    },
+  },
+  {
+    id: "approval.pending",
+    evaluate: (ctx) => {
+      if (ctx.approvalPending === undefined) return v("approval.pending", "allow", "not a live-ticket resolve");
+      return ctx.approvalPending
+        ? v("approval.pending", "allow", "ticket is pending")
+        : v("approval.pending", "deny", "ticket is not pending");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -863,6 +881,14 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.known_cart": {
     kind: "none",
     hint: "That cart id is not in this world. Issue the cart first. A missing cart is not a broken payment chain.",
+  },
+  "approval.known": {
+    kind: "none",
+    hint: "That approval id is not in this world. Escalate a real spend to mint a ticket. A missing ticket is not a late yes.",
+  },
+  "approval.pending": {
+    kind: "none",
+    hint: "That ticket is expired or already resolved. Resolving it is a refuse, not a late yes. Retry the original command if it is still legal.",
   },
   "payment.execution_date": {
     kind: "none",
