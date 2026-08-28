@@ -74,8 +74,8 @@ const ESCALATABLE = new Set<CommandType>([
   "hire.release",
 ]);
 
-/** Recurrence consumes a slot at fund. Create is fail-fast. Completing a funded hire is not a new occurrence. */
-const RECURRENCE_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund"]);
+/** New spend starts here. Completing a funded hire is not a new spend. */
+const SPEND_START_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund"]);
 
 const FREQ_RANK: Record<RecurrenceFrequency, number> = {
   ON_DEMAND: 0,
@@ -107,6 +107,21 @@ function recurrenceDeny(
         gapMs: gap,
       });
     }
+  }
+  return undefined;
+}
+
+function executionWindowDeny(
+  c: Extract<MandateConstraint, { type: "payment.execution_date" }>,
+  clock: Instant,
+  prefix: string,
+): RuleVerdict | undefined {
+  const now = Date.parse(clock);
+  if (c.not_before && now < Date.parse(c.not_before)) {
+    return v("payment.execution_date", "deny", `${prefix}before not_before`);
+  }
+  if (c.not_after && now > Date.parse(c.not_after)) {
+    return v("payment.execution_date", "deny", `${prefix}after not_after`);
   }
   return undefined;
 }
@@ -261,7 +276,7 @@ export const RULES: readonly Rule[] = [
   {
     id: "payment.recurrence",
     evaluate: (ctx) => {
-      if (!RECURRENCE_COMMANDS.has(ctx.commandType as CommandType)) {
+      if (!SPEND_START_COMMANDS.has(ctx.commandType as CommandType)) {
         return v("payment.recurrence", "allow", "recurrence counted at fund");
       }
       const own = findConstraint(ctx, "payment.agent_recurrence");
@@ -289,15 +304,22 @@ export const RULES: readonly Rule[] = [
   {
     id: "payment.execution_date",
     evaluate: (ctx) => {
-      const c = findConstraint(ctx, "payment.execution_date");
-      if (!c) return v("payment.execution_date", "allow", "no execution window");
-      const now = Date.parse(ctx.clock);
-      if (c.not_before && now < Date.parse(c.not_before)) {
-        return v("payment.execution_date", "deny", "before not_before");
+      if (!SPEND_START_COMMANDS.has(ctx.commandType as CommandType)) {
+        return v("payment.execution_date", "allow", "window checked at fund");
       }
-      if (c.not_after && now > Date.parse(c.not_after)) {
-        return v("payment.execution_date", "deny", "after not_after");
+      const own = findConstraint(ctx, "payment.execution_date");
+      if (own) {
+        const hit = executionWindowDeny(own, ctx.clock, "");
+        if (hit) return hit;
       }
+      const parentC = ctx.parentIntent
+        ? listed(ctx.parentIntent.payload.constraints, "payment.execution_date")
+        : undefined;
+      if (parentC) {
+        const hit = executionWindowDeny(parentC, ctx.clock, "parent ");
+        if (hit) return hit;
+      }
+      if (!own && !parentC) return v("payment.execution_date", "allow", "no execution window");
       return v("payment.execution_date", "allow", "in execution window");
     },
   },
@@ -606,6 +628,23 @@ export const RULES: readonly Rule[] = [
           return v("mandate.child_tighter", "deny", "child recurrence more frequent than parent");
         }
       }
+      const parentWin = listed(parent, "payment.execution_date");
+      const childWin = listed(child, "payment.execution_date");
+      if (parentWin) {
+        if (!childWin) return v("mandate.child_tighter", "deny", "child missing execution window");
+        if (
+          parentWin.not_before &&
+          (!childWin.not_before || Date.parse(childWin.not_before) < Date.parse(parentWin.not_before))
+        ) {
+          return v("mandate.child_tighter", "deny", "child execution window starts before parent");
+        }
+        if (
+          parentWin.not_after &&
+          (!childWin.not_after || Date.parse(childWin.not_after) > Date.parse(parentWin.not_after))
+        ) {
+          return v("mandate.child_tighter", "deny", "child execution window ends after parent");
+        }
+      }
       return v("mandate.child_tighter", "allow", "sub-intent tighter than parent");
     },
   },
@@ -742,6 +781,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.cart_matches": {
     kind: "none",
     hint: "The cart must equal the hire: same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount.",
+  },
+  "payment.execution_date": {
+    kind: "none",
+    hint: "This slip's calendar window is closed for new spends. Completing a funded hire is not a new spend. Issue a new intent if you need another hire.",
   },
 };
 

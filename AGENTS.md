@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.9.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.10.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -63,6 +63,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 20. Missing required body fields are `command.malformed` (HTTP 400). That is syntax, not policy. The clock does not step. The notary does not write. `evaluate()` does not run.
 21. `payment.agent_recurrence` binds. `max_occurrences` and the frequency gap are checked on `hire.create` and `hire.fund`. Completing a funded hire is not a new occurrence. A refund does not restore a slot. Child slips may not be more frequent than the parent.
 22. A cart bound to a hire must match it (`hire.cart_matches`): same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount.
+23. `payment.execution_date` binds on new spends (`hire.create`, `hire.fund`). Completing a funded hire after `not_after` is legal. Child windows may not outlive the parent.
 
 ## Autonomy
 

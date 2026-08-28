@@ -308,6 +308,33 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
   });
 
+  it("denies a child execution window that outlives the parent", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      {
+        type: "payment.execution_date",
+        not_before: "2026-08-28T00:00:00.000Z",
+        not_after: "2026-08-29T00:00:00.000Z",
+      },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 200000 },
+          {
+            type: "payment.execution_date",
+            not_before: "2026-08-28T00:00:00.000Z",
+            not_after: "2026-08-31T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+  });
+
   it("denies a new hire when the DAILY gap has not elapsed", () => {
     const d = evaluate(
       ctx({
@@ -429,6 +456,41 @@ describe("policy catalog", () => {
   it("denies a cart that does not match the hire", () => {
     const d = evaluate(ctx({ commandType: "hire.fund", cartMatchesHire: false }));
     expect(d.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not freeze a funded hire when the execution window has closed", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.deliver",
+        clock: "2026-08-30T00:00:00.000Z",
+        intent: signedIntent([
+          {
+            type: "payment.execution_date",
+            not_before: "2026-08-28T00:00:00.000Z",
+            not_after: "2026-08-29T00:00:00.000Z",
+          },
+        ]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("allow");
+  });
+
+  it("refuses a new hire after not_after", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        clock: "2026-08-30T00:00:00.000Z",
+        intent: signedIntent([
+          {
+            type: "payment.execution_date",
+            not_before: "2026-08-28T00:00:00.000Z",
+            not_after: "2026-08-29T00:00:00.000Z",
+          },
+        ]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 });

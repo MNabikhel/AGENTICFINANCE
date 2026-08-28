@@ -313,6 +313,7 @@ export type MandateConstraint =
       not_before?: Instant;
       not_after?: Instant;
     }
+    // Window checked on hire.create and hire.fund. Completing a funded hire after not_after is legal.
   | {
       type: "payment.reference";
       conditional_transaction_id: HexSha256;
@@ -731,7 +732,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 09 | `payment.allowed_payees` | settle if constraint present | payee not in list | — | listed |
 | 10 | `payment.allowed_skus` | settle/hire if constraint present | sku not listed | — | listed |
 | 11 | `payment.recurrence` | hire.create / hire.fund if constraint present | `occurrenceCount >= max` or last fund inside the frequency gap (`DAILY` 24h, `WEEKLY` 7d, `MONTHLY` 30d). `ON_DEMAND` has no gap. Completing a funded hire is not a new occurrence. | — | under cap and past the gap |
-| 12 | `payment.execution_date` | settle if constraint present | now outside `[not_before, not_after]` | — | in window |
+| 12 | `payment.execution_date` | hire.create / hire.fund if constraint present | now outside `[not_before, not_after]`. Completing a funded hire is not a new spend. | — | in window |
 | 13 | `ladder.min_level` | settle/hire/sub-intent | actor.level < required **and** no pending human signature path | actor.level < required **and** command is escalatable | level ≥ required |
 | 14 | `ladder.max_autonomy_constraint` | settle if `aether.max_autonomy` present | actor.level > max (over-autonomy abuse) | — | actor.level ≤ max |
 | 15 | `approval.threshold` | settle/fund | — | amount ≥ role threshold **and** level < 5 | below threshold or L5 with circuit intact |
