@@ -11,8 +11,9 @@ This document is the implementation contract. Another engineer should be able to
 
 | Constraint | How Aether satisfies it |
 |---|---|
-| Works today, no bank/crypto credentials | Single simulated rail `sim:aether-1`. Double-entry ledger in RAM + append-only JSONL. Facilitator is in-process. |
+| Works today, no bank/crypto credentials | Single simulated rail `sim:aether-1`. Double-entry ledger in RAM + durable `world.json`. Facilitator is in-process. |
 | Machine-first | JSON Schema is source of truth. OpenAPI for HTTP. MCP tools wrap the same commands. Policy engine is pure, ordered, no LLM. |
+| Public ≠ live | `aether.protocol.1` is pin-able now (`liveMoney: false`). Live rails are adapters later. `AETHER_DATA_DIR` makes a hosted sim survive restart. |
 | Autonomy ladder | Every agent has a level L0–L5. Every spendable action declares a minimum level. Escalation is a first-class object, not a log line. |
 | AP2-compatible **shape** | Three-mandate chain: Intent → Cart → Payment. Closed payment binds to cart via hash. Open mandate carries constraints. Receipt binds to closed payment via hash. |
 | x402-compatible **shape** | Three envelopes: PaymentRequired (402) → PaymentPayload (signed) → SettlementResponse. Headers exist even on the sim transport. |
@@ -21,7 +22,7 @@ This document is the implementation contract. Another engineer should be able to
 
 **Clock:** inject `Clock.now(): Instant`. Default is system UTC. Demo uses a frozen/steppable clock. Never call `Date.now()` inside policy or hashing.
 
-**IDs:** `aid_<ulid>` agents, `mid_<ulid>` mandates, `hid_<ulid>` hires, `tid_<ulid>` transfers, `rid_<ulid>` receipts, `apd_<ulid>` approvals, `jnl_<ulid>` journal entries, `rfq_<ulid>` RFQs, `qte_<ulid>` quotes, `dlg_<ulid>` KYA delegations. ULID Crockford base32, 26 chars.
+**IDs:** `aid_<ulid>` agents, `mid_<ulid>` mandates, `hid_<ulid>` hires, `tid_<ulid>` transfers, `rid_<ulid>` receipts, `apd_<ulid>` approvals, `jnl_<ulid>` journal entries, `rfq_<ulid>` RFQs, `qte_<ulid>` quotes, `dlg_<ulid>` KYA delegations, `win_<ulid>` settlement windows. ULID Crockford base32, 26 chars.
 
 **Money:** integer **minor units** only. `USD_SIM` and `USDC_SIM` both have `decimals = 2`. Never use IEEE floats for amounts. JSON encodes `amount` as integer, `currency` as string.
 
@@ -101,7 +102,7 @@ mcp, openapi, runtime-http, cli ← runtime
 | `aether-settlement` | `requirePayment`, `submitPayment`, `getReceipt` | via ledger + audit |
 | `aether-escrow` | `createHire`, `acceptHire`, `fundHire`, `deliver`, `release`, `refund` | hire table + ledger |
 | `aether-market` | `createRfq`, `submitQuote`, `acceptQuote` | rfq/quote tables |
-| `aether-runtime` | `dispatch(command)` | orchestrates all |
+| `aether-runtime` | `dispatch(command)` | `data/world.json` + orchestrates all |
 
 ### Transport map (one command bus, three faces)
 
@@ -926,6 +927,7 @@ export interface AetherError {
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |
 | `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` + `aether_demo_sub_hire` |
+| `world.test.ts` | Durable boot restores keys and audit head; settlement window restores |
 
 Determinism: same fixture + frozen clock ⇒ bit-identical `payloadHash` sequence from seq 1 onward (seq 0 nonce is fixture-fixed).
 

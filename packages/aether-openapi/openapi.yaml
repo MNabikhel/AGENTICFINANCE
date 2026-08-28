@@ -125,6 +125,16 @@ paths:
       responses:
         "200": { description: Nested-slip TAP report }
         "500": { description: Assertions failed }
+  /v1/protocol:
+    get:
+      operationId: protocolCard
+      responses:
+        "200": { description: Pin-able aether.protocol.1 card. liveMoney is false until adapters exist. }
+  /v1/clearing/windows:
+    post:
+      operationId: clearingSettleWindow
+      responses:
+        "200": { description: Settlement window archived. Not a second payment. }
   /v1/snapshot:
     get:
       operationId: snapshot

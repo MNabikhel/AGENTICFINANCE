@@ -20,6 +20,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_identity_register");
     expect(names).toContain("aether_snapshot");
     expect(names).toContain("aether_demo_sub_hire");
+    expect(names).toContain("aether_protocol");
 
     const reg = mcp.callTool("aether_identity_register", {
       actor: "system",
@@ -33,6 +34,10 @@ describe("MCP host", () => {
 
     const snap = mcp.callTool("aether_snapshot", {}) as { agents: { displayName: string }[] };
     expect(snap.agents.some((a) => a.displayName === "Founder")).toBe(true);
+
+    const protocol = mcp.callTool("aether_protocol", {}) as { spec: string; liveMoney: boolean };
+    expect(protocol.spec).toBe("aether.protocol.1");
+    expect(protocol.liveMoney).toBe(false);
   });
 
   it("runs the sub-hire demo over the tool bus", () => {

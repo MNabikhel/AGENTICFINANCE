@@ -15,7 +15,8 @@
  * File: append-only JSONL. Never rewrite. Compaction is out of v0.
  */
 
-import { appendFileSync, readFileSync, existsSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
+import { dirname } from "node:path";
 import {
   AUDIT_DOMAIN,
   AUDIT_GENESIS_PREV,
@@ -142,6 +143,7 @@ export class AuditLog {
     });
     this.records.push(record);
     if (this.path) {
+      mkdirSync(dirname(this.path), { recursive: true });
       appendFileSync(this.path, `${JSON.stringify(record)}\n`, { flag: "a" });
     }
     return record;

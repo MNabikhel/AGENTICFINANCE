@@ -277,6 +277,16 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "clearing.settle_window") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} closed a settlement window`,
+      body: "Gross exposure is photographed and archived. Money already moved at escrow — this is the clearing photo, not a second payment. Live net-settle of open credit comes later as an adapter.",
+      tone: "settle",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "audit.verify") {
     return {
       seq: input.seq,

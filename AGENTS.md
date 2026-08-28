@@ -2,14 +2,24 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist.
+
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
+
+## There is no finish date
+
+This is a kernel. You extend it. Public protocol and live money are different switches.
+
+- **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch.
+- **Live money (later):** adapters on these objects (x402 / MPP / AP2 / TAP) plus credentials that never enter `evaluate()`. Until then `instrument.sim_only` denies anything else.
 
 ## Speak to it
 
 ```
 pnpm mcp                 # stdio MCP (Content-Length JSON-RPC)
 POST /v1/*               # same commands over HTTP
-POST /v1/demo/sub-hire   # nested-slip TAP on this runtime
+GET  /v1/protocol        # pin-able card
+AETHER_DATA_DIR=./data pnpm mcp   # durable world.json + audit.jsonl
 ```
 
 Every mutating verb is a `Command`: `{ type, actorId, body }`. HTTP, CLI, and MCP construct that object and call `Runtime.dispatch`. Policy runs first. Deny never mutates.
@@ -17,7 +27,8 @@ Every mutating verb is a `Command`: `{ type, actorId, body }`. HTTP, CLI, and MC
 MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
-- `aether_reset`
+- `aether_protocol` / resource `aether://protocol`
+- `aether_reset` (wipes `AETHER_DATA_DIR` if set)
 - `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
 
 Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
@@ -33,6 +44,8 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 7. Freeze sets L0. Unfreeze restores the prior rung. `any → L0` is always legal. Skipping rungs is not.
 8. Auditor can `audit.verify` and freeze. Auditor cannot spend.
 9. Receipt.reference === sha256(JCS(payment mandate)).
+10. Durable boot: `world.json` and `audit.jsonl` must agree on length. Mismatch is a refuse, not a guess.
+11. `clearing.settle_window` archives net exposure. It is not a second payment. Money already moved at escrow.
 
 ## Autonomy
 

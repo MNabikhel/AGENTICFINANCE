@@ -1,10 +1,14 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { AuditLog, genesisRecord } from "@aether/audit";
 import { signInner, verifyInner } from "@aether/envelope";
 import { transitionHire } from "@aether/escrow";
 import { IdentityRegistry, legalLadderTransition, makeAgent, missingGates } from "@aether/identity";
 import {
+  exportKeypair,
   fail,
   IdFactory,
+  importKeypair,
   ManualClock,
   ok,
   payloadHash,
@@ -20,6 +24,7 @@ import { DelegationGraph, resolveKya } from "@aether/kya";
 import { evaluate } from "@aether/policy";
 import { issueReceipt, paymentRequired, settlementFail, settlementOk } from "@aether/settlement";
 import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
+import { WORLD_VERSION, type WorldState } from "./world.js";
 import type {
   AccountId,
   Agent,
@@ -53,9 +58,10 @@ import type {
   Result,
   Rfq,
   Signed,
+  WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, SIM_RAIL_ID, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, PROTOCOL, SIM_RAIL_ID, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -108,15 +114,41 @@ export class Runtime {
   circuitTripped = false;
   tldr = IDLE_TLDR;
   analogDoc: Analog = analog();
+  readonly genesisNonce: string;
+  readonly dataDir?: string;
+  private readonly worldPath?: string;
 
-  constructor(opts: { startIso: string; genesisNonce: string; dailyLimit?: number; auditPath?: string; ledgerPath?: string }) {
-    this.clock = new ManualClock(opts.startIso);
+  constructor(opts: {
+    startIso: string;
+    genesisNonce: string;
+    dailyLimit?: number;
+    auditPath?: string;
+    ledgerPath?: string;
+    dataDir?: string;
+  }) {
+    const worldPath = opts.dataDir ? join(opts.dataDir, "world.json") : undefined;
+    const existing =
+      worldPath && existsSync(worldPath) ? (JSON.parse(readFileSync(worldPath, "utf8")) as WorldState) : undefined;
+    this.clock = new ManualClock(existing?.clock ?? opts.startIso);
     this.ids = new IdFactory(this.clock);
-    this.audit = new AuditLog(opts.auditPath);
-    this.ledger = new Ledger(opts.ledgerPath);
-    this.dailyLimit = opts.dailyLimit ?? 10_000_000;
+    this.genesisNonce = existing?.genesisNonce ?? opts.genesisNonce;
+    this.dataDir = opts.dataDir;
+    this.worldPath = worldPath;
+    if (opts.dataDir) mkdirSync(opts.dataDir, { recursive: true });
+    this.audit = new AuditLog(opts.dataDir ? join(opts.dataDir, "audit.jsonl") : opts.auditPath);
+    this.ledger = new Ledger(opts.dataDir ? undefined : opts.ledgerPath);
+    this.dailyLimit = existing?.dailyLimit ?? opts.dailyLimit ?? 10_000_000;
+    if (existing) {
+      if (existing.auditLength !== this.audit.length) {
+        throw new Error(
+          `durable world out of sync with audit (world ${existing.auditLength} vs audit ${this.audit.length})`,
+        );
+      }
+      this.hydrateWorld(existing);
+      return;
+    }
     if (this.audit.length === 0) {
-      const g = genesisRecord(this.clock, opts.genesisNonce);
+      const g = genesisRecord(this.clock, this.genesisNonce);
       this.audit.append({
         clock: this.clock,
         actorId: "system",
@@ -138,6 +170,7 @@ export class Runtime {
       type: "equity",
       currency: "USDC_SIM",
     });
+    this.persistWorld();
   }
 
   keypair(id: AgentId): Ed25519Keypair {
@@ -192,38 +225,43 @@ export class Runtime {
       subjects: [{ type: "command", id: cmd.type }],
       payload: { type: cmd.type, verdict: decision.verdict, trace: decision.trace.map((t) => ({ ruleId: t.ruleId, verdict: t.verdict })) },
     });
-    if (decision.verdict === "deny") {
-      if (decision.trace.some((t) => t.ruleId === "circuit.daily" && t.verdict === "deny")) {
-        this.circuitTripped = true;
-      }
-      this.pushStory(cmd, actor, decision, ctx);
-      const rule = decision.trace.find((t) => t.verdict === "deny");
-      return fail({
-        error: err("policy.deny", "Policy deny", 422, rule?.message ?? "denied", { ruleId: rule?.ruleId }),
-        decision,
-      });
-    }
-    if (decision.verdict === "escalate") {
-      this.pushStory(cmd, actor, decision, ctx);
-      const ticket = this.openTicket(cmd, decision);
-      return ok({ kind: "escalated", decision, data: { ticket }, ticket });
-    }
     try {
-      const data = this.mutate(cmd, actor);
-      this.pushStory(cmd, actor, decision, ctx);
-      return ok({ kind: "allow", decision, data });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      return fail({
-        error: err("mutate", "Mutation failed", message.startsWith("HIRE") ? 409 : 400, message),
-        decision,
-      });
+      if (decision.verdict === "deny") {
+        if (decision.trace.some((t) => t.ruleId === "circuit.daily" && t.verdict === "deny")) {
+          this.circuitTripped = true;
+        }
+        this.pushStory(cmd, actor, decision, ctx);
+        const rule = decision.trace.find((t) => t.verdict === "deny");
+        return fail({
+          error: err("policy.deny", "Policy deny", 422, rule?.message ?? "denied", { ruleId: rule?.ruleId }),
+          decision,
+        });
+      }
+      if (decision.verdict === "escalate") {
+        this.pushStory(cmd, actor, decision, ctx);
+        const ticket = this.openTicket(cmd, decision);
+        return ok({ kind: "escalated", decision, data: { ticket }, ticket });
+      }
+      try {
+        const data = this.mutate(cmd, actor);
+        this.pushStory(cmd, actor, decision, ctx);
+        return ok({ kind: "allow", decision, data });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return fail({
+          error: err("mutate", "Mutation failed", message.startsWith("HIRE") ? 409 : 400, message),
+          decision,
+        });
+      }
+    } finally {
+      this.persistWorld();
     }
   }
 
   snapshotState() {
     const verify = this.audit.verify();
     return {
+      protocol: this.protocolCard(),
       clock: this.clock.now(),
       rail: SIM_RAIL_ID,
       agents: this.identity.all(),
@@ -251,9 +289,20 @@ export class Runtime {
     };
   }
 
+  protocolCard() {
+    return {
+      ...PROTOCOL,
+      durable: Boolean(this.worldPath),
+      dataDir: this.dataDir ?? null,
+      clock: this.clock.now(),
+      auditHead: this.audit.head(),
+      auditLength: this.audit.length,
+    };
+  }
+
   agentCard(agent: Agent) {
     return {
-      protocolVersion: "0.2.1",
+      protocolVersion: PROTOCOL.version,
       name: agent.displayName,
       description: `${agent.role} on Aether sim:aether-1`,
       url: `http://127.0.0.1:8787/v1/agents/${agent.id}`,
@@ -269,6 +318,110 @@ export class Runtime {
     const full: StoryBeat = { ...beat, seq: this.story.length, at: this.clock.now() };
     this.story.push(full);
     return full;
+  }
+
+  captureWorld(): WorldState {
+    const keys = [...this.identity.keys.entries()].map(([, kp]) => exportKeypair(kp));
+    return {
+      v: WORLD_VERSION,
+      spec: "aether.protocol.1",
+      clock: this.clock.now(),
+      genesisNonce: this.genesisNonce,
+      idSeq: this.ids.seq,
+      dailyLimit: this.dailyLimit,
+      dailySpend: this.dailySpend,
+      circuitTripped: this.circuitTripped,
+      tldr: this.tldr,
+      analog: this.analogDoc,
+      auditLength: this.audit.length,
+      auditHead: String(this.audit.head()),
+      agents: this.identity.all(),
+      keys,
+      aliases: Object.fromEntries(this.aliases),
+      accounts: [...this.ledger.accounts.values()],
+      journals: [...this.ledger.entries],
+      intents: [...this.intents.values()],
+      carts: [...this.carts.values()],
+      payments: [...this.payments.values()],
+      hires: [...this.hires.values()],
+      rfqs: [...this.rfqs.values()],
+      quotes: [...this.quotes.values()],
+      receipts: [...this.receipts.values()],
+      approvals: [...this.approvals.values()],
+      pending: [...this.pending.entries()],
+      nonces: [...this.nonces],
+      spentByIntent: [...this.spentByIntent.entries()],
+      occurrences: [...this.occurrences.entries()],
+      settleEvents: [...this.settleEvents],
+      decisions: [...this.decisions],
+      story: [...this.story],
+      kya: { attestations: [...this.kya.attestations.values()], blocked: [...this.kya.blocked] },
+      clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.windows },
+      killSwitchTested: [...this.killSwitchTested],
+    };
+  }
+
+  persistWorld(): void {
+    if (!this.worldPath) return;
+    const tmp = `${this.worldPath}.tmp`;
+    writeFileSync(tmp, JSON.stringify(this.captureWorld()));
+    renameSync(tmp, this.worldPath);
+  }
+
+  private hydrateWorld(world: WorldState): void {
+    if (world.v !== WORLD_VERSION) throw new Error(`unsupported world version ${world.v}`);
+    this.clock.set(world.clock);
+    this.ids.setSeq(world.idSeq);
+    this.dailyLimit = world.dailyLimit;
+    this.dailySpend = world.dailySpend;
+    this.circuitTripped = world.circuitTripped;
+    this.tldr = world.tldr;
+    this.analogDoc = world.analog;
+    this.ledger.restore(world.accounts, world.journals);
+    this.journals.splice(0, this.journals.length, ...world.journals);
+    this.identity.agents.clear();
+    this.identity.byDid.clear();
+    this.identity.keys.clear();
+    const keyByKid = new Map(world.keys.map((k) => [k.kid, k]));
+    for (const agent of world.agents) {
+      const kid = agent.keys[0]?.kid;
+      const exported = kid ? keyByKid.get(kid) : undefined;
+      if (!exported) throw new Error(`missing key for ${agent.id}`);
+      this.identity.register(agent, importKeypair(exported));
+    }
+    this.aliases.clear();
+    for (const [k, v] of Object.entries(world.aliases)) this.aliases.set(k, v);
+    this.intents.clear();
+    for (const s of world.intents) this.intents.set(s.payload.id, s);
+    this.carts.clear();
+    for (const s of world.carts) this.carts.set(s.payload.id, s);
+    this.payments.clear();
+    for (const s of world.payments) this.payments.set(s.payload.id, s);
+    this.hires.clear();
+    for (const h of world.hires) this.hires.set(h.id, h);
+    this.rfqs.clear();
+    for (const r of world.rfqs) this.rfqs.set(r.id, r);
+    this.quotes.clear();
+    for (const q of world.quotes) this.quotes.set(q.id, q);
+    this.receipts.clear();
+    for (const r of world.receipts) this.receipts.set(r.id, r);
+    this.approvals.clear();
+    for (const a of world.approvals) this.approvals.set(a.id, a);
+    this.pending.clear();
+    for (const [id, cmd] of world.pending) this.pending.set(id, cmd);
+    this.nonces.clear();
+    for (const n of world.nonces) this.nonces.add(n);
+    this.spentByIntent.clear();
+    for (const [id, n] of world.spentByIntent) this.spentByIntent.set(id, n);
+    this.occurrences.clear();
+    for (const [id, n] of world.occurrences) this.occurrences.set(id, n);
+    this.settleEvents.splice(0, this.settleEvents.length, ...world.settleEvents);
+    this.decisions.splice(0, this.decisions.length, ...world.decisions);
+    this.story.splice(0, this.story.length, ...world.story);
+    this.kya.restore(world.kya);
+    this.clearing.restore(world.clearing);
+    this.killSwitchTested.clear();
+    for (const id of world.killSwitchTested) this.killSwitchTested.add(id);
   }
 
   private systemActor(): Agent {
@@ -593,6 +746,8 @@ export class Runtime {
         return this.mutTransfer(body);
       case "ledger.balances":
         return this.mutBalances(body);
+      case "clearing.settle_window":
+        return this.mutClearingWindow(body, actor);
       case "audit.verify":
         return this.mutAudit(actor);
       case "receipt.get":
@@ -1145,6 +1300,29 @@ export class Runtime {
     }));
   }
 
+  private mutClearingWindow(body: Record<string, unknown>, actor: Agent) {
+    const currency = (body.currency as "USD_SIM" | "USDC_SIM" | undefined) ?? "USD_SIM";
+    const window = this.clearing.settleWindow({
+      id: this.ids.next("win") as WindowId,
+      at: this.clock.now(),
+      currency,
+    });
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "CLEARING_WINDOW",
+      subjects: [{ type: "window", id: window.id }],
+      payload: {
+        id: window.id,
+        currency: window.currency,
+        legsConsumed: window.legsConsumed,
+        grossVolume: window.grossVolume,
+        netVolume: window.netVolume,
+      },
+    });
+    return window;
+  }
+
   private mutAudit(actor: Agent) {
     const result = this.audit.verify();
     this.audit.append({
@@ -1247,6 +1425,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
     treasury: [
       { id: "fund", name: "Allocate cash", description: "Move cash to operating agents." },
       { id: "approve", name: "Approve exceptions", description: "Sign escalation tickets above threshold." },
+      { id: "clearing", name: "Close a settlement window", description: "Archive net exposure. Not a second payment." },
     ],
     procurement: [{ id: "hire", name: "Hire vendors", description: "RFQ, hire, escrow, and settle against a mandate." }],
     data_vendor: [{ id: "sell-data", name: "Sell data", description: "Quote and deliver datasets once escrow is funded." }],
@@ -1259,5 +1438,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
 
 export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
+export { WORLD_VERSION };
+export type { WorldState };
 export { err, fail, ok, settlementFail };
 export type { Clock };

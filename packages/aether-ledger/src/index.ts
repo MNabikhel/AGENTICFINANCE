@@ -89,6 +89,20 @@ export class Ledger {
     return { ok: true, value: entry };
   }
 
+  /** Rebuild books from a durable world. Does not re-append JSONL. */
+  restore(accounts: Account[], entries: JournalEntry[]): void {
+    this.accounts.clear();
+    this.accountsByName.clear();
+    this.balances.clear();
+    this.entries.splice(0, this.entries.length);
+    for (const account of accounts) {
+      this.accounts.set(account.id, account);
+      this.accountsByName.set(account.name, account);
+      this.balances.set(account.id, 0);
+    }
+    for (const entry of entries) this.apply(entry, false);
+  }
+
   replayEqualsMemory(path: string): boolean {
     const other = new Ledger(path);
     if (other.entries.length !== this.entries.length) return false;

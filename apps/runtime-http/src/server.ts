@@ -7,7 +7,7 @@ import { Runtime, cmd, type DispatchResult } from "@aether/runtime";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
-import type { AgentId, CommandType } from "@aether/types";
+import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(here, "../public");
@@ -19,10 +19,12 @@ let runtime = boot();
 let lastDemo: unknown = null;
 
 function boot(): Runtime {
+  const dir = process.env.AETHER_DATA_DIR;
   return new Runtime({
     startIso: "2026-08-28T00:00:00.000Z",
     genesisNonce: "01J6AETHERGENESIS0000000001",
     dailyLimit: 10_000_000,
+    ...(dir && dir.length > 0 ? { dataDir: dir } : {}),
   });
 }
 
@@ -107,13 +109,17 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, 200, runtime.snapshotState());
         return;
       }
+      if (req.method === "GET" && path === "/v1/protocol") {
+        json(res, 200, runtime.protocolCard());
+        return;
+      }
       if (req.method === "GET" && path === "/v1/kya") {
         json(res, 200, runtime.kya.snapshot());
         return;
       }
       if (req.method === "GET" && (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json")) {
         json(res, 200, {
-          protocolVersion: "0.2.1",
+          protocolVersion: PROTOCOL.version,
           name: "Aether Economic Runtime",
           description: "Policy, mandate, hire, escrow, settlement, and audit for software agents. Simulated rail sim:aether-1.",
           url: "http://127.0.0.1:8787",
@@ -123,6 +129,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
             { id: "night-watch", name: "Night Watch", description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker" },
             { id: "sub-hire", name: "Sub-hire", description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake" },
             { id: "command-bus", name: "Command bus", description: "Same commands as MCP and CLI" },
+            { id: "protocol", name: "Protocol card", description: "GET /v1/protocol — pin aether.protocol.1" },
           ],
           defaultInputModes: ["application/json"],
           defaultOutputModes: ["application/json"],
@@ -191,6 +198,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         "/v1/payments/require": "envelope.require",
         "/v1/payments/submit": "envelope.submit",
         "/v1/audit/verify": "audit.verify",
+        "/v1/clearing/windows": "clearing.settle_window",
       };
 
       if (req.method === "POST" && routes[path]) {

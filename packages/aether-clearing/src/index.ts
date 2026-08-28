@@ -1,4 +1,4 @@
-import type { AgentId, CurrencyCode } from "@aether/types";
+import type { AgentId, CurrencyCode, Instant, SettlementWindow, WindowId } from "@aether/types";
 
 export interface ExposureLeg {
   payer: AgentId;
@@ -17,17 +17,44 @@ export interface NetPosition {
 }
 
 /**
- * Bilateral exposure book. Gross payments accumulate; netting is a view, not a mutation.
- * This is the seed of a CCP: who is exposed to whom, in which currency, right now.
+ * Bilateral exposure book. Gross payments accumulate; netting is a view until
+ * `settleWindow` archives the open book for a currency. Money already moved at
+ * escrow — a window is the CCP photo, not a second payment.
  */
 export class ExposureBook {
   private readonly legs: ExposureLeg[] = [];
+  readonly windows: SettlementWindow[] = [];
   readonly defaultBilateralLimit = 50_000_000;
 
   record(payer: AgentId, payee: AgentId, amount: number, currency: CurrencyCode): void {
     if (amount <= 0) return;
     if (payer === payee) return;
     this.legs.push({ payer, payee, currency, amount });
+  }
+
+  restore(input: { legs: ExposureLeg[]; windows?: SettlementWindow[] }): void {
+    this.legs.splice(0, this.legs.length, ...input.legs);
+    this.windows.splice(0, this.windows.length, ...(input.windows ?? []));
+  }
+
+  settleWindow(input: { id: WindowId; at: Instant; currency: CurrencyCode }): SettlementWindow {
+    const open = this.legs.filter((l) => l.currency === input.currency);
+    const nets = this.nettingGrid(input.currency);
+    const grossVolume = open.reduce((s, l) => s + l.amount, 0);
+    const netVolume = nets.reduce((s, n) => s + n.net, 0);
+    const window: SettlementWindow = {
+      id: input.id,
+      currency: input.currency,
+      at: input.at,
+      nets,
+      legsConsumed: open.length,
+      grossVolume,
+      netVolume,
+    };
+    const kept = this.legs.filter((l) => l.currency !== input.currency);
+    this.legs.splice(0, this.legs.length, ...kept);
+    this.windows.push(window);
+    return window;
   }
 
   gross(payer: AgentId, payee: AgentId, currency: CurrencyCode): number {
@@ -92,6 +119,7 @@ export class ExposureBook {
   snapshot() {
     return {
       legs: this.legs,
+      windows: this.windows,
       usd: {
         positions: this.positions("USD_SIM"),
         netting: this.nettingGrid("USD_SIM"),

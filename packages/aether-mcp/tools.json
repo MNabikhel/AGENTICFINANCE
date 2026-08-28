@@ -97,6 +97,11 @@
       "description": "Move an agent one rung. Skipping rungs is illegal. any→L0 always allowed."
     },
     {
+      "name": "aether_clearing_settle_window",
+      "commandType": "clearing.settle_window",
+      "description": "Close a settlement window: archive net exposure for a currency. Money already moved at escrow."
+    },
+    {
       "name": "aether_ledger_balances",
       "commandType": "ledger.balances",
       "description": "Read account balances. Does not mutate."

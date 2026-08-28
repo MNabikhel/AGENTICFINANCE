@@ -22,6 +22,18 @@ export const AUDIT_DOMAIN = "aether-audit-v1" as const;
 export const AUDIT_GENESIS_PREV = "0".repeat(64);
 export const RECEIPT_ISSUER = "did:aether:runtime" as const;
 
+/**
+ * Pin this. There is no finish date for the kernel.
+ * `liveMoney: false` until adapters exist. Public protocol ≠ live bank.
+ */
+export const PROTOCOL = {
+  spec: "aether.protocol.1",
+  version: "0.3.0",
+  rail: SIM_RAIL_ID,
+  liveMoney: false,
+  currencies: ["USD_SIM", "USDC_SIM"] as const,
+} as const;
+
 export interface Money {
   /** Integer minor units. */
   amount: number;
@@ -80,6 +92,7 @@ export interface PublicKeyRef {
 export type AgentId = `aid_${Ulid}`;
 export type AccountId = `acct_${Ulid}`;
 export type MandateId = `mid_${Ulid}`;
+export type WindowId = `win_${Ulid}`;
 export type HireId = `hid_${Ulid}`;
 export type TransferId = `tid_${Ulid}`;
 export type ReceiptId = `rid_${Ulid}`;
@@ -466,6 +479,16 @@ export interface CircuitState {
   tripped: boolean;
 }
 
+export interface SettlementWindow {
+  id: WindowId;
+  currency: CurrencyCode;
+  at: Instant;
+  nets: Array<{ from: AgentId; to: AgentId; currency: CurrencyCode; net: number }>;
+  legsConsumed: number;
+  grossVolume: number;
+  netVolume: number;
+}
+
 // ---------------------------------------------------------------------------
 // KYA — Know Your Agent (runtime graph the kernel consults)
 // ---------------------------------------------------------------------------
@@ -604,6 +627,7 @@ export type AuditAction =
   | "KYA_ATTEST"
   | "KYA_REVOKE"
   | "CIRCUIT_RESET"
+  | "CLEARING_WINDOW"
   | "AUDIT_VERIFY";
 
 export interface AuditSubject {
@@ -667,6 +691,7 @@ export type CommandType =
   | "ladder.set"
   | "ledger.transfer"
   | "ledger.balances"
+  | "clearing.settle_window"
   | "audit.verify"
   | "receipt.get";
 
@@ -715,6 +740,7 @@ export const ROLE_CAPABILITY: Record<
     "ladder.set",
     "ledger.transfer",
     "ledger.balances",
+    "clearing.settle_window",
     "audit.verify",
     "receipt.get",
   ],
@@ -775,6 +801,7 @@ export const ROLE_CAPABILITY: Record<
     "ladder.set",
     "audit.verify",
     "ledger.balances",
+    "clearing.settle_window",
     "receipt.get",
   ],
 };

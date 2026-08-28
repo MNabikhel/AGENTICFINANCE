@@ -24,6 +24,13 @@ export class DelegationGraph {
   readonly attestations = new Map<DelegationId, DelegationAttestation>();
   readonly blocked = new Set<string>();
 
+  restore(snap: { attestations: DelegationAttestation[]; blocked: string[] }): void {
+    this.attestations.clear();
+    this.blocked.clear();
+    for (const a of snap.attestations) this.attestations.set(a.id, a);
+    for (const b of snap.blocked) this.blocked.add(b);
+  }
+
   attest(input: DelegationAttestation): DelegationAttestation {
     if (input.grantorId === input.delegateId) {
       throw new Error("kya self-delegation forbidden");

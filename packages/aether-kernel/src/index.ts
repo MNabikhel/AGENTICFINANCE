@@ -5,6 +5,8 @@
 
 import {
   createHash,
+  createPrivateKey,
+  createPublicKey,
   generateKeyPairSync,
   sign as nodeSign,
   verify as nodeVerify,
@@ -33,6 +35,9 @@ export class ManualClock implements Clock {
   step(ms = 1000): string {
     this.t += ms;
     return this.now();
+  }
+  set(iso: string): void {
+    this.t = Date.parse(iso);
   }
 }
 
@@ -165,6 +170,14 @@ export class IdFactory {
   private n = 0;
   constructor(private readonly clock: Clock) {}
 
+  get seq(): number {
+    return this.n;
+  }
+
+  setSeq(n: number): void {
+    this.n = n;
+  }
+
   next(prefix: string): string {
     this.n += 1;
     const ms = Date.parse(this.clock.now());
@@ -198,6 +211,32 @@ export function generateEd25519(kid: string): Ed25519Keypair {
   const der = pair.publicKey.export({ type: "spki", format: "der" });
   const x = Buffer.from(der.subarray(-32)).toString("base64url");
   return { kid, privateKey: pair.privateKey, publicKey: pair.publicKey, x };
+}
+
+/** PKCS8/SPKI for durable worlds. Sim keys only — never a live rail secret. */
+export interface ExportedKeypair {
+  kid: string;
+  x: string;
+  pkcs8: string;
+  spki: string;
+}
+
+export function exportKeypair(kp: Ed25519Keypair): ExportedKeypair {
+  return {
+    kid: kp.kid,
+    x: kp.x,
+    pkcs8: Buffer.from(kp.privateKey.export({ type: "pkcs8", format: "der" })).toString("base64"),
+    spki: Buffer.from(kp.publicKey.export({ type: "spki", format: "der" })).toString("base64"),
+  };
+}
+
+export function importKeypair(raw: ExportedKeypair): Ed25519Keypair {
+  return {
+    kid: raw.kid,
+    x: raw.x,
+    privateKey: createPrivateKey({ key: Buffer.from(raw.pkcs8, "base64"), format: "der", type: "pkcs8" }),
+    publicKey: createPublicKey({ key: Buffer.from(raw.spki, "base64"), format: "der", type: "spki" }),
+  };
 }
 
 export function signBytes(privateKey: KeyObject, message: string): string {

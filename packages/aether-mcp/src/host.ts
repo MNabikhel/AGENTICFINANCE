@@ -3,14 +3,14 @@
  * or a demo/control verb. Other agents should speak this, not the HTML room.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Runtime, cmd, type DispatchResult } from "@aether/runtime";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
-import type { AgentId, CommandType } from "@aether/types";
+import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
 
@@ -52,11 +52,18 @@ const ACTOR_SCHEMA = {
   additionalProperties: true,
 } as const;
 
+function dataDir(): string | undefined {
+  const dir = process.env.AETHER_DATA_DIR;
+  return dir && dir.length > 0 ? dir : undefined;
+}
+
 function boot(): Runtime {
+  const dir = dataDir();
   return new Runtime({
     startIso: "2026-08-28T00:00:00.000Z",
     genesisNonce: "01J6AETHERGENESISMCP00000001",
     dailyLimit: 10_000_000,
+    ...(dir ? { dataDir: dir } : {}),
   });
 }
 
@@ -132,6 +139,11 @@ export class AetherMcp {
             inputSchema: { type: "object", properties: {} },
           },
           {
+            name: "aether_protocol",
+            description: "Pin-able protocol card. liveMoney is false until adapters exist.",
+            inputSchema: { type: "object", properties: {} },
+          },
+          {
             name: "aether_reset",
             description: "Replace the in-process runtime with a fresh genesis. Destroys simulated state.",
             inputSchema: { type: "object", properties: {} },
@@ -142,6 +154,11 @@ export class AetherMcp {
     if (method === "resources/list") {
       return {
         resources: [
+          {
+            uri: "aether://protocol",
+            name: "protocol card",
+            mimeType: "application/json",
+          },
           {
             uri: "aether://snapshot",
             name: "runtime snapshot",
@@ -157,6 +174,9 @@ export class AetherMcp {
     }
     if (method === "resources/read") {
       const uri = (params as { uri?: string })?.uri;
+      if (uri === "aether://protocol") {
+        return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(this.runtime.protocolCard()) }] };
+      }
       if (uri === "aether://snapshot") {
         return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(this.runtime.snapshotState()) }] };
       }
@@ -167,7 +187,7 @@ export class AetherMcp {
               uri,
               mimeType: "application/json",
               text: JSON.stringify({
-                protocolVersion: "0.2.1",
+                protocolVersion: PROTOCOL.version,
                 name: "Aether Economic Runtime",
                 description: "Policy, mandate, hire, escrow, settlement, KYA, audit. Rail sim:aether-1.",
                 skills: catalog.tools.map((t) => ({ id: t.name, description: t.description })),
@@ -187,7 +207,15 @@ export class AetherMcp {
 
   callTool(name: string, args: Record<string, unknown>): unknown {
     if (name === "aether_snapshot") return this.runtime.snapshotState();
+    if (name === "aether_protocol") return this.runtime.protocolCard();
     if (name === "aether_reset") {
+      const dir = dataDir();
+      if (dir) {
+        for (const f of ["world.json", "audit.jsonl", "world.json.tmp"]) {
+          const p = join(dir, f);
+          if (existsSync(p)) unlinkSync(p);
+        }
+      }
       this.reset();
       return { ok: true };
     }
