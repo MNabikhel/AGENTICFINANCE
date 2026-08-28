@@ -59,7 +59,7 @@
         "parentId": { "type": "string" },
         "constraints": {
           "type": "array",
-          "description": "An execution_date that has already closed, is inverted, or is unparseable is mandate.window_fresh, not a written corpse.",
+          "description": "An execution_date that has already closed, is inverted, or is unparseable is mandate.window_fresh. A not_before at or after the slip's seven-day exp is mandate.window_reach.",
           "items": {
             "type": "object",
             "required": ["type"],

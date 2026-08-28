@@ -164,6 +164,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "mandate.window_reach") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a calendar that opens after the slip dies`,
+          body: "A permission slip lives seven days. A window that opens after that is not a window. Name a not_before inside the slip, or omit it.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

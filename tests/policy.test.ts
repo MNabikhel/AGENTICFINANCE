@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 79 rules", () => {
-    expect(RULE_IDS).toHaveLength(79);
+  it("has 80 rules", () => {
+    expect(RULE_IDS).toHaveLength(80);
   });
 
   it("denies frozen actors", () => {
@@ -2084,5 +2084,91 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
+  });
+
+  it("denies a window that opens after the slip dies as mandate.window_reach", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        windowMintFresh: true,
+        windowReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.window_reach");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.window_reach when the window opens while the slip lives", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        windowMintFresh: true,
+        windowReachOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.window_reach when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.window_fresh first when a corpse would also open too late", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        windowMintFresh: false,
+        windowReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.window_fresh");
+  });
+
+  it("still names identity.known first when a ghost subject would also open too late", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: false,
+        windowMintFresh: true,
+        windowReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+  });
+
+  it("still names mandate.known_parent first when a ghost parent would also open too late", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: false,
+        windowMintFresh: true,
+        windowReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
   });
 });

@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.71.0",
+  version: "0.72.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -192,6 +192,10 @@ export const DAY_SEC = 86_400;
 export const HOUR_MS = 3_600_000;
 /** One year in milliseconds. KYA hop omit and ceiling (`kya.mint_window`). */
 export const KYA_TTL_MS = 365 * DAY_MS;
+/** Seven days in unix seconds. Intent mandate `exp` from `iat`. */
+export const INTENT_TTL_SEC = 7 * DAY_SEC;
+/** Seven days in milliseconds. Execution windows must open before the slip dies. */
+export const INTENT_TTL_MS = 7 * DAY_MS;
 
 /** Minimum gap between funded occurrences. `ON_DEMAND` has no gap. Monthly is 30 × 24h on the sim clock. */
 export const RECURRENCE_GAP_MS: Record<RecurrenceFrequency, number> = {
@@ -878,10 +882,18 @@ export interface PolicyContext {
    * False when mandate.issue_intent would write an execution_date window that
    * cannot contain now (already closed, inverted, or unparseable Instant).
    * Absent = not issue_intent, or the slip has no execution_date constraint.
-   * Hire/fund still names `payment.execution_date`. A future not_before still mints.
-   * Ghost subject, missing parent, and a wider child keep first deny.
+   * Hire/fund still names `payment.execution_date`. A future not_before still mints
+   * if it opens before the slip dies (`mandate.window_reach`). Ghost subject,
+   * missing parent, and a wider child keep first deny.
    */
   windowMintFresh?: boolean;
+  /**
+   * False when mandate.issue_intent would write a not_before at or after the
+   * slip's seven-day exp. Absent = not issue_intent, or no execution_date constraint.
+   * A closed calendar stays `mandate.window_fresh`. Ghost, parent, and wider child
+   * keep first deny.
+   */
+  windowReachOk?: boolean;
   /**
    * False when issue_cart names a live hire that already has a cartId.
    * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).

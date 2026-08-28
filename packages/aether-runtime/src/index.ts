@@ -65,7 +65,7 @@ import type {
   WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, KYA_TTL_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, INTENT_TTL_SEC, KYA_TTL_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -134,6 +134,15 @@ function executionWindowMintable(c: { not_before?: unknown; not_after?: unknown 
   if (before !== undefined && after !== undefined && after < before) return false;
   if (after !== undefined && now > after) return false;
   return true;
+}
+
+/** A not_before at or after the slip's seven-day exp never overlaps a live intent. */
+function executionWindowReachable(c: { not_before?: unknown }, nowIso: Instant): boolean {
+  if (c.not_before === undefined || c.not_before === null) return true;
+  if (typeof c.not_before !== "string") return false;
+  const before = Date.parse(c.not_before);
+  if (!Number.isFinite(before)) return false;
+  return before < (unixSeconds(nowIso) + INTENT_TTL_SEC) * 1000;
 }
 
 const SIM_INSTRUMENT = {
@@ -927,7 +936,10 @@ export class Runtime {
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
       const win = ctx.proposedConstraints.find((c) => c.type === "payment.execution_date");
-      if (win) ctx.windowMintFresh = executionWindowMintable(win, this.clock.now());
+      if (win) {
+        ctx.windowMintFresh = executionWindowMintable(win, this.clock.now());
+        ctx.windowReachOk = executionWindowReachable(win, this.clock.now());
+      }
     }
     const namedIds = this.namedAgentIds(cmd, body);
     if (namedIds.length > 0) {
@@ -1691,6 +1703,9 @@ export class Runtime {
     if (win && !executionWindowMintable(win, this.clock.now())) {
       throw new Error("intent window already closed");
     }
+    if (win && !executionWindowReachable(win, this.clock.now())) {
+      throw new Error("intent window unreachable");
+    }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",
       id: this.ids.next("mid") as MandateId,
@@ -1699,7 +1714,7 @@ export class Runtime {
       task: String(body.task),
       constraints: body.constraints as MandateConstraint[],
       iat: unixSeconds(this.clock.now()),
-      exp: unixSeconds(this.clock.now()) + 7 * DAY_SEC,
+      exp: unixSeconds(this.clock.now()) + INTENT_TTL_SEC,
     };
     if (typeof body.parentId === "string") {
       if (!this.intents.get(body.parentId as MandateId)) throw new Error("unknown parent intent");

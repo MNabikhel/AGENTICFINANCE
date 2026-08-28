@@ -202,6 +202,7 @@ describe("execution window", () => {
       "future slip",
     );
     expect(r.decision.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("allow");
     expect(r.decision.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("allow");
     const intentId = (r.data as { payload: { id: MandateId } }).payload.id;
     const late = offerHire(rt, {
@@ -218,6 +219,68 @@ describe("execution window", () => {
       "deny",
     );
     expect(late.attempt.error.decision?.remediation?.ruleId).toBe("payment.execution_date");
+  });
+
+  it("refuses a window that opens after the slip dies as mandate.window_reach", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const before = rt.intents.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy research next month",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+          {
+            type: "payment.allowed_payees",
+            allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+          },
+          {
+            type: "payment.execution_date",
+            not_before: "2026-09-10T00:00:00.000Z",
+            not_after: "2026-09-15T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.window_reach");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.intents.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("opens after the slip dies"))).toBe(true);
+  });
+
+  it("still names mandate.window_fresh first when a corpse would also open too late", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "closed and also next month",
+        constraints: [
+          {
+            type: "payment.execution_date",
+            not_before: "2026-09-10T00:00:00.000Z",
+            not_after: "2020-01-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.window_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.window_fresh");
+    expect(rt.intents.size).toBe(before);
   });
 
   it("still names identity.known first when the subject is missing", () => {

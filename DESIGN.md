@@ -663,6 +663,7 @@ export interface PolicyContext {
   kyaMintFresh?: boolean;           // false when kya.attest would write expiresAt ≤ now (or an unparseable Instant)
   kyaMintWindowOk?: boolean;        // false when kya.attest would write expiresAt after now + one year (omit is the ceiling)
   windowMintFresh?: boolean;        // false when issue_intent would write an execution_date that cannot contain now
+  windowReachOk?: boolean;          // false when issue_intent would write a not_before at or after the slip's seven-day exp
 }
 ```
 
@@ -839,7 +840,8 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 76 | `ladder.birth_rung` | identity.register | autonomyLevel is 5 | — | birth rung is L0–L4 (`ladder.set` 4→5 after a freeze test) |
 | 77 | `kya.mint_fresh` | kya.attest | expiresAt ≤ now, or unparseable Instant (omit is one year from now) | — | handshake expires after now |
 | 78 | `kya.mint_window` | kya.attest | expiresAt after now + one year (omit is that ceiling) | — | handshake expires within one year |
-| 79 | `mandate.window_fresh` | issue_intent with execution_date | not_after already past, inverted window, or unparseable Instant (a future not_before still mints) | — | window can still contain a now |
+| 79 | `mandate.window_fresh` | issue_intent with execution_date | not_after already past, inverted window, or unparseable Instant (a future not_before still mints if it opens while the slip lives) | — | window can still contain a now |
+| 80 | `mandate.window_reach` | issue_intent with execution_date | not_before at or after the slip's seven-day exp | — | window opens while the intent is live |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations. L5 cannot be minted at `identity.register` (`ladder.birth_rung`); that rung is a climb after a freeze that was actually tested.
 
@@ -1029,7 +1031,7 @@ export interface AetherError {
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
 | `ladder.test.ts` | Skip 2→4 is `ladder.legal`; L5 before freeze test is `ladder.legal`; minting L5 at register is `ladder.birth_rung`; freeze restores the prior rung |
 | `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows and payment-required before deliver are `hire.state`; funding without cash is `ledger.sufficient`; quoting an FX SKU without a window is `market.fx_window` |
-| `window.test.ts` | Completing a funded hire after `not_after` is legal; a new hire is `payment.execution_date`; minting a closed, inverted, or unparseable window is `mandate.window_fresh`, not a written corpse; a future `not_before` still mints; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
+| `window.test.ts` | Completing a funded hire after `not_after` is legal; a new hire is `payment.execution_date`; minting a closed, inverted, or unparseable window is `mandate.window_fresh`, not a written corpse; a future `not_before` still mints if it opens while the slip lives; a window that opens after the seven-day exp is `mandate.window_reach`; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |

@@ -1173,6 +1173,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.window_fresh", "deny", "execution window already closed");
     },
   },
+  {
+    id: "mandate.window_reach",
+    evaluate: (ctx) => {
+      if (ctx.windowReachOk === undefined) return v("mandate.window_reach", "allow", "not a windowed mint");
+      return ctx.windowReachOk
+        ? v("mandate.window_reach", "allow", "execution window opens while the slip lives")
+        : v("mandate.window_reach", "deny", "execution window opens after the slip dies");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1414,7 +1423,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.window_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with a closed calendar. Name a not_after after now, or omit the window. An inverted or unparseable Instant is not a window. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.execution_date.",
+    hint: "A slip cannot be born with a closed calendar. Name a not_after after now, or omit the window. An inverted or unparseable Instant is not a window. A window that opens after the slip dies is mandate.window_reach. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.execution_date.",
+  },
+  "mandate.window_reach": {
+    kind: "none",
+    hint: "A slip lives seven days. A not_before at or after that exp never opens. Name an earlier Instant, or omit not_before. A closed calendar stays mandate.window_fresh.",
   },
   "payment.execution_date": {
     kind: "none",
