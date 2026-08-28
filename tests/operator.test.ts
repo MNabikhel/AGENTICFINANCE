@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import { fundHire, offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
+import { fundHire, offerHire, completeHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { SIM_RAIL } from "@aether/settlement";
 import { PROTOCOL } from "@aether/types";
 import type { HireContract, JournalEntry, MandateId } from "@aether/types";
@@ -78,7 +78,7 @@ describe("SIM_RAIL", () => {
     expect(SIM_RAIL.live).toBe(false);
     expect(SIM_RAIL.id).toBe(PROTOCOL.rail);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.65.0");
+    expect(PROTOCOL.version).toBe("0.66.0");
   });
 });
 
@@ -601,5 +601,77 @@ describe("constraint values at the shape gate", () => {
     expect(r.error.decision).toBeUndefined();
     expect(rt.intents.size).toBe(before);
     expect(rt.clock.now()).toBe(clockBefore);
+  });
+});
+
+describe("idempotency.nonce", () => {
+  it("does not name a settled envelope nonce on a transfer that happens to carry one", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    rt.nonces.add("settled-envelope");
+    const cashBefore = rt.ledger.balanceByName("procurement:cash").amount;
+    const r = must(
+      rt.dispatch(
+        cmd("ledger.transfer", treasury.id, {
+          fromAccount: "procurement:cash",
+          toAccount: "vendor:cash",
+          amount: { amount: 1, currency: "USD_SIM" },
+          nonce: "settled-envelope",
+        }),
+      ),
+      "transfer with leftover nonce",
+    );
+    expect(r.decision.trace.find((t) => t.ruleId === "idempotency.nonce")?.verdict).toBe("allow");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cashBefore - 1);
+    expect(rt.nonces.has("settled-envelope")).toBe(true);
+    expect(rt.nonces.size).toBe(1);
+  });
+
+  it("still names idempotency.nonce first when envelope.submit reuses a settled nonce", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const first = completeHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "first settle",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+      qty: 1,
+      deliverable: { ok: true },
+    });
+    const stolen = `nonce-${first.hireId}`;
+    expect(rt.nonces.has(stolen)).toBe(true);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "second settle",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    const created = must(offered.attempt, "second hire");
+    const hireId = (created.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { ok: true } })), "deliver");
+    must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
+    const before = rt.hires.get(hireId)?.state;
+    const r = rt.dispatch(cmd("envelope.submit", desk.id, { hireId, nonce: stolen }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("idempotency.nonce");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "idempotency.nonce")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe(before);
+    expect(rt.nonces.size).toBe(1);
   });
 });

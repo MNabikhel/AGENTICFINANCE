@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.65.0",
+  version: "0.66.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -614,7 +614,11 @@ export interface PolicyContext {
   circuit: CircuitState;
   /** Market-maker FX rate in millionths. Absent unless quoting/settling FX. */
   fxRateE6?: number;
-  /** True when envelope nonce was already settled. */
+  /**
+   * True when envelope.submit’s nonce was already settled.
+   * Absent = not a payment submit, or the body omitted nonce (mutate mints one).
+   * A leftover `nonce` on another verb is not this flag.
+   */
   nonceSeen?: boolean;
   /** False when MM cannot pay the `to` currency. */
   mmInventoryOk?: boolean;

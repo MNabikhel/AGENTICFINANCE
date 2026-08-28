@@ -485,10 +485,14 @@ export const RULES: readonly Rule[] = [
   },
   {
     id: "idempotency.nonce",
-    evaluate: (ctx) =>
-      ctx.nonceSeen
+    evaluate: (ctx) => {
+      if (ctx.commandType !== "envelope.submit") {
+        return v("idempotency.nonce", "allow", "not a payment submit");
+      }
+      return ctx.nonceSeen
         ? v("idempotency.nonce", "deny", "nonce already settled")
-        : v("idempotency.nonce", "allow", "nonce unused"),
+        : v("idempotency.nonce", "allow", "nonce unused");
+    },
   },
   {
     id: "mm.spread_bound",

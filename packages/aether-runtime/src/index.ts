@@ -858,7 +858,7 @@ export class Runtime {
     if (amount) ctx.amount = amount;
     if (payeeId) ctx.payeeId = payeeId;
     if (fxRateE6 !== undefined) ctx.fxRateE6 = fxRateE6;
-    if (nonce !== undefined) ctx.nonceSeen = this.nonces.has(nonce);
+    if (cmd.type === "envelope.submit" && nonce !== undefined) ctx.nonceSeen = this.nonces.has(nonce);
     if (mmInventoryOk !== undefined) ctx.mmInventoryOk = mmInventoryOk;
     if (chainOk !== undefined) ctx.chainOk = chainOk;
     if (thresholdWaived) ctx.thresholdWaived = true;

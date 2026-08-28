@@ -779,7 +779,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 19 | `hire.no_self_deal` | hire.create | `buyerId === sellerId` | — | distinct |
 | 20 | `counterparty.known` | hire/settle | payee/seller not in registry | — | registered |
 | 21 | `instrument.sim_only` | settle | `payment_instrument.type !== "sim_ledger"` | — | sim |
-| 22 | `idempotency.nonce` | submit payment | nonce seen | — | new nonce |
+| 22 | `idempotency.nonce` | envelope.submit | nonce already in the settled table | — | new nonce (a leftover nonce on another verb is not this refuse) |
 | 23 | `mm.spread_bound` | MM quote | `rateE6` outside `[980_000, 1_020_000]` (200 bps) | — | inside band |
 | 24 | `mm.inventory` | MM accept FX | MM cash in `to` currency < payout | — | inventory exists |
 | 25 | `audit.writable` | always (runtime injects) | audit head missing / verify dirty | — | chain healthy |
@@ -962,7 +962,7 @@ Aether is an **economic control plane for agents**, not a product in an adjacent
 4. **Copied AP2 or x402 source.** Re-implement shapes. Do not vendor their SDKs.
 5. **LLM-in-the-policy-loop.** An agent may *propose* a command in natural language; `evaluate()` is a pure function of `PolicyContext`. No “ask the model if this looks risky.”
 6. **Consumer wallets, KYC products, yield, lending, perpetual leverage.**
-7. **Silent retries that re-spend.** Nonce table is durable. `idempotency.nonce` is deny, not “best effort.” Command-level idempotency caches **allow/escalate only**. A deny is never a cached success.
+7. **Silent retries that re-spend.** Nonce table is durable. `idempotency.nonce` is deny on `envelope.submit`, not “best effort,” and not a leftover `nonce` on a transfer. Command-level idempotency caches **allow/escalate only**. A deny is never a cached success.
 8. **Mutable audit or ledger history.** Corrections are reversing journal entries + new audit lines.
 9. **Autonomy L5 as ‘god mode’.** L5 skips *humans*, not constraints, circuits, or freezes.
 10. **Generic multi-agent chat framework.** No mailbox product. Messages that are not commands/quotes/receipts do not belong here.
@@ -1026,7 +1026,7 @@ export interface AetherError {
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |
 | `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` replay + `aether_hire_refund`; an unknown `actor` alias is `actor.known`, not silent system; omit or `system` still bootstraps |
-| `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false`; ghost book is `ledger.known_account`; mixed-currency transfer is `ledger.same_currency`; overdraft is `ledger.sufficient`; dest overflow is `ledger.safe_balance`; transfer from equity or escrow is `ledger.operating_book`; an amount_range with no max is `command.malformed` |
+| `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false`; ghost book is `ledger.known_account`; mixed-currency transfer is `ledger.same_currency`; overdraft is `ledger.sufficient`; dest overflow is `ledger.safe_balance`; transfer from equity or escrow is `ledger.operating_book`; an amount_range with no max is `command.malformed`; a leftover nonce on a transfer is not `idempotency.nonce` |
 | `inspect.test.ts` | `aether_get` / inspect by id; MCP command schemas; expired approval tickets refuse resolve; a missing receipt is `receipt.known`, not an empty success |
 | `approval.test.ts` | Ghost ticket is `approval.known`; expired or already-resolved is `approval.pending`; approving a stale pause or a ticket with no held command is `approval.replay`, not a mutate throw after yes; reject of a dead pause still releases the quote; an L1 hire.create ticket that a grown-up signs is an offered hire, not a stuck escalate |
 | `identity.test.ts` | Ghost freeze / handshake principal / revoke is `identity.known`; attesting yourself is `kya.not_self`; nested handshake with a ghost parent is `kya.known_parent`; ghost or foreign attestationId revoke is `kya.known_attestation`; L4 writing a founder handshake is `kya.party`; omitted principalId is the speaker, not the supervisor; L4 omitting `maxAutonomy` (L5) is `kya.capability_subset`; reused alias, second market maker, or a taken USDC book is `identity.unique_key`; vendor/MM USDC `ownerId` is the agent, not system; minting L5 at register is `ladder.birth_rung`; unfreeze of a live unfrozen agent (and a second freeze) is `identity.freeze_state`; a second live handshake for the same pair is `kya.unique_live`; a missing speaker is `actor.known`, not a throw before policy; system spending or minting a second agent is `actor.system_scope`; HTTP/MCP unknown alias is `actor.known`, not silent system |

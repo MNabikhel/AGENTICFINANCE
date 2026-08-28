@@ -1826,4 +1826,34 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("ladder.min_level");
   });
+
+  it("denies a reused envelope nonce as idempotency.nonce", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "envelope.submit",
+        nonceSeen: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "idempotency.nonce")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("idempotency.nonce");
+  });
+
+  it("does not name idempotency.nonce when a transfer carries a leftover nonce flag", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        nonceSeen: true,
+        accountsKnown: true,
+        accountsSameCurrency: true,
+        fundsOk: true,
+        balancesSafe: true,
+        operatingBooksOk: true,
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "idempotency.nonce")?.verdict).toBe("allow");
+    expect(d.verdict).not.toBe("deny");
+  });
 });
