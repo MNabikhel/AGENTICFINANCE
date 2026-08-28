@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluate } from "@aether/policy";
+import { evaluate, remediationFor } from "@aether/policy";
 import { RULE_IDS } from "@aether/policy";
 import type { Agent, IntentMandate, MandateConstraint, PolicyContext, Signed } from "@aether/types";
 
@@ -100,6 +100,9 @@ describe("policy catalog", () => {
       }),
     );
     expect(d.trace.find((t) => t.ruleId === "payment.amount_range")?.verdict).toBe("deny");
+    const rem = remediationFor(d);
+    expect(rem?.kind).toBe("issue_intent");
+    expect(rem?.commandType).toBe("mandate.issue_intent");
   });
 
   it("escalates procurement above $5,000", () => {
@@ -298,5 +301,58 @@ describe("policy catalog", () => {
     );
     expect(d.trace.find((t) => t.ruleId === "payment.parent_budget")?.verdict).toBe("deny");
     expect(d.verdict).toBe("deny");
+  });
+
+  it("tells an agent to reset the fuse when the daily circuit denies", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 1, currency: "USD_SIM" },
+        circuit: { dailySpend: 0, dailyLimit: 10, tripped: true },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "circuit.daily")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("reset_circuit");
+  });
+
+  it("tells an agent to wait on the approval ticket when policy escalates", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 640000, currency: "USD_SIM" },
+        hire: {
+          id: "hid_draft",
+          buyerId: "aid_01J6AETHERAGENT00000000001",
+          sellerId: "aid_01J6AETHERAGENT00000000002",
+          sku: "compute.gpu.hours",
+          spec: "x",
+          price: { amount: 640000, currency: "USD_SIM" },
+          state: "offered",
+          rfqId: "rfq_01J6AETHERRFQ000000000001",
+          quoteId: "qte_01J6AETHERQTE000000000001",
+          intentId: "mid_01J6AETHERMAND00000000001",
+          escrowAccountId: "acct_01J6AETHERACCT00000000002",
+          createdAt: "2026-08-28T00:00:00.000Z",
+        },
+        intent: {
+          issuer: "did:aether:human",
+          kid: "k",
+          alg: "EdDSA",
+          jws: "x",
+          payload: {
+            vct: "aether.mandate.intent.open.1",
+            id: "mid_01J6AETHERMAND00000000001",
+            issuerId: "aid_human",
+            subjectId: "aid_01J6AETHERAGENT00000000001",
+            task: "t",
+            constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 700000 }],
+            iat: 1,
+            exp: 9_999_999_999,
+          },
+        },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(remediationFor(d)?.kind).toBe("wait_approval");
   });
 });

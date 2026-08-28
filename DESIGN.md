@@ -506,7 +506,7 @@ funded   → refunded      (buyer+policy or auditor after timeout)
 
 Funding posts: `Dr escrow:{hire}  Cr buyer:cash`.  
 Release posts: `Dr seller:cash  Cr escrow:{hire}`.  
-Refund posts: `Dr buyer:cash  Cr escrow:{hire}`.
+Refund posts: `Dr buyer:cash  Cr escrow:{hire}`. Spend counters decrement along the parent intent chain. Circuit stays sticky. Live rails later implement `SIM_RAIL`’s shape (`require` / `receipt` / `ok` / `fail`); they do not enter `evaluate()`. `SIM_RAIL.live === false`.
 
 ### 2.6 Ledger (double-entry)
 
@@ -576,6 +576,7 @@ export interface PolicyDecision {
   verdict: Verdict;                 // deny > escalate > allow
   trace: RuleVerdict[];             // ALL rules, in catalog order
   approvalId?: `apd_${Ulid}`;
+  remediation?: Remediation;        // on deny/escalate. `kind` is for machines
 }
 
 export interface ApprovalTicket {
@@ -869,7 +870,7 @@ Aether is an **economic control plane for agents**, not a product in an adjacent
 4. **Copied AP2 or x402 source.** Re-implement shapes. Do not vendor their SDKs.
 5. **LLM-in-the-policy-loop.** An agent may *propose* a command in natural language; `evaluate()` is a pure function of `PolicyContext`. No “ask the model if this looks risky.”
 6. **Consumer wallets, KYC products, yield, lending, perpetual leverage.**
-7. **Silent retries that re-spend.** Nonce table is durable. `idempotency.nonce` is deny, not “best effort.”
+7. **Silent retries that re-spend.** Nonce table is durable. `idempotency.nonce` is deny, not “best effort.” Command-level idempotency caches **allow/escalate only**. A deny is never a cached success.
 8. **Mutable audit or ledger history.** Corrections are reversing journal entries + new audit lines.
 9. **Autonomy L5 as ‘god mode’.** L5 skips *humans*, not constraints, circuits, or freezes.
 10. **Generic multi-agent chat framework.** No mailbox product. Messages that are not commands/quotes/receipts do not belong here.
@@ -882,16 +883,21 @@ Aether is an **economic control plane for agents**, not a product in an adjacent
 
 ```ts
 async function dispatch(cmd: Command): Promise<Result<CommandResult>> {
+  const key = cmd.idempotencyKey ?? autoKey(cmd);     // money-moving verbs only
+  if (key && cache.has(key) && !opts.thresholdWaived) return replay(cache.get(key));
   const ctx = await snapshotPolicyContext(cmd);       // read-only
   const decision = evaluate(ctx);                     // pure
+  decision.remediation = remediationFor(decision);    // typed next step; not English
   await audit.append({ action: "POLICY_DECISION", payload: decision });
-  if (decision.verdict === "deny") return fail(decision);
+  if (decision.verdict === "deny") return fail(decision); // NOT cached
   if (decision.verdict === "escalate") {
     const ticket = await approvals.create(cmd, decision);
+    cache.set(key, { kind: "escalated", ticket });
     return { ok: true, value: { kind: "escalated", ticket } };
   }
   const result = await mutate(cmd);                   // ledger / hire / mandate
   await audit.append({ action: mutationAction(cmd), payload: result });
+  cache.set(key, result);
   return { ok: true, value: result };
 }
 ```
@@ -905,7 +911,7 @@ export interface AetherError {
   status: 400 | 401 | 403 | 402 | 409 | 422 | 500;
   detail: string;
   instance: string;
-  extra?: { ruleId?: string; seq?: number };
+  extra?: { ruleId?: string; seq?: number; remediation?: Remediation };
 }
 ```
 
@@ -926,7 +932,9 @@ export interface AetherError {
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |
-| `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` + `aether_demo_sub_hire` |
+| `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` replay + `aether_hire_refund` |
+| `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false` |
+| `world.test.ts` | Durable boot restores keys and audit head; settlement window restores |
 | `world.test.ts` | Durable boot restores keys and audit head; settlement window restores |
 
 Determinism: same fixture + frozen clock ⇒ bit-identical `payloadHash` sequence from seq 1 onward (seq 0 nonce is fixture-fixed).

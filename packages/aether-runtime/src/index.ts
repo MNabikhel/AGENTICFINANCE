@@ -21,8 +21,8 @@ import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate"
 import { fxPayout } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, resolveKya } from "@aether/kya";
-import { evaluate } from "@aether/policy";
-import { issueReceipt, paymentRequired, settlementFail, settlementOk } from "@aether/settlement";
+import { evaluate, remediationFor } from "@aether/policy";
+import { SIM_RAIL, settlementFail } from "@aether/settlement";
 import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
 import { WORLD_VERSION, type WorldState } from "./world.js";
 import type {
@@ -68,6 +68,7 @@ export type DispatchOk = {
   decision: PolicyDecision;
   data: unknown;
   ticket?: ApprovalTicket;
+  replayed?: true;
 };
 
 export type DispatchFail = {
@@ -76,6 +77,27 @@ export type DispatchFail = {
 };
 
 export type DispatchResult = Result<DispatchOk, DispatchFail>;
+
+/** Same body, same actor: replay. Denies are not cached so a fix can be retried. */
+const AUTO_IDEMPOTENT = new Set<CommandType>([
+  "identity.register",
+  "hire.create",
+  "hire.fund",
+  "hire.release",
+  "hire.refund",
+  "envelope.submit",
+  "market.fx_settle",
+]);
+
+function idempotencyKeyOf(cmd: Command): string | undefined {
+  if (typeof cmd.idempotencyKey === "string" && cmd.idempotencyKey.length > 0) return cmd.idempotencyKey;
+  if (!AUTO_IDEMPOTENT.has(cmd.type)) return undefined;
+  return payloadHash({ type: cmd.type, actorId: cmd.actorId, body: cmd.body });
+}
+
+function cloneResult(result: DispatchResult): DispatchResult {
+  return JSON.parse(JSON.stringify(result)) as DispatchResult;
+}
 
 const SIM_INSTRUMENT = {
   id: "sim-ledger",
@@ -111,6 +133,7 @@ export class Runtime {
   readonly clearing = new ExposureBook();
   readonly kya = new DelegationGraph();
   readonly killSwitchTested = new Set<AgentId>();
+  readonly idempotency = new Map<string, DispatchResult>();
   circuitTripped = false;
   tldr = IDLE_TLDR;
   analogDoc: Analog = analog();
@@ -213,10 +236,21 @@ export class Runtime {
   }
 
   dispatch(cmd: Command, opts?: { thresholdWaived?: boolean; skipStep?: boolean }): DispatchResult {
+    const key = idempotencyKeyOf(cmd);
+    if (key && !opts?.thresholdWaived) {
+      const hit = this.idempotency.get(key);
+      if (hit && this.idempotencyHitStillValid(hit)) {
+        const cloned = cloneResult(hit);
+        if (cloned.ok) cloned.value.replayed = true;
+        return cloned;
+      }
+    }
     if (!opts?.skipStep) this.clock.step();
     const actor = cmd.actorId === "system" ? this.systemActor() : this.identity.require(cmd.actorId);
     const ctx = this.snapshot(cmd, actor, opts?.thresholdWaived === true);
     const decision = evaluate(ctx);
+    const rem = remediationFor(decision);
+    if (rem) decision.remediation = rem;
     this.decisions.push({ at: this.clock.now(), type: cmd.type, decision });
     this.audit.append({
       clock: this.clock,
@@ -232,20 +266,28 @@ export class Runtime {
         }
         this.pushStory(cmd, actor, decision, ctx);
         const rule = decision.trace.find((t) => t.verdict === "deny");
+        const extra = {
+          ...(rule?.ruleId ? { ruleId: rule.ruleId } : {}),
+          ...(rem ? { remediation: rem } : {}),
+        };
         return fail({
-          error: err("policy.deny", "Policy deny", 422, rule?.message ?? "denied", { ruleId: rule?.ruleId }),
+          error: err("policy.deny", "Policy deny", 422, rule?.message ?? "denied", extra),
           decision,
         });
       }
       if (decision.verdict === "escalate") {
         this.pushStory(cmd, actor, decision, ctx);
         const ticket = this.openTicket(cmd, decision);
-        return ok({ kind: "escalated", decision, data: { ticket }, ticket });
+        const result = ok({ kind: "escalated" as const, decision, data: { ticket }, ticket });
+        if (key) this.idempotency.set(key, cloneResult(result));
+        return result;
       }
       try {
         const data = this.mutate(cmd, actor);
         this.pushStory(cmd, actor, decision, ctx);
-        return ok({ kind: "allow", decision, data });
+        const result = ok({ kind: "allow" as const, decision, data });
+        if (key) this.idempotency.set(key, cloneResult(result));
+        return result;
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         return fail({
@@ -358,6 +400,7 @@ export class Runtime {
       kya: { attestations: [...this.kya.attestations.values()], blocked: [...this.kya.blocked] },
       clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.windows },
       killSwitchTested: [...this.killSwitchTested],
+      idempotency: [...this.idempotency.entries()],
     };
   }
 
@@ -422,6 +465,8 @@ export class Runtime {
     this.clearing.restore(world.clearing);
     this.killSwitchTested.clear();
     for (const id of world.killSwitchTested) this.killSwitchTested.add(id);
+    this.idempotency.clear();
+    for (const [k, v] of world.idempotency ?? []) this.idempotency.set(k, v as DispatchResult);
   }
 
   private systemActor(): Agent {
@@ -462,6 +507,15 @@ export class Runtime {
       payload: { id: res.value.id, description },
     });
     return res.value;
+  }
+
+  /** Rejected/expired escalation tickets must not trap a later retry of the same body. */
+  private idempotencyHitStillValid(hit: DispatchResult): boolean {
+    if (!hit.ok || hit.value.kind !== "escalated") return true;
+    const ticketId = hit.value.ticket?.id;
+    if (!ticketId) return true;
+    const live = this.approvals.get(ticketId);
+    return !live || live.status === "pending";
   }
 
   private openTicket(cmd: Command, decision: PolicyDecision): ApprovalTicket {
@@ -586,7 +640,11 @@ export class Runtime {
       actor,
       decision,
       ...(counterpart?.displayName ? { counterpartName: counterpart.displayName } : {}),
-      ...(ctx.amount ? { amountMinor: ctx.amount.amount } : {}),
+      ...(ctx.amount
+        ? { amountMinor: ctx.amount.amount }
+        : ctx.hire
+          ? { amountMinor: ctx.hire.price.amount }
+          : {}),
       ...(ctx.hire?.sku || typeof body.sku === "string" ? { sku: ctx.hire?.sku ?? String(body.sku) } : {}),
       ...(typeof body.task === "string" ? { task: String(body.task) } : {}),
     });
@@ -654,7 +712,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -733,6 +791,8 @@ export class Runtime {
         return this.mutHireAccept(body, actor);
       case "hire.fund":
         return this.mutHireFund(body, actor);
+      case "hire.refund":
+        return this.mutHireRefund(body, actor);
       case "hire.deliver":
         return this.mutHireDeliver(body);
       case "hire.release":
@@ -1126,6 +1186,33 @@ export class Runtime {
     return next;
   }
 
+  private mutHireRefund(body: Record<string, unknown>, actor: Agent) {
+    const hire = this.requireHire(body.hireId as HireId);
+    if (hire.buyerId !== actor.id && actor.role !== "treasury") {
+      throw new Error("only buyer or treasury may refund");
+    }
+    const next = transitionHire(hire, "refunded");
+    const buyer = this.identity.require(hire.buyerId);
+    this.postJournal(
+      `Refund escrow ${hire.sku}`,
+      [
+        { accountId: buyer.accountId, debit: hire.price.amount, credit: 0 },
+        { accountId: hire.escrowAccountId, debit: 0, credit: hire.price.amount },
+      ],
+      { hireId: hire.id },
+    );
+    this.hires.set(next.id, next);
+    this.noteRefund(hire);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "HIRE_TRANSITION",
+      subjects: [{ type: "hire", id: hire.id }],
+      payload: { id: hire.id, state: next.state },
+    });
+    return next;
+  }
+
   private mutHireDeliver(body: Record<string, unknown>) {
     const hire = this.requireHire(body.hireId as HireId);
     const next = transitionHire(hire, "delivered");
@@ -1144,7 +1231,7 @@ export class Runtime {
   private mutRequire(body: Record<string, unknown>) {
     const hire = this.requireHire(body.hireId as HireId);
     const seller = this.identity.require(hire.sellerId);
-    const required = paymentRequired({
+    const required = SIM_RAIL.require({
       url: `aether://hire/${hire.id}/release`,
       description: `Release escrow for ${hire.sku}`,
       amount: hire.price.amount,
@@ -1194,7 +1281,7 @@ export class Runtime {
       { hireId: hire.id, paymentMandateId: payment.payload.id },
     );
     this.hires.set(next.id, next);
-    const receipt = issueReceipt({
+    const receipt = SIM_RAIL.receipt({
       id: this.ids.next("rid") as Receipt["id"],
       payment: payment.payload,
       paymentId: this.ids.next("tid") as Receipt["payment_id"],
@@ -1217,7 +1304,7 @@ export class Runtime {
       subjects: [{ type: "receipt", id: receipt.id }],
       payload: { id: receipt.id, reference: receipt.reference },
     });
-    return { hire: next, receipt, settlement: settlementOk({ transaction: receipt.payment_id, payer: actor.accountId, receiptId: receipt.id }) };
+    return { hire: next, receipt, settlement: SIM_RAIL.ok({ transaction: receipt.payment_id, payer: actor.accountId, receiptId: receipt.id }) };
   }
 
   private mutFx(body: Record<string, unknown>, actor: Agent) {
@@ -1264,7 +1351,14 @@ export class Runtime {
       subjects: [{ type: "approval", id: ticket.id }],
       payload: { id: ticket.id, decision },
     });
-    if (decision === "rejected") return next;
+    if (decision === "rejected") {
+      const pending = this.pending.get(ticket.id);
+      if (pending) {
+        const k = idempotencyKeyOf(pending);
+        if (k) this.idempotency.delete(k);
+      }
+      return next;
+    }
     const pending = this.pending.get(ticket.id);
     if (!pending) throw new Error("missing pending command");
     const replay = this.dispatch(pending, { thresholdWaived: true, skipStep: true });
@@ -1363,6 +1457,19 @@ export class Runtime {
     this.noteVolume(hire.price.amount);
   }
 
+  private noteRefund(hire: HireContract) {
+    let cursor: MandateId | undefined = hire.intentId;
+    const seen = new Set<MandateId>();
+    while (cursor && !seen.has(cursor)) {
+      seen.add(cursor);
+      const next = (this.spentByIntent.get(cursor) ?? 0) - hire.price.amount;
+      this.spentByIntent.set(cursor, next < 0 ? 0 : next);
+      cursor = this.intents.get(cursor)?.payload.parentId;
+    }
+    this.clearing.record(hire.sellerId, hire.buyerId, hire.price.amount, hire.price.currency);
+    this.dailySpend = Math.max(0, this.dailySpend - hire.price.amount);
+  }
+
   private noteVolume(volume: number) {
     this.dailySpend += volume;
     if (this.dailySpend > this.dailyLimit) this.circuitTripped = true;
@@ -1412,8 +1519,8 @@ export class Runtime {
   }
 }
 
-export function cmd(type: CommandType, actorId: AgentId | "system", body: unknown): Command {
-  return { type, actorId, body };
+export function cmd(type: CommandType, actorId: AgentId | "system", body: unknown, idempotencyKey?: string): Command {
+  return idempotencyKey ? { type, actorId, body, idempotencyKey } : { type, actorId, body };
 }
 
 function skillsFor(role: AgentRole): Array<{ id: string; name: string; description: string }> {

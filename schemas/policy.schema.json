@@ -19,6 +19,27 @@
           "evidence": { "type": "object" }
         }
       }
+    },
+    "remediation": {
+      "type": "object",
+      "required": ["kind", "ruleId", "hint"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "issue_intent",
+            "reset_circuit",
+            "unfreeze_actor",
+            "unfreeze_principal",
+            "attest_kya",
+            "wait_approval",
+            "role_forbidden",
+            "none"
+          ]
+        },
+        "ruleId": { "type": "string" },
+        "hint": { "type": "string" },
+        "commandType": { "type": "string" }
+      }
     }
   }
 }

@@ -175,6 +175,26 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "hire.refund") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not unwind escrow${amt ? ` (${amt})` : ""}`,
+        body: "Refund is only legal while the hire is funded and work has not been delivered. The referee still checks who may pull the money back.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `Escrow returned${amt ? ` (${amt})` : ""} to the buyer`,
+      body: "The hire was unwound before delivery. Mandate spend goes back. The daily fuse stays sticky if it already blew — refund is not a circuit reset.",
+      tone: "settle",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "envelope.submit") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");

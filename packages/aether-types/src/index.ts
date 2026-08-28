@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.3.0",
+  version: "0.4.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -56,7 +56,7 @@ export interface AetherError {
   status: 400 | 401 | 403 | 402 | 409 | 422 | 500;
   detail: string;
   instance: string;
-  extra?: { ruleId?: string; seq?: number };
+  extra?: { ruleId?: string; seq?: number; remediation?: Remediation };
 }
 
 // ---------------------------------------------------------------------------
@@ -440,6 +440,16 @@ export interface LedgerSnapshot {
 
 export type Verdict = "allow" | "deny" | "escalate";
 
+export type RemediationKind =
+  | "issue_intent"
+  | "reset_circuit"
+  | "unfreeze_actor"
+  | "unfreeze_principal"
+  | "attest_kya"
+  | "wait_approval"
+  | "role_forbidden"
+  | "none";
+
 export interface RuleVerdict {
   ruleId: string;
   verdict: Verdict;
@@ -451,6 +461,7 @@ export interface PolicyDecision {
   verdict: Verdict;
   trace: RuleVerdict[];
   approvalId?: ApprovalId;
+  remediation?: Remediation;
 }
 
 export interface ApprovalTicket {
@@ -695,11 +706,22 @@ export type CommandType =
   | "audit.verify"
   | "receipt.get";
 
+/**
+ * What another agent should do next. English is for humans; `kind` is for machines.
+ * `commandType` is a hint for a follow-up Command, not a guaranteed second dispatch.
+ */
+export interface Remediation {
+  kind: RemediationKind;
+  ruleId: string;
+  hint: string;
+  commandType?: CommandType;
+}
+
 export interface Command<T extends CommandType = CommandType, B = unknown> {
   type: T;
   actorId: AgentId | "system";
   body: B;
-  /** Stable bytes for approval replay. Set by runtime before hash. */
+  /** Client-supplied or auto-hashed for money-moving verbs. Denies are never keyed. */
   idempotencyKey?: string;
 }
 
@@ -708,6 +730,7 @@ export const KYA_GATED_COMMANDS: readonly CommandType[] = [
   "hire.create",
   "hire.fund",
   "hire.release",
+  "hire.refund",
   "envelope.submit",
   "mandate.issue_intent",
   "kya.attest",
@@ -755,6 +778,7 @@ export const ROLE_CAPABILITY: Record<
     "hire.accept",
     "hire.fund",
     "hire.release",
+    "hire.refund",
     "envelope.require",
     "envelope.submit",
     "ledger.balances",

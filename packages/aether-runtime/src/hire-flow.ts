@@ -80,7 +80,7 @@ export function completeHire(
   return { hireId };
 }
 
-export function finishHire(
+export function fundHire(
   rt: Runtime,
   input: {
     hireId: string;
@@ -90,7 +90,6 @@ export function finishHire(
     intentId: string;
     qty: number;
     unitAmount: number;
-    deliverable: unknown;
   },
 ) {
   mustDispatch(rt.dispatch(cmd("hire.accept", input.seller, { hireId: input.hireId })), "accept");
@@ -125,13 +124,29 @@ export function finishHire(
     ),
     "fund",
   );
+  return { hireId: input.hireId, paymentId: (payment.data as { payload: { id: string } }).payload.id };
+}
+
+export function finishHire(
+  rt: Runtime,
+  input: {
+    hireId: string;
+    buyer: AgentId;
+    seller: AgentId;
+    sku: string;
+    intentId: string;
+    qty: number;
+    unitAmount: number;
+    deliverable: unknown;
+  },
+) {
+  fundHire(rt, input);
   mustDispatch(rt.dispatch(cmd("hire.deliver", input.seller, { hireId: input.hireId, deliverable: input.deliverable })), "deliver");
   mustDispatch(rt.dispatch(cmd("envelope.require", input.seller, { hireId: input.hireId })), "require");
   mustDispatch(
     rt.dispatch(
       cmd("envelope.submit", input.buyer, {
         hireId: input.hireId,
-        paymentMandateId: (payment.data as { payload: { id: string } }).payload.id,
         nonce: `nonce-${input.hireId}`,
       }),
     ),

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.0.1
+  version: 0.4.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -63,6 +63,21 @@ paths:
       responses:
         "200": { description: Escrow funded }
         "422": { description: Policy deny or escalate }
+  /v1/hires/{id}/refund:
+    post:
+      operationId: hireRefund
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Escrow returned to buyer. Mandate spend restored. Circuit stays sticky. }
+        "409": { description: Illegal hire transition (already delivered/released) }
+        "422": { description: Policy deny }
   /v1/payments/require:
     post:
       operationId: envelopeRequire

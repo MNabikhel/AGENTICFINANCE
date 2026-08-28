@@ -54,8 +54,9 @@ function actorOf(body: { actorId?: string; actor?: string }): AgentId | "system"
 }
 
 function dispatchJson(type: CommandType, reqBody: Record<string, unknown>): DispatchResult {
-  const { actorId: _a, actor: _b, ...body } = reqBody;
-  return runtime.dispatch(cmd(type, actorOf(reqBody), body));
+  const { actorId: _a, actor: _b, idempotencyKey, ...body } = reqBody;
+  const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
+  return runtime.dispatch(cmd(type, actorOf(reqBody), body, key));
 }
 
 function handleDispatch(res: ServerResponse, type: CommandType, reqBody: Record<string, unknown>, extra?: (r: DispatchResult) => Record<string, string> | undefined) {
@@ -225,6 +226,11 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const hireFund = path.match(/^\/v1\/hires\/([^/]+)\/fund$/);
       if (req.method === "POST" && hireFund) {
         handleDispatch(res, "hire.fund", { ...body, hireId: hireFund[1] });
+        return;
+      }
+      const hireRefund = path.match(/^\/v1\/hires\/([^/]+)\/refund$/);
+      if (req.method === "POST" && hireRefund) {
+        handleDispatch(res, "hire.refund", { ...body, hireId: hireRefund[1] });
         return;
       }
       const approval = path.match(/^\/v1\/approvals\/([^/]+)\/resolve$/);

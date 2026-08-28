@@ -48,6 +48,10 @@ const ACTOR_SCHEMA = {
   properties: {
     actor: { type: "string", description: "Runtime alias (ops-human, desk, scout) or aid_/system" },
     actorId: { type: "string" },
+    idempotencyKey: {
+      type: "string",
+      description: "Stable key for money-moving retries. Denies are never cached. Same key + allow = replay, not a second spend.",
+    },
   },
   additionalProperties: true,
 } as const;
@@ -78,6 +82,7 @@ function serializeDispatch(r: DispatchResult) {
       verdict: r.error.decision.verdict,
       error: r.error.error,
       deny: r.error.decision.trace.filter((t) => t.verdict !== "allow"),
+      remediation: r.error.decision.remediation ?? null,
     };
   }
   return {
@@ -86,6 +91,8 @@ function serializeDispatch(r: DispatchResult) {
     verdict: r.value.decision.verdict,
     data: r.value.data,
     ticket: r.value.ticket ?? null,
+    replayed: r.value.replayed === true,
+    remediation: r.value.decision.remediation ?? null,
   };
 }
 
@@ -237,8 +244,9 @@ export class AetherMcp {
     const type = COMMAND_BY_TOOL.get(name);
     if (!type) throw new Error(`unknown tool ${name}`);
     const actor = this.actorOf(args);
-    const { actor: _a, actorId: _b, ...body } = args;
-    return serializeDispatch(this.runtime.dispatch(cmd(type, actor, body)));
+    const { actor: _a, actorId: _b, idempotencyKey, ...body } = args;
+    const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
+    return serializeDispatch(this.runtime.dispatch(cmd(type, actor, body, key)));
   }
 
   private actorOf(args: Record<string, unknown>): AgentId | "system" {

@@ -15,6 +15,7 @@ import {
   type MandateConstraint,
   type PolicyContext,
   type PolicyDecision,
+  type Remediation,
   type RuleVerdict,
   type Verdict,
 } from "@aether/types";
@@ -54,7 +55,7 @@ function minLevelFor(ctx: PolicyContext): AutonomyLevel {
     }
     return MIN_LEVEL_FOR_ACTION.issueSubIntent;
   }
-  if (commandType === "hire.create") {
+  if (commandType === "hire.create" || commandType === "hire.refund") {
     return MIN_LEVEL_FOR_ACTION.hireAgainstIntent;
   }
   if (commandType === "envelope.submit" || commandType === "hire.fund" || commandType === "hire.release") {
@@ -571,4 +572,69 @@ export function evaluate(ctx: PolicyContext): PolicyDecision {
   if (denied.length > 0) return { verdict: "deny", trace };
   if (escalated.length > 0) return { verdict: "escalate", trace };
   return { verdict: "allow", trace };
+}
+
+const ISSUE_INTENT: Omit<Remediation, "ruleId"> = {
+  kind: "issue_intent",
+  commandType: "mandate.issue_intent",
+  hint: "Hard constraint. A manager cannot wink this through. Issue a new (or tighter) intent.",
+};
+
+const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
+  "actor.not_frozen": {
+    kind: "unfreeze_actor",
+    commandType: "identity.unfreeze",
+    hint: "Unfreeze this agent. Freeze drops it to L0 until then.",
+  },
+  "actor.role_capability": {
+    kind: "role_forbidden",
+    hint: "This role cannot run that command. Use a different actor. An auditor cannot spend.",
+  },
+  "payment.amount_range": ISSUE_INTENT,
+  "payment.budget": ISSUE_INTENT,
+  "payment.parent_budget": ISSUE_INTENT,
+  "mandate.child_tighter": ISSUE_INTENT,
+  "payment.allowed_payees": ISSUE_INTENT,
+  "payment.allowed_skus": ISSUE_INTENT,
+  "circuit.daily": {
+    kind: "reset_circuit",
+    commandType: "circuit.reset",
+    hint: "Daily fuse is sticky. A human or treasury must reset it. Mandate budgets are unchanged.",
+  },
+  "kya.chain_intact": {
+    kind: "attest_kya",
+    commandType: "kya.attest",
+    hint: "No live handshake from the principal. Attest, or stop. Revoke is a tombstone.",
+  },
+  "kya.principal_not_frozen": {
+    kind: "unfreeze_principal",
+    commandType: "identity.unfreeze",
+    hint: "The money’s owner is frozen. Unfreeze the principal, not only the delegate.",
+  },
+  "kya.attestation_fresh": {
+    kind: "attest_kya",
+    commandType: "kya.attest",
+    hint: "The handshake expired. Issue a new attestation.",
+  },
+};
+
+export function remediationFor(decision: PolicyDecision): Remediation | undefined {
+  if (decision.verdict === "escalate") {
+    const rule = decision.trace.find((t) => t.verdict === "escalate");
+    const next: Remediation = {
+      kind: "wait_approval",
+      ruleId: rule?.ruleId ?? "approval.threshold",
+      commandType: "approval.resolve",
+      hint: "Do not retry the spend. Resolve the approval ticket. Policy re-runs; only the threshold is waived.",
+    };
+    return next;
+  }
+  if (decision.verdict !== "deny") return undefined;
+  const rule = decision.trace.find((t) => t.verdict === "deny");
+  if (!rule) return undefined;
+  const row = REMEDIATION_BY_RULE[rule.ruleId] ?? {
+    kind: "none",
+    hint: "Read the rule trace. Do not retry until the constraint changes.",
+  };
+  return { ...row, ruleId: rule.ruleId };
 }

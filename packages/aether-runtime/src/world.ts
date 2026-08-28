@@ -71,4 +71,5 @@ export interface WorldState {
   kya: { attestations: DelegationAttestation[]; blocked: string[] };
   clearing: { legs: ExposureLeg[]; windows: SettlementWindow[] };
   killSwitchTested: AgentId[];
+  idempotency?: Array<[string, unknown]>;
 }

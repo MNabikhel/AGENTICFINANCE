@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "demo": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo sprint-procurement",
+    "demo": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo",
     "demo:night-watch": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo night-watch",
     "demo:sub-hire": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo sub-hire",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",

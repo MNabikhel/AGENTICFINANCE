@@ -96,3 +96,13 @@ export function issueReceipt(input: {
 }
 
 export { encodeRequired, encodeResponse };
+
+/** The only rail in v0. Live adapters later implement this shape. They do not enter evaluate(). */
+export const SIM_RAIL = {
+  id: SIM_RAIL_ID,
+  live: false as const,
+  require: paymentRequired,
+  receipt: issueReceipt,
+  ok: settlementOk,
+  fail: settlementFail,
+};

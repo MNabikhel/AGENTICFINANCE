@@ -62,6 +62,11 @@
       "description": "Seller marks work delivered. Hire must be funded."
     },
     {
+      "name": "aether_hire_refund",
+      "commandType": "hire.refund",
+      "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release."
+    },
+    {
       "name": "aether_payment_require",
       "commandType": "envelope.require",
       "description": "Return an x402-shaped PaymentRequired envelope (HTTP 402)."

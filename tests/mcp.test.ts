@@ -20,6 +20,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_identity_register");
     expect(names).toContain("aether_snapshot");
     expect(names).toContain("aether_demo_sub_hire");
+    expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_protocol");
 
     const reg = mcp.callTool("aether_identity_register", {
@@ -28,9 +29,21 @@ describe("MCP host", () => {
       displayName: "Founder",
       role: "human_operator",
       autonomyLevel: 0,
-    }) as { ok: boolean; data: { displayName: string } };
+    }) as { ok: boolean; data: { displayName: string; id: string }; replayed: boolean };
     expect(reg.ok).toBe(true);
     expect(reg.data.displayName).toBe("Founder");
+    expect(reg.replayed).toBe(false);
+
+    const again = mcp.callTool("aether_identity_register", {
+      actor: "system",
+      key: "ops-human",
+      displayName: "Founder",
+      role: "human_operator",
+      autonomyLevel: 0,
+    }) as { ok: boolean; data: { id: string }; replayed: boolean };
+    expect(again.ok).toBe(true);
+    expect(again.replayed).toBe(true);
+    expect(again.data.id).toBe(reg.data.id);
 
     const snap = mcp.callTool("aether_snapshot", {}) as { agents: { displayName: string }[] };
     expect(snap.agents.some((a) => a.displayName === "Founder")).toBe(true);

@@ -22,7 +22,7 @@ GET  /v1/protocol        # pin-able card
 AETHER_DATA_DIR=./data pnpm mcp   # durable world.json + audit.jsonl
 ```
 
-Every mutating verb is a `Command`: `{ type, actorId, body }`. HTTP, CLI, and MCP construct that object and call `Runtime.dispatch`. Policy runs first. Deny never mutates.
+Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. HTTP, CLI, and MCP construct that object and call `Runtime.dispatch`. Policy runs first. Deny never mutates. A deny includes a typed `remediation` (`kind` is for machines). Money-moving allows are replayed by key so a retry cannot double-spend. Denies are never cached.
 
 MCP tools map 1:1 onto `CommandType` plus:
 
@@ -46,6 +46,10 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 9. Receipt.reference === sha256(JCS(payment mandate)).
 10. Durable boot: `world.json` and `audit.jsonl` must agree on length. Mismatch is a refuse, not a guess.
 11. `clearing.settle_window` archives net exposure. It is not a second payment. Money already moved at escrow.
+12. Idempotency: same key (or auto-hash of a money-moving command) + prior **allow/escalate** = replay, no second mutation, no extra clock step, no extra audit. **Denies are not cached.** Unfreeze / new intent / circuit reset must be retryable with the same body. Approval replay (`thresholdWaived`) bypasses the lookup so the books can actually change.
+13. `PolicyDecision.remediation.kind` is a machine enum (`issue_intent`, `wait_approval`, `attest_kya`, `unfreeze_actor`, `unfreeze_principal`, `reset_circuit`, `role_forbidden`, `none`). Do not parse English `hint`.
+14. `hire.refund` is legal only from `funded` (not after deliver/release). It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
+15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
 
 ## Autonomy
 
