@@ -643,7 +643,7 @@ export interface PolicyContext {
   ladderLegal?: boolean;            // false when ladder.set would skip a rung or skip a real freeze test
   kyaNotSelf?: boolean;             // false when kya.attest would make the grantor the delegate
   kyaParentKnown?: boolean;         // false when kya.attest.parentId is not in this world's graph
-  kyaParentFresh?: boolean;         // false when kya.attest.parentId exists but hopStatus is expired or revoked
+  kyaParentFresh?: boolean;         // false when attest/hire.create/hire.fund/issue_intent names a nested hop whose parent is expired or revoked
   kyaAttestationKnown?: boolean;    // false when kya.revoke.attestationId is missing or belongs to another principal
   kyaPartyOk?: boolean;             // false when attest/revoke names a principal that is not the actor (human/treasury exempt). omitted principalId is the speaker, not the supervisor
   aliasFree?: boolean;              // false when identity.register would reuse a runtime alias or its USD/USDC operating book
@@ -847,7 +847,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 80 | `mandate.window_reach` | issue_intent with execution_date | not_before at or after the slip's seven-day exp | — | window opens while the intent is live |
 | 81 | `mandate.occurrence_fresh` | issue_intent with agent_recurrence | max_occurrences ≤ 0, or not a finite number (omit is unlimited and still mints) | — | cadence can still admit a first hire |
 | 82 | `mandate.parent_fresh` | issue_intent / hire.create / hire.fund with a parent | parent intent `exp` (unix seconds) is already past | — | parent still lives (completing a funded hire after that is legal) |
-| 83 | `kya.parent_fresh` | kya.attest with a known parentId | parent hop is expired or revoked (`hopStatus` is not live) | — | parent hop still lives (ghost stays `kya.known_parent`) |
+| 83 | `kya.parent_fresh` | kya.attest with a known parentId; hire.create / hire.fund / issue_intent along a nested hop | parent hop is expired or revoked (`hopStatus` is not live) | — | parent hop still lives (ghost stays `kya.known_parent`; completing a funded hire after that is legal) |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations. L5 cannot be minted at `identity.register` (`ladder.birth_rung`); that rung is a climb after a freeze that was actually tested.
 
@@ -1036,7 +1036,7 @@ export interface AetherError {
 | `cart.test.ts` | A cart must equal the hire it pays; a line with no amount is `command.malformed`, not a throw after yes; a second cart on the same hire is `hire.unique_cart`, not a pointer swap; a second payment on the same cart is `mandate.unique_payment`, not a second check; payment `exp` is one day in unix seconds, not milliseconds; funding with a loose cartId (never bound to the hire) is `hire.bound_cart`, not a throw at release; a line whose cents overflow, or mixed USD/USDC lines, is `command.malformed` |
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
 | `ladder.test.ts` | Skip 2→4 is `ladder.legal`; L5 before freeze test is `ladder.legal`; minting L5 at register is `ladder.birth_rung`; freeze restores the prior rung |
-| `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows and payment-required before deliver are `hire.state`; funding without cash is `ledger.sufficient`; quoting an FX SKU without a window is `market.fx_window`; minting or hiring under an expired parent is `mandate.parent_fresh`; completing a funded child hire after the parent dies is legal |
+| `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows and payment-required before deliver are `hire.state`; funding without cash is `ledger.sufficient`; quoting an FX SKU without a window is `market.fx_window`; minting or hiring under an expired parent is `mandate.parent_fresh`; hiring or funding under a nested hop whose parent hop died is `kya.parent_fresh`; completing a funded child hire after the parent (slip or hop) dies is legal |
 | `window.test.ts` | Completing a funded hire after `not_after` is legal; a new hire is `payment.execution_date`; minting a closed, inverted, or unparseable window is `mandate.window_fresh`, not a written corpse; a future `not_before` still mints if it opens while the slip lives; a window that opens after the seven-day exp is `mandate.window_reach`; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
 | `recurrence.test.ts` | First hire with `max_occurrences: 1` then a second create is `payment.recurrence`; DAILY gap binds until 24h; minting `max_occurrences` ≤ 0 is `mandate.occurrence_fresh`, not a written corpse; one slot still mints; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |

@@ -194,6 +194,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.parent_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot hand down a slip whose handshake parent is dead`,
+          body: "A dead parent hop is not a parent. Attest a live parent, then nest. Completing a funded hire after that is still legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -361,6 +371,8 @@ export function autoBeat(input: {
         body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
       } else if (ruleId === "mandate.parent_fresh") {
         body = "The parent permission slip has expired. A dead parent is not a parent. Completing a funded hire after that is legal; a new hire is not.";
+      } else if (ruleId === "kya.parent_fresh") {
+        body = "The parent handshake has expired. A nested hop does not outlive its parent. Completing a funded hire after that is legal; a new hire is not.";
       }
       return {
         seq: input.seq,
@@ -436,6 +448,8 @@ export function autoBeat(input: {
                     ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
                   : rule?.ruleId === "ledger.safe_balance"
                     ? "The escrow (or the buyer’s remaining cash) cannot hold this many cents. IEEE rounding is not a mint."
+                  : rule?.ruleId === "kya.parent_fresh"
+                    ? "The parent handshake has expired. A nested hop does not outlive its parent. Completing a funded hire after that is legal; a new fund is not."
                 : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,

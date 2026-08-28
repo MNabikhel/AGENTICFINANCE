@@ -153,6 +153,29 @@ function recurrenceMintable(c: { max_occurrences?: unknown }): boolean {
   return c.max_occurrences > 0;
 }
 
+/** New spend (not completing funded work). Nested hops on these verbs must have a live parent. */
+const KYA_NESTED_SPEND: ReadonlySet<CommandType> = new Set([
+  "mandate.issue_intent",
+  "hire.create",
+  "hire.fund",
+]);
+
+/** Undefined = no nested hop on the path. False = a parent hop is expired or revoked. */
+function nestedKyaParentsLive(
+  hops: ReadonlyArray<{ parentId?: DelegationId }>,
+  lookup: (id: DelegationId) => DelegationAttestation | undefined,
+  nowIso: Instant,
+): boolean | undefined {
+  let saw = false;
+  for (const hop of hops) {
+    if (hop.parentId === undefined) continue;
+    saw = true;
+    const parent = lookup(hop.parentId);
+    if (!parent || hopStatus(parent, nowIso) !== "live") return false;
+  }
+  return saw ? true : undefined;
+}
+
 const SIM_INSTRUMENT = {
   id: "sim-ledger",
   type: "sim_ledger" as const,
@@ -1171,6 +1194,14 @@ export class Runtime {
       }
     }
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire, ctx);
+    if (KYA_NESTED_SPEND.has(cmd.type)) {
+      const nested = nestedKyaParentsLive(
+        ctx.kya.hops,
+        (id) => this.kya.attestations.get(id),
+        this.clock.now(),
+      );
+      if (nested !== undefined) ctx.kyaParentFresh = nested;
+    }
     return ctx;
   }
 
@@ -1753,6 +1784,7 @@ export class Runtime {
       const parent = this.intents.get(body.parentId as MandateId);
       if (!parent) throw new Error("unknown parent intent");
       if (parent.payload.exp <= unixSeconds(this.clock.now())) throw new Error("parent intent expired");
+      this.assertKyaNestedParentsLive(actor, parent);
       payload.parentId = body.parentId as MandateId;
     }
     const signed = signMandate(payload, actor.did, this.keypair(actor.id));
@@ -1910,6 +1942,7 @@ export class Runtime {
         throw new Error("parent intent expired");
       }
     }
+    this.assertKyaNestedParentsLive(actor, intent);
     if (this.consumedQuotes.has(quote.id)) throw new Error("quote already used");
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, quote.price.currency)) {
       throw new Error("sku currency");
@@ -1975,6 +2008,7 @@ export class Runtime {
         throw new Error("parent intent expired");
       }
     }
+    this.assertKyaNestedParentsLive(actor, fundedIntent);
     const buyer = this.identity.require(hire.buyerId);
     if (this.ledger.balance(buyer.accountId) < hire.price.amount) {
       throw new Error("insufficient funds");
@@ -2462,6 +2496,18 @@ export class Runtime {
       if (typeof principal === "string" && !this.identity.get(principal as AgentId)) return false;
     }
     return true;
+  }
+
+  private assertKyaNestedParentsLive(actor: Agent, intent?: Signed<IntentMandate>) {
+    const principalId = intent?.payload.issuerId;
+    if (!principalId || actor.id === principalId) return;
+    const hops = this.kya.path(principalId, actor.id, this.clock.now()) ?? [];
+    const nested = nestedKyaParentsLive(
+      hops,
+      (id) => this.kya.attestations.get(id),
+      this.clock.now(),
+    );
+    if (nested === false) throw new Error("kya parent hop not live");
   }
 
   private resolveKya(

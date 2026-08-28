@@ -1467,7 +1467,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.parent_fresh": {
     kind: "none",
-    hint: "A dead parent hop is not a parent. Attest a live parent, then nest. Ghost parent stays kya.known_parent. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
+    hint: "A dead parent hop is not a parent. Attest a live parent, then nest. A new hire or fund against a nested hop whose parent died is a refuse. Completing a funded hire after that is legal. Ghost parent stays kya.known_parent. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
   },
   "payment.execution_date": {
     kind: "none",

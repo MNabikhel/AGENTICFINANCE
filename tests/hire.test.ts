@@ -319,6 +319,156 @@ describe("parent freshness", () => {
   });
 });
 
+describe("kya parent hop freshness on spend", () => {
+  const NOON = "2026-08-28T12:00:00.000Z";
+  const AFTER_NOON = "2026-08-28T18:00:00.000Z";
+
+  function nestedScout(rt: ReturnType<typeof boot>) {
+    const { desk, vendor } = economy(rt);
+    const founder = rt.alias("ops-human");
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    rt.seedOpening({ "scout:cash": { amount: 1_500_000, currency: "USD_SIM" } });
+    const parent = must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3, expiresAt: NOON }),
+      ),
+      "parent hop",
+    );
+    const parentId = (parent.data as { id: string }).id;
+    must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: scout.id, parentId, maxAutonomy: 3 })),
+      "nested hop",
+    );
+    const intent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: scout.id,
+          task: "buy as nested scout",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }],
+        }),
+      ),
+      "scout intent",
+    );
+    return {
+      founder,
+      desk,
+      vendor,
+      scout,
+      parentId,
+      intentId: (intent.data as { payload: { id: MandateId } }).payload.id,
+    };
+  }
+
+  it("still hires against a nested hop while the parent hop lives", () => {
+    const rt = boot();
+    const { scout, vendor, intentId } = nestedScout(rt);
+    const live = offerHire(rt, {
+      buyer: scout.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    expect(live.attempt.value.decision.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+  });
+
+  it("refuses a new hire against a nested hop after the parent hop dies as kya.parent_fresh", () => {
+    const rt = boot();
+    const { scout, vendor, intentId } = nestedScout(rt);
+    rt.clock.set(AFTER_NOON);
+    const late = offerHire(rt, {
+      buyer: scout.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "too late",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("kya.parent_fresh");
+  });
+
+  it("refuses to fund a nested hire after the parent hop dies as kya.parent_fresh", () => {
+    const rt = boot();
+    const { scout, vendor, intentId } = nestedScout(rt);
+    const live = offerHire(rt, {
+      buyer: scout.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: scout.id, seller: vendor.id, intentId });
+    rt.clock.set(AFTER_NOON);
+    const r = rt.dispatch(cmd("hire.fund", scout.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.parent_fresh");
+  });
+
+  it("lets a funded nested hire finish after the parent hop dies", () => {
+    const rt = boot();
+    const { scout, vendor, intentId } = nestedScout(rt);
+    const live = offerHire(rt, {
+      buyer: scout.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: scout.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set(AFTER_NOON);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    expect(delivered.ok && delivered.value.decision.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe(
+      "allow",
+    );
+    const released = rt.dispatch(cmd("hire.release", scout.id, { hireId }));
+    expect(released.ok).toBe(true);
+    expect(released.ok && released.value.decision.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe(
+      "allow",
+    );
+  });
+});
+
 function offered(rt: ReturnType<typeof boot>) {
   const { desk, vendor, intentId } = economy(rt);
   const live = offerHire(rt, {

@@ -2547,4 +2547,125 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
   });
+
+  it("denies a hire against a nested hop whose parent died as kya.parent_fresh", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        kyaParentFresh: false,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.parent_fresh");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name kya.parent_fresh when completing a funded hire", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.deliver",
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.parent_fresh on a hire whose path has no nested hop", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: true,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.attestation_fresh first when the nested hop is also expired", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        kyaParentFresh: false,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: true,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.attestation_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.attestation_fresh");
+  });
+
+  it("still names mandate.parent_fresh first when the parent slip is also dead", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 200_000 }], { exp: 1 }),
+        parentFresh: false,
+        kyaParentFresh: false,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.parent_fresh");
+  });
 });

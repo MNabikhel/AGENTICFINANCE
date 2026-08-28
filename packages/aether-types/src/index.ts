@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.76.0",
+  version: "0.77.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -780,8 +780,12 @@ export interface PolicyContext {
   kyaParentKnown?: boolean;
   /**
    * False when kya.attest names a parent hop that exists but is not live
-   * (`hopStatus` is expired or revoked). Set only when `kyaParentKnown === true`.
-   * Absent = no parentId, or the parent is missing (`kya.known_parent` handles that).
+   * (`hopStatus` is expired or revoked), or when hire.create / hire.fund /
+   * mandate.issue_intent would spend along a nested hop whose parent is not live.
+   * Set on attest when `kyaParentKnown === true`. Set on those spend verbs when
+   * the resolved path contains a hop with parentId.
+   * Absent = no parentId, or not those verbs (completing a funded hire after the
+   * parent hop dies is legal). Ghost parent stays `kya.known_parent`.
    * Do not reuse `parentFresh` — that flag is for intent slips.
    * Do not add this to `proposedKyaGrant` or omit→L5 would steal `kya.capability_subset`.
    * Graph `attest()` still writes a nested hop under a corpse; dispatch does not.

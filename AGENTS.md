@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.76.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.77.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -44,7 +44,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
 3. 83 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
-4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
+4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`).
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
 7. Freeze sets L0. Unfreeze restores the prior rung. `any → L0` is always legal. Skipping rungs is `ladder.legal`, not a mutate throw after an allow. Listing L5 gate names is not the freeze test.
@@ -117,7 +117,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 74. A cadence with no slots is not a cadence (`mandate.occurrence_fresh`). `mandate.issue_intent` with `max_occurrences` ≤ 0, or a non-number cap, is a refuse, not a written corpse that then fails hire as `payment.recurrence`. Omit `max_occurrences` is unlimited and still mints. One slot still mints; a second hire still names `payment.recurrence`. Ghost subject, missing parent, and a wider child keep first deny.
 75. Fetching one hop by id (`aether_get` / `GET /v1/objects/dlg_*`) labels it `live`, `expired`, or `revoked` — the same derivation as the graph. The store stays raw. Unique_live still occupies. Spend still names `kya.attestation_fresh`.
 76. A dead parent is not a parent (`mandate.parent_fresh`). `mandate.issue_intent` with a parent past `exp`, or a new hire/fund against a child of that parent, is a refuse. Completing a funded hire after the parent dies is legal. Ghost parent stays `mandate.known_parent`. The child's own expiry stays `mandate.not_expired`.
-77. A dead parent hop is not a parent (`kya.parent_fresh`). `kya.attest` with a parentId whose hop is expired or revoked is a refuse, not a nested grant that occupies a new pair while spend skips the corpse. Ghost parent stays `kya.known_parent`. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny. Graph `attest()` still writes a nested hop under a corpse so path-freshness tests can inject; dispatch does not.
+77. A dead parent hop is not a parent (`kya.parent_fresh`). `kya.attest` with a parentId whose hop is expired or revoked is a refuse, not a nested grant that occupies a new pair while spend skips the corpse. A new hire or fund against a nested hop whose parent died is the same refuse. Completing a funded hire after the parent hop dies is legal. Ghost parent stays `kya.known_parent`. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny. Graph `attest()` still writes a nested hop under a corpse so path-freshness tests can inject; dispatch does not.
 
 ## Autonomy
 
