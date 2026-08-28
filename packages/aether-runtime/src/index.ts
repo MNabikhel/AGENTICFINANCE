@@ -880,7 +880,7 @@ export class Runtime {
       if (delegate) ctx.kyaNotSelf = actor.id !== delegate.id;
     }
     if (cmd.type === "kya.attest" && ctx.kyaNotSelf === true) {
-      const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
+      const principalId = this.kyaPrincipalId(body, actor);
       const delegateId = body.delegateId as AgentId;
       ctx.kyaLiveFree = ![...this.kya.attestations.values()].some(
         (a) => a.principalId === principalId && a.delegateId === delegateId && !a.revokedAt,
@@ -890,7 +890,7 @@ export class Runtime {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
     }
     if (cmd.type === "kya.attest" || cmd.type === "kya.revoke") {
-      const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
+      const principalId = this.kyaPrincipalId(body, actor);
       ctx.kyaPartyOk =
         actor.role === "human_operator" || actor.role === "treasury" || actor.id === principalId;
     }
@@ -910,7 +910,7 @@ export class Runtime {
     }
     if (cmd.type === "kya.revoke" && typeof body.attestationId === "string") {
       const named = this.kya.attestations.get(body.attestationId as DelegationId);
-      const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
+      const principalId = this.kyaPrincipalId(body, actor);
       ctx.kyaAttestationKnown = Boolean(named && named.principalId === principalId);
     }
     if (cmd.type === "ledger.transfer") {
@@ -1516,7 +1516,7 @@ export class Runtime {
     const delegateId = body.delegateId as AgentId;
     this.identity.require(delegateId);
     if (typeof body.principalId === "string") this.identity.require(body.principalId as AgentId);
-    const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
+    const principalId = this.kyaPrincipalId(body, actor);
     if (actor.role !== "human_operator" && actor.role !== "treasury" && principalId !== actor.id) {
       throw new Error("kya party");
     }
@@ -1556,7 +1556,7 @@ export class Runtime {
   private mutKyaRevoke(body: Record<string, unknown>, actor: Agent) {
     if (typeof body.principalId === "string") this.identity.require(body.principalId as AgentId);
     if (typeof body.delegateId === "string") this.identity.require(body.delegateId as AgentId);
-    const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
+    const principalId = this.kyaPrincipalId(body, actor);
     if (actor.role !== "human_operator" && actor.role !== "treasury" && principalId !== actor.id) {
       throw new Error("kya party");
     }
@@ -2334,7 +2334,7 @@ export class Runtime {
     const required = this.kyaRequired(cmd, actor, hire, intent);
     let principalId = intent?.payload.issuerId;
     if (cmd.type === "kya.attest") {
-      principalId = (body.principalId as AgentId | undefined) ?? actor.supervisors[0] ?? actor.id;
+      principalId = this.kyaPrincipalId(body, actor);
     }
     if (cmd.type === "mandate.issue_intent" && !principalId) {
       principalId = parentIntent?.payload.issuerId ?? actor.supervisors[0];
@@ -2351,6 +2351,14 @@ export class Runtime {
     if (principal) input.principal = principal;
     if (proposed !== undefined) input.proposedMaxAutonomy = proposed;
     return resolveKya(input);
+  }
+
+  /**
+   * Omitted principalId is the speaker. Snapshot (party / unique_live / KYA path)
+   * and mutate share this so an L4 omit is not evaluated as the supervisor's hop.
+   */
+  private kyaPrincipalId(body: Record<string, unknown>, actor: Agent): AgentId {
+    return typeof body.principalId === "string" ? (body.principalId as AgentId) : actor.id;
   }
 
   /** Omitted maxAutonomy is L5. An agent may not grant a ceiling above its own rung. */

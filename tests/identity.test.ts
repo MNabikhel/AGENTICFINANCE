@@ -819,6 +819,98 @@ describe("kya.capability_subset", () => {
   });
 });
 
+describe("kya principal default", () => {
+  function scoutDesk(rt: Runtime) {
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    return { founder, vendor, scout: rt.alias("scout") };
+  }
+
+  it("writes the speaker as principal when an L4 desk omits principalId", () => {
+    const rt = boot();
+    const { scout, vendor } = scoutDesk(rt);
+    const r = must(
+      rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id, maxAutonomy: 4 })),
+      "omit principal",
+    );
+    expect((r.data as { principalId: string; grantorId: string }).principalId).toBe(scout.id);
+    expect((r.data as { principalId: string; grantorId: string }).grantorId).toBe(scout.id);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.principal_not_frozen")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(1);
+  });
+
+  it("does not name a frozen founder when the desk omits principalId", () => {
+    const rt = boot();
+    const { founder, scout, vendor } = scoutDesk(rt);
+    must(rt.dispatch(cmd("identity.freeze", founder.id, { agentId: founder.id })), "freeze founder");
+    const before = rt.kya.attestations.size;
+    const r = must(
+      rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id, maxAutonomy: 4 })),
+      "omit under freeze",
+    );
+    expect((r.data as { principalId: string }).principalId).toBe(scout.id);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.principal_not_frozen")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before + 1);
+  });
+
+  it("still names kya.party first when the desk fills in the founder’s id", () => {
+    const rt = boot();
+    const { founder, scout, vendor } = scoutDesk(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: founder.id, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.capability_subset first when omit principalId would write L5", () => {
+    const rt = boot();
+    const { scout, vendor } = scoutDesk(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.capability_subset");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.unique_live first on a second omit hop", () => {
+    const rt = boot();
+    const { scout, vendor } = scoutDesk(rt);
+    must(
+      rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id, maxAutonomy: 4 })),
+      "first hop",
+    );
+    const before = [...rt.kya.attestations.values()].filter((a) => !a.revokedAt).length;
+    const r = rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id, maxAutonomy: 3 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(before);
+  });
+});
+
 describe("known speaker", () => {
   it("refuses a command from a missing actor as actor.known, not a throw before policy", () => {
     const rt = boot();

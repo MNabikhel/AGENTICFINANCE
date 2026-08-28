@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.62.0",
+  version: "0.63.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -576,6 +576,10 @@ export interface KyaResolution {
   implicit: boolean;
   depth: number;
   maxDepth: number;
+  /**
+   * On `kya.attest`, omitted `principalId` is the speaker (`actor.id`), not the
+   * supervisor. Spend commands still resolve from the intent issuer.
+   */
   principalId?: AgentId;
   principalFrozen: boolean;
   expired: boolean;
@@ -770,7 +774,8 @@ export interface PolicyContext {
   /**
    * False when kya.attest or kya.revoke names a principal that is not the actor,
    * and the actor is not a human or treasury. Absent = not a handshake command.
-   * An L4 desk cannot mint or tombstone a founder’s handshake by filling in the ids.
+   * Omitted principalId is the speaker, not the supervisor. An L4 desk cannot mint
+   * or tombstone a founder’s handshake by filling in the ids.
    */
   kyaPartyOk?: boolean;
   /**

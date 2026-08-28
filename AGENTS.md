@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.62.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.63.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -82,7 +82,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 39. One journal is one currency (`ledger.same_currency`). USD_SIM and USDC_SIM do not mix in a transfer, and the stated amount must match the books. Escrow cannot lock USD cash into a USDC hire. Convert with `market.fx_settle`.
 40. A transfer cannot overdraw the source book (`ledger.sufficient`). Neither can `hire.fund` or `market.fx_settle` (the vendor’s USD leg). Draining to zero is legal. Negative cash is not. Escrow cannot lock on empty operating cash. MM USDC inventory is `mm.inventory`. A transfer of operating cash is not a mint; equity and escrow are `ledger.operating_book`.
 41. A KYA `attestationId` that is not in this world (or that belongs to another principal) is `kya.known_attestation`. It is not a silent tombstone. Revoke by principal+delegate with no id still kills implicit grants. Policy denies; mutate does not write `KYA_REVOKE` for a ghost or foreign handshake.
-42. Minting or tombstoning a handshake in someone else’s name is `kya.party`. You are the principal, or you are a human/treasury kill switch. An L4 desk cannot write a founder’s handshake by filling in the ids.
+42. Minting or tombstoning a handshake in someone else’s name is `kya.party`. You are the principal, or you are a human/treasury kill switch. Omitted `principalId` is you, not your supervisor. An L4 desk cannot write a founder’s handshake by filling in the ids.
 43. A reused register alias (or a second market maker sharing `market_maker:cash_usd`, or a data vendor whose `key:usdc` is already open) is `identity.unique_key`. Two agents cannot share one operating book. Same-body retries still replay. Policy denies; mutate does not throw `account exists` after an allow.
 44. A receiptId that is not in this world is `receipt.known`. It is not an empty success. Policy denies; mutate does not return nothing after an allow. Inspect of a miss still returns nothing.
 45. Unfreezing someone who is not frozen, or freezing someone who is already frozen, is `identity.freeze_state`. A no-op freeze is not a notary line after yes. Ghost freeze stays `identity.known`. Freeze then unfreeze is still the kill-switch test.
@@ -104,6 +104,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 61. L5 is not a birthright (`ladder.birth_rung`). `identity.register` may mint L0–L4. L5 is a climb (`ladder.set` 4→5) after a freeze that was actually tested. Listing the gate names is not the test. A reused alias stays `identity.unique_key`. Skipping a rung on an existing agent stays `ladder.legal`. System minting a second agent stays `actor.system_scope`.
 62. Omitted `maxAutonomy` on `kya.attest` is L5. An agent may not grant a standing-mandate ceiling above its own rung (`kya.capability_subset`). Name a ceiling you hold. A human or treasury may grant L5. A second live hop stays `kya.unique_live`. Writing someone else’s handshake stays `kya.party`.
 63. A payment mandate’s `exp` is unix seconds, one day from `iat` — the same window as the cart’s ISO `expiresAt`. Milliseconds are not seconds. `mandate.not_expired` reads both. Restore of old worlds may still show a ~1000-day payment `exp`; a new payment does not.
+64. Omitted `principalId` on `kya.attest` / `kya.revoke` is the speaker, not the supervisor. Policy and mutate share that default. Filling in someone else’s id stays `kya.party`. Omitting the ceiling still writes L5 (`kya.capability_subset`). A frozen founder does not freeze a desk’s own handshake.
 
 ## Autonomy
 
