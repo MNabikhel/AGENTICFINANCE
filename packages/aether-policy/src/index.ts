@@ -1013,6 +1013,17 @@ export const RULES: readonly Rule[] = [
         : v("hire.unique_cart", "deny", "hire already has a cart");
     },
   },
+  {
+    id: "mandate.unique_payment",
+    evaluate: (ctx) => {
+      if (ctx.paymentUnbound === undefined) {
+        return v("mandate.unique_payment", "allow", "not minting a payment for a cart");
+      }
+      return ctx.paymentUnbound
+        ? v("mandate.unique_payment", "allow", "cart has no payment yet")
+        : v("mandate.unique_payment", "deny", "cart already has a payment");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1187,6 +1198,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.unique_cart": {
     kind: "none",
     hint: "That hire already has a cart. A hire takes one cart. Issue payment against the existing cart. A second cart is not a pointer swap.",
+  },
+  "mandate.unique_payment": {
+    kind: "none",
+    hint: "That cart already has a payment. A cart takes one payment. Fund or release against the existing mandate. A second payment is not a second check.",
   },
   "payment.execution_date": {
     kind: "none",

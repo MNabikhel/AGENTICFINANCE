@@ -170,6 +170,42 @@ describe("hire cart match", () => {
     expect(rt.hires.get(hireId)?.cartId).toBe(firstId);
   });
 
+  it("refuses a second payment on the same cart as mandate.unique_payment, not a second check", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cart = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          line_items: [
+            {
+              sku: "research.brief",
+              description: "page 1",
+              quantity: 1,
+              unitAmount: { amount: 80_000, currency: "USD_SIM" },
+            },
+          ],
+        }),
+      ),
+      "cart",
+    );
+    const cartId = (cart.data as { payload: { id: string } }).payload.id;
+    const first = must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    const firstId = (first.data as { payload: { id: string } }).payload.id;
+    const before = rt.payments.size;
+    const r = rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.unique_payment");
+    expect(rt.payments.size).toBe(before);
+    expect(rt.payments.has(firstId as MandateId)).toBe(true);
+  });
+
   it("refuses a cart line with no amount as command.malformed, not a mutate throw", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);

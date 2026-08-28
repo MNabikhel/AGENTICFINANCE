@@ -152,6 +152,7 @@ describe("known cart", () => {
     expect(r.error.error.status).toBe(422);
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("mandate.known_cart");
     expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(rt.clock.now()).not.toBe(clockBefore);

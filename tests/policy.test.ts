@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 63 rules", () => {
-    expect(RULE_IDS).toHaveLength(63);
+  it("has 64 rules", () => {
+    expect(RULE_IDS).toHaveLength(64);
   });
 
   it("denies frozen actors", () => {
@@ -1132,5 +1132,26 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "hire.unique_cart")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a second payment on a cart that already has one", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "mandate.issue_payment",
+        cartKnown: true,
+        paymentUnbound: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name unique_payment when the cart itself is missing", () => {
+    const d = evaluate(ctx({ commandType: "mandate.issue_payment", cartKnown: false }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_cart");
   });
 });

@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.45.0",
+  version: "0.46.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -769,6 +769,13 @@ export interface PolicyContext {
    * A hire takes one cart. A second cart is not a pointer swap.
    */
   cartUnbound?: boolean;
+  /**
+   * False when issue_payment points at a cart that already has a payment mandate
+   * (same cart hash / transaction_id).
+   * Absent = not issue_payment, or the cart is unknown (`mandate.known_cart` handles that).
+   * A cart takes one payment. A second payment is not a second check.
+   */
+  paymentUnbound?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

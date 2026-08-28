@@ -753,6 +753,7 @@ export class Runtime {
     }
     if (cmd.type === "mandate.issue_payment") {
       ctx.cartKnown = Boolean(cart);
+      if (cart) ctx.paymentUnbound = this.paymentMatchingCart(cart) === undefined;
     }
     if (cmd.type === "approval.resolve") {
       const ticket =
@@ -1128,10 +1129,8 @@ export class Runtime {
     const id = body.paymentMandateId as MandateId | undefined;
     if (id) return this.payments.get(id);
     if (hire?.cartId) {
-      for (const p of this.payments.values()) {
-        const cart = this.carts.get(hire.cartId);
-        if (cart && p.payload.transaction_id === cartHash(cart.payload)) return p;
-      }
+      const bound = this.carts.get(hire.cartId);
+      if (bound) return this.paymentMatchingCart(bound);
     }
     return undefined;
   }
@@ -1501,6 +1500,7 @@ export class Runtime {
   private mutPayment(body: Record<string, unknown>, actor: Agent) {
     const cart = this.carts.get(body.cartId as MandateId);
     if (!cart) throw new Error("unknown cart");
+    if (this.paymentMatchingCart(cart)) throw new Error("cart already has a payment");
     const payload: PaymentMandate = {
       vct: "aether.mandate.payment.1",
       id: this.ids.next("mid") as MandateId,
@@ -1964,14 +1964,21 @@ export class Runtime {
     });
   }
 
+  private paymentMatchingCart(cart: Signed<CartMandate>): Signed<PaymentMandate> | undefined {
+    const hash = cartHash(cart.payload);
+    for (const p of this.payments.values()) {
+      if (p.payload.transaction_id === hash) return p;
+    }
+    return undefined;
+  }
+
   private paymentForHire(hire: HireContract): Signed<PaymentMandate> {
     if (!hire.cartId) throw new Error("hire has no cart");
     const cart = this.carts.get(hire.cartId);
     if (!cart) throw new Error("missing cart");
-    for (const p of this.payments.values()) {
-      if (p.payload.transaction_id === cartHash(cart.payload)) return p;
-    }
-    throw new Error("missing payment mandate for hire");
+    const payment = this.paymentMatchingCart(cart);
+    if (!payment) throw new Error("missing payment mandate for hire");
+    return payment;
   }
 
   private noteSpend(hire: HireContract) {
