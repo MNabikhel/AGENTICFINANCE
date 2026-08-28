@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.16.0",
+  version: "0.17.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -626,6 +626,11 @@ export interface PolicyContext {
    * Absent = command does not require a live intent.
    */
   intentKnown?: boolean;
+  /**
+   * False when issue_payment points at a cart that is not in this world.
+   * Absent = command does not require a live cart.
+   */
+  cartKnown?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

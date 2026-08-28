@@ -137,3 +137,22 @@ describe("known intent", () => {
     expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
+
+describe("known cart", () => {
+  it("refuses a payment against a missing cart as known_cart, not a mutate throw", () => {
+    const rt = boot();
+    const { desk } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("mandate.issue_payment", desk.id, { cartId: "mid_01J6AETHERGHOSTCART0000001" }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.known_cart");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});

@@ -756,6 +756,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.known_intent", "deny", "intent not found");
     },
   },
+  {
+    id: "mandate.known_cart",
+    evaluate: (ctx) => {
+      if (ctx.cartKnown === undefined) return v("mandate.known_cart", "allow", "not a cart-gated command");
+      return ctx.cartKnown
+        ? v("mandate.known_cart", "allow", "cart exists")
+        : v("mandate.known_cart", "deny", "cart not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -850,6 +859,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.known_intent": {
     kind: "none",
     hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake.",
+  },
+  "mandate.known_cart": {
+    kind: "none",
+    hint: "That cart id is not in this world. Issue the cart first. A missing cart is not a broken payment chain.",
   },
   "payment.execution_date": {
     kind: "none",

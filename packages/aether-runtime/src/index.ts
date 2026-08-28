@@ -722,6 +722,9 @@ export class Runtime {
     if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart") {
       ctx.intentKnown = Boolean(intent);
     }
+    if (cmd.type === "mandate.issue_payment") {
+      ctx.cartKnown = Boolean(cart);
+    }
     if (amount) ctx.amount = amount;
     if (payeeId) ctx.payeeId = payeeId;
     if (fxRateE6 !== undefined) ctx.fxRateE6 = fxRateE6;

@@ -498,7 +498,7 @@ export interface Quote {
 }
 ```
 
-RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. A cartId that is not in this world is `mandate.known_cart` — not a broken payment chain. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
 
 Hire state machine (illegal arrows throw `HIRE_ILLEGAL_TRANSITION`):
 
@@ -628,6 +628,7 @@ export interface PolicyContext {
   quoteUnspent?: boolean;           // false when hire.create reuses a consumed quote
   hireKnown?: boolean;              // false when hireId is not in this world
   intentKnown?: boolean;            // false when intentId is not in this world
+  cartKnown?: boolean;              // false when cartId is not in this world
 }
 ```
 
@@ -769,6 +770,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 41 | `hire.quote_unspent` | hire.create | quote already produced a hire or an FX settle | — | quote unused |
 | 42 | `hire.known` | accept / fund / deliver / release / refund / envelope.* / issue_cart (with hireId) | hireId not in this world | — | hire exists |
 | 43 | `mandate.known_intent` | hire.create / issue_cart | intentId not in this world | — | intent exists |
+| 44 | `mandate.known_cart` | issue_payment | cartId not in this world | — | cart exists |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 

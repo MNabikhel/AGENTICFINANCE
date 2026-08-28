@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 43 rules", () => {
-    expect(RULE_IDS).toHaveLength(43);
+  it("has 44 rules", () => {
+    expect(RULE_IDS).toHaveLength(44);
   });
 
   it("denies frozen actors", () => {
@@ -481,6 +481,14 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("mandate.known_intent");
+  });
+
+  it("denies a missing cart as known_cart, not a mutate throw", () => {
+    const d = evaluate(ctx({ commandType: "mandate.issue_payment", cartKnown: false }));
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_cart");
   });
 
   it("denies FX settle without a live unused FX quote", () => {
