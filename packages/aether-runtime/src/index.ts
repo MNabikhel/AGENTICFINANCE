@@ -27,6 +27,7 @@ import { commandShapeError } from "./command-schema.js";
 import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
 import { WORLD_VERSION, type WorldState } from "./world.js";
 import type {
+  Account,
   AccountId,
   Agent,
   AgentId,
@@ -896,8 +897,11 @@ export class Runtime {
     if (cmd.type === "identity.register") {
       const key = String(body.key ?? body.displayName);
       const role = body.role as AgentRole;
-      const cashName = role === "market_maker" ? "market_maker:cash_usd" : `${key}:cash`;
-      ctx.aliasFree = !this.aliases.has(key) && !this.ledger.accountsByName.has(cashName);
+      const books = this.registerBookNames(role, key);
+      ctx.aliasFree =
+        !this.aliases.has(key) &&
+        !this.ledger.accountsByName.has(books.cashName) &&
+        (books.usdcName === undefined || !this.ledger.accountsByName.has(books.usdcName));
     }
     if (cmd.type === "receipt.get") {
       ctx.receiptKnown = this.receipts.has(String(body.receiptId));
@@ -1432,21 +1436,20 @@ export class Runtime {
     if (!(role in ROLE_CAPABILITY)) throw new Error("unknown role");
     const key = String(body.key ?? body.displayName);
     const kp = this.identity.mintKey(`kid_${key}`);
-    const cashName =
-      role === "market_maker" ? "market_maker:cash_usd" : `${key}:cash`;
+    const books = this.registerBookNames(role, key);
     const cash = this.ledger.openAccount({
       id: this.ids.next("acct") as AccountId,
       ownerId: "system",
-      name: cashName,
+      name: books.cashName,
       type: "asset",
       currency: "USD_SIM",
     });
-    if (role === "market_maker" || role === "data_vendor") {
-      const usdcName = role === "market_maker" ? "market_maker:cash_usdc" : `${key}:usdc`;
-      this.ledger.openAccount({
+    let usdc: Account | undefined;
+    if (books.usdcName) {
+      usdc = this.ledger.openAccount({
         id: this.ids.next("acct") as AccountId,
         ownerId: "system",
-        name: usdcName,
+        name: books.usdcName,
         type: "asset",
         currency: "USDC_SIM",
       });
@@ -1461,8 +1464,9 @@ export class Runtime {
       createdAt: this.clock.now(),
       keypair: kp,
     });
-    // Fix owner after we have the id.
+    // Fix owner after we have the id. USDC is the agent's wallet, not system's.
     (cash as { ownerId: AgentId }).ownerId = agent.id;
+    if (usdc) (usdc as { ownerId: AgentId }).ownerId = agent.id;
     this.identity.register(agent, kp);
     this.aliases.set(key, agent.id);
     this.audit.append({
@@ -2342,6 +2346,14 @@ export class Runtime {
     if (principal) input.principal = principal;
     if (proposed !== undefined) input.proposedMaxAutonomy = proposed;
     return resolveKya(input);
+  }
+
+  private registerBookNames(role: AgentRole, key: string): { cashName: string; usdcName?: string } {
+    if (role === "market_maker") {
+      return { cashName: "market_maker:cash_usd", usdcName: "market_maker:cash_usdc" };
+    }
+    if (role === "data_vendor") return { cashName: `${key}:cash`, usdcName: `${key}:usdc` };
+    return { cashName: `${key}:cash` };
   }
 
   private aliasOf(id: AgentId): string | undefined {

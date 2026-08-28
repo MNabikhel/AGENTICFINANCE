@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.58.0",
+  version: "0.59.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -760,9 +760,11 @@ export interface PolicyContext {
    */
   kyaPartyOk?: boolean;
   /**
-   * False when identity.register would reuse a runtime alias or its cash book.
+   * False when identity.register would reuse a runtime alias or its operating book
+   * (USD cash, and USDC for data_vendor / market_maker).
    * Absent = not a register. Two agents cannot share one operating book.
    * A second market maker collides on `market_maker:cash_usd` even with a new alias.
+   * A stray `key:usdc` is the same refuse — not `account exists` after opening USD cash.
    */
   aliasFree?: boolean;
   /**

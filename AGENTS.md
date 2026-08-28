@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.58.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.59.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -83,7 +83,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 40. A transfer cannot overdraw the source book (`ledger.sufficient`). Neither can `hire.fund` or `market.fx_settle` (the vendor’s USD leg). Draining to zero is legal. Negative cash is not. Escrow cannot lock on empty operating cash. MM USDC inventory is `mm.inventory`. A transfer of operating cash is not a mint; equity and escrow are `ledger.operating_book`.
 41. A KYA `attestationId` that is not in this world (or that belongs to another principal) is `kya.known_attestation`. It is not a silent tombstone. Revoke by principal+delegate with no id still kills implicit grants. Policy denies; mutate does not write `KYA_REVOKE` for a ghost or foreign handshake.
 42. Minting or tombstoning a handshake in someone else’s name is `kya.party`. You are the principal, or you are a human/treasury kill switch. An L4 desk cannot write a founder’s handshake by filling in the ids.
-43. A reused register alias (or a second market maker sharing `market_maker:cash_usd`) is `identity.unique_key`. Two agents cannot share one operating book. Same-body retries still replay. Policy denies; mutate does not throw `account exists` after an allow.
+43. A reused register alias (or a second market maker sharing `market_maker:cash_usd`, or a data vendor whose `key:usdc` is already open) is `identity.unique_key`. Two agents cannot share one operating book. Same-body retries still replay. Policy denies; mutate does not throw `account exists` after an allow.
 44. A receiptId that is not in this world is `receipt.known`. It is not an empty success. Policy denies; mutate does not return nothing after an allow. Inspect of a miss still returns nothing.
 45. Unfreezing someone who is not frozen, or freezing someone who is already frozen, is `identity.freeze_state`. A no-op freeze is not a notary line after yes. Ghost freeze stays `identity.known`. Freeze then unfreeze is still the kill-switch test.
 46. A second live handshake for the same principal→delegate pair is `kya.unique_live`. One live hop per pair. Revoke, then attest again. A second live hop is not a tighter grant. The graph still throws if policy ever lies.
@@ -100,6 +100,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 57. A journal that would leave a touched book outside `Number.isSafeInteger` is `ledger.safe_balance`. IEEE rounding is not a mint. Overdraft stays `ledger.sufficient`. Ghost book stays `ledger.known_account`. Restore of old worlds still applies historical journals; a new post does not.
 58. `system` is the runtime, not a treasurer (`actor.system_scope`). It may bootstrap the first human and read the catalog, the notary, balances, and receipts. It cannot spend, freeze, or mint further agents. HTTP/MCP omitting actor still becomes system; this rule is the fence.
 59. A transfer that would journal against equity or escrow is `ledger.operating_book`. Opening cash is `seedOpening`. Escrow moves through `hire.fund` / refund / release. Overdraft stays `ledger.sufficient`. Dest overflow of operating cash stays `ledger.safe_balance`. Ghost book stays `ledger.known_account`. A transfer is not a mint, and it cannot pick the escrow lock.
+60. A data vendor’s `key:usdc` and a market maker’s `market_maker:cash_usdc` belong to that agent, not system. Register writes `ownerId` after the id exists. A USDC name collision is `identity.unique_key`, not `account exists` after opening USD cash. Restore of old worlds may still show system as owner; a new register does not.
 
 ## Autonomy
 

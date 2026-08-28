@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
+import type { AccountId } from "@aether/types";
 
 const GHOST = "aid_01J6AETHERGHOSTAGEN0000001";
 const GHOST_PARENT = "dlg_01J6AETHERGHOSTPARENT00001";
@@ -460,6 +461,65 @@ describe("identity.unique_key", () => {
     expect(rt.aliases.has("mm-b")).toBe(false);
     expect(rt.ledger.accountsByName.has("market_maker:cash_usd")).toBe(true);
     expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses a data vendor whose USDC book is already open as identity.unique_key, not account exists after yes", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    rt.ledger.openAccount({
+      id: "acct_01J6AETHERGHOSTUSDC0000001" as AccountId,
+      ownerId: "system",
+      name: "ghost:usdc",
+      type: "asset",
+      currency: "USDC_SIM",
+    });
+    const before = rt.identity.all().length;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("identity.register", founder.id, {
+        key: "ghost",
+        displayName: "Ghost Vendor",
+        role: "data_vendor",
+        autonomyLevel: 2,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.unique_key");
+    expect(rt.identity.all()).toHaveLength(before);
+    expect(rt.aliases.has("ghost")).toBe(false);
+    expect(rt.ledger.accountsByName.has("ghost:cash")).toBe(false);
+    expect(rt.ledger.account("ghost:usdc").ownerId).toBe("system");
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});
+
+describe("USDC books belong to the agent", () => {
+  it("assigns vendor and market-maker USDC wallets to the agent, not system", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    expect(rt.ledger.account("vendor:usdc").ownerId).toBe(vendor.id);
+    expect(rt.ledger.account("vendor:cash").ownerId).toBe(vendor.id);
+    expect(rt.ledger.account("procurement:cash").ownerId).toBe(rt.alias("procurement").id);
+    expect(rt.ledger.account("system:equity").ownerId).toBe("system");
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "mm",
+          displayName: "Maker",
+          role: "market_maker",
+          autonomyLevel: 2,
+        }),
+      ),
+      "mm",
+    );
+    const mm = rt.alias("mm");
+    expect(rt.ledger.account("market_maker:cash_usd").ownerId).toBe(mm.id);
+    expect(rt.ledger.account("market_maker:cash_usdc").ownerId).toBe(mm.id);
   });
 });
 

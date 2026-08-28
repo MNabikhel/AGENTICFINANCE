@@ -75,7 +75,7 @@ export function autoBeat(input: {
           seq: input.seq,
           at: input.at,
           headline: `${who} could not register that agent`,
-          body: "That runtime alias (or its cash book) is already taken. Two agents cannot share one operating book.",
+          body: "That runtime alias (or its USD/USDC operating book) is already taken. Two agents cannot share one operating book.",
           tone: "deny",
           commandType: cmd.type,
         };

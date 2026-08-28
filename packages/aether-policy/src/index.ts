@@ -975,8 +975,8 @@ export const RULES: readonly Rule[] = [
     evaluate: (ctx) => {
       if (ctx.aliasFree === undefined) return v("identity.unique_key", "allow", "not a register");
       return ctx.aliasFree
-        ? v("identity.unique_key", "allow", "alias and cash book are free")
-        : v("identity.unique_key", "deny", "alias or cash book already taken");
+        ? v("identity.unique_key", "allow", "alias and operating books are free")
+        : v("identity.unique_key", "deny", "alias or operating book already taken");
     },
   },
   {
@@ -1287,7 +1287,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "identity.unique_key": {
     kind: "none",
-    hint: "That runtime alias (or its cash book) is already taken. Pick a free key. Two agents cannot share one operating book. Same-body retries still replay.",
+    hint: "That runtime alias (or its USD/USDC operating book) is already taken. Pick a free key. Two agents cannot share one operating book. Same-body retries still replay.",
   },
   "receipt.known": {
     kind: "none",
