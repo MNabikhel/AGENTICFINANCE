@@ -65,7 +65,7 @@ import type {
   WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -678,7 +678,7 @@ export class Runtime {
     const ticket: ApprovalTicket = {
       id,
       createdAt: this.clock.now(),
-      expiresAt: new Date(Date.parse(this.clock.now()) + 86_400_000).toISOString(),
+      expiresAt: new Date(Date.parse(this.clock.now()) + DAY_MS).toISOString(),
       commandType: cmd.type,
       commandHash: payloadHash({ type: cmd.type, actorId: cmd.actorId, body: cmd.body }),
       reason: decision.trace.filter((t) => t.verdict === "escalate").map((t) => t.message).join("; "),
@@ -1533,7 +1533,7 @@ export class Runtime {
       expiresAt:
         typeof body.expiresAt === "string"
           ? body.expiresAt
-          : new Date(Date.parse(this.clock.now()) + 365 * 24 * 3600 * 1000).toISOString(),
+          : new Date(Date.parse(this.clock.now()) + 365 * DAY_MS).toISOString(),
     };
     if (typeof body.parentId === "string") {
       if (!this.kya.attestations.has(body.parentId as DelegationId)) throw new Error("unknown parent hop");
@@ -1620,7 +1620,7 @@ export class Runtime {
       task: String(body.task),
       constraints: body.constraints as MandateConstraint[],
       iat: unixSeconds(this.clock.now()),
-      exp: unixSeconds(this.clock.now()) + 7 * 24 * 3600,
+      exp: unixSeconds(this.clock.now()) + 7 * DAY_SEC,
     };
     if (typeof body.parentId === "string") {
       if (!this.intents.get(body.parentId as MandateId)) throw new Error("unknown parent intent");
@@ -1668,7 +1668,7 @@ export class Runtime {
       merchant: this.merchant(merchantAgent),
       line_items: lineItems,
       total,
-      expiresAt: new Date(Date.parse(this.clock.now()) + 86_400_000).toISOString(),
+      expiresAt: new Date(Date.parse(this.clock.now()) + DAY_MS).toISOString(),
       userConfirmationRequired: actor.autonomyLevel < 2,
     };
     const signed = signMandate(payload, merchantAgent.did, this.keypair(merchantAgent.id));
@@ -1698,7 +1698,7 @@ export class Runtime {
       payment_amount: cart.payload.total,
       payment_instrument: SIM_INSTRUMENT,
       iat: unixSeconds(this.clock.now()),
-      exp: unixSeconds(this.clock.now()) + 86_400_000,
+      exp: unixSeconds(this.clock.now()) + DAY_SEC,
     };
     const signed = signMandate(payload, actor.did, this.keypair(actor.id));
     this.payments.set(payload.id, signed);
@@ -1721,7 +1721,7 @@ export class Runtime {
       invitedSellerIds: Array.isArray(body.invitedSellerIds)
         ? (body.invitedSellerIds.filter((id): id is AgentId => typeof id === "string") as AgentId[])
         : [],
-      expiresAt: new Date(Date.parse(this.clock.now()) + 86_400_000).toISOString(),
+      expiresAt: new Date(Date.parse(this.clock.now()) + DAY_MS).toISOString(),
     };
     this.rfqs.set(rfq.id, rfq);
     this.audit.append({
@@ -1755,7 +1755,7 @@ export class Runtime {
       rfqId: rfq.id,
       sellerId: actor.id,
       price,
-      expiresAt: new Date(Date.parse(this.clock.now()) + 3_600_000).toISOString(),
+      expiresAt: new Date(Date.parse(this.clock.now()) + HOUR_MS).toISOString(),
     };
     if (body.fx) quote.fx = body.fx as Quote["fx"];
     this.quotes.set(quote.id, quote);

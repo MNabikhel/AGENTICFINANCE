@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
 import { offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
-import type { HireContract, MandateId } from "@aether/types";
+import { DAY_MS, DAY_SEC, type HireContract, type MandateId } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -347,5 +347,85 @@ describe("hire cart match", () => {
     expect(rt.hires.get(hireId)?.state).toBe("accepted");
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
     expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});
+
+describe("payment exp", () => {
+  it("writes payment exp one day in unix seconds, not milliseconds", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cart = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          line_items: [
+            {
+              sku: "research.brief",
+              description: "page 1",
+              quantity: 1,
+              unitAmount: { amount: 80_000, currency: "USD_SIM" },
+            },
+          ],
+        }),
+      ),
+      "cart",
+    );
+    const cartId = (cart.data as { payload: { id: string } }).payload.id;
+    const issued = must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    const payment = issued.data as { payload: { iat: number; exp: number } };
+    expect(payment.payload.exp - payment.payload.iat).toBe(DAY_SEC);
+    expect(payment.payload.exp - payment.payload.iat).not.toBe(DAY_MS);
+  });
+
+  it("refuses to fund after the one-day window as mandate.not_expired", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cart = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          hireId,
+          line_items: [
+            {
+              sku: "research.brief",
+              description: "one pager",
+              quantity: 1,
+              unitAmount: { amount: 80_000, currency: "USD_SIM" },
+            },
+          ],
+        }),
+      ),
+      "cart",
+    );
+    const cartId = (cart.data as { payload: { id: string } }).payload.id;
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    rt.clock.set(new Date(Date.parse(rt.clock.now()) + DAY_MS + 3_600_000).toISOString());
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.bound_cart")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
   });
 });

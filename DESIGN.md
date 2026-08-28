@@ -359,8 +359,8 @@ export interface PaymentMandate {
   payment_amount: { amount: number; currency: CurrencyCode };
   payment_instrument: PaymentInstrument;
   execution_date?: Instant;
-  iat: number;
-  exp: number;
+  iat: number;                      // unix seconds
+  exp: number;                      // unix seconds. One day from iat (not milliseconds). Matches cart expiresAt.
 }
 
 export interface Signed<T> {
@@ -1018,7 +1018,7 @@ export interface AetherError {
 | `audit.test.ts` | Tamper a JSONL byte → verify fails at that seq; reorder fails; genesis prevHash is zeros |
 | `ledger.test.ts` | Unbalanced journal rejected; replay file ≡ memory; FX keeps two books; a dest that would leave `Number.isSafeInteger` is refused at `post()`; operating books are asset cash, not equity or escrow |
 | `mandate.test.ts` | Wrong cart hash / swapped payee / amount mismatch denied |
-| `cart.test.ts` | A cart must equal the hire it pays; a line with no amount is `command.malformed`, not a throw after yes; a second cart on the same hire is `hire.unique_cart`, not a pointer swap; a second payment on the same cart is `mandate.unique_payment`, not a second check; funding with a loose cartId (never bound to the hire) is `hire.bound_cart`, not a throw at release; a line whose cents overflow, or mixed USD/USDC lines, is `command.malformed` |
+| `cart.test.ts` | A cart must equal the hire it pays; a line with no amount is `command.malformed`, not a throw after yes; a second cart on the same hire is `hire.unique_cart`, not a pointer swap; a second payment on the same cart is `mandate.unique_payment`, not a second check; payment `exp` is one day in unix seconds, not milliseconds; funding with a loose cartId (never bound to the hire) is `hire.bound_cart`, not a throw at release; a line whose cents overflow, or mixed USD/USDC lines, is `command.malformed` |
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
 | `ladder.test.ts` | Skip 2→4 is `ladder.legal`; L5 before freeze test is `ladder.legal`; minting L5 at register is `ladder.birth_rung`; freeze restores the prior rung |
 | `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows and payment-required before deliver are `hire.state`; funding without cash is `ledger.sufficient`; quoting an FX SKU without a window is `market.fx_window` |

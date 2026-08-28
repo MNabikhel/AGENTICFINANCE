@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.61.0",
+  version: "0.62.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -184,12 +184,19 @@ export interface LineItem {
 
 export type RecurrenceFrequency = "ON_DEMAND" | "DAILY" | "WEEKLY" | "MONTHLY";
 
+/** One day in milliseconds. ISO `expiresAt` windows (cart, RFQ, approval ticket). */
+export const DAY_MS = 86_400_000;
+/** One day in unix seconds. Mandate `iat`/`exp` are seconds, not milliseconds. */
+export const DAY_SEC = 86_400;
+/** One hour in milliseconds. Quote `expiresAt`. */
+export const HOUR_MS = 3_600_000;
+
 /** Minimum gap between funded occurrences. `ON_DEMAND` has no gap. Monthly is 30 × 24h on the sim clock. */
 export const RECURRENCE_GAP_MS: Record<RecurrenceFrequency, number> = {
   ON_DEMAND: 0,
-  DAILY: 86_400_000,
-  WEEKLY: 7 * 86_400_000,
-  MONTHLY: 30 * 86_400_000,
+  DAILY: DAY_MS,
+  WEEKLY: 7 * DAY_MS,
+  MONTHLY: 30 * DAY_MS,
 };
 
 export type MandateConstraint =
@@ -283,6 +290,7 @@ export interface PaymentMandate {
   payment_instrument: PaymentInstrument;
   execution_date?: Instant;
   iat: number;
+  /** Unix seconds. One day from `iat`, matching the cart window. Not milliseconds. */
   exp: number;
 }
 
