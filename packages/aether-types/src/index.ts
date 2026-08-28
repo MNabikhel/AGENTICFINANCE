@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.56.0",
+  version: "0.57.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -840,6 +840,13 @@ export interface PolicyContext {
    * A missing speaker is not a 500 after yes.
    */
   actorKnown?: boolean;
+  /**
+   * False when Command.actorId is `system` and the command is not a bootstrap of the
+   * first human or a read (catalog / audit.query / balances / receipt.get).
+   * Absent = speaker is not system. System is the runtime, not a treasurer.
+   * HTTP/MCP omitting actor still becomes system; this rule is the fence.
+   */
+  systemOk?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
@@ -999,6 +1006,17 @@ export const KYA_GATED_COMMANDS: readonly CommandType[] = [
   "envelope.submit",
   "mandate.issue_intent",
   "kya.attest",
+];
+
+/**
+ * Commands `system` may run besides bootstrapping the first human_operator.
+ * System is the runtime, not a treasurer. HTTP/MCP omitting actor still becomes system.
+ */
+export const SYSTEM_READ_COMMANDS: readonly CommandType[] = [
+  "market.catalog",
+  "audit.query",
+  "ledger.balances",
+  "receipt.get",
 ];
 
 export const ROLE_CAPABILITY: Record<

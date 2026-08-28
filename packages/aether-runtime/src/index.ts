@@ -64,7 +64,7 @@ import type {
   WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -776,6 +776,15 @@ export class Runtime {
       },
       auditHealthy: audit.ok,
     };
+    if (cmd.actorId === "system") {
+      if (cmd.type === "identity.register") {
+        ctx.systemOk =
+          body.role === "human_operator" &&
+          ![...this.identity.all()].some((a) => a.role === "human_operator");
+      } else {
+        ctx.systemOk = (SYSTEM_READ_COMMANDS as readonly string[]).includes(cmd.type);
+      }
+    }
     if (intent) ctx.intent = intent;
     if (intent) {
       const last = this.lastOccurrence.get(intent.payload.id);

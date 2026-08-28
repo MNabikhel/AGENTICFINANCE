@@ -1110,6 +1110,15 @@ export const RULES: readonly Rule[] = [
         : v("ledger.safe_balance", "deny", "resulting balance is not a safe integer");
     },
   },
+  {
+    id: "actor.system_scope",
+    evaluate: (ctx) => {
+      if (ctx.systemOk === undefined) return v("actor.system_scope", "allow", "speaker is not system");
+      return ctx.systemOk
+        ? v("actor.system_scope", "allow", "system may bootstrap or read")
+        : v("actor.system_scope", "deny", "system cannot run this command");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1324,6 +1333,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "ledger.safe_balance": {
     kind: "none",
     hint: "That book cannot hold this many more cents. IEEE rounding is not a mint. Split the journal or drain the dest first. Command amounts that are already unsafe integers are command.malformed.",
+  },
+  "actor.system_scope": {
+    kind: "none",
+    hint: "System is the runtime, not a treasurer. It may bootstrap the first human and read the catalog, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
   },
   "payment.execution_date": {
     kind: "none",

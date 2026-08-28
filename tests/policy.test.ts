@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 73 rules", () => {
-    expect(RULE_IDS).toHaveLength(73);
+  it("has 74 rules", () => {
+    expect(RULE_IDS).toHaveLength(74);
   });
 
   it("denies frozen actors", () => {
@@ -1554,5 +1554,37 @@ describe("policy catalog", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+  });
+
+  it("denies system spending as actor.system_scope, not a treasurer costume", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 5 }),
+        commandType: "ledger.transfer",
+        accountsKnown: true,
+        accountsSameCurrency: true,
+        fundsOk: true,
+        balancesSafe: true,
+        systemOk: false,
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("actor.system_scope");
+  });
+
+  it("allows system to read the catalog", () => {
+    const d = evaluate(ctx({ commandType: "market.catalog", systemOk: true }));
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+  });
+
+  it("does not name actor.system_scope when the speaker is a registered agent", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
   });
 });

@@ -575,3 +575,88 @@ describe("known speaker", () => {
     expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
   });
 });
+
+describe("system is not a treasurer", () => {
+  it("refuses a transfer spoken as system as actor.system_scope, not L5 treasury", () => {
+    const rt = boot();
+    economy(rt);
+    rt.seedOpening({ "procurement:cash": { amount: 1_500_000, currency: "USD_SIM" } });
+    const clockBefore = rt.clock.now();
+    const journalsBefore = rt.journals.length;
+    const r = rt.dispatch(
+      cmd("ledger.transfer", "system", {
+        fromAccount: "procurement:cash",
+        toAccount: "vendor:cash",
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.system_scope");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.journals.length).toBe(journalsBefore);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(1_500_000);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("not a treasurer"))).toBe(true);
+  });
+
+  it("refuses system minting a second agent after the first human", () => {
+    const rt = boot();
+    economy(rt);
+    const before = rt.identity.all().length;
+    const r = rt.dispatch(
+      cmd("identity.register", "system", {
+        key: "extra",
+        displayName: "Extra",
+        role: "treasury",
+        autonomyLevel: 3,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.system_scope");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("allow");
+    expect(rt.identity.all()).toHaveLength(before);
+  });
+
+  it("refuses system bootstrapping a treasurer instead of a human", () => {
+    const rt = boot();
+    const r = rt.dispatch(
+      cmd("identity.register", "system", {
+        key: "treasury",
+        displayName: "Treasury",
+        role: "treasury",
+        autonomyLevel: 3,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.system_scope");
+    expect(rt.identity.all()).toHaveLength(0);
+  });
+
+  it("still lets system bootstrap the first human and read the catalog", () => {
+    const rt = boot();
+    const listed = rt.dispatch(cmd("market.catalog", "system", {}));
+    expect(listed.ok).toBe(true);
+    must(
+      rt.dispatch(
+        cmd("identity.register", "system", {
+          key: "ops-human",
+          displayName: "Founder",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "founder",
+    );
+    const again = rt.dispatch(cmd("market.catalog", "system", {}));
+    expect(again.ok).toBe(true);
+  });
+});

@@ -53,6 +53,20 @@ export function autoBeat(input: {
   const other = input.counterpartName;
   const sku = input.sku;
 
+  if (decision.verdict === "deny") {
+    const rule = decision.trace.find((t) => t.verdict === "deny");
+    if (rule?.ruleId === "actor.system_scope") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: "system is not a treasurer",
+        body: "System may bootstrap the first human and read the catalog, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+  }
+
   if (cmd.type === "identity.register") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");

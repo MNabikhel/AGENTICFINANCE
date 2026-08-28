@@ -653,6 +653,7 @@ export interface PolicyContext {
   paymentUnbound?: boolean;         // false when issue_payment names a cart that already has a payment
   cartBound?: boolean;              // false when fund/release/submit would move escrow on a hire that has not bound its cart and payment
   actorKnown?: boolean;             // false when Command.actorId is not system and is not a registered agent
+  systemOk?: boolean;               // false when actorId is system and the command is not first-human bootstrap or a read
   accountsKnown?: boolean;          // false when ledger.transfer / named balances / fx_settle points at a missing book (FX needs the vendor’s USDC book)
   accountsSameCurrency?: boolean;   // false when a transfer would mix USD_SIM and USDC_SIM, the label disagrees, or hire.fund would lock USD cash into a USDC escrow
   fundsOk?: boolean;                // false when a transfer, hire.fund, or fx_settle would overdraw the source book
@@ -828,6 +829,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 71 | `mm.known` | fx_settle (live FX quote) | no market_maker agent, or missing `market_maker:cash_usd` / `market_maker:cash_usdc` | — | MM and both books exist |
 | 72 | `actor.known` | always when actorId is not system | actorId is not a registered agent | — | speaker exists (or is system) |
 | 73 | `ledger.safe_balance` | transfer / fund / refund / release / envelope.submit / fx_settle | posting the journal would leave a book outside `Number.isSafeInteger` (dest + amount, or the matching source/equity leg) | — | resulting books stay safe integers |
+| 74 | `actor.system_scope` | always when actorId is system | command is not first-human bootstrap or a read (catalog / audit.query / balances / receipt.get) | — | system may bootstrap or read |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -1023,7 +1025,7 @@ export interface AetherError {
 | `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false`; ghost book is `ledger.known_account`; mixed-currency transfer is `ledger.same_currency`; overdraft is `ledger.sufficient`; dest overflow is `ledger.safe_balance`; an amount_range with no max is `command.malformed` |
 | `inspect.test.ts` | `aether_get` / inspect by id; MCP command schemas; expired approval tickets refuse resolve; a missing receipt is `receipt.known`, not an empty success |
 | `approval.test.ts` | Ghost ticket is `approval.known`; expired or already-resolved is `approval.pending`; approving a stale pause or a ticket with no held command is `approval.replay`, not a mutate throw after yes; reject of a dead pause still releases the quote |
-| `identity.test.ts` | Ghost freeze / handshake principal / revoke is `identity.known`; attesting yourself is `kya.not_self`; nested handshake with a ghost parent is `kya.known_parent`; ghost or foreign attestationId revoke is `kya.known_attestation`; L4 writing a founder handshake is `kya.party`; reused alias or second market maker is `identity.unique_key`; unfreeze of a live unfrozen agent (and a second freeze) is `identity.freeze_state`; a second live handshake for the same pair is `kya.unique_live`; a missing speaker is `actor.known`, not a throw before policy |
+| `identity.test.ts` | Ghost freeze / handshake principal / revoke is `identity.known`; attesting yourself is `kya.not_self`; nested handshake with a ghost parent is `kya.known_parent`; ghost or foreign attestationId revoke is `kya.known_attestation`; L4 writing a founder handshake is `kya.party`; reused alias or second market maker is `identity.unique_key`; unfreeze of a live unfrozen agent (and a second freeze) is `identity.freeze_state`; a second live handshake for the same pair is `kya.unique_live`; a missing speaker is `actor.known`, not a throw before policy; system spending or minting a second agent is `actor.system_scope` |
 | `kya.test.ts` | Nested hops; revoke cascades; unknown parent hop throws; unknown or foreign attestation throws; a second live pair throws |
 | `market.test.ts` | Catalog SKU deny; stale quote cannot be hired; audit.query by hire id; garbage role/decision/numeric agentId is `command.malformed`; a USD-only SKU quoted in USDC is `market.sku_currency`; `fxPairSettles` is the FX SKU priced in `from` |
 | `schema.test.ts` | Listed enums, integer ranges, JSON types, nested cart/constraint/FX fields, listed constraint value fields, unsafe integer cart/FX products, and mixed cart currencies in `commands.schema.json` are 400 at the shape gate |
