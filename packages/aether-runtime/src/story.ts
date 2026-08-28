@@ -137,6 +137,17 @@ export function autoBeat(input: {
   }
   if (cmd.type === "ledger.transfer") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "ledger.same_currency") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to mix currencies in one journal`,
+          body: "One journal is one currency. Convert with an FX quote and settle. A transfer is not a swap.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

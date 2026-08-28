@@ -800,9 +800,16 @@ export class Runtime {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
     }
     if (cmd.type === "ledger.transfer") {
-      ctx.accountsKnown =
-        this.ledger.accountsByName.has(String(body.fromAccount)) &&
-        this.ledger.accountsByName.has(String(body.toAccount));
+      const fromAcct = this.ledger.accountsByName.get(String(body.fromAccount));
+      const toAcct = this.ledger.accountsByName.get(String(body.toAccount));
+      ctx.accountsKnown = Boolean(fromAcct && toAcct);
+      if (fromAcct && toAcct) {
+        const stated =
+          body.amount && typeof body.amount === "object"
+            ? (body.amount as Money).currency
+            : undefined;
+        ctx.accountsSameCurrency = fromAcct.currency === toAcct.currency && stated === fromAcct.currency;
+      }
     }
     if (cmd.type === "ledger.balances") {
       if (typeof body.name === "string") {
@@ -1759,6 +1766,9 @@ export class Runtime {
     const amount = body.amount as Money;
     const from = this.ledger.account(String(body.fromAccount));
     const to = this.ledger.account(String(body.toAccount));
+    if (from.currency !== to.currency || amount.currency !== from.currency) {
+      throw new Error("mixed currency; split FX into two entries");
+    }
     return this.postJournal(`Transfer ${body.fromAccount} -> ${body.toAccount}`, [
       { accountId: to.id, debit: amount.amount, credit: 0 },
       { accountId: from.id, debit: 0, credit: amount.amount },

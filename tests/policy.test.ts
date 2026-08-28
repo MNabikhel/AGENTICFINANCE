@@ -74,8 +74,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 54 rules", () => {
-    expect(RULE_IDS).toHaveLength(54);
+  it("has 55 rules", () => {
+    expect(RULE_IDS).toHaveLength(55);
   });
 
   it("denies frozen actors", () => {
@@ -736,6 +736,24 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("ledger.known_account");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a mixed-currency transfer as ledger.same_currency, not a mutate throw", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        accountsKnown: true,
+        accountsSameCurrency: false,
+        amount: { amount: 1000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.same_currency");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

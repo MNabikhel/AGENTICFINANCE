@@ -884,6 +884,15 @@ export const RULES: readonly Rule[] = [
         : v("ledger.known_account", "deny", "account not found");
     },
   },
+  {
+    id: "ledger.same_currency",
+    evaluate: (ctx) => {
+      if (ctx.accountsSameCurrency === undefined) return v("ledger.same_currency", "allow", "not a transfer");
+      return ctx.accountsSameCurrency
+        ? v("ledger.same_currency", "allow", "one currency")
+        : v("ledger.same_currency", "deny", "mixed currency; use market.fx_settle");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1022,6 +1031,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "ledger.known_account": {
     kind: "none",
     hint: "That account name is not in this world. Register the agent (or open the book) first. A missing book is not an allocation.",
+  },
+  "ledger.same_currency": {
+    kind: "none",
+    hint: "One journal is one currency. USD_SIM and USDC_SIM do not mix. Convert with market.fx_settle, not a transfer.",
   },
   "payment.execution_date": {
     kind: "none",

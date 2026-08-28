@@ -78,7 +78,7 @@ describe("SIM_RAIL", () => {
     expect(SIM_RAIL.live).toBe(false);
     expect(SIM_RAIL.id).toBe(PROTOCOL.rail);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.28.0");
+    expect(PROTOCOL.version).toBe("0.29.0");
   });
 });
 
@@ -292,5 +292,55 @@ describe("ledger.known_account", () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.known_account");
+  });
+});
+
+describe("ledger.same_currency", () => {
+  it("refuses USD into a USDC book as ledger.same_currency, not a mutate throw", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const clockBefore = rt.clock.now();
+    const journalsBefore = rt.journals.length;
+    const treasuryBefore = rt.ledger.balanceByName("treasury:cash").amount;
+    const usdcBefore = rt.ledger.balanceByName("vendor:usdc").amount;
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "treasury:cash",
+        toAccount: "vendor:usdc",
+        amount: { amount: 1000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.same_currency");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.journals.length).toBe(journalsBefore);
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(treasuryBefore);
+    expect(rt.ledger.balanceByName("vendor:usdc").amount).toBe(usdcBefore);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("mix currencies"))).toBe(true);
+  });
+
+  it("refuses a USDC label on USD books as ledger.same_currency, not a silent relabel", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "treasury:cash",
+        toAccount: "procurement:cash",
+        amount: { amount: 1000, currency: "USDC_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.same_currency");
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(5_000_000);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(1_500_000);
   });
 });
