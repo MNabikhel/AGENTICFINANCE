@@ -1053,6 +1053,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.not_fx", "deny", "FX window is not a hire");
     },
   },
+  {
+    id: "approval.replay",
+    evaluate: (ctx) => {
+      if (ctx.replayOk === undefined) return v("approval.replay", "allow", "not approving a live ticket");
+      return ctx.replayOk
+        ? v("approval.replay", "allow", "paused command is still an allow")
+        : v("approval.replay", "deny", "paused command is no longer legal");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1243,6 +1252,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.not_fx": {
     kind: "none",
     hint: "An FX window settles with market.fx_settle. It is not a hire. A deny does not consume the window.",
+  },
+  "approval.replay": {
+    kind: "none",
+    hint: "That ticket’s paused command is no longer legal (stale quote, expired slip, or the held command is gone). Reject the ticket to release a reserved quote. Do not treat a grown-up yes as a late hire.",
   },
   "payment.execution_date": {
     kind: "none",

@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 67 rules", () => {
-    expect(RULE_IDS).toHaveLength(67);
+  it("has 68 rules", () => {
+    expect(RULE_IDS).toHaveLength(68);
   });
 
   it("denies frozen actors", () => {
@@ -610,6 +610,7 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "approval.replay")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("approval.pending");
   });
 
@@ -1276,5 +1277,37 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("denies approving a ticket whose paused command is no longer legal", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "approval.resolve",
+        approvalKnown: true,
+        approvalPending: true,
+        replayOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "approval.replay")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("approval.replay");
+  });
+
+  it("does not name approval.replay when the ticket itself is missing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "approval.resolve",
+        approvalKnown: false,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "approval.replay")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("approval.known");
   });
 });

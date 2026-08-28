@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.50.0",
+  version: "0.51.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -693,6 +693,13 @@ export interface PolicyContext {
    * Absent = not an approval.resolve, or the ticket is unknown (`approvalKnown` handles that).
    */
   approvalPending?: boolean;
+  /**
+   * False when `approval.resolve` would approve a ticket whose paused command
+   * is no longer an allow (stale quote, expired intent, missing pending command).
+   * Absent = not approving a live ticket (`approval.pending` / `approval.known` handle those).
+   * Reject does not set this flag — you can always refuse a dead pause.
+   */
+  replayOk?: boolean;
   /**
    * False when the actor is not the counterparty this hire command belongs to.
    * Accept / deliver / envelope.require are the seller. Refund / release are the buyer or treasury.

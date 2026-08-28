@@ -115,6 +115,7 @@ describe("pending approval", () => {
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.replay")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("approval.pending");
     expect(rt.approvals.get(ticket.id)?.status).toBe("expired");
   });
@@ -143,5 +144,57 @@ describe("pending approval", () => {
     if (again.ok) return;
     expect(again.error.decision?.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("deny");
     expect(rt.approvals.get(ticket.id)?.status).toBe("approved");
+  });
+});
+
+describe("approval replay", () => {
+  it("refuses to approve after the paused quote has gone stale, not a mutate throw after yes", () => {
+    const rt = boot();
+    const { treasury, ticket, quoteId } = pauseHire(rt);
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "approved" }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.replay")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("approval.replay");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("pending");
+    expect(rt.reservedQuotes.get(quoteId)).toBe(ticket.id);
+    expect(rt.consumedQuotes.has(quoteId)).toBe(false);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still lets a grown-up reject a ticket whose paused command is stale", () => {
+    const rt = boot();
+    const { treasury, ticket, quoteId } = pauseHire(rt);
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    const rejected = must(
+      rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "rejected" })),
+      "reject stale",
+    );
+    expect((rejected.data as { status: string }).status).toBe("rejected");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("rejected");
+    expect(rt.reservedQuotes.has(quoteId)).toBe(false);
+  });
+
+  it("refuses to approve when the held command is gone, not a missing-pending throw after yes", () => {
+    const rt = boot();
+    const { treasury, ticket, quoteId } = pauseHire(rt);
+    rt.pending.delete(ticket.id);
+    const r = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "approved" }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.replay")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("approval.replay");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("pending");
+    expect(rt.reservedQuotes.get(quoteId)).toBe(ticket.id);
   });
 });

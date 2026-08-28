@@ -763,6 +763,20 @@ export class Runtime {
         ctx.approvalPending =
           ticket.status === "pending" && Date.parse(ticket.expiresAt) > Date.parse(this.clock.now());
       }
+      if (ctx.approvalPending === true && body.decision === "approved") {
+        const pending = this.pending.get(ticket!.id);
+        if (!pending) {
+          ctx.replayOk = false;
+        } else {
+          const pendingActor =
+            pending.actorId === "system" ? this.systemActor() : this.identity.get(pending.actorId as AgentId);
+          if (!pendingActor) {
+            ctx.replayOk = false;
+          } else {
+            ctx.replayOk = evaluate(this.snapshot(pending, pendingActor, true)).verdict === "allow";
+          }
+        }
+      }
     }
     if (hire && hire.id !== "hid_draft") {
       if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
@@ -1903,15 +1917,15 @@ export class Runtime {
       resolvedBy: actor.id,
       resolvedAt: this.clock.now(),
     };
-    this.approvals.set(ticket.id, next);
-    this.audit.append({
-      clock: this.clock,
-      actorId: actor.id,
-      action: "APPROVAL_RESOLVE",
-      subjects: [{ type: "approval", id: ticket.id }],
-      payload: { id: ticket.id, decision },
-    });
     if (decision === "rejected") {
+      this.approvals.set(ticket.id, next);
+      this.audit.append({
+        clock: this.clock,
+        actorId: actor.id,
+        action: "APPROVAL_RESOLVE",
+        subjects: [{ type: "approval", id: ticket.id }],
+        payload: { id: ticket.id, decision },
+      });
       const pending = this.pending.get(ticket.id);
       if (pending) {
         const k = idempotencyKeyOf(pending);
@@ -1929,6 +1943,14 @@ export class Runtime {
     if (replay.value.kind !== "allow") {
       throw new Error(`approved command did not allow: ${replay.value.kind}`);
     }
+    this.approvals.set(ticket.id, next);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "APPROVAL_RESOLVE",
+      subjects: [{ type: "approval", id: ticket.id }],
+      payload: { id: ticket.id, decision },
+    });
     return { ticket: next, hire: replay.value.data, replay: replay.value };
   }
 
