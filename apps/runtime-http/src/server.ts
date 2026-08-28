@@ -111,6 +111,10 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, 200, runtime.protocolCard());
         return;
       }
+      if (req.method === "GET" && path === "/.well-known/aether.json") {
+        json(res, 200, runtime.protocolCard());
+        return;
+      }
       if (req.method === "GET" && path === "/v1/catalog") {
         const listed = runtime.dispatch(cmd("market.catalog", "system", {}));
         if (!listed.ok) {
@@ -188,11 +192,11 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
           url: "http://127.0.0.1:8787",
           capabilities: { streaming: false, pushNotifications: false },
           skills: [
-            { id: "sprint-procurement", name: "Sprint Procurement", description: "POST /v1/demo/sprint-procurement" },
-            { id: "night-watch", name: "Night Watch", description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker" },
-            { id: "sub-hire", name: "Sub-hire", description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake" },
-            { id: "command-bus", name: "Command bus", description: "Same commands as MCP and CLI" },
-            { id: "protocol", name: "Protocol card", description: "GET /v1/protocol — pin aether.protocol.1" },
+            { id: "protocol", name: "Host card", description: "GET /v1/protocol and GET /.well-known/aether.json — pin aether.protocol.1. liveMoney false. evaluateLlm false. hosted false." },
+            { id: "commands", name: "Command bus", description: "GET /v1/commands — JSON Schema for every CommandType. Same commands as MCP." },
+            { id: "sprint-procurement", name: "Sprint Procurement TAP", description: "POST /v1/demo/sprint-procurement — conformance, not a storefront" },
+            { id: "night-watch", name: "Night Watch TAP", description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker" },
+            { id: "sub-hire", name: "Sub-hire TAP", description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake" },
           ],
           defaultInputModes: ["application/json"],
           defaultOutputModes: ["application/json"],
@@ -263,6 +267,8 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         "/v1/audit/verify": "audit.verify",
         "/v1/audit/query": "audit.query",
         "/v1/catalog": "market.catalog",
+        "/v1/host/card": "host.card",
+        "/v1/host/subscribe": "host.subscribe",
         "/v1/clearing/windows": "clearing.settle_window",
       };
 

@@ -567,6 +567,22 @@ export class Runtime {
       clock: this.clock.now(),
       auditHead: this.audit.head(),
       auditLength: this.audit.length,
+      discovery: {
+        wellKnown: "/.well-known/aether.json",
+        protocol: "/v1/protocol",
+        commands: "/v1/commands",
+        mcp: "aether://protocol",
+      },
+      pricing: {
+        currency: "USD_SIM" as const,
+        selfHost: { amount: 0 },
+        hostedMonthly: null,
+      },
+      authority: {
+        bootstrap: "human_operator" as const,
+        subscribe: "host.subscribe" as const,
+        subscribeAvailable: PROTOCOL.hosted,
+      },
     };
   }
 
@@ -1299,6 +1315,7 @@ export class Runtime {
       );
       if (nested !== undefined) ctx.kyaParentFresh = nested;
     }
+    if (cmd.type === "host.subscribe") ctx.hostedOk = PROTOCOL.hosted;
     return ctx;
   }
 
@@ -1567,7 +1584,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -1669,6 +1686,10 @@ export class Runtime {
         return this.mutAuditQuery(body);
       case "market.catalog":
         return { skus: CATALOG };
+      case "host.card":
+        return this.protocolCard();
+      case "host.subscribe":
+        throw new Error("not hosted");
       case "receipt.get": {
         const receipt = this.receipts.get(String(body.receiptId));
         if (!receipt) throw new Error("unknown receipt");

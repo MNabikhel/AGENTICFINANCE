@@ -180,7 +180,7 @@ export class AetherMcp {
           },
           {
             name: "aether_protocol",
-            description: "Pin-able protocol card. liveMoney is false until adapters exist.",
+            description: "Pin-able protocol card. liveMoney is false until adapters exist. evaluateLlm is false. hosted is false on this public kernel.",
             inputSchema: { type: "object", properties: {} },
           },
           {
@@ -197,6 +197,11 @@ export class AetherMcp {
           {
             uri: "aether://protocol",
             name: "protocol card",
+            mimeType: "application/json",
+          },
+          {
+            uri: "aether://host",
+            name: "host card (same pin as protocol: pricing, capabilities, hosted)",
             mimeType: "application/json",
           },
           {
@@ -219,7 +224,7 @@ export class AetherMcp {
     }
     if (method === "resources/read") {
       const uri = (params as { uri?: string })?.uri;
-      if (uri === "aether://protocol") {
+      if (uri === "aether://protocol" || uri === "aether://host") {
         return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(this.runtime.protocolCard()) }] };
       }
       if (uri === "aether://snapshot") {

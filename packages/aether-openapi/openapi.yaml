@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.88.0
+  version: 0.89.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -144,7 +144,22 @@ paths:
     get:
       operationId: protocolCard
       responses:
-        "200": { description: Pin-able aether.protocol.1 card. liveMoney is false until adapters exist. }
+        "200": { description: Pin-able aether.protocol.1 host card. liveMoney false. evaluateLlm false. hosted false on this public kernel. }
+  /.well-known/aether.json:
+    get:
+      operationId: wellKnownHostCard
+      responses:
+        "200": { description: Same pin as GET /v1/protocol. Machine discovery. }
+  /v1/host/card:
+    post:
+      operationId: hostCard
+      responses:
+        "200": { description: Same pin via the command bus. System may read it. }
+  /v1/host/subscribe:
+    post:
+      operationId: hostSubscribe
+      responses:
+        "422": { description: host.not_hosted on this public kernel. GitHub is not a checkout. }
   /v1/catalog:
     get:
       operationId: marketCatalog

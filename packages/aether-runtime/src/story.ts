@@ -60,7 +60,17 @@ export function autoBeat(input: {
         seq: input.seq,
         at: input.at,
         headline: "system is not a treasurer",
-        body: "System may bootstrap the first human and read the catalog, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
+        body: "System may bootstrap the first human and read the catalog, the host card, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (rule?.ruleId === "host.not_hosted") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} cannot subscribe to the public kernel`,
+        body: "This instance is the public protocol. Self-host is free. A hosted operator (durable audits, live adapters) is a later adapter. GitHub is not a checkout. Read host.card.",
         tone: "deny",
         commandType: cmd.type,
       };
@@ -128,7 +138,7 @@ export function autoBeat(input: {
     }
     return undefined;
   }
-  if (cmd.type === "ledger.balances" || cmd.type === "receipt.get") return undefined;
+  if (cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card") return undefined;
 
   if (cmd.type === "mandate.issue_intent") {
     const parented = typeof (cmd.body as { parentId?: string }).parentId === "string";
@@ -889,6 +899,7 @@ export function analog(): Analog {
       "If yes, money sits in escrow until the work is done, then a receipt is written that points back at the slip.",
       "A notary (the audit log) writes every decision in ink that smudges if you try to rewrite yesterday.",
       "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
+      "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator is a later adapter. GitHub is the public kernel, not a checkout.",
     ],
   };
 }

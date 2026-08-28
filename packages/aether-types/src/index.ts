@@ -28,10 +28,19 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.88.0",
+  version: "0.89.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
+  /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
+  evaluateLlm: false,
+  /**
+   * This public kernel is not a paid operator. Self-host is free.
+   * Hosted subscribe (`host.subscribe`) is a later adapter. GitHub is not a checkout.
+   */
+  hosted: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
+  /** Shape-only. Credentials never enter `evaluate()`. */
+  adapters: { ap2: "shape", x402: "shape", mpp: "shape" } as const,
 } as const;
 
 export interface Money {
@@ -994,12 +1003,18 @@ export interface PolicyContext {
   actorKnown?: boolean;
   /**
    * False when Command.actorId is `system` and the command is not a bootstrap of the
-   * first human or a read (catalog / audit.query / balances / receipt.get).
+   * first human or a read (catalog / audit.query / balances / receipt.get / host.card).
    * Absent = speaker is not system. System is the runtime, not a treasurer.
    * HTTP/MCP omitting actor still becomes system; this rule is the fence.
    * A provided name that is not a live alias is `actor.known`, not silent system.
    */
   systemOk?: boolean;
+  /**
+   * False when `host.subscribe` targets this public kernel (`PROTOCOL.hosted` is false).
+   * Absent = not a subscribe. Self-host is free. A hosted operator is a later adapter.
+   * GitHub is not a checkout. `host.card` is a read, not a subscribe.
+   */
+  hostedOk?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
@@ -1129,7 +1144,9 @@ export type CommandType =
   | "clearing.settle_window"
   | "audit.verify"
   | "audit.query"
-  | "receipt.get";
+  | "receipt.get"
+  | "host.card"
+  | "host.subscribe";
 
 /**
  * What another agent should do next. English is for humans; `kind` is for machines.
@@ -1174,6 +1191,7 @@ export const SYSTEM_READ_COMMANDS: readonly CommandType[] = [
   "audit.query",
   "ledger.balances",
   "receipt.get",
+  "host.card",
 ];
 
 export const ROLE_CAPABILITY: Record<
@@ -1208,6 +1226,8 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
+    "host.subscribe",
   ],
   procurement: [
     "mandate.issue_intent",
@@ -1227,6 +1247,8 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
+    "host.subscribe",
   ],
   data_vendor: [
     "market.quote",
@@ -1239,6 +1261,7 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
   ],
   compute_vendor: [
     "market.quote",
@@ -1251,6 +1274,7 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
   ],
   market_maker: [
     "market.quote",
@@ -1261,8 +1285,9 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
   ],
-  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog"],
+  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog", "host.card"],
   human_operator: [
     "identity.register",
     "identity.freeze",
@@ -1279,5 +1304,7 @@ export const ROLE_CAPABILITY: Record<
     "ledger.balances",
     "clearing.settle_window",
     "receipt.get",
+    "host.card",
+    "host.subscribe",
   ],
 };

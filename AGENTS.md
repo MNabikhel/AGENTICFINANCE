@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.88.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, `GET /.well-known/aether.json`, resource `aether://protocol` / `aether://host`, tool `aether_protocol` / `aether_host_card`). `liveMoney` is `false` until adapters exist. `evaluateLlm` is `false`. `hosted` is `false` on this public kernel. Current card: `0.89.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -10,15 +10,17 @@ Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
 This is a kernel. You extend it. Public protocol and live money are different switches.
 
-- **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch.
+- **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch. This kernel is meant to be public so others can trust the referee.
 - **Live money (later):** adapters on these objects (x402 / MPP / AP2 / TAP) plus credentials that never enter `evaluate()`. Until then `instrument.sim_only` denies anything else.
+- **Hosted operator (later):** production durability, approvals, identity, security, and those adapters as a paid service. Self-host of this kernel is free (`pricing.selfHost.amount` is 0). `host.subscribe` on this instance is `host.not_hosted`. GitHub is not a checkout.
 
 ## Speak to it
 
 ```
 pnpm mcp                 # stdio MCP (Content-Length JSON-RPC)
 POST /v1/*               # same commands over HTTP
-GET  /v1/protocol        # pin-able card
+GET  /v1/protocol        # pin-able host card
+GET  /.well-known/aether.json
 AETHER_DATA_DIR=./data pnpm mcp   # durable world.json + audit.jsonl
 ```
 
@@ -28,7 +30,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
 - `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `mid_` intent includes derived status (`live | expired | funded`). Funded (escrow moved against this slip, including later refund/release) wins over expired. A child hire does not occupy the parent. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `mid_` payment includes derived status (`live | expired | funded`). Funded (escrow moved, including later refund/release) wins over expired. A `dlg_` hop includes derived status (`live | expired | revoked`).
-- `aether_protocol` / resource `aether://protocol`
+- `aether_protocol` / resource `aether://protocol` / `aether://host` / tool `aether_host_card` — pin-able host card (pricing, capabilities, hosted). `host.subscribe` on this kernel is `host.not_hosted`.
 - `aether://commands` — JSON Schema for every command body
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
 - `aether_audit_query` / `GET /v1/audit?subject=` — notary lines for one id
@@ -43,7 +45,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on fund (`hire.fund`). Submit verifies signatures and hashes; expiry was checked at fund. Completing a funded hire after the cart or payment window is legal.
-3. 84 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 85 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`). Completing a funded hire after the hop expires, or after a climb above the grant, is legal; freeze and revoke still bind.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -129,6 +131,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 86. Completing a funded hire after a hot settle hour is legal. `velocity.window` binds new spends (`hire.create`, `hire.fund`, `market.fx_settle`). Deliver, release, refund, require, submit, accept, and reads after that hour are not a trapped escrow and are not a grown-up pause. A new hire, fund, or FX settle still asks a grown-up.
 87. Fetching one payment by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `funded`. Funded (escrow moved, including later refund/release) wins over expired. A cart that this payment occupies is not funded — that occupancy lives on the cart (`bound`). The store stays raw. Snapshot uses the same derivation and lists payments. A second payment still names `mandate.unique_payment`. Fund of a stale unpaid payment still names `mandate.chain_integrity`.
 88. Fetching one intent by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `funded`. Funded (escrow moved against this slip, including later refund/release) wins over expired. A child hire does not occupy the parent. Recurrence spend is not occupancy. The store stays raw (`exp` only). Snapshot uses the same derivation (signed view, not payload-only). A new hire against a stale unused slip still names `mandate.not_expired`. Completing a funded hire after the seven-day window is legal.
+89. Other agents discover this referee by pinning the host card (`host.card` / `GET /v1/protocol` / `GET /.well-known/aether.json`). `evaluateLlm` is false. `hosted` is false on this public kernel. Self-host is free. `host.subscribe` is `host.not_hosted`. System may read the card. A vendor subscribe stays `actor.role_capability`. System subscribe stays `actor.system_scope`. GitHub is not a checkout. Live adapters (AP2 / x402 / MPP) are shape-only until `liveMoney`. Humans establish identity, budget, and authority first.
 
 ## Autonomy
 

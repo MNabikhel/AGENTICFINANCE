@@ -137,6 +137,16 @@
       "description": "Fetch a receipt. reference must equal sha256(payment mandate)."
     },
     {
+      "name": "aether_host_card",
+      "commandType": "host.card",
+      "description": "Pin-able host card: protocol, pricing, capabilities, whether this instance is a hosted operator. liveMoney is false. evaluateLlm is false. This public kernel is hosted false. Self-host is free. System may read it."
+    },
+    {
+      "name": "aether_host_subscribe",
+      "commandType": "host.subscribe",
+      "description": "Subscribe an authorized agent to a hosted operator. This public kernel refuses as host.not_hosted. Humans establish identity, budget, and authority first. GitHub is not a checkout."
+    },
+    {
       "name": "aether_demo_sprint",
       "commandType": "demo.sprint",
       "description": "Run the Sprint Procurement TAP demo on sim:aether-1."

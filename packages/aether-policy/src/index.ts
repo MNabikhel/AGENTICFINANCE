@@ -1248,6 +1248,15 @@ export const RULES: readonly Rule[] = [
         : v("market.fx_fresh", "deny", "FX window already closed");
     },
   },
+  {
+    id: "host.not_hosted",
+    evaluate: (ctx) => {
+      if (ctx.hostedOk === undefined) return v("host.not_hosted", "allow", "not a host subscribe");
+      return ctx.hostedOk
+        ? v("host.not_hosted", "allow", "this instance is a hosted operator")
+        : v("host.not_hosted", "deny", "this instance is the public kernel");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1516,6 +1525,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.fx_fresh": {
     kind: "none",
     hint: "An FX window cannot be born dead. Name a validUntil strictly after now. An unparseable Instant is not a window. Settle of a window that lapses after mint stays market.not_expired. Ghost RFQ stays market.known_rfq. A missing window stays market.fx_window. A swapped pair stays market.fx_pair.",
+  },
+  "host.not_hosted": {
+    kind: "none",
+    hint: "This instance is the public kernel. Self-host is free. A hosted operator (durable audits, live adapters) is a later adapter. GitHub is not a checkout. Read host.card.",
   },
   "payment.execution_date": {
     kind: "none",

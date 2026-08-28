@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 84 rules", () => {
-    expect(RULE_IDS).toHaveLength(84);
+  it("has 85 rules", () => {
+    expect(RULE_IDS).toHaveLength(85);
   });
 
   it("denies frozen actors", () => {
@@ -3391,5 +3391,31 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("escalate");
     expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
     expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+  });
+
+  it("denies subscribe on the public kernel as host.not_hosted", () => {
+    const d = evaluate(ctx({ commandType: "host.subscribe", hostedOk: false }));
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("host.not_hosted");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name host.not_hosted on a hosted operator", () => {
+    const d = evaluate(ctx({ commandType: "host.subscribe", hostedOk: true }));
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
+  });
+
+  it("does not name host.not_hosted when the speaker is not subscribing", () => {
+    const d = evaluate(ctx({ commandType: "host.card" }));
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.message).toBe("not a host subscribe");
+  });
+
+  it("allows system to read the host card", () => {
+    const d = evaluate(ctx({ commandType: "host.card", systemOk: true }));
+    expect(d.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
   });
 });
