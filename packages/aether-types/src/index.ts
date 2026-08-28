@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.80.0",
+  version: "0.81.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -285,6 +285,13 @@ export interface CartMandate {
   expiresAt: Instant;
   userConfirmationRequired: boolean;
 }
+
+/**
+ * Inspect / snapshot view. Bound (unique_payment occupies) wins over expired.
+ * A hire that points at this cart is not bound — that occupancy lives on the hire.
+ * The store stays raw.
+ */
+export type CartStatus = "live" | "expired" | "bound";
 
 export interface PaymentMandate {
   vct: "aether.mandate.payment.1" | "aether.mandate.payment.open.1";

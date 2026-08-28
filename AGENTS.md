@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.80.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.81.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -27,7 +27,7 @@ Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. 
 MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
-- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `dlg_` hop includes derived status (`live | expired | revoked`).
+- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `dlg_` hop includes derived status (`live | expired | revoked`).
 - `aether_protocol` / resource `aether://protocol`
 - `aether://commands` — JSON Schema for every command body
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 83 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 84 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`).
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -121,6 +121,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 78. Fetching one quote by id (`aether_get` / `GET /v1/objects/qte_*`) labels it `live`, `expired`, `spent`, or `held`. Spent (consumed) and held (a live reserved ticket) win over expired. Expired includes the quote envelope and a lapsed FX `validUntil`. A reservation whose ticket is past `expiresAt` is not held. The store stays raw. Snapshot uses the same derivation. Hire still names `hire.quote_unspent` / `market.not_expired`.
 79. An FX window cannot be born dead (`market.fx_fresh`). `market.quote` with `validUntil` ≤ now, or an unparseable Instant, is a refuse, not a written corpse that then fails settle as `market.not_expired`. A window that lapses after mint is still `market.not_expired` at settle, and inspect labels it `expired`. Ghost RFQ stays `market.known_rfq`. A missing window stays `market.fx_window`. A swapped pair stays `market.fx_pair`. An expired RFQ stays `market.not_expired`. Off-band stays `mm.spread_bound`.
 80. Inviting a missing agent onto an RFQ is `identity.known`, not a closed room nobody can quote. Empty or omitted is still open. A missing SKU stays `market.known_sku`. A live guest list still binds (`market.invited_seller`).
+81. Fetching one cart by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `bound`. Bound (unique_payment occupies) wins over expired. A hire that points at this cart is not bound — that occupancy lives on the hire. The store stays raw. Snapshot uses the same derivation. A second payment still names `mandate.unique_payment`. Fund of a stale cart still names `mandate.chain_integrity` / `mandate.not_expired`.
 
 ## Autonomy
 

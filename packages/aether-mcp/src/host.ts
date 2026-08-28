@@ -166,12 +166,12 @@ export class AetherMcp {
           })),
           {
             name: "aether_snapshot",
-            description: "Read-only runtime snapshot: agents, mandates, hires, KYA, clearing, audit head.",
+            description: "Read-only runtime snapshot: agents, mandates, carts, hires, KYA, clearing, audit head. Carts include derived live | expired | bound.",
             inputSchema: { type: "object", properties: {} },
           },
           {
             name: "aether_get",
-            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil. A dlg_ hop includes derived status (live | expired | revoked).",
+            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A dlg_ hop includes derived status (live | expired | revoked).",
             inputSchema: {
               type: "object",
               properties: { id: { type: "string" } },

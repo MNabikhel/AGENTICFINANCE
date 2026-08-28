@@ -69,6 +69,31 @@ function economy(rt: Runtime, max = 700_000) {
   };
 }
 
+function issueCart(
+  rt: Runtime,
+  input: { buyer: string; seller: string; intentId: MandateId; hireId?: string },
+) {
+  const cart = must(
+    rt.dispatch(
+      cmd("mandate.issue_cart", input.buyer, {
+        intentId: input.intentId,
+        merchantId: input.seller,
+        ...(input.hireId ? { hireId: input.hireId } : {}),
+        line_items: [
+          {
+            sku: "research.brief",
+            description: "page 1",
+            quantity: 1,
+            unitAmount: { amount: 80_000, currency: "USD_SIM" },
+          },
+        ],
+      }),
+    ),
+    "cart",
+  );
+  return (cart.data as { payload: { id: string } }).payload.id;
+}
+
 describe("inspect", () => {
   it("fetches a hire by id and an agent by alias", () => {
     const rt = boot();
@@ -350,6 +375,71 @@ describe("quote inspect", () => {
     expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("expired");
     expect(rt.snapshotState().quotes.find((q) => q.id === quoteId)?.status).toBe("expired");
     expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
+  });
+});
+
+describe("cart inspect", () => {
+  it("labels a live cart live and does not write status into the store", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("live");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a paid cart bound, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+    const again = rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId }));
+    expect(again.ok).toBe(false);
+    if (again.ok) return;
+    expect(again.error.decision?.remediation?.ruleId).toBe("mandate.unique_payment");
+  });
+
+  it("labels a hire-attached cart live until a payment occupies it", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
+    expect(rt.hires.get(hireId)?.cartId).toBe(cartId);
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+  });
+
+  it("labels a stale unpaid cart expired, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("expired");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a bound cart bound even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
   });
 });
 

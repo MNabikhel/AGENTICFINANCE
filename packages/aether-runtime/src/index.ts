@@ -37,6 +37,7 @@ import type {
   ApprovalTicket,
   AutonomyLevel,
   CartMandate,
+  CartStatus,
   Command,
   CommandType,
   CurrencyCode,
@@ -436,6 +437,7 @@ export class Runtime {
       })),
       intents: [...this.intents.values()].map((s) => s.payload),
       spentByIntent: Object.fromEntries(this.spentByIntent),
+      carts: [...this.carts.values()].map((c) => this.cartView(c)),
       hires: [...this.hires.values()],
       rfqs: [...this.rfqs.values()],
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
@@ -512,6 +514,20 @@ export class Runtime {
     return { ...quote, status: "live" };
   }
 
+  /**
+   * Cart view for other agents. A cart whose unique_payment occupies is `bound`,
+   * not `live`. Bound wins over expired. A hire that points at this cart is not
+   * bound — that occupancy lives on the hire (`hire.unique_cart`).
+   * The store stays raw (expiresAt only).
+   */
+  cartView(cart: Signed<CartMandate>): Signed<CartMandate> & { status: CartStatus } {
+    if (this.paymentMatchingCart(cart)) return { ...cart, status: "bound" };
+    if (Date.parse(cart.payload.expiresAt) <= Date.parse(this.clock.now())) {
+      return { ...cart, status: "expired" };
+    }
+    return { ...cart, status: "live" };
+  }
+
   protocolCard() {
     return {
       ...PROTOCOL,
@@ -525,7 +541,8 @@ export class Runtime {
 
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
-   * aid_ agent, hid_ hire, mid_ mandate, rid_ receipt, apd_ approval,
+   * aid_ agent, hid_ hire, mid_ mandate (carts include derived live | expired | bound;
+   * bound is unique_payment occupancy and wins over expired), rid_ receipt, apd_ approval,
    * rfq_ / qte_ market (qte_ includes derived live | expired | spent | held; expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
@@ -543,7 +560,7 @@ export class Runtime {
       const intent = this.intents.get(id as MandateId);
       if (intent) return { type: "intent", id, value: intent };
       const cart = this.carts.get(id as MandateId);
-      if (cart) return { type: "cart", id, value: cart };
+      if (cart) return { type: "cart", id, value: this.cartView(cart) };
       const payment = this.payments.get(id as MandateId);
       if (payment) return { type: "payment", id, value: payment };
       return undefined;
