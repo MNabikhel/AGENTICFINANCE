@@ -44,7 +44,7 @@
     {
       "name": "aether_hire_create",
       "commandType": "hire.create",
-      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. A nested hop whose parent handshake has expired is refused. An expired handshake, or a climb above the handshake ceiling, is refused on a new hire; completing funded work after that is legal."
+      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire; completing funded work after that is legal."
     },
     {
       "name": "aether_hire_accept",
@@ -54,7 +54,7 @@
     {
       "name": "aether_hire_fund",
       "commandType": "hire.fund",
-      "description": "Buyer funds escrow. Budget is consumed here, not at deliver/submit. A nested hop whose parent handshake has expired is refused. An expired handshake, or a climb above the handshake ceiling, is refused on a new fund; completing funded work after that is legal."
+      "description": "Buyer funds escrow. Budget is consumed here, not at deliver/submit. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new fund; completing funded work after that is legal."
     },
     {
       "name": "aether_hire_deliver",

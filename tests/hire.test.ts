@@ -846,6 +846,191 @@ describe("kya grant ceiling on complete after fund", () => {
   });
 });
 
+describe("slip max autonomy on complete after fund", () => {
+  function cappedDesk(rt: ReturnType<typeof boot>) {
+    const { desk, vendor } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const intent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy under L3",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+            { type: "aether.max_autonomy", max: 3 },
+          ],
+        }),
+      ),
+      "capped intent",
+    );
+    return { founder, desk, vendor, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
+  }
+
+  function fundedCapped(rt: ReturnType<typeof boot>) {
+    const { founder, desk, vendor, intentId } = cappedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    if (!live.attempt.ok) throw new Error("expected hire.create allow under slip ceiling");
+    const hireId = (live.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    return { founder, desk, vendor, intentId, hireId };
+  }
+
+  it("still hires against a slip ceiling of 3 while the desk is L3", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = cappedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    expect(live.attempt.value.decision.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe(
+      "allow",
+    );
+  });
+
+  it("refuses a new hire after a climb above the slip ceiling as ladder.max_autonomy_constraint", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = cappedDesk(rt);
+    must(rt.dispatch(cmd("ladder.set", founder.id, { agentId: desk.id, to: 4 })), "L4");
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "above the slip",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe(
+      "deny",
+    );
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "payment.amount_range")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("ladder.max_autonomy_constraint");
+  });
+
+  it("refuses to fund after a climb above the slip ceiling as ladder.max_autonomy_constraint", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = cappedDesk(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const { paymentId } = cartAndPay(rt, { hireId, buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("ladder.set", founder.id, { agentId: desk.id, to: 4 })), "L4");
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ladder.max_autonomy_constraint");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+  });
+
+  it("lets a funded hire finish after a climb above the slip ceiling", () => {
+    const rt = boot();
+    const { founder, desk, vendor, hireId } = fundedCapped(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    must(rt.dispatch(cmd("ladder.set", founder.id, { agentId: desk.id, to: 4 })), "L4");
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    if (!delivered.ok) return;
+    const released = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(released.ok).toBe(true);
+    if (!released.ok) return;
+    expect(released.value.decision.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe(
+      "allow",
+    );
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(80_000);
+  });
+
+  it("refunds a funded hire after a climb above the slip ceiling", () => {
+    const rt = boot();
+    const { founder, desk, hireId } = fundedCapped(rt);
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    must(rt.dispatch(cmd("ladder.set", founder.id, { agentId: desk.id, to: 4 })), "L4");
+    const refund = rt.dispatch(cmd("hire.refund", desk.id, { hireId }));
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    expect(refund.value.decision.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe(
+      "allow",
+    );
+    expect(rt.hires.get(hireId)?.state).toBe("refunded");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash + 80_000);
+  });
+
+  it("submits envelope after a climb above the slip ceiling", () => {
+    const rt = boot();
+    const { founder, desk, vendor, hireId } = fundedCapped(rt);
+    must(rt.dispatch(cmd("ladder.set", founder.id, { agentId: desk.id, to: 4 })), "L4");
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
+    const submitted = rt.dispatch(cmd("envelope.submit", desk.id, { hireId, nonce: `nonce-${hireId}-slip` }));
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    expect(submitted.value.decision.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe(
+      "allow",
+    );
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+  });
+
+  it("still names ladder.max_autonomy_constraint first when the handshake grant is also below the climb", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = cappedDesk(rt);
+    must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "grant L3",
+    );
+    must(rt.dispatch(cmd("ladder.set", founder.id, { agentId: desk.id, to: 4 })), "L4");
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "slip and handshake",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe(
+      "deny",
+    );
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("ladder.max_autonomy_constraint");
+  });
+});
+
 function offered(rt: ReturnType<typeof boot>) {
   const { desk, vendor, intentId } = economy(rt);
   const live = offerHire(rt, {

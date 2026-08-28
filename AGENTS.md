@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.84.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.85.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -125,6 +125,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 82. Completing a funded hire after the cart or payment window is legal. `mandate.not_expired` binds new spends (`hire.create`, `hire.fund`, `mandate.issue_cart`, `mandate.issue_payment`). Deliver, release, refund, require, and submit after that window are not a trapped escrow. Fund of a stale cart still names `mandate.chain_integrity` first. A first payment on a stale unpaid cart still names `mandate.not_expired`. Refund of delivered work still names `hire.state`.
 83. Completing a funded hire after the KYA hop expires is legal. `kya.attestation_fresh` binds new spends (`hire.create`, `hire.fund`, `mandate.issue_intent`). Deliver, release, refund, require, and submit after that window are not a trapped escrow. Freeze of the principal and revoke still bind. Unique_live still occupies. A nested hop whose parent died still names `kya.parent_fresh` on a new hire.
 84. Completing a funded hire after a climb above the handshake ceiling is legal. `kya.capability_subset` binds new spends (`hire.create`, `hire.fund`, `kya.attest`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. Freeze and revoke still bind. An expired hop still names `kya.attestation_fresh` first on a new hire.
+85. Completing a funded hire after a climb above the permission-slip ceiling is legal. `ladder.max_autonomy_constraint` binds new spends (`hire.create`, `hire.fund`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. A handshake grant below the climb still names `kya.capability_subset` on a new hire, but the slip ceiling is first.
 
 ## Autonomy
 

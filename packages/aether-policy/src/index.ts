@@ -95,7 +95,7 @@ const ESCALATABLE = new Set<CommandType>([
 /** New spend starts here. Completing a funded hire is not a new spend. */
 const SPEND_START_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund"]);
 
-/** Escrow already moved. Cart, payment, intent, handshake windows, and grant ceilings do not trap the lock. Freeze and revoke still bind. */
+/** Escrow already moved. Cart, payment, intent, handshake windows, grant ceilings, and slip rungs do not trap the lock. Freeze and revoke still bind. */
 const COMPLETE_AFTER_FUND = new Set<CommandType>([
   "hire.deliver",
   "hire.release",
@@ -394,6 +394,9 @@ export const RULES: readonly Rule[] = [
   {
     id: "ladder.max_autonomy_constraint",
     evaluate: (ctx) => {
+      if (COMPLETE_AFTER_FUND.has(ctx.commandType as CommandType)) {
+        return v("ladder.max_autonomy_constraint", "allow", "rung checked at fund");
+      }
       const c = findConstraint(ctx, "aether.max_autonomy");
       if (!c) return v("ladder.max_autonomy_constraint", "allow", "no max autonomy");
       if (typeof c.max !== "number") {
@@ -1271,6 +1274,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.child_tighter": ISSUE_INTENT,
   "payment.allowed_payees": ISSUE_INTENT,
   "payment.allowed_skus": ISSUE_INTENT,
+  "ladder.max_autonomy_constraint": {
+    kind: "issue_intent",
+    commandType: "mandate.issue_intent",
+    hint: "This slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not. Issue a new slip, or demote.",
+  },
   "circuit.daily": {
     kind: "reset_circuit",
     commandType: "circuit.reset",

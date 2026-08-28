@@ -408,6 +408,8 @@ export function autoBeat(input: {
         body = "The handshake expired. Revoke it, then attest again. A dead hop still occupies the pair. Completing a funded hire after that is legal; a new hire is not.";
       } else if (ruleId === "kya.capability_subset") {
         body = "This agent sits above the handshake ceiling. Completing a funded hire after a climb is legal; a new hire is not.";
+      } else if (ruleId === "ladder.max_autonomy_constraint") {
+        body = "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not.";
       }
       return {
         seq: input.seq,
@@ -489,6 +491,8 @@ export function autoBeat(input: {
                     ? "The handshake expired. Revoke it, then attest again. A dead hop still occupies the pair. Completing a funded hire after that is legal; a new fund is not."
                   : rule?.ruleId === "kya.capability_subset"
                     ? "This agent sits above the handshake ceiling. Completing a funded hire after a climb is legal; a new fund is not."
+                  : rule?.ruleId === "ladder.max_autonomy_constraint"
+                    ? "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new fund is not."
                 : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,

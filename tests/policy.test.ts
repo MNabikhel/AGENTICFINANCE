@@ -2980,6 +2980,100 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.ruleId).toBe("kya.attestation_fresh");
   });
 
+  it("does not name ladder.max_autonomy_constraint on release after a climb above the slip ceiling", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.release",
+        hire: hire({ state: "delivered" }),
+        intent: signedIntent([{ type: "aether.max_autonomy", max: 3 }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.message).toBe("rung checked at fund");
+  });
+
+  it("does not name ladder.max_autonomy_constraint on refund, submit, require, or deliver after a climb above the slip ceiling", () => {
+    for (const commandType of ["hire.refund", "envelope.submit", "envelope.require", "hire.deliver"] as const) {
+      const d = evaluate(
+        ctx({
+          actor: agent({ autonomyLevel: 4 }),
+          commandType,
+          hire: hire({ state: commandType === "hire.refund" ? "funded" : "delivered" }),
+          intent: signedIntent([{ type: "aether.max_autonomy", max: 3 }]),
+        }),
+      );
+      expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("allow");
+    }
+  });
+
+  it("still names ladder.max_autonomy_constraint on a new hire after a climb above the slip ceiling", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.create",
+        intent: signedIntent([
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.max_autonomy", max: 3 },
+        ]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.amount_range")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.max_autonomy_constraint");
+    expect(remediationFor(d)?.kind).toBe("issue_intent");
+  });
+
+  it("still names ladder.max_autonomy_constraint on fund after a climb above the slip ceiling", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        cart: signedCart(),
+        payment: signedPayment(),
+        intent: signedIntent([
+          { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+          { type: "aether.max_autonomy", max: 3 },
+        ]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.max_autonomy_constraint");
+  });
+
+  it("still names ladder.max_autonomy_constraint first when the handshake grant is also below the climb", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "hire.create",
+        intent: signedIntent([
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.max_autonomy", max: 3 },
+        ]),
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 3,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.max_autonomy_constraint");
+  });
+
   it("still names kya.attestation_fresh first when the nested hop is also expired", () => {
     const d = evaluate(
       ctx({
