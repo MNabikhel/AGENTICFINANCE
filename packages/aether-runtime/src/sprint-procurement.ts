@@ -258,6 +258,7 @@ export function runSprintProcurement(scenario: Scenario): DemoReport {
   });
 
   const step13Decision = step13.ok ? step13.value.decision : step13.error.decision;
+  if (!step13Decision) throw new Error("step 13 produced no policy decision");
   const step17Decision = step17.value.decision;
 
   const results: TapResult[] = [
@@ -278,7 +279,8 @@ export function runSprintProcurement(scenario: Scenario): DemoReport {
     expect(procCash.amount === 780000 && procCash.currency === "USD_SIM", 7, "procurement cash = 780000", String(procCash.amount)),
     expect(vendorUsdc.amount === 79840 && vendorUsdc.currency === "USDC_SIM", 8, "data-vendor USDC_SIM = 79840", String(vendorUsdc.amount)),
     expect(
-      !auditorSpend.ok && auditorSpend.error.decision.trace.some((t) => t.ruleId === "actor.role_capability" && t.verdict === "deny"),
+      !auditorSpend.ok &&
+        auditorSpend.error.decision?.trace.some((t) => t.ruleId === "actor.role_capability" && t.verdict === "deny") === true,
       9,
       "auditor spend denied",
     ),

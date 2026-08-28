@@ -579,6 +579,15 @@ export const RULES: readonly Rule[] = [
         : v("market.not_expired", "deny", "quote or RFQ expired");
     },
   },
+  {
+    id: "market.invited_seller",
+    evaluate: (ctx) => {
+      if (ctx.sellerInvited === undefined) return v("market.invited_seller", "allow", "not an invite-gated command");
+      return ctx.sellerInvited
+        ? v("market.invited_seller", "allow", "seller is invited or RFQ is open")
+        : v("market.invited_seller", "deny", "seller is not on the RFQ invite list");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -641,6 +650,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.not_expired": {
     kind: "none",
     hint: "RFQ or quote is stale. Issue a new RFQ and get a fresh quote. Do not hire on a dead price.",
+  },
+  "market.invited_seller": {
+    kind: "none",
+    hint: "This RFQ named its sellers. Only invitedSellerIds may quote. An empty invite list is an open RFQ.",
   },
 };
 

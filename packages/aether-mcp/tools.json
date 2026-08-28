@@ -34,7 +34,7 @@
     {
       "name": "aether_market_rfq",
       "commandType": "market.rfq",
-      "description": "Create an RFQ to invited seller agents."
+      "description": "Create an RFQ. Non-empty invitedSellerIds is a closed room; empty/omitted is open."
     },
     {
       "name": "aether_market_quote",

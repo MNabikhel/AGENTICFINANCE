@@ -34,11 +34,13 @@ function expect(ok: boolean, id: number, name: string, detail?: string): TapResu
 
 function deniedRule(attempt: ReturnType<Runtime["dispatch"]>, ruleId: string): boolean {
   if (attempt.ok) return false;
-  return attempt.error.decision.trace.some((t) => t.ruleId === ruleId && t.verdict === "deny");
+  return attempt.error.decision?.trace.some((t) => t.ruleId === ruleId && t.verdict === "deny") === true;
 }
 
 function decisionOf(attempt: ReturnType<Runtime["dispatch"]>): PolicyDecision {
-  return attempt.ok ? attempt.value.decision : attempt.error.decision;
+  if (attempt.ok) return attempt.value.decision;
+  if (!attempt.error.decision) throw new Error("malformed command in TAP (no policy decision)");
+  return attempt.error.decision;
 }
 
 export function runNightWatch(scenario: NightWatchScenario): NightWatchReport {
@@ -268,7 +270,7 @@ export function runNightWatch(scenario: NightWatchScenario): NightWatchReport {
     expect(deniedRule(revoked.attempt, "kya.chain_intact"), 11, "revoked handshake blocks spend"),
     expect((verify.data as { ok: boolean }).ok === true && rt.audit.verify().ok, 12, "audit chain verifies"),
     expect(
-      !auditorSpend.ok && auditorSpend.error.decision.trace.some((t) => t.ruleId === "actor.role_capability"),
+      !auditorSpend.ok && auditorSpend.error.decision?.trace.some((t) => t.ruleId === "actor.role_capability") === true,
       13,
       "auditor cannot spend",
     ),

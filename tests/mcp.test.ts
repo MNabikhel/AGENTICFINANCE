@@ -22,6 +22,10 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_sub_hire");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_protocol");
+    const hireTool = ((listed as { result: { tools: { name: string; inputSchema?: { required?: string[] } }[] } }).result.tools).find(
+      (t) => t.name === "aether_hire_create",
+    );
+    expect(hireTool?.inputSchema?.required).toEqual(["quoteId", "intentId"]);
 
     const reg = mcp.callTool("aether_identity_register", {
       actor: "system",
@@ -51,6 +55,16 @@ describe("MCP host", () => {
     const protocol = mcp.callTool("aether_protocol", {}) as { spec: string; liveMoney: boolean };
     expect(protocol.spec).toBe("aether.protocol.1");
     expect(protocol.liveMoney).toBe(false);
+
+    const malformed = mcp.callTool("aether_hire_create", { actor: "system", intentId: "mid_x" }) as {
+      ok: boolean;
+      verdict: string;
+      error: { status: number; type: string };
+    };
+    expect(malformed.ok).toBe(false);
+    expect(malformed.verdict).toBe("malformed");
+    expect(malformed.error.status).toBe(400);
+    expect(malformed.error.type).toContain("command.malformed");
   });
 
   it("runs the sub-hire demo over the tool bus", () => {

@@ -3,7 +3,7 @@ import { Runtime, cmd, type DispatchResult } from "./index.js";
 
 export function mustDispatch(r: DispatchResult, label: string) {
   if (!r.ok) {
-    const extra = r.error.decision.trace
+    const extra = (r.error.decision?.trace ?? [])
       .filter((t) => t.verdict !== "allow")
       .map((t) => `${t.ruleId}:${t.verdict}`)
       .join(",");

@@ -78,7 +78,11 @@
       "properties": {
         "sku": { "type": "string" },
         "spec": { "type": "string" },
-        "invitedSellerIds": { "type": "array", "items": { "type": "string" } }
+        "invitedSellerIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Closed RFQ if non-empty — only these sellers may quote. Empty or omitted is an open RFQ."
+        }
       }
     },
     "market.quote": {

@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.6.0",
+  version: "0.7.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -575,10 +575,17 @@ export interface PolicyContext {
   /** Parent intent when spending against a sub-slip, or when issuing one. */
   parentIntent?: Signed<IntentMandate>;
   parentSpent?: number;
+  /** Child constraints when issuing a sub-intent. */
+  proposedConstraints?: MandateConstraint[];
   /** False when SKU is not in the market catalog. Absent = command is not catalog-gated. */
   skuListed?: boolean;
   /** False when RFQ/quote/FX window is past expiresAt. Absent = not a market-time command. */
   marketFresh?: boolean;
+  /**
+   * False when the quoting/hired seller is not on `Rfq.invitedSellerIds`.
+   * Absent = command is not invite-gated. Empty invite list is an open RFQ (true).
+   */
+  sellerInvited?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

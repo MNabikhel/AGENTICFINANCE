@@ -67,11 +67,13 @@ const ACTOR_PROPERTIES = {
 
 function inputSchemaFor(commandType: string): JsonSchema {
   const body = commandBodies[commandType] ?? { type: "object", properties: {} };
-  return {
+  const schema: JsonSchema = {
     type: "object",
     properties: { ...ACTOR_PROPERTIES, ...(body.properties ?? {}) },
     additionalProperties: true,
   };
+  if (body.required && body.required.length > 0) schema.required = body.required;
+  return schema;
 }
 
 function dataDir(): string | undefined {
@@ -97,10 +99,10 @@ function serializeDispatch(r: DispatchResult) {
   if (!r.ok) {
     return {
       ok: false,
-      verdict: r.error.decision.verdict,
+      verdict: r.error.decision?.verdict ?? "malformed",
       error: r.error.error,
-      deny: r.error.decision.trace.filter((t) => t.verdict !== "allow"),
-      remediation: r.error.decision.remediation ?? null,
+      deny: r.error.decision?.trace.filter((t) => t.verdict !== "allow") ?? [],
+      remediation: r.error.decision?.remediation ?? null,
     };
   }
   return {

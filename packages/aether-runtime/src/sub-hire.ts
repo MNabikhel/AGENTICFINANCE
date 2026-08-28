@@ -35,7 +35,7 @@ function expect(ok: boolean, id: number, name: string, detail?: string): TapResu
 
 function deniedRule(attempt: ReturnType<Runtime["dispatch"]>, ruleId: string): boolean {
   if (attempt.ok) return false;
-  return attempt.error.decision.trace.some((t) => t.ruleId === ruleId && t.verdict === "deny");
+  return attempt.error.decision?.trace.some((t) => t.ruleId === ruleId && t.verdict === "deny") === true;
 }
 
 export function runSubHire(scenario: SubHireScenario): SubHireReport {

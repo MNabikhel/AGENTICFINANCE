@@ -495,7 +495,7 @@ export interface Quote {
 }
 ```
 
-RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront.
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny.
 
 Hire state machine (illegal arrows throw `HIRE_ILLEGAL_TRANSITION`):
 
@@ -613,6 +613,9 @@ export interface PolicyContext {
   parentIntent?: Signed<IntentMandate>;
   parentSpent?: number;
   proposedConstraints?: MandateConstraint[];
+  skuListed?: boolean;
+  marketFresh?: boolean;
+  sellerInvited?: boolean;
 }
 ```
 
@@ -747,6 +750,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 34 | `payment.parent_budget` | spend against a child intent | `parentSpent + amount > parent budget` | — | parent remaining ≥ amount |
 | 35 | `market.known_sku` | rfq / quote / hire.create | SKU not in `CATALOG` | — | listed |
 | 36 | `market.not_expired` | quote / hire.create / fx_settle | RFQ, quote, or FX `validUntil` ≤ now | — | in window |
+| 37 | `market.invited_seller` | quote / hire.create | seller not in `Rfq.invitedSellerIds` (when the list is non-empty) | — | invited, or open RFQ |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -770,7 +774,7 @@ L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen
 | treasury | 2_000_000 |
 | vendors (outbound, should be rare) | 50_000 |
 
-**Escalation object:** on `escalate`, runtime writes `ApprovalTicket` with `commandHash = sha256(JCS(command))`. Resolver must replay the **same** command bytes. Mutation proceeds only after `status=approved` and re-evaluation returns `allow`. Tickets past `expiresAt` become `expired`; resolve is a refuse; the original command may be retried (new ticket). Inspect any id with `Runtime.inspect` / `GET /v1/objects/:id` / MCP `aether_get`. Command bodies: `schemas/commands.schema.json`.
+**Escalation object:** on `escalate`, runtime writes `ApprovalTicket` with `commandHash = sha256(JCS(command))`. Resolver must replay the **same** command bytes. Mutation proceeds only after `status=approved` and re-evaluation returns `allow`. Tickets past `expiresAt` become `expired`; resolve is a refuse; the original command may be retried (new ticket). Inspect any id with `Runtime.inspect` / `GET /v1/objects/:id` / MCP `aether_get`. Command bodies: `schemas/commands.schema.json` (required fields enforced at dispatch).
 
 ---
 

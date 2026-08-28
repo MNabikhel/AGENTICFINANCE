@@ -96,20 +96,43 @@ export function autoBeat(input: {
       seq: input.seq,
       at: input.at,
       headline: `${who} asked the market for ${sku ?? "a service"}`,
-      body: "This is an RFQ: a request for quotes. No money moved. Vendors are invited to name a price.",
+      body: "This is an RFQ: a request for quotes. No money moved. An empty invite list is open; a named list is a closed room.",
       tone: "neutral",
       commandType: cmd.type,
     };
   }
-  if (cmd.type === "market.quote" && amt) {
-    return {
-      seq: input.seq,
-      at: input.at,
-      headline: `${who} quoted ${amt}${sku ? ` for ${sku}` : ""}`,
-      body: "A quote is a promise with an expiry, not a charge. Policy still has to bless the hire.",
-      tone: "neutral",
-      commandType: cmd.type,
-    };
+  if (cmd.type === "market.quote") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "market.invited_seller") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a job they were not invited to`,
+          body: "An RFQ with invited sellers is not a bulletin board. Empty invite list is open; a non-empty list is the guest list.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} submitted a quote the referee refused`,
+        body: rule?.message ?? "The quote did not pass policy.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} quoted ${amt}${sku ? ` for ${sku}` : ""}`,
+        body: "A quote is a promise with an expiry, not a charge. Policy still has to bless the hire.",
+        tone: "neutral",
+        commandType: cmd.type,
+      };
+    }
   }
   if (cmd.type === "hire.create") {
     if (decision.verdict === "deny") {
@@ -126,6 +149,8 @@ export function autoBeat(input: {
         body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists.";
       } else if (ruleId === "actor.not_frozen") {
         body = "This agent is frozen. Freeze is a kill switch: autonomy drops to L0 and spend is denied.";
+      } else if (ruleId === "market.invited_seller") {
+        body = "That seller was not on the RFQ. A named invite list is a closed room.";
       }
       return {
         seq: input.seq,

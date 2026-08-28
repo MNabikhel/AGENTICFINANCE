@@ -33,12 +33,14 @@ function economy(rt: Runtime) {
   for (const a of [
     { key: "procurement", displayName: "Desk", role: "procurement", autonomyLevel: 3 },
     { key: "vendor", displayName: "Vendor", role: "data_vendor", autonomyLevel: 2 },
+    { key: "vendor-b", displayName: "Other Vendor", role: "data_vendor", autonomyLevel: 2 },
   ] as const) {
     must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
   }
   rt.seedOpening({ "procurement:cash": { amount: 1_500_000, currency: "USD_SIM" } });
   const desk = rt.alias("procurement");
   const vendor = rt.alias("vendor");
+  const other = rt.alias("vendor-b");
   const intent = must(
     rt.dispatch(
       cmd("mandate.issue_intent", founder.id, {
@@ -48,14 +50,17 @@ function economy(rt: Runtime) {
           { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
           {
             type: "payment.allowed_payees",
-            allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            allowed: [
+              { id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" },
+              { id: other.id, name: other.displayName, website: "https://other.aether.test" },
+            ],
           },
         ],
       }),
     ),
     "intent",
   );
-  return { founder, desk, vendor, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
+  return { founder, desk, vendor, other, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
 }
 
 describe("market catalog", () => {
@@ -113,5 +118,86 @@ describe("audit.query", () => {
     expect(data.matched).toBeGreaterThan(0);
     expect(data.records.every((r) => r.subjects.some((s) => s.id === hireId))).toBe(true);
     expect(data.records.some((r) => r.action === "HIRE_TRANSITION")).toBe(true);
+  });
+});
+
+describe("RFQ invites", () => {
+  it("refuses a quote from a seller who was not invited", () => {
+    const rt = boot();
+    const { desk, vendor, other } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "research.brief",
+          spec: "one pager",
+          invitedSellerIds: [vendor.id],
+        }),
+      ),
+      "rfq",
+    );
+    const sneak = rt.dispatch(
+      cmd("market.quote", other.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(sneak.ok).toBe(false);
+    if (sneak.ok) return;
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("deny");
+    expect(sneak.error.decision?.remediation?.kind).toBe("none");
+  });
+
+  it("lets any seller quote an open RFQ (empty invite list)", () => {
+    const rt = boot();
+    const { desk, other } = economy(rt);
+    const rfq = must(
+      rt.dispatch(cmd("market.rfq", desk.id, { sku: "research.brief", spec: "open desk", invitedSellerIds: [] })),
+      "open rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", other.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 50_000, currency: "USD_SIM" },
+        }),
+      ),
+      "open quote",
+    );
+    expect((quoted.data as { sellerId: string }).sellerId).toBe(other.id);
+  });
+});
+
+describe("command schema", () => {
+  it("refuses missing required fields before policy or the clock", () => {
+    const rt = boot();
+    const { desk, intentId } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const r = rt.dispatch(cmd("hire.create", desk.id, { intentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("quoteId");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.clock.now()).toBe(clockBefore);
+    expect(rt.audit.length).toBe(auditBefore);
+  });
+
+  it("does not cache a malformed command under an idempotency key", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const key = "hire-once";
+    const missing = rt.dispatch(cmd("hire.create", desk.id, { intentId }, key));
+    expect(missing.ok).toBe(false);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const created = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }, key)), "create");
+    expect((created.data as HireContract).state).toBe("offered");
   });
 });
