@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.79.0",
+  version: "0.80.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -768,9 +768,10 @@ export interface PolicyContext {
    */
   parentKnown?: boolean;
   /**
-   * False when freeze / unfreeze / ladder.set / kya.attest / kya.revoke / issue_cart / issue_intent
-   * names an agent that is not in this world (delegate, principal, merchant, subject, or freeze target).
-   * Absent = command does not require a registered target agent.
+   * False when freeze / unfreeze / ladder.set / kya.attest / kya.revoke / issue_cart / issue_intent /
+   * market.rfq names an agent that is not in this world (delegate, principal, merchant, subject,
+   * freeze target, or RFQ invitee). Absent = command does not require a registered target agent.
+   * An empty or omitted invite list is an open RFQ and does not set this flag.
    */
   targetKnown?: boolean;
   /**

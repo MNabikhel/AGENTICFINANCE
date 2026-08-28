@@ -1339,7 +1339,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "identity.known": {
     kind: "none",
-    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, or a revoke target.",
+    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, a revoke target, or an RFQ guest.",
   },
   "hire.state": {
     kind: "none",

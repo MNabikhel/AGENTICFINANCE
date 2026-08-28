@@ -34,7 +34,7 @@
     {
       "name": "aether_market_rfq",
       "commandType": "market.rfq",
-      "description": "Create an RFQ. Non-empty invitedSellerIds is a closed room; empty/omitted is open."
+      "description": "Create an RFQ. Non-empty invitedSellerIds is a closed room of live agents; empty/omitted is open. A missing guest is identity.known."
     },
     {
       "name": "aether_market_quote",

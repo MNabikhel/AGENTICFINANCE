@@ -1452,6 +1452,9 @@ export class Runtime {
     }
     if (cmd.type === "mandate.issue_cart") add(body.merchantId);
     if (cmd.type === "mandate.issue_intent") add(body.subjectId);
+    if (cmd.type === "market.rfq" && Array.isArray(body.invitedSellerIds)) {
+      for (const id of body.invitedSellerIds) add(id);
+    }
     return ids;
   }
 
@@ -1931,6 +1934,9 @@ export class Runtime {
         : [],
       expiresAt: new Date(Date.parse(this.clock.now()) + DAY_MS).toISOString(),
     };
+    for (const id of rfq.invitedSellerIds) {
+      if (!this.identity.get(id)) throw new Error("unknown invited seller");
+    }
     this.rfqs.set(rfq.id, rfq);
     this.audit.append({
       clock: this.clock,

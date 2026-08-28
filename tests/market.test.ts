@@ -166,6 +166,80 @@ describe("RFQ invites", () => {
     );
     expect((quoted.data as { sellerId: string }).sellerId).toBe(other.id);
   });
+
+  it("refuses an RFQ that invites a missing seller as identity.known, not a closed room nobody can quote", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const before = rt.rfqs.size;
+    const r = rt.dispatch(
+      cmd("market.rfq", desk.id, {
+        sku: "research.brief",
+        spec: "one pager",
+        invitedSellerIds: ["aid_01J6AETHERGHOSTSELLER00001"],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.rfqs.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.audit.length).toBeGreaterThan(auditBefore);
+    const live = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "research.brief",
+          spec: "retry with a live guest",
+          invitedSellerIds: [vendor.id],
+        }),
+      ),
+      "live rfq",
+    );
+    expect((live.data as { invitedSellerIds: string[] }).invitedSellerIds).toEqual([vendor.id]);
+  });
+
+  it("refuses a mixed live-and-ghost invite list as identity.known", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const before = rt.rfqs.size;
+    const r = rt.dispatch(
+      cmd("market.rfq", desk.id, {
+        sku: "research.brief",
+        spec: "one pager",
+        invitedSellerIds: [vendor.id, "aid_01J6AETHERGHOSTSELLER00001"],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
+    expect(rt.rfqs.size).toBe(before);
+  });
+
+  it("still names known_sku first when the catalog miss is also a ghost invite", () => {
+    const rt = boot();
+    const { desk } = economy(rt);
+    const before = rt.rfqs.size;
+    const r = rt.dispatch(
+      cmd("market.rfq", desk.id, {
+        sku: "lunch.tacos",
+        spec: "not a listed good",
+        invitedSellerIds: ["aid_01J6AETHERGHOSTSELLER00001"],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.known_sku");
+    expect(rt.rfqs.size).toBe(before);
+  });
 });
 
 describe("known RFQ", () => {

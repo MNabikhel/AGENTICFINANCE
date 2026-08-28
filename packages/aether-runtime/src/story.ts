@@ -292,11 +292,32 @@ export function autoBeat(input: {
     }
   }
   if (cmd.type === "market.rfq") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} invited a seller who is not in this world`,
+          body: "A closed RFQ is a guest list of live agents. A missing id is not a closed room. Register them first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} asked the market for a job the referee refused`,
+        body: rule?.message ?? "The RFQ did not pass policy.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
     return {
       seq: input.seq,
       at: input.at,
       headline: `${who} asked the market for ${sku ?? "a service"}`,
-      body: "This is an RFQ: a request for quotes. No money moved. An empty invite list is open; a named list is a closed room.",
+      body: "This is an RFQ: a request for quotes. No money moved. An empty invite list is open; a named list is a closed room of live agents.",
       tone: "neutral",
       commandType: cmd.type,
     };

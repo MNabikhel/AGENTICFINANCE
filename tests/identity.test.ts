@@ -138,6 +138,23 @@ describe("known agent", () => {
     expect(rt.intents.size).toBe(before);
   });
 
+  it("refuses an RFQ that invites a missing seller as identity.known, not a closed room", () => {
+    const rt = boot();
+    const { desk } = economy(rt);
+    const before = rt.rfqs.size;
+    const r = rt.dispatch(
+      cmd("market.rfq", desk.id, {
+        sku: "research.brief",
+        spec: "one pager",
+        invitedSellerIds: [GHOST],
+      }),
+    );
+    deniedKnown(r);
+    expect(rt.rfqs.size).toBe(before);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+  });
+
   it("refuses to attest a missing principal as identity.known, not a handshake with nobody", () => {
     const rt = boot();
     const { founder, desk } = economy(rt);

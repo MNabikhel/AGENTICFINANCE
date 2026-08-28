@@ -127,7 +127,7 @@
         "invitedSellerIds": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Closed RFQ if non-empty — only these sellers may quote. Empty or omitted is an open RFQ."
+          "description": "Closed RFQ if non-empty — only these sellers may quote. Empty or omitted is an open RFQ. A guest id that is not in this world is identity.known."
         }
       }
     },

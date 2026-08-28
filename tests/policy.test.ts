@@ -676,6 +676,39 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("denies an RFQ that invites a missing agent as identity.known", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "market.rfq",
+        skuListed: true,
+        targetKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("still names market.known_sku first when the SKU is missing on a ghost invite", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "market.rfq",
+        skuListed: false,
+        targetKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_sku");
+  });
+
   it("denies a second accept as hire.state, not a mutate throw", () => {
     const d = evaluate(
       ctx({
