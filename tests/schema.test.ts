@@ -131,4 +131,29 @@ describe("command shape enums and integer ranges", () => {
       }),
     ).toBeUndefined();
   });
+
+  it("rejects an FX window with no rate", () => {
+    expect(
+      commandShapeError("market.quote", {
+        rfqId: "rfq_x",
+        price: { amount: 1, currency: "USD_SIM" },
+        fx: { from: "USD_SIM", to: "USDC_SIM", validUntil: "2026-08-29T00:00:00.000Z" },
+      }),
+    ).toBe("invalid nested: fx.rateE6");
+  });
+
+  it("accepts a complete FX window", () => {
+    expect(
+      commandShapeError("market.quote", {
+        rfqId: "rfq_x",
+        price: { amount: 1, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    ).toBeUndefined();
+  });
 });

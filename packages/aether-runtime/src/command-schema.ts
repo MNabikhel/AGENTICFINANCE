@@ -2,7 +2,8 @@
  * Shape check against schemas/commands.schema.json.
  * Syntax, not economics: a miss, a float, a listed enum miss, a rung outside 0–5,
  * a listed field with the wrong JSON type, a nested cart line / constraint
- * missing its fields, or a listed constraint missing its value fields is HTTP 400, not a policy deny.
+ * missing its fields, a listed constraint missing its value fields, or an FX
+ * window missing from/to/rateE6/validUntil is HTTP 400, not a policy deny.
  * Policy never sees a command that failed this gate.
  */
 
@@ -240,7 +241,28 @@ function malformedConstraintFields(c: Record<string, unknown>, i: number, out: s
   }
 }
 
-/** Nested objects the kernel totals or hashes: cart lines and intent constraints. */
+function malformedFxWindow(fx: unknown, out: string[]): void {
+  if (!fx || typeof fx !== "object" || Array.isArray(fx)) {
+    out.push("fx");
+    return;
+  }
+  const f = fx as Record<string, unknown>;
+  if (typeof f.from !== "string" || !SIM_CURRENCY.has(f.from)) out.push("fx.from");
+  if (typeof f.to !== "string" || !SIM_CURRENCY.has(f.to)) out.push("fx.to");
+  if (
+    typeof f.from === "string" &&
+    typeof f.to === "string" &&
+    SIM_CURRENCY.has(f.from) &&
+    SIM_CURRENCY.has(f.to) &&
+    f.from === f.to
+  ) {
+    out.push("fx.to");
+  }
+  if (f.rateE6 === undefined || f.rateE6 === null) out.push("fx.rateE6");
+  if (typeof f.validUntil !== "string" || f.validUntil.length === 0) out.push("fx.validUntil");
+}
+
+/** Nested objects the kernel totals or hashes: cart lines, intent constraints, FX windows. */
 export function malformedNestedFields(type: string, body: unknown): string[] {
   const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const out: string[] = [];
@@ -265,6 +287,9 @@ export function malformedNestedFields(type: string, body: unknown): string[] {
       }
       malformedConstraintFields(raw as Record<string, unknown>, i, out);
     });
+  }
+  if (type === "market.quote" && rec.fx !== undefined && rec.fx !== null) {
+    malformedFxWindow(rec.fx, out);
   }
   return out;
 }

@@ -701,7 +701,16 @@ export class Runtime {
     }
     const velocityWindow = this.velocity();
     const audit = this.audit.verify();
-    const fxRateE6 = typeof body.rateE6 === "number" ? body.rateE6 : this.quoteOf(body)?.fx?.rateE6;
+    const nestedFx =
+      body.fx && typeof body.fx === "object" && !Array.isArray(body.fx)
+        ? (body.fx as Record<string, unknown>).rateE6
+        : undefined;
+    const fxRateE6 =
+      typeof nestedFx === "number"
+        ? nestedFx
+        : typeof body.rateE6 === "number"
+          ? body.rateE6
+          : this.quoteOf(body)?.fx?.rateE6;
     const mm = [...this.identity.all()].find((a) => a.role === "market_maker");
     let mmInventoryOk: boolean | undefined;
     if (cmd.type === "market.fx_settle" && mm && typeof fxRateE6 === "number" && amount) {
@@ -1764,6 +1773,9 @@ export class Runtime {
   private mutFx(body: Record<string, unknown>, actor: Agent) {
     const quote = this.quoteOf(body);
     if (!quote?.fx) throw new Error("quote is not FX");
+    if (typeof quote.fx.rateE6 !== "number" || !Number.isFinite(quote.fx.rateE6)) {
+      throw new Error("fx quote missing rateE6");
+    }
     if (this.consumedQuotes.has(quote.id) || this.reservedQuotes.has(quote.id)) {
       throw new Error("fx quote already settled");
     }

@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.43.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.44.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -60,12 +60,12 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 17. Only catalog SKUs may be RFQ’d or hired (`market.catalog`). Stale quotes/RFQs cannot be hired (`market.not_expired`).
 18. `audit.query` reads notary lines for one subject. It does not mutate. Verify is a separate command.
 19. Non-empty `invitedSellerIds` is a closed RFQ (`market.invited_seller`). Empty or omitted is open; any listed seller role may quote.
-20. Missing required body fields, non-integer cents, a non-sim currency, a listed enum miss (role, decision, issuer kind, clearing currency), an integer outside its schema range (ladder rung, autonomy), a listed field with the wrong JSON type (a number where a string id belongs, a string where an array belongs), a nested cart line / intent constraint missing its fields, an unknown constraint type, or a listed constraint missing its value fields (an `amount_range` without `max`) are `command.malformed` (HTTP 400). That is syntax, not policy. The clock does not step. The notary does not write. `evaluate()` does not run.
+20. Missing required body fields, non-integer cents, a non-sim currency, a listed enum miss (role, decision, issuer kind, clearing currency), an integer outside its schema range (ladder rung, autonomy), a listed field with the wrong JSON type (a number where a string id belongs, a string where an array belongs), a nested cart line / intent constraint missing its fields, an unknown constraint type, a listed constraint missing its value fields (an `amount_range` without `max`), or an FX window missing from/to/rateE6/validUntil are `command.malformed` (HTTP 400). That is syntax, not policy. The clock does not step. The notary does not write. `evaluate()` does not run.
 21. `payment.agent_recurrence` binds. `max_occurrences` and the frequency gap are checked on `hire.create` and `hire.fund`. Completing a funded hire is not a new occurrence. A refund does not restore a slot. Child slips may not be more frequent than the parent.
 22. A cart bound to a hire must match it (`hire.cart_matches`): same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount.
 23. `payment.execution_date` binds on new spends (`hire.create`, `hire.fund`). Completing a funded hire after `not_after` is legal. Child windows may not outlive the parent.
 24. Quoting or hiring against an unknown RFQ or quote is `market.known_rfq`. It is not a missing SKU. SKU, expiry, and invite flags are only set once the room exists.
-25. An FX quote is a one-shot window (`market.fx_quote`). Settling a missing quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket is a policy deny, not a mutate throw after an allow. A retry of the same command still replays.
+25. An FX quote is a one-shot window (`market.fx_quote`). Settling a missing quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket is a policy deny, not a mutate throw after an allow. A retry of the same command still replays. The 200bps band (`mm.spread_bound`) binds the nested `fx.rateE6` that is stored and settled — a decoy top-level `rateE6` does not.
 26. A hire quote is used once (`hire.quote_unspent`). The same set is consumed by `hire.create` and `market.fx_settle`. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void or refund does not restore it.
 27. A hireId that is not in this world is `hire.known`. It is not a broken mandate chain. Policy denies; mutate does not throw after an allow.
 28. An intentId that is not in this world is `mandate.known_intent`. It is not a missing handshake. A deny does not consume the quote.

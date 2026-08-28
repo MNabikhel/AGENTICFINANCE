@@ -121,6 +121,60 @@ describe("FX quote is a one-shot", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
   });
 
+  it("refuses an FX window with no rate as command.malformed, not a NaN settle later", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] })),
+      "fx rfq",
+    );
+    const clockBefore = rt.clock.now();
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: { from: "USD_SIM", to: "USDC_SIM", validUntil: "2026-08-29T00:00:00.000Z" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("fx.rateE6");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.quotes.size).toBe(before);
+    expect(rt.clock.now()).toBe(clockBefore);
+  });
+
+  it("refuses an off-band nested rate even when a decoy top-level rateE6 is in band", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] })),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 500_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+        rateE6: 998_000,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("deny");
+    expect(rt.quotes.size).toBe(before);
+  });
+
   it("settles once; a retry of the same command replays; a second key is refused", () => {
     const rt = boot();
     const { desk, vendor, mm } = economy(rt);

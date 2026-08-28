@@ -490,7 +490,7 @@ export const RULES: readonly Rule[] = [
       if (ctx.actor.role !== "market_maker" || ctx.commandType !== "market.quote") {
         return v("mm.spread_bound", "allow", "not an MM quote");
       }
-      // rate lives on the command; runtime must copy it onto ctx.hire.spec or amount evidence.
+      // Nested fx.rateE6 is what is stored and what settle uses.
       const rate = ctx.fxRateE6;
       if (rate === undefined) return v("mm.spread_bound", "allow", "no fx rate on context");
       if (rate < MM_RATE_BAND_E6.min || rate > MM_RATE_BAND_E6.max) {
