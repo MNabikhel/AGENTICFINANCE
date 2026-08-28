@@ -271,15 +271,31 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
-  if (cmd.type === "market.fx_settle" && amt) {
-    return {
-      seq: input.seq,
-      at: input.at,
-      headline: `${who} swapped ${amt} into USDC`,
-      body: "The market maker is a dumb window (±2%), not a trading desk. Two balanced journal entries, two currencies, one audit trail.",
-      tone: "settle",
-      commandType: cmd.type,
-    };
+  if (cmd.type === "market.fx_settle") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not swap${amt ? ` ${amt}` : ""} into USDC`,
+        body:
+          rule?.ruleId === "market.fx_quote"
+            ? "An FX quote is a one-shot window. A missing quote, a research quote, or a spent quote is not a second settle."
+            : (rule?.message ?? "The referee refused the FX settle."),
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} swapped ${amt} into USDC`,
+        body: "The market maker is a dumb window (±2%), not a trading desk. Two balanced journal entries, two currencies, one audit trail.",
+        tone: "settle",
+        commandType: cmd.type,
+      };
+    }
   }
   if (cmd.type === "identity.freeze") {
     if (decision.verdict === "deny") {

@@ -129,6 +129,7 @@ export class Runtime {
   readonly spentByIntent = new Map<MandateId, number>();
   readonly occurrences = new Map<MandateId, number>();
   readonly lastOccurrence = new Map<MandateId, Instant>();
+  readonly settledFx = new Set<string>();
   readonly settleEvents: { at: string; volume: number }[] = [];
   dailySpend = 0;
   dailyLimit: number;
@@ -466,6 +467,7 @@ export class Runtime {
       spentByIntent: [...this.spentByIntent.entries()],
       occurrences: [...this.occurrences.entries()],
       lastOccurrence: [...this.lastOccurrence.entries()],
+      settledFxQuotes: [...this.settledFx],
       settleEvents: [...this.settleEvents],
       decisions: [...this.decisions],
       story: [...this.story],
@@ -532,6 +534,8 @@ export class Runtime {
     for (const [id, n] of world.occurrences) this.occurrences.set(id, n);
     this.lastOccurrence.clear();
     for (const [id, at] of world.lastOccurrence ?? []) this.lastOccurrence.set(id, at);
+    this.settledFx.clear();
+    for (const id of world.settledFxQuotes ?? []) this.settledFx.add(id);
     this.settleEvents.splice(0, this.settleEvents.length, ...world.settleEvents);
     this.decisions.splice(0, this.decisions.length, ...world.decisions);
     this.story.splice(0, this.story.length, ...world.story);
@@ -726,6 +730,7 @@ export class Runtime {
     if (market.marketFresh !== undefined) ctx.marketFresh = market.marketFresh;
     if (market.sellerInvited !== undefined) ctx.sellerInvited = market.sellerInvited;
     if (market.rfqKnown !== undefined) ctx.rfqKnown = market.rfqKnown;
+    if (market.fxQuoteLive !== undefined) ctx.fxQuoteLive = market.fxQuoteLive;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent);
@@ -749,7 +754,13 @@ export class Runtime {
     body: Record<string, unknown>,
     hire: HireContract | undefined,
     actor: Agent,
-  ): { skuListed?: boolean; marketFresh?: boolean; sellerInvited?: boolean; rfqKnown?: boolean } {
+  ): {
+    skuListed?: boolean;
+    marketFresh?: boolean;
+    sellerInvited?: boolean;
+    rfqKnown?: boolean;
+    fxQuoteLive?: boolean;
+  } {
     const now = Date.parse(this.clock.now());
     const quote =
       this.quoteOf(body) ?? (hire?.quoteId && hire.id !== "hid_draft" ? this.quotes.get(hire.quoteId) : undefined);
@@ -760,7 +771,13 @@ export class Runtime {
           ? this.rfqs.get(String(body.rfqId))
           : undefined;
     const sku = typeof body.sku === "string" ? body.sku : (rfq?.sku ?? hire?.sku);
-    const out: { skuListed?: boolean; marketFresh?: boolean; sellerInvited?: boolean; rfqKnown?: boolean } = {};
+    const out: {
+      skuListed?: boolean;
+      marketFresh?: boolean;
+      sellerInvited?: boolean;
+      rfqKnown?: boolean;
+      fxQuoteLive?: boolean;
+    } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
       return out;
@@ -785,9 +802,13 @@ export class Runtime {
       }
       return out;
     }
-    if (cmd.type === "market.fx_settle" && quote) {
-      const fxOk = quote.fx ? Date.parse(quote.fx.validUntil) > now : true;
-      out.marketFresh = Date.parse(quote.expiresAt) > now && fxOk;
+    if (cmd.type === "market.fx_settle") {
+      const live = Boolean(quote?.fx) && quote !== undefined && !this.settledFx.has(quote.id);
+      out.fxQuoteLive = live;
+      if (quote?.fx && live) {
+        const fxOk = Date.parse(quote.fx.validUntil) > now;
+        out.marketFresh = Date.parse(quote.expiresAt) > now && fxOk;
+      }
     }
     return out;
   }
@@ -1514,6 +1535,7 @@ export class Runtime {
   private mutFx(body: Record<string, unknown>, actor: Agent) {
     const quote = this.quoteOf(body);
     if (!quote?.fx) throw new Error("quote is not FX");
+    if (this.settledFx.has(quote.id)) throw new Error("fx quote already settled");
     const payout = fxPayout(quote.price.amount, quote.fx.rateE6);
     const vendorUsd = this.ledger.account(`${this.keyOf(actor.id)}:cash`);
     const vendorUsdc = this.ledger.account(`${this.keyOf(actor.id)}:usdc`);
@@ -1533,6 +1555,7 @@ export class Runtime {
       this.clearing.record(mm.id, actor.id, payout, quote.fx.to);
     }
     this.noteVolume(quote.price.amount);
+    this.settledFx.add(quote.id);
     return { payout, rateE6: quote.fx.rateE6 };
   }
 

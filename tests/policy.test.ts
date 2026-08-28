@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 39 rules", () => {
-    expect(RULE_IDS).toHaveLength(39);
+  it("has 40 rules", () => {
+    expect(RULE_IDS).toHaveLength(40);
   });
 
   it("denies frozen actors", () => {
@@ -457,6 +457,20 @@ describe("policy catalog", () => {
     const d = evaluate(ctx({ commandType: "hire.fund", cartMatchesHire: false }));
     expect(d.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies FX settle without a live unused FX quote", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_quote");
   });
 
   it("denies a quote against an unknown RFQ as known_rfq, not known_sku", () => {

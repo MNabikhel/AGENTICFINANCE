@@ -67,6 +67,8 @@ export interface WorldState {
   spentByIntent: Array<[MandateId, number]>;
   occurrences: Array<[MandateId, number]>;
   lastOccurrence?: Array<[MandateId, Instant]>;
+  /** Quote ids already settled via `market.fx_settle`. Optional so old worlds boot. */
+  settledFxQuotes?: string[];
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];

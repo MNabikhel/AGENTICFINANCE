@@ -716,6 +716,15 @@ export const RULES: readonly Rule[] = [
         : v("market.known_rfq", "deny", "rfq or quote not found");
     },
   },
+  {
+    id: "market.fx_quote",
+    evaluate: (ctx) => {
+      if (ctx.fxQuoteLive === undefined) return v("market.fx_quote", "allow", "not an FX settle");
+      return ctx.fxQuoteLive
+        ? v("market.fx_quote", "allow", "live unused FX quote")
+        : v("market.fx_quote", "deny", "need a live unused FX quote");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -794,6 +803,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.known_rfq": {
     kind: "none",
     hint: "That RFQ or quote id is unknown. Issue a real RFQ, then quote it. A missing room is not a missing SKU.",
+  },
+  "market.fx_quote": {
+    kind: "none",
+    hint: "An FX quote is a one-shot window. A missing quote, a research quote, or a spent quote is not a second settle.",
   },
   "payment.execution_date": {
     kind: "none",

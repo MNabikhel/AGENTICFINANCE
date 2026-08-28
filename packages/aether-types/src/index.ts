@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.12.0",
+  version: "0.13.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -605,6 +605,11 @@ export interface PolicyContext {
   cartMatchesHire?: boolean;
   /** False when the RFQ (or the quote’s RFQ) does not exist. Absent = not an RFQ-gated command. */
   rfqKnown?: boolean;
+  /**
+   * False when `market.fx_settle` has no quote, a non-FX quote, or a quote already settled.
+   * Absent = not an FX-settle command. An FX quote is a one-shot window.
+   */
+  fxQuoteLive?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

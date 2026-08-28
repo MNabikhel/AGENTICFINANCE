@@ -498,7 +498,7 @@ export interface Quote {
 }
 ```
 
-RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
 
 Hire state machine (illegal arrows throw `HIRE_ILLEGAL_TRANSITION`):
 
@@ -624,6 +624,7 @@ export interface PolicyContext {
   sellerInvited?: boolean;
   cartMatchesHire?: boolean;
   rfqKnown?: boolean;               // false when RFQ/quote id is unknown; absent = not RFQ-gated
+  fxQuoteLive?: boolean;            // false when fx_settle has no/non-FX/spent quote
 }
 ```
 
@@ -761,6 +762,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 37 | `market.invited_seller` | quote / hire.create | seller not in `Rfq.invitedSellerIds` (when the list is non-empty) | — | invited, or open RFQ |
 | 38 | `hire.cart_matches` | issue_cart (with hireId) / hire.fund / envelope.submit | cart total, seller, or SKU ≠ hire, or non-integer cents | — | cart equals hire |
 | 39 | `market.known_rfq` | quote / hire.create | RFQ (or the quote’s RFQ) does not exist | — | room exists |
+| 40 | `market.fx_quote` | fx_settle | quote missing, has no `fx`, or already settled | — | live unused FX quote |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
