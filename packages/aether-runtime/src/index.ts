@@ -580,13 +580,21 @@ export class Runtime {
   /**
    * Intent view for other agents. A slip whose hire has moved escrow is
    * `funded`, not `live`. Funded wins over expired (refunded and released still
-   * funded — the slip was drawn). A child hire does not occupy the parent.
-   * Recurrence spend is not occupancy. The store stays raw (`exp` only).
+   * funded — the slip was drawn). Expired includes the slip `exp` and a dead
+   * parent intent, even when this child's own window still lives. A child hire
+   * does not occupy the parent. Recurrence spend is not occupancy. The store
+   * stays raw (`exp` only).
    */
   intentView(intent: Signed<IntentMandate>): Signed<IntentMandate> & { status: IntentStatus } {
     if (this.hireDrawnIntent(intent)) return { ...intent, status: "funded" };
     if (intent.payload.exp <= unixSeconds(this.clock.now())) {
       return { ...intent, status: "expired" };
+    }
+    if (intent.payload.parentId) {
+      const parent = this.intents.get(intent.payload.parentId);
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+        return { ...intent, status: "expired" };
+      }
     }
     return { ...intent, status: "live" };
   }
@@ -623,6 +631,8 @@ export class Runtime {
    * Fetch one object by id (or alias). Prefix selects the table:
    * aid_ agent, hid_ hire, mid_ mandate (intents include derived live | expired | funded;
    * funded is escrow-moved occupancy against this slip and wins over expired;
+   * expired includes a dead parent intent even when this child's `exp` still lives;
+   * a child hire does not occupy the parent;
    * carts include derived live | expired | bound;
    * bound is unique_payment occupancy and wins over expired; payments include derived
    * live | expired | funded; funded is escrow-moved occupancy and wins over expired;

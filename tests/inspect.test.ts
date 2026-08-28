@@ -980,6 +980,132 @@ describe("intent inspect", () => {
     expect(offered.attempt.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
   });
 
+  it("labels a child intent expired when the parent dies while the child exp still lives", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    rt.clock.set("2026-09-03T00:00:00.000Z");
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down before the parent dies",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+            { type: "payment.budget", currency: "USD_SIM", max: 100_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: MandateId } }).payload.id;
+    const childExp = (child.data as { payload: { exp: number } }).payload.exp;
+    rt.clock.set(INTENT_DEAD);
+    expect(childExp).toBeGreaterThan(Math.floor(Date.parse(INTENT_DEAD) / 1000));
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("expired");
+    expect((rt.inspect(childId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().intents.find((s) => s.payload.id === childId)?.status).toBe("expired");
+    expect("status" in (rt.intents.get(childId) ?? {})).toBe(false);
+  });
+
+  it("still names mandate.parent_fresh when hiring against a child after the parent dies and the child exp still lives", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    rt.clock.set("2026-09-03T00:00:00.000Z");
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down before the parent dies",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+            { type: "payment.budget", currency: "USD_SIM", max: 100_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: MandateId; exp: number } }).payload.id;
+    const childExp = (child.data as { payload: { exp: number } }).payload.exp;
+    rt.clock.set(INTENT_DEAD);
+    expect(childExp).toBeGreaterThan(Math.floor(Date.parse(INTENT_DEAD) / 1000));
+    expect((rt.inspect(childId)?.value as { status: string }).status).toBe("expired");
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "too late",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId: childId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("mandate.parent_fresh");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+  });
+
+  it("labels a funded child funded even after the parent dies while the child exp still lives", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    rt.clock.set("2026-09-03T00:00:00.000Z");
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down before the parent dies",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 80_000 },
+            { type: "payment.budget", currency: "USD_SIM", max: 80_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: MandateId; exp: number } }).payload.id;
+    const childExp = (child.data as { payload: { exp: number } }).payload.exp;
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId: childId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId: childId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set(INTENT_DEAD);
+    expect(childExp).toBeGreaterThan(Math.floor(Date.parse(INTENT_DEAD) / 1000));
+    expect((rt.inspect(childId)?.value as { status: string }).status).toBe("funded");
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("expired");
+    expect("status" in (rt.intents.get(childId) ?? {})).toBe(false);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+  });
+
   it("does not let a funded child occupy the parent slip", () => {
     const rt = boot();
     const { founder, desk, vendor, intentId } = economy(rt);

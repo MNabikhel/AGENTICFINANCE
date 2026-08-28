@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.93.0",
+  version: "0.94.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
@@ -288,9 +288,10 @@ export interface IntentMandate {
 
 /**
  * Inspect / snapshot view. Funded (escrow moved against this slip, including
- * later refund/release) wins over expired. A child hire does not occupy the
- * parent. Recurrence `spentByIntent` is not occupancy. The store stays raw
- * (`exp` only).
+ * later refund/release) wins over expired. Expired includes the slip `exp` and a
+ * dead parent intent, even when this child's own window still lives. A child
+ * hire does not occupy the parent. Recurrence `spentByIntent` is not occupancy.
+ * The store stays raw (`exp` only).
  */
 export type IntentStatus = "live" | "expired" | "funded";
 

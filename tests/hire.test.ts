@@ -240,7 +240,7 @@ describe("parent freshness", () => {
     expect((r.data as { payload: { parentId?: string } }).payload.parentId).toBe(intentId);
   });
 
-  it("refuses a new hire against a live child after the parent dies as mandate.parent_fresh", () => {
+  it("refuses a new hire against a child after the parent dies as mandate.parent_fresh", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
     const founder = rt.alias("ops-human");
