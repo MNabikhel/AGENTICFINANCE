@@ -831,6 +831,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.state", "deny", `illegal ${ctx.hire.state} -> ${to}`, { from: ctx.hire.state, to });
     },
   },
+  {
+    id: "ladder.legal",
+    evaluate: (ctx) => {
+      if (ctx.ladderLegal === undefined) return v("ladder.legal", "allow", "not a ladder.set");
+      return ctx.ladderLegal
+        ? v("ladder.legal", "allow", "legal climb")
+        : v("ladder.legal", "deny", "illegal ladder climb");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -953,6 +962,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.state": {
     kind: "none",
     hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. An illegal arrow is a refuse. Delivered work cannot be unwound.",
+  },
+  "ladder.legal": {
+    kind: "none",
+    hint: "Rungs cannot be skipped. L5 also needs a working circuit breaker and a freeze that was actually tested — listing the gate names is not the test. any→L0 is always legal for a ladder approver.",
   },
   "payment.execution_date": {
     kind: "none",

@@ -74,8 +74,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 50 rules", () => {
-    expect(RULE_IDS).toHaveLength(50);
+  it("has 51 rules", () => {
+    expect(RULE_IDS).toHaveLength(51);
   });
 
   it("denies frozen actors", () => {
@@ -648,6 +648,23 @@ describe("policy catalog", () => {
       }),
     );
     expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+  });
+
+  it("denies skipping a ladder rung as ladder.legal, not a mutate throw", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "ladder.set",
+        targetKnown: true,
+        ladderLegal: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.legal")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.legal");
+    expect(remediationFor(d)?.kind).toBe("none");
   });
 
   it("denies FX settle without a live unused FX quote", () => {

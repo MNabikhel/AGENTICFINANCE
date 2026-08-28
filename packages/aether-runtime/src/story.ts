@@ -465,6 +465,17 @@ export function autoBeat(input: {
   }
   if (cmd.type === "ladder.set") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "ladder.legal") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot skip a rung`,
+          body: "Rungs cannot be skipped. L5 also requires a working circuit breaker and a freeze that was actually tested. Listing the gate names is not the test.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

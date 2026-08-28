@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.23.0",
+  version: "0.24.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -666,11 +666,17 @@ export interface PolicyContext {
    */
   parentKnown?: boolean;
   /**
-   * False when freeze / unfreeze / ladder / kya.attest / issue_cart / issue_intent
+   * False when freeze / unfreeze / ladder.set / kya.attest / issue_cart / issue_intent
    * names an agent that is not in this world.
    * Absent = command does not require a registered target agent.
    */
   targetKnown?: boolean;
+  /**
+   * False when ladder.set would skip a rung, lack a required gate, or use the wrong approver.
+   * Listing `kill_switch_tested` is not the test — freeze then unfreeze is.
+   * Absent = not a ladder.set, or the target agent is unknown (`identity.known` handles that).
+   */
+  ladderLegal?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

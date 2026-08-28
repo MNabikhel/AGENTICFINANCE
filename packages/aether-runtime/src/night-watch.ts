@@ -253,7 +253,7 @@ export function runNightWatch(scenario: NightWatchScenario): NightWatchReport {
 
   const results: TapResult[] = [
     expect(attestLive && snap.kya.edges.some((e) => e.status === "revoked"), 1, "KYA handshake issued then revoked"),
-    expect(!prematureL5.ok, 2, "L5 refused until kill switch is tested"),
+    expect(deniedRule(prematureL5, "ladder.legal"), 2, "L5 refused until kill switch is tested"),
     expect(deniedRule(frozenHire, "actor.not_frozen"), 3, "frozen agent cannot hire"),
     expect(l5.autonomyLevel === 5 && !l5.frozen, 4, "Night Watch reached L5 after freeze test"),
     expect(released.length === 2, 5, "cheap $200 and $6,000 hires released", String(released.length)),

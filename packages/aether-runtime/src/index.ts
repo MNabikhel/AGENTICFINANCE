@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { AuditLog, genesisRecord } from "@aether/audit";
 import { signInner, verifyInner } from "@aether/envelope";
 import { transitionHire } from "@aether/escrow";
-import { IdentityRegistry, legalLadderTransition, makeAgent, missingGates } from "@aether/identity";
+import { IdentityRegistry, ladderClimbLegal, makeAgent } from "@aether/identity";
 import {
   exportKeypair,
   fail,
@@ -792,6 +792,12 @@ export class Runtime {
     if (targetId !== undefined) {
       ctx.targetKnown = Boolean(this.identity.get(targetId));
     }
+    if (cmd.type === "ladder.set" && ctx.targetKnown === true && targetId) {
+      const target = this.identity.get(targetId);
+      if (target && typeof body.to === "number") {
+        ctx.ladderLegal = this.ladderClimbOk(target, body.to as AutonomyLevel, actor, body);
+      }
+    }
     const market = this.marketFlags(cmd, body, hire, actor, thresholdWaived);
     if (market.skuListed !== undefined) ctx.skuListed = market.skuListed;
     if (market.marketFresh !== undefined) ctx.marketFresh = market.marketFresh;
@@ -1282,19 +1288,8 @@ export class Runtime {
   private mutLadder(body: Record<string, unknown>, actor: Agent) {
     const target = this.identity.require(body.agentId as AgentId);
     const to = body.to as AutonomyLevel;
-    const legal = legalLadderTransition(target.autonomyLevel, to);
-    if (!legal) throw new Error(`illegal ladder ${target.autonomyLevel} -> ${to}`);
-    const gates = (body.gates as LadderExtraGate[] | undefined) ?? [];
-    if (legal.extraGates.includes("kill_switch_tested") && !this.killSwitchTested.has(target.id)) {
-      throw new Error("missing gates kill_switch_tested");
-    }
-    if (legal.extraGates.includes("circuit_breaker_configured") && !(this.dailyLimit > 0 && this.dailyLimit < 100_000_000)) {
-      throw new Error("missing gates circuit_breaker_configured");
-    }
-    const missing = missingGates(legal.extraGates, gates);
-    if (missing.length) throw new Error(`missing gates ${missing.join(",")}`);
-    if (legal.requiredApproverRoles.length && !legal.requiredApproverRoles.includes(actor.role) && to !== 0) {
-      throw new Error(`approver role ${actor.role} cannot set ladder`);
+    if (!this.ladderClimbOk(target, to, actor, body)) {
+      throw new Error(`illegal ladder ${target.autonomyLevel} -> ${to}`);
     }
     const next = this.identity.setLevel(target.id, to);
     this.audit.append({
@@ -1795,6 +1790,23 @@ export class Runtime {
     const h = this.hires.get(id);
     if (!h) throw new Error(`unknown hire ${id}`);
     return h;
+  }
+
+  private ladderClimbOk(
+    target: Agent,
+    to: AutonomyLevel,
+    actor: Agent,
+    body: Record<string, unknown>,
+  ): boolean {
+    const providedGates = Array.isArray(body.gates) ? (body.gates as LadderExtraGate[]) : [];
+    return ladderClimbLegal({
+      from: target.autonomyLevel,
+      to,
+      actorRole: actor.role,
+      providedGates,
+      killSwitchTested: this.killSwitchTested.has(target.id),
+      circuitConfigured: this.dailyLimit > 0 && this.dailyLimit < 100_000_000,
+    });
   }
 
   private paymentForHire(hire: HireContract): Signed<PaymentMandate> {

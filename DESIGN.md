@@ -236,7 +236,7 @@ Hard-coded legal transitions (implement as a table, not `if (to > from)`):
 | 3 → 4 | owner **and** treasury (dual control) | none |
 | 4 → 5 | owner **and** treasury | `circuit_breaker_configured`, `kill_switch_tested` |
 
-Skipping rungs is illegal. `L5` still cannot violate mandate constraints or circuit breakers. “Human-out-of-the-loop” means no *per-transaction* human, not no policy.
+Skipping rungs is `ladder.legal` (422), not a mutate throw after an allow. Listing L5 gate names is not the freeze test. `L5` still cannot violate mandate constraints or circuit breakers. “Human-out-of-the-loop” means no *per-transaction* human, not no policy.
 
 Minimum autonomy to *execute* (not merely draft):
 
@@ -782,6 +782,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 48 | `mandate.known_parent` | issue_intent with parentId | parentId not in this world | — | parent exists |
 | 49 | `identity.known` | freeze / unfreeze / ladder.set / kya.attest / issue_cart / issue_intent | named agentId / delegateId / merchantId / subjectId not in this world | — | agent registered |
 | 50 | `hire.state` | accept / fund / deliver / refund / release / envelope.submit | command is not a legal arrow from the hire’s current state | — | legal transition |
+| 51 | `ladder.legal` | ladder.set | skip a rung, omit a required gate, list `kill_switch_tested` without a freeze test, or wrong approver | — | legal climb (`any→L0` always) |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -967,7 +968,7 @@ export interface AetherError {
 | `ledger.test.ts` | Unbalanced journal rejected; replay file ≡ memory; FX keeps two books |
 | `mandate.test.ts` | Wrong cart hash / swapped payee / amount mismatch denied |
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
-| `ladder.test.ts` | Skip 2→4 illegal; freeze forces deny; L5 still hits amount_range |
+| `ladder.test.ts` | Skip 2→4 is `ladder.legal`; L5 before freeze test is `ladder.legal`; freeze restores the prior rung |
 | `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows are `hire.state` (422), not a 409 after allow |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |

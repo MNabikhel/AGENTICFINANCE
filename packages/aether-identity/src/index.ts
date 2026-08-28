@@ -90,6 +90,26 @@ export function missingGates(
   return extraGates.filter((g) => !provided.includes(g));
 }
 
+/** Same predicate policy reads as `ladderLegal` and mutate uses as a backstop. */
+export function ladderClimbLegal(input: {
+  from: AutonomyLevel;
+  to: AutonomyLevel;
+  actorRole: AgentRole;
+  providedGates: readonly LadderExtraGate[];
+  killSwitchTested: boolean;
+  circuitConfigured: boolean;
+}): boolean {
+  const legal = legalLadderTransition(input.from, input.to);
+  if (!legal) return false;
+  if (input.to !== 0 && legal.requiredApproverRoles.length > 0 && !legal.requiredApproverRoles.includes(input.actorRole)) {
+    return false;
+  }
+  if (missingGates(legal.extraGates, input.providedGates).length) return false;
+  if (legal.extraGates.includes("kill_switch_tested") && !input.killSwitchTested) return false;
+  if (legal.extraGates.includes("circuit_breaker_configured") && !input.circuitConfigured) return false;
+  return true;
+}
+
 export function makeAgent(input: {
   id: AgentId;
   displayName: string;
