@@ -64,7 +64,7 @@
         "intentId": { "type": "string" },
         "merchantId": { "type": "string" },
         "hireId": { "type": "string" },
-        "line_items": { "type": "array" }
+        "line_items": { "type": "array", "minItems": 1, "description": "Must total the hire price. Same seller, same SKU, integer cents." }
       }
     },
     "mandate.issue_payment": {

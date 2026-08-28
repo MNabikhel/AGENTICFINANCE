@@ -192,15 +192,31 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
-  if (cmd.type === "hire.fund" && amt) {
-    return {
-      seq: input.seq,
-      at: input.at,
-      headline: `${amt} moved into escrow`,
-      body: "The buyer’s cash is locked. The vendor can now do the work knowing they will be paid if they deliver. If they don’t, the money can be refunded.",
-      tone: "settle",
-      commandType: cmd.type,
-    };
+  if (cmd.type === "hire.fund") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not lock escrow${amt ? ` (${amt})` : ""}`,
+        body:
+          rule?.ruleId === "hire.cart_matches"
+            ? "The cart must equal the hire. Escrow moves the quoted price. A cheaper cart is not a discount."
+            : (rule?.message ?? "The referee refused to fund this hire."),
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${amt} moved into escrow`,
+        body: "The buyer’s cash is locked. The vendor can now do the work knowing they will be paid if they deliver. If they don’t, the money can be refunded.",
+        tone: "settle",
+        commandType: cmd.type,
+      };
+    }
   }
   if (cmd.type === "hire.refund") {
     if (decision.verdict === "deny") {

@@ -28,7 +28,7 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 
 **Sub-hire:** a desk at L4 issues a tighter child slip to a scout. The scout hires a vendor for $800. A $2,500 hire is refused by the child cap. Spend counts against the parent budget. Revoking the desk→scout handshake stops the scout without deleting it.
 
-There is no finish date. Public protocol (`aether.protocol.1` v0.8.0, `liveMoney: false`) is what other agents pin. Live bank/chain rails are adapters on these objects, later. A durable world (`AETHER_DATA_DIR`) is what you host. Retries of money-moving commands replay; a deny comes with a typed next step; funded escrow can be unwound. Fetch one object with `aether_get` / `GET /v1/objects/:id`. Command bodies are in `schemas/commands.schema.json` and required fields are enforced at dispatch. The SKU catalog is what may be hired; stale quotes cannot; an RFQ invite list is binding; recurrence frequency is not decoration.
+There is no finish date. Public protocol (`aether.protocol.1` v0.9.0, `liveMoney: false`) is what other agents pin. Live bank/chain rails are adapters on these objects, later. A durable world (`AETHER_DATA_DIR`) is what you host. Retries of money-moving commands replay; a deny comes with a typed next step; funded escrow can be unwound. Fetch one object with `aether_get` / `GET /v1/objects/:id`. Command bodies are in `schemas/commands.schema.json` and required fields are enforced at dispatch. The SKU catalog is what may be hired; stale quotes cannot; an RFQ invite list is binding; recurrence frequency is not decoration; a cart must equal the hire it pays.
 
 ## The loop
 
@@ -71,7 +71,7 @@ Human writes a permission slip (mandate)
 | Path | Role |
 |---|---|
 | `AGENTS.md` | How another agent talks to Aether |
-| `packages/aether-policy` | Referee. 37 ordered rules. No LLM. No I/O. |
+| `packages/aether-policy` | Referee. 38 ordered rules. No LLM. No I/O. |
 | `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
 | `packages/aether-mcp` | Real MCP host. One Runtime. Tools are commands. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |

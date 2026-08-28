@@ -659,6 +659,15 @@ export const RULES: readonly Rule[] = [
         : v("market.invited_seller", "deny", "seller is not on the RFQ invite list");
     },
   },
+  {
+    id: "hire.cart_matches",
+    evaluate: (ctx) => {
+      if (ctx.cartMatchesHire === undefined) return v("hire.cart_matches", "allow", "not a hire-cart command");
+      return ctx.cartMatchesHire
+        ? v("hire.cart_matches", "allow", "cart matches hire")
+        : v("hire.cart_matches", "deny", "cart does not match hire price, seller, or sku");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -729,6 +738,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "payment.recurrence": {
     kind: "none",
     hint: "Cadence is spent. If the frequency gap has not elapsed, wait. If max_occurrences is exhausted, issue a new intent. Refund does not restore a slot.",
+  },
+  "hire.cart_matches": {
+    kind: "none",
+    hint: "The cart must equal the hire: same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount.",
   },
 };
 

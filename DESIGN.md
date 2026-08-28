@@ -621,6 +621,7 @@ export interface PolicyContext {
   skuListed?: boolean;
   marketFresh?: boolean;
   sellerInvited?: boolean;
+  cartMatchesHire?: boolean;
 }
 ```
 
@@ -756,6 +757,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 35 | `market.known_sku` | rfq / quote / hire.create | SKU not in `CATALOG` | — | listed |
 | 36 | `market.not_expired` | quote / hire.create / fx_settle | RFQ, quote, or FX `validUntil` ≤ now | — | in window |
 | 37 | `market.invited_seller` | quote / hire.create | seller not in `Rfq.invitedSellerIds` (when the list is non-empty) | — | invited, or open RFQ |
+| 38 | `hire.cart_matches` | issue_cart (with hireId) / hire.fund / envelope.submit | cart total, seller, or SKU ≠ hire, or non-integer cents | — | cart equals hire |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 

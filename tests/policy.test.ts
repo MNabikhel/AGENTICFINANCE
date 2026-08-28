@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 37 rules", () => {
-    expect(RULE_IDS).toHaveLength(37);
+  it("has 38 rules", () => {
+    expect(RULE_IDS).toHaveLength(38);
   });
 
   it("denies frozen actors", () => {
@@ -423,6 +423,12 @@ describe("policy catalog", () => {
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a cart that does not match the hire", () => {
+    const d = evaluate(ctx({ commandType: "hire.fund", cartMatchesHire: false }));
+    expect(d.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 });

@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.8.0",
+  version: "0.9.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -598,6 +598,11 @@ export interface PolicyContext {
    * Absent = command is not invite-gated. Empty invite list is an open RFQ (true).
    */
   sellerInvited?: boolean;
+  /**
+   * False when a cart bound to a hire disagrees with that hire (price, seller, SKU, or non-integer cents).
+   * Absent = command is not cart-gated.
+   */
+  cartMatchesHire?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

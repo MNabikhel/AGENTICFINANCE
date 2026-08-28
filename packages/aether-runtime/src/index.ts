@@ -48,6 +48,7 @@ import type {
   JournalEntry,
   KyaIssuerKind,
   LadderExtraGate,
+  LineItem,
   MandateConstraint,
   MandateId,
   Merchant,
@@ -729,6 +730,8 @@ export class Runtime {
     if (market.skuListed !== undefined) ctx.skuListed = market.skuListed;
     if (market.marketFresh !== undefined) ctx.marketFresh = market.marketFresh;
     if (market.sellerInvited !== undefined) ctx.sellerInvited = market.sellerInvited;
+    const cartMatch = this.cartFlags(cmd, body, hire, cart);
+    if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent);
     return ctx;
   }
@@ -781,6 +784,42 @@ export class Runtime {
       out.sellerInvited = Boolean(rfq && sellerId && (invited.length === 0 || invited.includes(sellerId)));
     }
     return out;
+  }
+
+  private cartFlags(
+    cmd: Command,
+    body: Record<string, unknown>,
+    hire: HireContract | undefined,
+    cart: Signed<CartMandate> | undefined,
+  ): { cartMatchesHire?: boolean } {
+    if (cmd.type !== "mandate.issue_cart" && cmd.type !== "hire.fund" && cmd.type !== "envelope.submit") {
+      return {};
+    }
+    if (!hire || hire.id === "hid_draft") return {};
+    if (cmd.type === "mandate.issue_cart") {
+      const lines = Array.isArray(body.line_items) ? (body.line_items as LineItem[]) : [];
+      const merchantId = typeof body.merchantId === "string" ? (body.merchantId as AgentId) : undefined;
+      return { cartMatchesHire: this.cartAgreesWithHire(hire, lines, merchantId) };
+    }
+    if (!cart) return {};
+    return { cartMatchesHire: this.cartAgreesWithHire(hire, cart.payload.line_items, cart.payload.merchant.id) };
+  }
+
+  private cartAgreesWithHire(hire: HireContract, lines: LineItem[], merchantId: AgentId | undefined): boolean {
+    if (!merchantId || merchantId !== hire.sellerId) return false;
+    if (!Array.isArray(lines) || lines.length === 0) return false;
+    let amount = 0;
+    let currency: CurrencyCode | undefined;
+    for (const line of lines) {
+      if (line.sku !== hire.sku) return false;
+      if (!Number.isInteger(line.quantity) || line.quantity <= 0) return false;
+      const unit = line.unitAmount?.amount;
+      if (!Number.isInteger(unit) || unit < 0) return false;
+      if (currency && line.unitAmount.currency !== currency) return false;
+      currency = line.unitAmount.currency;
+      amount += unit * line.quantity;
+    }
+    return currency === hire.price.currency && amount === hire.price.amount;
   }
 
   private pushStory(cmd: Command, actor: Agent, decision: PolicyDecision, ctx: PolicyContext): void {
