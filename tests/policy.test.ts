@@ -2387,6 +2387,61 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.ruleId).toBe("mandate.not_expired");
   });
 
+  it("does not name mandate.not_expired on deliver after the cart window", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.deliver",
+        hire: hire({ state: "funded" }),
+        cart: signedCart({ expiresAt: "2020-01-01T00:00:00.000Z" }),
+        payment: signedPayment({ exp: 1 }),
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.not_expired on refund, release, or submit after the cart window", () => {
+    for (const commandType of ["hire.refund", "hire.release", "envelope.submit", "envelope.require"] as const) {
+      const d = evaluate(
+        ctx({
+          commandType,
+          hire: hire({ state: commandType === "hire.refund" ? "funded" : "delivered" }),
+          cart: signedCart({ expiresAt: "2020-01-01T00:00:00.000Z" }),
+          payment: signedPayment({ exp: 1 }),
+          intent: signedIntent([]),
+        }),
+      );
+      expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    }
+  });
+
+  it("still names mandate.not_expired on fund of a stale cart", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        cart: signedCart({ expiresAt: "2020-01-01T00:00:00.000Z" }),
+        payment: signedPayment({ exp: 1 }),
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
+  });
+
+  it("still names mandate.not_expired on a first payment for a stale unpaid cart", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "mandate.issue_payment",
+        cart: signedCart({ expiresAt: "2020-01-01T00:00:00.000Z" }),
+        cartKnown: true,
+        paymentUnbound: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.not_expired");
+  });
+
   it("denies a new hire against a live child of a dead parent as mandate.parent_fresh", () => {
     const d = evaluate(
       ctx({

@@ -768,8 +768,8 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 |---|---|---|---|---|---|
 | 01 | `actor.not_frozen` | always | `actor.frozen` | — | otherwise |
 | 02 | `actor.role_capability` | always | auditor attempting spend/hire; vendor creating hire as buyer; MM creating RFQ | — | role may perform `commandType` |
-| 03 | `mandate.chain_integrity` | any settle/fund | verifyChain fails | — | chain ok |
-| 04 | `mandate.not_expired` | any mandate use | `exp`/`expiresAt` ≤ now | — | in window |
+| 03 | `mandate.chain_integrity` | fund / submit | verifyChain fails (expiry is checked at fund; submit verifies signatures and hashes) | — | chain ok. Completing a funded hire after the cart window is legal. Fund of a stale cart names this first. |
+| 04 | `mandate.not_expired` | new spend / mint (create, fund, issue_cart, issue_payment) | `exp`/`expiresAt` ≤ now | — | in window. Completing a funded hire after the cart or payment window is legal. |
 | 05 | `mandate.subject_is_actor` | settle | `intent.subjectId !== actor.id` | — | match |
 | 06 | `payment.currency_match` | settle | cart/payment/amount currencies differ | — | match |
 | 07 | `payment.amount_range` | settle if constraint present | amount outside `[min,max]` or currency mismatch | — | in range |
@@ -1034,12 +1034,12 @@ export interface AetherError {
 |---|---|
 | `audit.test.ts` | Tamper a JSONL byte → verify fails at that seq; reorder fails; genesis prevHash is zeros |
 | `ledger.test.ts` | Unbalanced journal rejected; replay file ≡ memory; FX keeps two books; a dest that would leave `Number.isSafeInteger` is refused at `post()`; operating books are asset cash, not equity or escrow |
-| `mandate.test.ts` | Wrong cart hash / swapped payee / amount mismatch denied |
-| `cart.test.ts` | A cart must equal the hire it pays; a line with no amount is `command.malformed`, not a throw after yes; a second cart on the same hire is `hire.unique_cart`, not a pointer swap; a second payment on the same cart is `mandate.unique_payment`, not a second check; payment `exp` is one day in unix seconds, not milliseconds; funding with a loose cartId (never bound to the hire) is `hire.bound_cart`, not a throw at release; a line whose cents overflow, or mixed USD/USDC lines, is `command.malformed` |
+| `mandate.test.ts` | Wrong cart hash / swapped payee / amount mismatch denied; `checkExp: false` still verifies hashes on an expired cart |
+| `cart.test.ts` | A cart must equal the hire it pays; a line with no amount is `command.malformed`, not a throw after yes; a second cart on the same hire is `hire.unique_cart`, not a pointer swap; a second payment on the same cart is `mandate.unique_payment`, not a second check; payment `exp` is one day in unix seconds, not milliseconds; funding with a loose cartId (never bound to the hire) is `hire.bound_cart`, not a throw at release; a line whose cents overflow, or mixed USD/USDC lines, is `command.malformed`; fund after the cart window is `mandate.chain_integrity`; completing or refunding a funded hire after that window is legal |
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures |
 | `ladder.test.ts` | Skip 2→4 is `ladder.legal`; L5 before freeze test is `ladder.legal`; minting L5 at register is `ladder.birth_rung`; freeze restores the prior rung |
 | `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows and payment-required before deliver are `hire.state`; funding without cash is `ledger.sufficient`; quoting an FX SKU without a window is `market.fx_window`; minting or hiring under an expired parent is `mandate.parent_fresh`; hiring or funding under a nested hop whose parent hop died is `kya.parent_fresh`; completing a funded child hire after the parent (slip or hop) dies is legal |
-| `window.test.ts` | Completing a funded hire after `not_after` is legal; a new hire is `payment.execution_date`; minting a closed, inverted, or unparseable window is `mandate.window_fresh`, not a written corpse; a future `not_before` still mints if it opens while the slip lives; a window that opens after the seven-day exp is `mandate.window_reach`; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
+| `window.test.ts` | Completing a funded hire after `not_after` is legal; a new hire is `payment.execution_date`; minting a closed, inverted, or unparseable window is `mandate.window_fresh`, not a written corpse; a future `not_before` still mints if it opens while the slip lives; a window that opens after the seven-day exp is `mandate.window_reach`; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent`; completing after the cart window is covered in `cart.test.ts` |
 | `recurrence.test.ts` | First hire with `max_occurrences: 1` then a second create is `payment.recurrence`; DAILY gap binds until 24h; minting `max_occurrences` ≤ 0 is `mandate.occurrence_fresh`, not a written corpse; one slot still mints; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |

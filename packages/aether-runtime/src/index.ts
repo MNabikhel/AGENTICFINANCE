@@ -884,6 +884,7 @@ export class Runtime {
     let chainOk: boolean | undefined;
     const mustChain = cmd.type === "envelope.submit" || cmd.type === "hire.fund";
     if (mustChain && intent && cart && payment) {
+      const checkExp = cmd.type === "hire.fund";
       const chain = verifyChain({
         intent,
         cart,
@@ -892,6 +893,7 @@ export class Runtime {
         cartKey: this.keypair(cart.payload.merchant.id),
         paymentKey: this.keypair(actor.id),
         nowIso: this.clock.now(),
+        checkExp,
       });
       // Payment may be signed by actor or a human supervisor — try both.
       chainOk = chain.ok;
@@ -906,6 +908,7 @@ export class Runtime {
             cartKey: this.keypair(cart.payload.merchant.id),
             paymentKey: this.keypair(human.id),
             nowIso: this.clock.now(),
+            checkExp,
           });
           chainOk = retry.ok;
         }

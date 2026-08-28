@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.81.0",
+  version: "0.82.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -946,7 +946,7 @@ export interface PolicyContext {
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
    * Absent = no parent, or not those verbs (completing a funded hire after the parent
    * dies is legal). Ghost parent stays `mandate.known_parent`. The child's own
-   * expiry stays `mandate.not_expired`.
+   * expiry stays `mandate.not_expired` on a new spend. Completing a funded hire after that is legal.
    */
   parentFresh?: boolean;
   /**

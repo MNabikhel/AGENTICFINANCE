@@ -58,6 +58,11 @@ export function verifyChain(input: {
   cartKey: Ed25519Keypair;
   paymentKey: Ed25519Keypair;
   nowIso: string;
+  /**
+   * When false, skip exp / expiresAt. Completing a funded hire after the
+   * checkout window still verifies signatures and hashes. Default true.
+   */
+  checkExp?: boolean;
 }): Result<true, AetherError> {
   if (!verifyJws(input.intent, input.intentKey)) {
     return { ok: false, error: err("mandate.jws", "Bad intent JWS", 401, "intent signature invalid") };
@@ -88,12 +93,14 @@ export function verifyChain(input: {
   if (pay.amount !== tot.amount || pay.currency !== tot.currency) {
     return { ok: false, error: err("mandate.amount", "Amount mismatch", 422, "payment_amount != cart.total") };
   }
-  const nowSec = unixSeconds(input.nowIso);
-  if (input.intent.payload.exp <= nowSec || input.payment.payload.exp <= nowSec) {
-    return { ok: false, error: err("mandate.exp", "Mandate expired", 422, "exp") };
-  }
-  if (Date.parse(input.cart.payload.expiresAt) <= Date.parse(input.nowIso)) {
-    return { ok: false, error: err("mandate.exp", "Cart expired", 422, "expiresAt") };
+  if (input.checkExp !== false) {
+    const nowSec = unixSeconds(input.nowIso);
+    if (input.intent.payload.exp <= nowSec || input.payment.payload.exp <= nowSec) {
+      return { ok: false, error: err("mandate.exp", "Mandate expired", 422, "exp") };
+    }
+    if (Date.parse(input.cart.payload.expiresAt) <= Date.parse(input.nowIso)) {
+      return { ok: false, error: err("mandate.exp", "Cart expired", 422, "expiresAt") };
+    }
   }
   return { ok: true, value: true };
 }

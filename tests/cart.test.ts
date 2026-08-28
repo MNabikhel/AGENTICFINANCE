@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import { offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
+import { offerHire, fundHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { DAY_MS, DAY_SEC, type HireContract, type MandateId } from "@aether/types";
 
 function boot() {
@@ -428,5 +428,174 @@ describe("payment exp", () => {
     expect(r.error.decision?.remediation?.ruleId).toBe("mandate.chain_integrity");
     expect(rt.hires.get(hireId)?.state).toBe("accepted");
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+  });
+
+  it("completes a funded hire after the cart window", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    rt.clock.set(new Date(Date.parse(rt.clock.now()) + DAY_MS + 3_600_000).toISOString());
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    if (!delivered.ok) return;
+    expect(delivered.value.decision.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(delivered.value.decision.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    const released = rt.dispatch(cmd("hire.release", desk.id, { hireId }));
+    expect(released.ok).toBe(true);
+    if (!released.ok) return;
+    expect(released.value.decision.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.ledger.balanceByName("vendor:cash").amount).toBe(80_000);
+  });
+
+  it("refunds a funded hire after the cart window", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    rt.clock.set(new Date(Date.parse(rt.clock.now()) + DAY_MS + 3_600_000).toISOString());
+    const refund = rt.dispatch(cmd("hire.refund", desk.id, { hireId }));
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    expect(refund.value.decision.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("refunded");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash + 80_000);
+  });
+
+  it("submits envelope after the cart window", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set(new Date(Date.parse(rt.clock.now()) + DAY_MS + 3_600_000).toISOString());
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
+    const submitted = rt.dispatch(cmd("envelope.submit", desk.id, { hireId, nonce: `nonce-${hireId}-late` }));
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    expect(submitted.value.decision.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(submitted.value.decision.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(rt.hires.get(hireId)?.state).toBe("released");
+  });
+
+  it("still refuses a first payment on a stale unpaid cart as mandate.not_expired", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cart = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          line_items: [
+            {
+              sku: "research.brief",
+              description: "page 1",
+              quantity: 1,
+              unitAmount: { amount: 80_000, currency: "USD_SIM" },
+            },
+          ],
+        }),
+      ),
+      "cart",
+    );
+    const cartId = (cart.data as { payload: { id: string } }).payload.id;
+    const before = rt.payments.size;
+    rt.clock.set(new Date(Date.parse(rt.clock.now()) + DAY_MS + 3_600_000).toISOString());
+    const r = rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("allow");
+    expect(rt.payments.size).toBe(before);
+  });
+
+  it("still names hire.state first when refunding delivered work after the cart window", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver");
+    rt.clock.set(new Date(Date.parse(rt.clock.now()) + DAY_MS + 3_600_000).toISOString());
+    const r = rt.dispatch(cmd("hire.refund", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.state");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
   });
 });

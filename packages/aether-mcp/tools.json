@@ -24,7 +24,7 @@
     {
       "name": "aether_mandate_issue_cart",
       "commandType": "mandate.issue_cart",
-      "description": "Issue a merchant-bound cart hashed to an intent."
+      "description": "Issue a merchant-bound cart hashed to an intent. Completing a funded hire after the cart window is legal; fund of a stale cart is not."
     },
     {
       "name": "aether_mandate_issue_payment",
@@ -59,17 +59,17 @@
     {
       "name": "aether_hire_deliver",
       "commandType": "hire.deliver",
-      "description": "Seller marks work delivered. Hire must be funded."
+      "description": "Seller marks work delivered. Hire must be funded. Completing after the cart window is legal."
     },
     {
       "name": "aether_hire_refund",
       "commandType": "hire.refund",
-      "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release."
+      "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release. Completing after the cart window is legal."
     },
     {
       "name": "aether_hire_release",
       "commandType": "hire.release",
-      "description": "Release funded+delivered escrow to the seller without an x402 envelope. Same books as envelope.submit."
+      "description": "Release funded+delivered escrow to the seller without an x402 envelope. Same books as envelope.submit. Completing after the cart window is legal."
     },
     {
       "name": "aether_payment_require",
@@ -79,7 +79,7 @@
     {
       "name": "aether_payment_submit",
       "commandType": "envelope.submit",
-      "description": "Submit a signed PaymentPayload. Settles via sim facilitator."
+      "description": "Submit a signed PaymentPayload. Settles via sim facilitator. Completing after the cart window is legal; hashes still verify."
     },
     {
       "name": "aether_approval_resolve",

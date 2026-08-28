@@ -95,6 +95,15 @@ const ESCALATABLE = new Set<CommandType>([
 /** New spend starts here. Completing a funded hire is not a new spend. */
 const SPEND_START_COMMANDS = new Set<CommandType>(["hire.create", "hire.fund"]);
 
+/** Escrow already moved. Cart/payment/intent windows do not trap the lock. */
+const COMPLETE_AFTER_FUND = new Set<CommandType>([
+  "hire.deliver",
+  "hire.release",
+  "hire.refund",
+  "envelope.require",
+  "envelope.submit",
+]);
+
 const FREQ_RANK: Record<RecurrenceFrequency, number> = {
   ON_DEMAND: 0,
   DAILY: 1,
@@ -201,6 +210,9 @@ export const RULES: readonly Rule[] = [
   {
     id: "mandate.not_expired",
     evaluate: (ctx) => {
+      if (COMPLETE_AFTER_FUND.has(ctx.commandType as CommandType)) {
+        return v("mandate.not_expired", "allow", "window checked at fund");
+      }
       const nowSec = Math.floor(Date.parse(ctx.clock) / 1000);
       if (ctx.intent && ctx.intent.payload.exp <= nowSec) {
         return v("mandate.not_expired", "deny", "intent expired");
