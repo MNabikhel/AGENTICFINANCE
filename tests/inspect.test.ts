@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import { offerHire, completeHire } from "../packages/aether-runtime/src/hire-flow.ts";
+import { offerHire, completeHire, inviteQuote } from "../packages/aether-runtime/src/hire-flow.ts";
 import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
 import type { ApprovalTicket, DelegationAttestation, HireContract, MandateId, Receipt } from "@aether/types";
 
@@ -194,6 +194,114 @@ describe("delegation inspect", () => {
     rt.clock.set("2027-09-01T00:00:00.000Z");
     expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("revoked");
     expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("revoked");
+  });
+});
+
+describe("quote inspect", () => {
+  it("labels a live quote live and does not write status into the store", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().quotes.find((q) => q.id === invited.quoteId)?.status).toBe("live");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a hired quote spent, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("spent");
+    expect(rt.snapshotState().quotes.find((q) => q.id === offered.quoteId)?.status).toBe("spent");
+    expect("status" in (rt.quotes.get(offered.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a quote held by an open hire ticket held, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect(offered.attempt.value.kind).toBe("escalated");
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("held");
+    expect(rt.snapshotState().quotes.find((q) => q.id === offered.quoteId)?.status).toBe("held");
+    expect("status" in (rt.quotes.get(offered.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a stale quote expired, not live", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().quotes.find((q) => q.id === invited.quoteId)?.status).toBe("expired");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a spent quote spent even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("spent");
+  });
+
+  it("does not label a quote held when the pause is already dead", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const ticket = offered.attempt.value.ticket as ApprovalTicket;
+    rt.approvals.set(ticket.id, { ...ticket, expiresAt: rt.clock.now() });
+    expect(rt.reservedQuotes.has(offered.quoteId)).toBe(true);
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("live");
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("expired");
+    expect("status" in (rt.quotes.get(offered.quoteId) ?? {})).toBe(false);
   });
 });
 

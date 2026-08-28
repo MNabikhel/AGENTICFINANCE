@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.77.0",
+  version: "0.78.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -450,6 +450,9 @@ export interface Quote {
   };
   expiresAt: Instant;
 }
+
+/** Inspect / snapshot view. Spent and held win over expired. The store stays raw. */
+export type QuoteStatus = "live" | "expired" | "spent" | "held";
 
 // ---------------------------------------------------------------------------
 // Ledger

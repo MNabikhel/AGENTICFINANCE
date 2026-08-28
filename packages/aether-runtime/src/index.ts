@@ -59,6 +59,7 @@ import type {
   PolicyContext,
   PolicyDecision,
   Quote,
+  QuoteStatus,
   Receipt,
   Result,
   Rfq,
@@ -429,7 +430,7 @@ export class Runtime {
       spentByIntent: Object.fromEntries(this.spentByIntent),
       hires: [...this.hires.values()],
       rfqs: [...this.rfqs.values()],
-      quotes: [...this.quotes.values()],
+      quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
       story: this.story,
@@ -471,6 +472,30 @@ export class Runtime {
     return { ...att, status: hopStatus(att, this.clock.now()) };
   }
 
+  /**
+   * Quote view for other agents. Spent (consumed) and held (live reserved ticket)
+   * win over expired. A reservation whose ticket is past expiresAt is not held.
+   * The store stays raw (expiresAt only).
+   */
+  quoteView(quote: Quote): Quote & { status: QuoteStatus } {
+    if (this.consumedQuotes.has(quote.id)) return { ...quote, status: "spent" };
+    const ticketId = this.reservedQuotes.get(quote.id);
+    if (ticketId) {
+      const ticket = this.approvals.get(ticketId);
+      if (
+        ticket &&
+        ticket.status === "pending" &&
+        Date.parse(ticket.expiresAt) > Date.parse(this.clock.now())
+      ) {
+        return { ...quote, status: "held" };
+      }
+    }
+    if (Date.parse(quote.expiresAt) <= Date.parse(this.clock.now())) {
+      return { ...quote, status: "expired" };
+    }
+    return { ...quote, status: "live" };
+  }
+
   protocolCard() {
     return {
       ...PROTOCOL,
@@ -485,7 +510,7 @@ export class Runtime {
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
    * aid_ agent, hid_ hire, mid_ mandate, rid_ receipt, apd_ approval,
-   * rfq_ / qte_ market, acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
+   * rfq_ / qte_ market (qte_ includes derived live | expired | spent | held), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -521,7 +546,7 @@ export class Runtime {
     }
     if (id.startsWith("qte_")) {
       const quote = this.quotes.get(id);
-      return quote ? { type: "quote", id: quote.id, value: quote } : undefined;
+      return quote ? { type: "quote", id: quote.id, value: this.quoteView(quote) } : undefined;
     }
     if (id.startsWith("dlg_")) {
       const att = this.kya.attestations.get(id as DelegationId);

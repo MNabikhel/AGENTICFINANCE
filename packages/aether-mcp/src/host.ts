@@ -171,7 +171,7 @@ export class AetherMcp {
           },
           {
             name: "aether_get",
-            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A dlg_ hop includes derived status (live | expired | revoked).",
+            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). A dlg_ hop includes derived status (live | expired | revoked).",
             inputSchema: {
               type: "object",
               properties: { id: { type: "string" } },
