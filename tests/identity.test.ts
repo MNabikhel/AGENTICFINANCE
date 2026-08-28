@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
 
 const GHOST = "aid_01J6AETHERGHOSTAGEN0000001";
+const GHOST_PARENT = "dlg_01J6AETHERGHOSTPARENT00001";
 
 function boot() {
   return new Runtime({
@@ -174,5 +175,49 @@ describe("kya.not_self", () => {
     expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(rt.kya.attestations.size).toBe(before);
     expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});
+
+describe("kya.known_parent", () => {
+  it("refuses a nested handshake against a missing parent hop as kya.known_parent, not a live mint", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: desk.id, parentId: GHOST_PARENT, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.known_parent");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still allows a nested handshake when the parent hop is live", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const parent = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "parent hop",
+    );
+    const parentId = (parent.data as { id: string }).id;
+    const before = rt.kya.attestations.size;
+    const r = must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId, maxAutonomy: 2 }),
+      ),
+      "nested hop",
+    );
+    expect((r.data as { parentId?: string }).parentId).toBe(parentId);
+    expect(rt.kya.attestations.size).toBe(before + 1);
   });
 });

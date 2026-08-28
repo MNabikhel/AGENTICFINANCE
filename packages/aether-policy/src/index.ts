@@ -866,6 +866,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.not_self", "deny", "cannot attest yourself");
     },
   },
+  {
+    id: "kya.known_parent",
+    evaluate: (ctx) => {
+      if (ctx.kyaParentKnown === undefined) return v("kya.known_parent", "allow", "not a nested hop");
+      return ctx.kyaParentKnown
+        ? v("kya.known_parent", "allow", "parent hop exists")
+        : v("kya.known_parent", "deny", "parent hop not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -996,6 +1005,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.not_self": {
     kind: "none",
     hint: "A handshake is with another agent. You cannot attest yourself. Know Your Agent is a grant, not a mirror.",
+  },
+  "kya.known_parent": {
+    kind: "none",
+    hint: "That parentId is not in this world’s graph. Attest the parent hop first. A missing parent is not a live nested handshake.",
   },
   "payment.execution_date": {
     kind: "none",

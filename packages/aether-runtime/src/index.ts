@@ -796,6 +796,9 @@ export class Runtime {
       const delegate = this.identity.get(body.delegateId as AgentId);
       if (delegate) ctx.kyaNotSelf = actor.id !== delegate.id;
     }
+    if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
+      ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
+    }
     if (cmd.type === "ladder.set" && ctx.targetKnown === true && namedIds[0]) {
       const target = this.identity.get(namedIds[0]);
       if (target && typeof body.to === "number") {
@@ -1252,7 +1255,10 @@ export class Runtime {
           ? body.expiresAt
           : new Date(Date.parse(this.clock.now()) + 365 * 24 * 3600 * 1000).toISOString(),
     };
-    if (typeof body.parentId === "string") att.parentId = body.parentId as DelegationId;
+    if (typeof body.parentId === "string") {
+      if (!this.kya.attestations.has(body.parentId as DelegationId)) throw new Error("unknown parent hop");
+      att.parentId = body.parentId as DelegationId;
+    }
     this.kya.attest(att);
     this.audit.append({
       clock: this.clock,

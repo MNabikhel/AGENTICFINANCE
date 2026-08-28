@@ -106,4 +106,18 @@ describe("delegation graph", () => {
     const g = new DelegationGraph();
     expect(() => g.attest(att({ id: "dlg_x" as DelegationId, grantorId: extra, delegateId: extra }))).toThrow(/self-delegation/);
   });
+
+  it("forbids a nested hop whose parent is not in the graph", () => {
+    const g = new DelegationGraph();
+    expect(() =>
+      g.attest(
+        att({
+          id: "dlg_orphan" as DelegationId,
+          grantorId: founder,
+          delegateId: watch,
+          parentId: "dlg_ghost" as DelegationId,
+        }),
+      ),
+    ).toThrow(/unknown parent hop/);
+  });
 });

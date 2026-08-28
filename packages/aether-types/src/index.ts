@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.26.0",
+  version: "0.27.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -687,6 +687,12 @@ export interface PolicyContext {
    * Absent = not a kya.attest, or the delegate is unknown (`identity.known` handles that).
    */
   kyaNotSelf?: boolean;
+  /**
+   * False when kya.attest points at a parentId that is not in this world’s graph.
+   * Absent = not a nested hop (no parentId). Do not reuse `parentKnown` —
+   * that flag is for issue_intent and would steal first deny as mandate.known_parent.
+   */
+  kyaParentKnown?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

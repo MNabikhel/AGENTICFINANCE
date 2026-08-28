@@ -35,6 +35,9 @@ export class DelegationGraph {
     if (input.grantorId === input.delegateId) {
       throw new Error("kya self-delegation forbidden");
     }
+    if (input.parentId && !this.attestations.has(input.parentId)) {
+      throw new Error("kya unknown parent hop");
+    }
     this.attestations.set(input.id, input);
     this.blocked.delete(pairKey(input.principalId, input.delegateId));
     return input;

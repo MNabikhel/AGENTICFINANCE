@@ -498,7 +498,7 @@ export interface Quote {
 }
 ```
 
-RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. A cartId that is not in this world is `mandate.known_cart` — not a broken payment chain. An approvalId that is not in this world is `approval.known` — not a late yes. An expired or already-resolved ticket is `approval.pending`. Accept, deliver, and payment-required belong to the seller; refund and release belong to the buyer or treasury (`hire.party`). A parentId that is not in this world is `mandate.known_parent` — not a tighter child. An agentId that is not in this world is `identity.known` — not a freeze, handshake, merchant, slip subject, or revoke target. Attesting yourself is `kya.not_self`. An illegal hire arrow is `hire.state` — not a 409 after an allow. Payment-required is only after deliver. An illegal ladder climb is `ladder.legal`. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. A cartId that is not in this world is `mandate.known_cart` — not a broken payment chain. An approvalId that is not in this world is `approval.known` — not a late yes. An expired or already-resolved ticket is `approval.pending`. Accept, deliver, and payment-required belong to the seller; refund and release belong to the buyer or treasury (`hire.party`). A parentId that is not in this world is `mandate.known_parent` — not a tighter child. An agentId that is not in this world is `identity.known` — not a freeze, handshake, merchant, slip subject, or revoke target. Attesting yourself is `kya.not_self`. A KYA parentId that is not in this world is `kya.known_parent` — not a live nested hop. An illegal hire arrow is `hire.state` — not a 409 after an allow. Payment-required is only after deliver. An illegal ladder climb is `ladder.legal`. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
 
 Hire state machine (illegal arrows are `hire.state`; mutate still throws `HIRE_ILLEGAL_TRANSITION` if policy ever lies):
 
@@ -634,6 +634,9 @@ export interface PolicyContext {
   hirePartyOk?: boolean;            // false when the actor is not the hire counterparty
   parentKnown?: boolean;            // false when issue_intent.parentId is not in this world
   targetKnown?: boolean;            // false when freeze/ladder/attest/cart/intent names a missing agent
+  ladderLegal?: boolean;            // false when ladder.set would skip a rung or skip a real freeze test
+  kyaNotSelf?: boolean;             // false when kya.attest would make the grantor the delegate
+  kyaParentKnown?: boolean;         // false when kya.attest.parentId is not in this world's graph
 }
 ```
 
@@ -784,6 +787,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 50 | `hire.state` | accept / fund / deliver / refund / release / envelope.submit / envelope.require | command is not a legal arrow from the hire’s current state; payment-required is only after deliver | — | legal transition |
 | 51 | `ladder.legal` | ladder.set | skip a rung, omit a required gate, list `kill_switch_tested` without a freeze test, or wrong approver | — | legal climb (`any→L0` always) |
 | 52 | `kya.not_self` | kya.attest | grantor would attest themselves | — | handshake with another agent |
+| 53 | `kya.known_parent` | kya.attest with parentId | parentId not in this world’s graph | — | parent hop exists |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -977,7 +981,7 @@ export interface AetherError {
 | `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` replay + `aether_hire_refund` |
 | `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false` |
 | `inspect.test.ts` | `aether_get` / inspect by id; MCP command schemas; expired approval tickets refuse resolve |
-| `identity.test.ts` | Ghost freeze / handshake principal / revoke is `identity.known`; attesting yourself is `kya.not_self` |
+| `identity.test.ts` | Ghost freeze / handshake principal / revoke is `identity.known`; attesting yourself is `kya.not_self`; nested handshake with a ghost parent is `kya.known_parent` |
 | `market.test.ts` | Catalog SKU deny; stale quote cannot be hired; audit.query by hire id |
 | `world.test.ts` | Durable boot restores keys and audit head; settlement window restores |
 

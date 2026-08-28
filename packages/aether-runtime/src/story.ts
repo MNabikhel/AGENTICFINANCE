@@ -446,6 +446,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.known_parent") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to nest a handshake under nobody`,
+          body: "A missing parent hop is not a live nested handshake. Attest the parent first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
