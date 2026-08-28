@@ -269,7 +269,7 @@
       "properties": {
         "intentId": {
           "type": "string",
-          "description": "Standing slip from the human/org that established identity, budget, and authority. This public kernel refuses subscribe as host.not_hosted."
+          "description": "Standing slip from the human/org that established identity, budget, and authority. Required on a hosted operator (ghost is mandate.known_intent). This public kernel refuses subscribe as host.not_hosted even when omitted."
         }
       }
     }

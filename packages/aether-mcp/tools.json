@@ -144,7 +144,7 @@
     {
       "name": "aether_host_subscribe",
       "commandType": "host.subscribe",
-      "description": "Subscribe an authorized agent to a hosted operator. This public kernel refuses as host.not_hosted. Humans establish identity, budget, and authority first. GitHub is not a checkout."
+      "description": "Subscribe an authorized agent to a hosted operator against a live human-issued intent. This public kernel refuses as host.not_hosted. One subscriber, one row. Spend is not gated on the row. GitHub is not a checkout."
     },
     {
       "name": "aether_demo_sprint",

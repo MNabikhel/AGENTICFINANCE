@@ -28,14 +28,15 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.89.0",
+  version: "0.90.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
   evaluateLlm: false,
   /**
    * This public kernel is not a paid operator. Self-host is free.
-   * Hosted subscribe (`host.subscribe`) is a later adapter. GitHub is not a checkout.
+   * A process may construct `Runtime({ hosted: true })` (or `AETHER_HOSTED=true`).
+   * That instance records `host.subscribe`. This pin stays false. GitHub is not a checkout.
    */
   hosted: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -110,6 +111,7 @@ export type JournalId = `jnl_${Ulid}`;
 export type RfqId = `rfq_${Ulid}`;
 export type QuoteId = `qte_${Ulid}`;
 export type DelegationId = `dlg_${Ulid}`;
+export type SubscriptionId = `hsb_${Ulid}`;
 export type Did = `did:aether:${string}`;
 
 export interface Agent {
@@ -763,8 +765,9 @@ export interface PolicyContext {
    */
   hireKnown?: boolean;
   /**
-   * False when hire.create or issue_cart points at an intent that is not in this world.
-   * Absent = command does not require a live intent.
+   * False when hire.create, issue_cart, or hosted `host.subscribe` points at an
+   * intent that is not in this world. Absent = command does not require a live intent.
+   * Public-kernel subscribe does not set this — that deny is `host.not_hosted`.
    */
   intentKnown?: boolean;
   /**
@@ -1010,11 +1013,33 @@ export interface PolicyContext {
    */
   systemOk?: boolean;
   /**
-   * False when `host.subscribe` targets this public kernel (`PROTOCOL.hosted` is false).
-   * Absent = not a subscribe. Self-host is free. A hosted operator is a later adapter.
-   * GitHub is not a checkout. `host.card` is a read, not a subscribe.
+   * False when `host.subscribe` targets an instance that is not hosted
+   * (`Runtime.hosted` / `PROTOCOL.hosted` is false). Absent = not a subscribe.
+   * Self-host is free. GitHub is not a checkout. `host.card` is a read, not a subscribe.
    */
   hostedOk?: boolean;
+  /**
+   * False when hosted `host.subscribe` carries a live intent whose issuer is not
+   * `human_operator` or `treasury`. Absent = not a hosted subscribe with a known intent
+   * (`mandate.known_intent` handles a ghost). An agent-issued slip is not host authority.
+   */
+  hostIssuerOk?: boolean;
+  /**
+   * False when hosted `host.subscribe` would bind an agent that already has a row.
+   * Absent = not a hosted subscribe with a known intent. One subscriber, one row.
+   */
+  subscribeUnique?: boolean;
+}
+
+/**
+ * Recorded when a hosted operator allows `host.subscribe`.
+ * The store stays raw. Spend is not gated on this row.
+ */
+export interface HostSubscription {
+  id: SubscriptionId;
+  subscriberId: AgentId;
+  intentId: MandateId;
+  createdAt: Instant;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
@@ -1077,7 +1102,8 @@ export type AuditAction =
   | "KYA_REVOKE"
   | "CIRCUIT_RESET"
   | "CLEARING_WINDOW"
-  | "AUDIT_VERIFY";
+  | "AUDIT_VERIFY"
+  | "HOST_SUBSCRIBE";
 
 export interface AuditSubject {
   type: string;

@@ -233,8 +233,12 @@ export const RULES: readonly Rule[] = [
     id: "mandate.subject_is_actor",
     evaluate: (ctx) => {
       if (!ctx.intent) return v("mandate.subject_is_actor", "allow", "no intent");
-      if (ctx.commandType !== "envelope.submit" && ctx.commandType !== "hire.fund") {
-        return v("mandate.subject_is_actor", "allow", "not a settle");
+      if (
+        ctx.commandType !== "envelope.submit" &&
+        ctx.commandType !== "hire.fund" &&
+        ctx.commandType !== "host.subscribe"
+      ) {
+        return v("mandate.subject_is_actor", "allow", "not a subject-bound command");
       }
       return ctx.intent.payload.subjectId === ctx.actor.id
         ? v("mandate.subject_is_actor", "allow", "actor is intent subject")
@@ -1257,6 +1261,26 @@ export const RULES: readonly Rule[] = [
         : v("host.not_hosted", "deny", "this instance is the public kernel");
     },
   },
+  {
+    id: "host.human_authority",
+    evaluate: (ctx) => {
+      if (ctx.hostIssuerOk === undefined) return v("host.human_authority", "allow", "not a hosted subscribe with intent");
+      return ctx.hostIssuerOk
+        ? v("host.human_authority", "allow", "intent issuer is human or treasury")
+        : v("host.human_authority", "deny", "intent issuer is not human or treasury");
+    },
+  },
+  {
+    id: "host.unique_subscriber",
+    evaluate: (ctx) => {
+      if (ctx.subscribeUnique === undefined) {
+        return v("host.unique_subscriber", "allow", "not a hosted subscribe with intent");
+      }
+      return ctx.subscribeUnique
+        ? v("host.unique_subscriber", "allow", "subscriber is free")
+        : v("host.unique_subscriber", "deny", "subscriber already bound");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1528,7 +1552,16 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "host.not_hosted": {
     kind: "none",
-    hint: "This instance is the public kernel. Self-host is free. A hosted operator (durable audits, live adapters) is a later adapter. GitHub is not a checkout. Read host.card.",
+    hint: "This instance is the public kernel. Self-host is free. A hosted operator constructs Runtime({ hosted: true }) and records subscribe against a live human-issued intent. GitHub is not a checkout. Read host.card.",
+  },
+  "host.human_authority": {
+    kind: "issue_intent",
+    commandType: "mandate.issue_intent",
+    hint: "Subscribe with a live intent issued by a human_operator or treasury. An agent-issued slip is not host authority. Ghost intent stays mandate.known_intent. An expired slip stays mandate.not_expired. The speaker must be the intent subject.",
+  },
+  "host.unique_subscriber": {
+    kind: "none",
+    hint: "This agent already has a subscription on this host. One subscriber, one row. Spend is not gated on the row.",
   },
   "payment.execution_date": {
     kind: "none",

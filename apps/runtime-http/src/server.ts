@@ -20,11 +20,19 @@ let lastDemo: unknown = null;
 
 function boot(): Runtime {
   const dir = process.env.AETHER_DATA_DIR;
+  const hostedEnv = process.env.AETHER_HOSTED;
+  const hosted =
+    hostedEnv === "true" || hostedEnv === "1"
+      ? true
+      : hostedEnv === "false" || hostedEnv === "0"
+        ? false
+        : undefined;
   return new Runtime({
     startIso: "2026-08-28T00:00:00.000Z",
     genesisNonce: "01J6AETHERGENESIS0000000001",
     dailyLimit: 10_000_000,
     ...(dir && dir.length > 0 ? { dataDir: dir } : {}),
+    ...(hosted !== undefined ? { hosted } : {}),
   });
 }
 

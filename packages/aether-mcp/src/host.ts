@@ -81,6 +81,13 @@ function dataDir(): string | undefined {
   return dir && dir.length > 0 ? dir : undefined;
 }
 
+function hostedOpt(): { hosted: boolean } | Record<string, never> {
+  const v = process.env.AETHER_HOSTED;
+  if (v === "true" || v === "1") return { hosted: true };
+  if (v === "false" || v === "0") return { hosted: false };
+  return {};
+}
+
 function boot(): Runtime {
   const dir = dataDir();
   return new Runtime({
@@ -88,6 +95,7 @@ function boot(): Runtime {
     genesisNonce: "01J6AETHERGENESISMCP00000001",
     dailyLimit: 10_000_000,
     ...(dir ? { dataDir: dir } : {}),
+    ...hostedOpt(),
   });
 }
 

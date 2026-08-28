@@ -18,6 +18,7 @@ import type {
   CommandType,
   DelegationAttestation,
   HireContract,
+  HostSubscription,
   IntentMandate,
   Instant,
   JournalEntry,
@@ -80,4 +81,11 @@ export interface WorldState {
   clearing: { legs: ExposureLeg[]; windows: SettlementWindow[] };
   killSwitchTested: AgentId[];
   idempotency?: Array<[string, unknown]>;
+  /**
+   * Hosted operator flag. Optional so 0.89 worlds boot (treated as false).
+   * Constructor `hosted` wins when passed.
+   */
+  hosted?: boolean;
+  /** Unique subscriber rows. Optional so 0.89 worlds boot. */
+  subscriptions?: HostSubscription[];
 }

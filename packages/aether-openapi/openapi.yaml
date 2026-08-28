@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.89.0
+  version: 0.90.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -159,7 +159,8 @@ paths:
     post:
       operationId: hostSubscribe
       responses:
-        "422": { description: host.not_hosted on this public kernel. GitHub is not a checkout. }
+        "200": { description: Hosted operator recorded a unique subscriber against a live human-issued intent. }
+        "422": { description: host.not_hosted on this public kernel; hosted also names mandate.known_intent, mandate.not_expired, host.human_authority, host.unique_subscriber. GitHub is not a checkout. }
   /v1/catalog:
     get:
       operationId: marketCatalog

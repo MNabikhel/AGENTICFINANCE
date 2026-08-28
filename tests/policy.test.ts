@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 85 rules", () => {
-    expect(RULE_IDS).toHaveLength(85);
+  it("has 87 rules", () => {
+    expect(RULE_IDS).toHaveLength(87);
   });
 
   it("denies frozen actors", () => {
@@ -3416,6 +3416,54 @@ describe("policy catalog", () => {
     const d = evaluate(ctx({ commandType: "host.card", systemOk: true }));
     expect(d.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
+  });
+
+  it("denies hosted subscribe when the intent issuer is not human or treasury", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "host.subscribe",
+        hostedOk: true,
+        intentKnown: true,
+        hostIssuerOk: false,
+        subscribeUnique: true,
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "host.human_authority")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("host.human_authority");
+  });
+
+  it("denies a second hosted subscribe for the same agent", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "host.subscribe",
+        hostedOk: true,
+        intentKnown: true,
+        hostIssuerOk: true,
+        subscribeUnique: false,
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "host.unique_subscriber")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("host.unique_subscriber");
+  });
+
+  it("allows hosted subscribe when the issuer is human and the subscriber is free", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "host.subscribe",
+        hostedOk: true,
+        intentKnown: true,
+        hostIssuerOk: true,
+        subscribeUnique: true,
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "host.human_authority")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.unique_subscriber")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
   });
 });

@@ -46,6 +46,7 @@ import type {
   DelegationId,
   HireContract,
   HireId,
+  HostSubscription,
   Instant,
   IntentMandate,
   IntentStatus,
@@ -67,6 +68,7 @@ import type {
   Result,
   Rfq,
   Signed,
+  SubscriptionId,
   WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
@@ -226,10 +228,12 @@ export class Runtime {
   readonly kya = new DelegationGraph();
   readonly killSwitchTested = new Set<AgentId>();
   readonly idempotency = new Map<string, DispatchResult>();
+  readonly subscriptions = new Map<SubscriptionId, HostSubscription>();
   circuitTripped = false;
   tldr = IDLE_TLDR;
   analogDoc: Analog = analog();
   readonly genesisNonce: string;
+  readonly hosted: boolean;
   readonly dataDir?: string;
   private readonly worldPath?: string;
 
@@ -240,6 +244,8 @@ export class Runtime {
     auditPath?: string;
     ledgerPath?: string;
     dataDir?: string;
+    /** Hosted operator. Default is `PROTOCOL.hosted` (false) or the restored world's flag. */
+    hosted?: boolean;
   }) {
     const worldPath = opts.dataDir ? join(opts.dataDir, "world.json") : undefined;
     const existing =
@@ -247,6 +253,7 @@ export class Runtime {
     this.clock = new ManualClock(existing?.clock ?? opts.startIso);
     this.ids = new IdFactory(this.clock);
     this.genesisNonce = existing?.genesisNonce ?? opts.genesisNonce;
+    this.hosted = opts.hosted ?? existing?.hosted ?? PROTOCOL.hosted;
     this.dataDir = opts.dataDir;
     this.worldPath = worldPath;
     if (opts.dataDir) mkdirSync(opts.dataDir, { recursive: true });
@@ -446,6 +453,7 @@ export class Runtime {
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
+      subscriptions: [...this.subscriptions.values()],
       story: this.story,
       analog: this.analogDoc,
       tldr: this.tldr,
@@ -562,6 +570,7 @@ export class Runtime {
   protocolCard() {
     return {
       ...PROTOCOL,
+      hosted: this.hosted,
       durable: Boolean(this.worldPath),
       dataDir: this.dataDir ?? null,
       clock: this.clock.now(),
@@ -581,7 +590,7 @@ export class Runtime {
       authority: {
         bootstrap: "human_operator" as const,
         subscribe: "host.subscribe" as const,
-        subscribeAvailable: PROTOCOL.hosted,
+        subscribeAvailable: this.hosted,
       },
     };
   }
@@ -594,7 +603,8 @@ export class Runtime {
    * bound is unique_payment occupancy and wins over expired; payments include derived
    * live | expired | funded; funded is escrow-moved occupancy and wins over expired),
    * rid_ receipt, apd_ approval, rfq_ / qte_ market (qte_ includes derived live | expired | spent | held;
-   * expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
+   * expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
+   * hsb_ host subscription (raw; spend is not gated on the row).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -635,6 +645,10 @@ export class Runtime {
     if (id.startsWith("dlg_")) {
       const att = this.kya.attestations.get(id as DelegationId);
       return att ? { type: "delegation", id: att.id, value: this.hopView(att) } : undefined;
+    }
+    if (id.startsWith("hsb_")) {
+      const sub = this.subscriptions.get(id as SubscriptionId);
+      return sub ? { type: "subscription", id: sub.id, value: sub } : undefined;
     }
     if (id.startsWith("acct_")) {
       const account = [...this.ledger.accounts.values()].find((a) => a.id === id);
@@ -713,6 +727,8 @@ export class Runtime {
       clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.windows },
       killSwitchTested: [...this.killSwitchTested],
       idempotency: [...this.idempotency.entries()],
+      hosted: this.hosted,
+      subscriptions: [...this.subscriptions.values()],
     };
   }
 
@@ -788,6 +804,8 @@ export class Runtime {
     for (const id of world.killSwitchTested) this.killSwitchTested.add(id);
     this.idempotency.clear();
     for (const [k, v] of world.idempotency ?? []) this.idempotency.set(k, v as DispatchResult);
+    this.subscriptions.clear();
+    for (const s of world.subscriptions ?? []) this.subscriptions.set(s.id, s);
   }
 
   private systemActor(): Agent {
@@ -1025,6 +1043,19 @@ export class Runtime {
     }
     if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart") {
       ctx.intentKnown = Boolean(intent);
+    }
+    if (cmd.type === "host.subscribe") {
+      ctx.hostedOk = this.hosted;
+      if (this.hosted && cmd.actorId !== "system") {
+        ctx.intentKnown = Boolean(intent);
+        if (intent) {
+          const issuer = this.identity.get(intent.payload.issuerId);
+          ctx.hostIssuerOk = Boolean(
+            issuer && (issuer.role === "human_operator" || issuer.role === "treasury"),
+          );
+          ctx.subscribeUnique = ![...this.subscriptions.values()].some((s) => s.subscriberId === actor.id);
+        }
+      }
     }
     if (cmd.type === "mandate.issue_payment") {
       ctx.cartKnown = Boolean(cart);
@@ -1315,7 +1346,15 @@ export class Runtime {
       );
       if (nested !== undefined) ctx.kyaParentFresh = nested;
     }
-    if (cmd.type === "host.subscribe") ctx.hostedOk = PROTOCOL.hosted;
+    ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire, ctx);
+    if (KYA_NESTED_SPEND.has(cmd.type)) {
+      const nested = nestedKyaParentsLive(
+        ctx.kya.hops,
+        (id) => this.kya.attestations.get(id),
+        this.clock.now(),
+      );
+      if (nested !== undefined) ctx.kyaParentFresh = nested;
+    }
     return ctx;
   }
 
@@ -1555,10 +1594,11 @@ export class Runtime {
   }
 
   private lookupIntent(
-    _cmd: Command,
+    cmd: Command,
     body: Record<string, unknown>,
     hire?: HireContract,
   ): Signed<IntentMandate> | undefined {
+    if (cmd.type === "host.subscribe" && (!this.hosted || cmd.actorId === "system")) return undefined;
     const id = (body.intentId as MandateId | undefined) ?? hire?.intentId;
     return id ? this.intents.get(id) : undefined;
   }
@@ -1689,7 +1729,7 @@ export class Runtime {
       case "host.card":
         return this.protocolCard();
       case "host.subscribe":
-        throw new Error("not hosted");
+        return this.mutHostSubscribe(body, actor);
       case "receipt.get": {
         const receipt = this.receipts.get(String(body.receiptId));
         if (!receipt) throw new Error("unknown receipt");
@@ -1698,6 +1738,32 @@ export class Runtime {
       default:
         throw new Error(`unhandled ${cmd.type}`);
     }
+  }
+
+  private mutHostSubscribe(body: Record<string, unknown>, actor: Agent): HostSubscription {
+    if (!this.hosted) throw new Error("not hosted");
+    if (typeof body.intentId !== "string" || body.intentId.length === 0) {
+      throw new Error("missing intent");
+    }
+    const row: HostSubscription = {
+      id: this.ids.next("hsb") as SubscriptionId,
+      subscriberId: actor.id,
+      intentId: body.intentId as MandateId,
+      createdAt: this.clock.now(),
+    };
+    this.subscriptions.set(row.id, row);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "HOST_SUBSCRIBE",
+      subjects: [
+        { type: "subscription", id: row.id },
+        { type: "intent", id: row.intentId },
+        { type: "agent", id: actor.id },
+      ],
+      payload: { id: row.id, subscriberId: actor.id, intentId: row.intentId },
+    });
+    return row;
   }
 
   private mutRegister(body: Record<string, unknown>, actor: Agent) {

@@ -70,7 +70,27 @@ export function autoBeat(input: {
         seq: input.seq,
         at: input.at,
         headline: `${who} cannot subscribe to the public kernel`,
-        body: "This instance is the public protocol. Self-host is free. A hosted operator (durable audits, live adapters) is a later adapter. GitHub is not a checkout. Read host.card.",
+        body: "This instance is the public protocol. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. GitHub is not a checkout. Read host.card.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (rule?.ruleId === "host.human_authority") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} cannot subscribe on an agent-issued slip`,
+        body: "Host subscribe binds a live intent issued by a human_operator or treasury. An agent-issued slip is not host authority.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (rule?.ruleId === "host.unique_subscriber") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} is already subscribed`,
+        body: "One subscriber, one row. Spend is not gated on the row.",
         tone: "deny",
         commandType: cmd.type,
       };
@@ -139,6 +159,20 @@ export function autoBeat(input: {
     return undefined;
   }
   if (cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card") return undefined;
+
+  if (cmd.type === "host.subscribe") {
+    if (decision.verdict === "allow") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} subscribed to this host`,
+        body: "This hosted operator recorded the agent against a live human-issued intent. One subscriber, one row. Spend is not gated on this row.",
+        tone: "allow",
+        commandType: cmd.type,
+      };
+    }
+    return undefined;
+  }
 
   if (cmd.type === "mandate.issue_intent") {
     const parented = typeof (cmd.body as { parentId?: string }).parentId === "string";
@@ -899,7 +933,7 @@ export function analog(): Analog {
       "If yes, money sits in escrow until the work is done, then a receipt is written that points back at the slip.",
       "A notary (the audit log) writes every decision in ink that smudges if you try to rewrite yesterday.",
       "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
-      "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator is a later adapter. GitHub is the public kernel, not a checkout.",
+      "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };
 }
