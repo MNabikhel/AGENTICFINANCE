@@ -18,7 +18,7 @@ import {
 } from "@aether/kernel";
 import { Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
-import { fxPayout } from "@aether/market";
+import { CATALOG, isCatalogSku, fxPayout } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
@@ -257,7 +257,7 @@ export class Runtime {
       clock: this.clock,
       actorId: cmd.actorId,
       action: "POLICY_DECISION",
-      subjects: [{ type: "command", id: cmd.type }],
+      subjects: this.decisionSubjects(cmd, ctx),
       payload: { type: cmd.type, verdict: decision.verdict, trace: decision.trace.map((t) => ({ ruleId: t.ruleId, verdict: t.verdict })) },
     });
     try {
@@ -700,8 +700,55 @@ export class Runtime {
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
     }
+    const market = this.marketFlags(cmd, body, hire);
+    if (market.skuListed !== undefined) ctx.skuListed = market.skuListed;
+    if (market.marketFresh !== undefined) ctx.marketFresh = market.marketFresh;
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent);
     return ctx;
+  }
+
+  private decisionSubjects(cmd: Command, ctx: PolicyContext): Array<{ type: string; id: string }> {
+    const subjects: Array<{ type: string; id: string }> = [{ type: "command", id: cmd.type }];
+    if (ctx.hire && ctx.hire.id !== "hid_draft") subjects.push({ type: "hire", id: ctx.hire.id });
+    if (ctx.intent) subjects.push({ type: "intent", id: ctx.intent.payload.id });
+    const body = cmd.body as Record<string, unknown>;
+    const quote = this.quoteOf(body) ?? (ctx.hire?.quoteId ? this.quotes.get(ctx.hire.quoteId) : undefined);
+    if (quote) subjects.push({ type: "quote", id: quote.id });
+    const rfq = quote ? this.rfqs.get(quote.rfqId) : typeof body.rfqId === "string" ? this.rfqs.get(String(body.rfqId)) : undefined;
+    if (rfq) subjects.push({ type: "rfq", id: rfq.id });
+    return subjects;
+  }
+
+  private marketFlags(
+    cmd: Command,
+    body: Record<string, unknown>,
+    hire?: HireContract,
+  ): { skuListed?: boolean; marketFresh?: boolean } {
+    const now = Date.parse(this.clock.now());
+    const quote =
+      this.quoteOf(body) ?? (hire?.quoteId && hire.id !== "hid_draft" ? this.quotes.get(hire.quoteId) : undefined);
+    const rfq =
+      quote
+        ? this.rfqs.get(quote.rfqId)
+        : typeof body.rfqId === "string"
+          ? this.rfqs.get(String(body.rfqId))
+          : undefined;
+    const sku = typeof body.sku === "string" ? body.sku : (rfq?.sku ?? hire?.sku);
+    const out: { skuListed?: boolean; marketFresh?: boolean } = {};
+    if (cmd.type === "market.rfq" || cmd.type === "market.quote" || cmd.type === "hire.create") {
+      out.skuListed = typeof sku === "string" && isCatalogSku(sku);
+    }
+    if (cmd.type === "market.quote" && rfq) {
+      out.marketFresh = Date.parse(rfq.expiresAt) > now;
+    }
+    if (cmd.type === "hire.create" && quote && rfq) {
+      out.marketFresh = Date.parse(quote.expiresAt) > now && Date.parse(rfq.expiresAt) > now;
+    }
+    if (cmd.type === "market.fx_settle" && quote) {
+      const fxOk = quote.fx ? Date.parse(quote.fx.validUntil) > now : true;
+      out.marketFresh = Date.parse(quote.expiresAt) > now && fxOk;
+    }
+    return out;
   }
 
   private pushStory(cmd: Command, actor: Agent, decision: PolicyDecision, ctx: PolicyContext): void {
@@ -786,7 +833,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -884,6 +931,10 @@ export class Runtime {
         return this.mutClearingWindow(body, actor);
       case "audit.verify":
         return this.mutAudit(actor);
+      case "audit.query":
+        return this.mutAuditQuery(body);
+      case "market.catalog":
+        return { skus: CATALOG };
       case "receipt.get":
         return this.receipts.get(String(body.receiptId));
       default:
@@ -1512,6 +1563,14 @@ export class Runtime {
       payload: result,
     });
     return result;
+  }
+
+  private mutAuditQuery(body: Record<string, unknown>) {
+    const subjectId = typeof body.subjectId === "string" ? body.subjectId : typeof body.id === "string" ? body.id : undefined;
+    const action = typeof body.action === "string" ? body.action : undefined;
+    const raw = typeof body.limit === "number" ? body.limit : 50;
+    const limit = Math.min(200, Math.max(1, Number.isFinite(raw) ? Math.trunc(raw) : 50));
+    return this.audit.query({ ...(subjectId ? { subjectId } : {}), ...(action ? { action } : {}), limit });
   }
 
   private requireHire(id: HireId): HireContract {

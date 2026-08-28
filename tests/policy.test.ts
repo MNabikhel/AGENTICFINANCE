@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 34 rules", () => {
-    expect(RULE_IDS).toHaveLength(34);
+  it("has 36 rules", () => {
+    expect(RULE_IDS).toHaveLength(36);
   });
 
   it("denies frozen actors", () => {
@@ -354,5 +354,16 @@ describe("policy catalog", () => {
     );
     expect(d.verdict).toBe("escalate");
     expect(remediationFor(d)?.kind).toBe("wait_approval");
+  });
+
+  it("denies SKUs that are not in the catalog", () => {
+    const d = evaluate(ctx({ commandType: "market.rfq", skuListed: false }));
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies hiring on an expired quote", () => {
+    const d = evaluate(ctx({ commandType: "hire.create", marketFresh: false, skuListed: true }));
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
   });
 });

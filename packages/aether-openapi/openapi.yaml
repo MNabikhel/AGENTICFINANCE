@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.5.0
+  version: 0.6.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -145,6 +145,26 @@ paths:
       operationId: protocolCard
       responses:
         "200": { description: Pin-able aether.protocol.1 card. liveMoney is false until adapters exist. }
+  /v1/catalog:
+    get:
+      operationId: marketCatalog
+      responses:
+        "200": { description: SKUs that may be hired. Not a storefront. }
+  /v1/audit:
+    get:
+      operationId: auditQuery
+      parameters:
+        - in: query
+          name: subject
+          schema: { type: string }
+        - in: query
+          name: action
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200": { description: Notary lines for one subject. Does not mutate. }
   /v1/commands:
     get:
       operationId: commandSchemas

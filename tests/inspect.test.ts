@@ -120,10 +120,10 @@ describe("approval expiry", () => {
     expect(rt.approvals.get(ticket.id)?.status).toBe("expired");
 
     const retry = rt.dispatch(cmd("hire.create", desk.id, { quoteId: offered.quoteId, intentId }));
-    expect(retry.ok).toBe(true);
-    if (!retry.ok) return;
-    expect(retry.value.kind).toBe("escalated");
-    expect(retry.value.ticket?.id).not.toBe(ticket.id);
+    expect(retry.ok).toBe(false);
+    if (retry.ok) return;
+    expect(retry.error.decision.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("expired");
   });
 });
 

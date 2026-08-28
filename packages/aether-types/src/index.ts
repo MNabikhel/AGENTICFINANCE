@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.5.0",
+  version: "0.6.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -575,8 +575,10 @@ export interface PolicyContext {
   /** Parent intent when spending against a sub-slip, or when issuing one. */
   parentIntent?: Signed<IntentMandate>;
   parentSpent?: number;
-  /** Constraints on a to-be-issued sub-intent. Used by mandate.child_tighter. */
-  proposedConstraints?: MandateConstraint[];
+  /** False when SKU is not in the market catalog. Absent = command is not catalog-gated. */
+  skuListed?: boolean;
+  /** False when RFQ/quote/FX window is past expiresAt. Absent = not a market-time command. */
+  marketFresh?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
@@ -690,6 +692,7 @@ export type CommandType =
   | "market.rfq"
   | "market.quote"
   | "market.fx_settle"
+  | "market.catalog"
   | "hire.create"
   | "hire.accept"
   | "hire.fund"
@@ -704,6 +707,7 @@ export type CommandType =
   | "ledger.balances"
   | "clearing.settle_window"
   | "audit.verify"
+  | "audit.query"
   | "receipt.get";
 
 /**
@@ -765,6 +769,8 @@ export const ROLE_CAPABILITY: Record<
     "ledger.balances",
     "clearing.settle_window",
     "audit.verify",
+    "audit.query",
+    "market.catalog",
     "receipt.get",
   ],
   procurement: [
@@ -782,6 +788,8 @@ export const ROLE_CAPABILITY: Record<
     "envelope.require",
     "envelope.submit",
     "ledger.balances",
+    "audit.query",
+    "market.catalog",
     "receipt.get",
   ],
   data_vendor: [
@@ -792,6 +800,8 @@ export const ROLE_CAPABILITY: Record<
     "envelope.require",
     "envelope.submit",
     "ledger.balances",
+    "audit.query",
+    "market.catalog",
     "receipt.get",
   ],
   compute_vendor: [
@@ -802,6 +812,8 @@ export const ROLE_CAPABILITY: Record<
     "envelope.require",
     "envelope.submit",
     "ledger.balances",
+    "audit.query",
+    "market.catalog",
     "receipt.get",
   ],
   market_maker: [
@@ -810,9 +822,11 @@ export const ROLE_CAPABILITY: Record<
     "envelope.require",
     "envelope.submit",
     "ledger.balances",
+    "audit.query",
+    "market.catalog",
     "receipt.get",
   ],
-  auditor: ["audit.verify", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get"],
+  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog"],
   human_operator: [
     "identity.register",
     "identity.freeze",
@@ -824,6 +838,8 @@ export const ROLE_CAPABILITY: Record<
     "approval.resolve",
     "ladder.set",
     "audit.verify",
+    "audit.query",
+    "market.catalog",
     "ledger.balances",
     "clearing.settle_window",
     "receipt.get",

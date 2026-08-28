@@ -122,6 +122,16 @@
       "description": "Replay the hash-chained audit log from genesis."
     },
     {
+      "name": "aether_audit_query",
+      "commandType": "audit.query",
+      "description": "Read notary lines for one subject id (hire, mandate, quote, agent). Does not mutate."
+    },
+    {
+      "name": "aether_market_catalog",
+      "commandType": "market.catalog",
+      "description": "List SKUs that may be hired. This is not a storefront."
+    },
+    {
       "name": "aether_receipt_get",
       "commandType": "receipt.get",
       "description": "Fetch a receipt. reference must equal sha256(payment mandate)."

@@ -8,6 +8,10 @@ export function rateInBand(rateE6: number): boolean {
   return rateE6 >= MM_RATE_BAND_E6.min && rateE6 <= MM_RATE_BAND_E6.max;
 }
 
+export function isCatalogSku(sku: string): boolean {
+  return Object.prototype.hasOwnProperty.call(CATALOG, sku);
+}
+
 export const CATALOG: Record<
   string,
   { description: string; unit: string; currencies: CurrencyCode[] }
@@ -20,6 +24,16 @@ export const CATALOG: Record<
   "compute.gpu.hours": {
     description: "GPU hours for sprint training",
     unit: "hour",
+    currencies: ["USD_SIM"],
+  },
+  "research.brief": {
+    description: "Short overnight research brief",
+    unit: "report",
+    currencies: ["USD_SIM"],
+  },
+  "research.deep": {
+    description: "Deep research package",
+    unit: "report",
     currencies: ["USD_SIM"],
   },
   "fx.usd_sim.usdc_sim": {

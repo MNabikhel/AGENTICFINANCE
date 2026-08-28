@@ -156,6 +156,24 @@ export class AuditLog {
   all(): readonly AuditRecord[] {
     return this.records;
   }
+
+  query(opts: { subjectId?: string; action?: string; limit?: number }): {
+    records: AuditRecord[];
+    matched: number;
+    limit: number;
+  } {
+    let rows = this.records;
+    if (opts.subjectId) {
+      const id = opts.subjectId;
+      rows = rows.filter((r) => r.subjects.some((s) => s.id === id));
+    }
+    if (opts.action) {
+      const action = opts.action;
+      rows = rows.filter((r) => r.action === action);
+    }
+    const limit = opts.limit ?? 50;
+    return { records: rows.slice(-limit), matched: rows.length, limit };
+  }
 }
 
 export function verifyRecords(records: readonly AuditRecord[]): AuditVerifyResult {

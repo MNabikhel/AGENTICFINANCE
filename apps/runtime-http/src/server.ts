@@ -114,6 +114,26 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, 200, runtime.protocolCard());
         return;
       }
+      if (req.method === "GET" && path === "/v1/catalog") {
+        const listed = runtime.dispatch(cmd("market.catalog", "system", {}));
+        if (!listed.ok) {
+          json(res, listed.error.error.status, { ...listed.error.error, decision: listed.error.decision });
+          return;
+        }
+        json(res, 200, listed.value.data);
+        return;
+      }
+      if (req.method === "GET" && path === "/v1/audit") {
+        const q: Record<string, unknown> = {};
+        const subject = url.searchParams.get("subject") ?? url.searchParams.get("subjectId");
+        const action = url.searchParams.get("action");
+        const limit = url.searchParams.get("limit");
+        if (subject) q.subjectId = subject;
+        if (action) q.action = action;
+        if (limit) q.limit = Number(limit);
+        handleDispatch(res, "audit.query", { ...q, actor: "system" });
+        return;
+      }
       if (req.method === "GET" && path === "/v1/commands") {
         const spec = join(process.cwd(), "schemas/commands.schema.json");
         json(res, 200, JSON.parse(readFileSync(spec, "utf8")));
@@ -244,6 +264,8 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         "/v1/payments/require": "envelope.require",
         "/v1/payments/submit": "envelope.submit",
         "/v1/audit/verify": "audit.verify",
+        "/v1/audit/query": "audit.query",
+        "/v1/catalog": "market.catalog",
         "/v1/clearing/windows": "clearing.settle_window",
       };
 

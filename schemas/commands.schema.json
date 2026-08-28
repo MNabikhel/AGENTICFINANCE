@@ -95,6 +95,7 @@
       "required": ["quoteId"],
       "properties": { "quoteId": { "type": "string" } }
     },
+    "market.catalog": { "type": "object", "properties": {} },
     "hire.create": {
       "type": "object",
       "required": ["quoteId", "intentId"],
@@ -185,6 +186,15 @@
       "properties": { "currency": { "enum": ["USD_SIM", "USDC_SIM"] } }
     },
     "audit.verify": { "type": "object", "properties": {} },
+    "audit.query": {
+      "type": "object",
+      "properties": {
+        "subjectId": { "type": "string", "description": "hid_, mid_, qte_, rfq_, aid_, rid_…" },
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 }
+      }
+    },
     "receipt.get": {
       "type": "object",
       "required": ["receiptId"],

@@ -495,6 +495,8 @@ export interface Quote {
 }
 ```
 
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront.
+
 Hire state machine (illegal arrows throw `HIRE_ILLEGAL_TRANSITION`):
 
 ```
@@ -743,6 +745,8 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 32 | `kya.capability_subset` | attest / spend | agent grants above own level, or acts above granted max | — | within grant |
 | 33 | `mandate.child_tighter` | `mandate.issue_intent` with `parentId` | child amount_range / budget / SKUs / payees / max autonomy wider than parent | — | child is a subset |
 | 34 | `payment.parent_budget` | spend against a child intent | `parentSpent + amount > parent budget` | — | parent remaining ≥ amount |
+| 35 | `market.known_sku` | rfq / quote / hire.create | SKU not in `CATALOG` | — | listed |
+| 36 | `market.not_expired` | quote / hire.create / fx_settle | RFQ, quote, or FX `validUntil` ≤ now | — | in window |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -755,6 +759,7 @@ L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen
 | Quote / hire as seller | no | no | yes | FX only | no | no |
 | Spend / submit payment | yes | yes | receive only | FX settle | **never** | approve only |
 | Audit verify / freeze | yes | no | no | no | yes | yes |
+| Catalog / audit.query | yes | yes | yes | yes | yes | yes |
 | KYA attest / revoke | yes | L4+ | no | no | no | yes |
 
 **Default thresholds** (`approval.threshold`), fixture-overridable:
@@ -935,6 +940,7 @@ export interface AetherError {
 | `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` replay + `aether_hire_refund` |
 | `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false` |
 | `inspect.test.ts` | `aether_get` / inspect by id; MCP command schemas; expired approval tickets refuse resolve |
+| `market.test.ts` | Catalog SKU deny; stale quote cannot be hired; audit.query by hire id |
 | `world.test.ts` | Durable boot restores keys and audit head; settlement window restores |
 
 Determinism: same fixture + frozen clock ⇒ bit-identical `payloadHash` sequence from seq 1 onward (seq 0 nonce is fixture-fixed).

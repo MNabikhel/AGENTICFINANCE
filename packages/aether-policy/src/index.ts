@@ -561,6 +561,24 @@ export const RULES: readonly Rule[] = [
       return v("payment.parent_budget", "allow", "parent budget remaining");
     },
   },
+  {
+    id: "market.known_sku",
+    evaluate: (ctx) => {
+      if (ctx.skuListed === undefined) return v("market.known_sku", "allow", "not a catalog command");
+      return ctx.skuListed
+        ? v("market.known_sku", "allow", "sku is in the catalog")
+        : v("market.known_sku", "deny", "sku is not in the catalog");
+    },
+  },
+  {
+    id: "market.not_expired",
+    evaluate: (ctx) => {
+      if (ctx.marketFresh === undefined) return v("market.not_expired", "allow", "not a market-time command");
+      return ctx.marketFresh
+        ? v("market.not_expired", "allow", "quote/rfq in window")
+        : v("market.not_expired", "deny", "quote or RFQ expired");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -615,6 +633,14 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "attest_kya",
     commandType: "kya.attest",
     hint: "The handshake expired. Issue a new attestation.",
+  },
+  "market.known_sku": {
+    kind: "none",
+    hint: "This is not a storefront. Only catalog SKUs can be hired. Read market.catalog.",
+  },
+  "market.not_expired": {
+    kind: "none",
+    hint: "RFQ or quote is stale. Issue a new RFQ and get a fresh quote. Do not hire on a dead price.",
   },
 };
 

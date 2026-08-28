@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.5.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.6.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -30,6 +30,8 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`.
 - `aether_protocol` / resource `aether://protocol`
 - `aether://commands` — JSON Schema for every command body
+- `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
+- `aether_audit_query` / `GET /v1/audit?subject=` — notary lines for one id
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
 - `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
 
@@ -41,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Canonical JSON (sorted keys) is what is hashed.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 34 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 36 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -55,6 +57,8 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 14. `hire.refund` is legal only from `funded` (not after deliver/release). It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
 15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
 16. Approval tickets expire. Resolving an expired ticket is a refuse, not a late yes. The original command may be retried (new ticket).
+17. Only catalog SKUs may be RFQ’d or hired (`market.catalog`). Stale quotes/RFQs cannot be hired (`market.not_expired`).
+18. `audit.query` reads notary lines for one subject. It does not mutate. Verify is a separate command.
 
 ## Autonomy
 
