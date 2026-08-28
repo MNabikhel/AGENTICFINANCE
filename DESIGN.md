@@ -69,8 +69,10 @@ aether/
   apps/
     runtime-http/                      # Fastify. Serves OpenAPI. Same commands as MCP
     cli/                               # `aether demo`, `aether audit verify`, `aether ledger replay`
-  fixtures/
-    demo/sprint-procurement/           # exact demo inputs + expected decisions
+    fixtures/
+      demo/sprint-procurement/           # human-in-the-loop shopping TAP
+      demo/night-watch/                  # L5 standing mandate, KYA, circuit, freeze
+      demo/sub-hire/                     # L4 nested slips, parent budget, child handshake
   data/                                # gitignored. ledger.jsonl + audit.jsonl at runtime
 ```
 
@@ -324,10 +326,11 @@ export type MandateConstraint =
 export interface IntentMandate {
   vct: "aether.mandate.intent.open.1" | "aether.mandate.intent.1";
   id: `mid_${Ulid}`;
-  issuerId: `aid_${Ulid}`;          // human or treasury
+  issuerId: `aid_${Ulid}`;          // human, treasury, or L4+ agent issuing a sub-intent
   subjectId: `aid_${Ulid}`;         // agent authorized to spend
   task: string;                     // natural-language purpose (audit, not policy)
   constraints: MandateConstraint[];
+  parentId?: `mid_${Ulid}`;         // L4 nested slip: child must be tighter; spend counts against parent
   iat: number;                      // unix seconds
   exp: number;
 }
@@ -603,6 +606,9 @@ export interface PolicyContext {
   occurrenceCount: number;
   velocity: { windowSeconds: number; count: number; volume: number };
   circuit: { dailySpend: number; dailyLimit: number; tripped: boolean };
+  parentIntent?: Signed<IntentMandate>;
+  parentSpent?: number;
+  proposedConstraints?: MandateConstraint[];
 }
 ```
 
@@ -733,6 +739,8 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 30 | `kya.principal_not_frozen` | KYA-gated spend | principal frozen (delegate keys still work) | — | principal active |
 | 31 | `kya.attestation_fresh` | KYA-gated spend | path exists but expired | — | in window |
 | 32 | `kya.capability_subset` | attest / spend | agent grants above own level, or acts above granted max | — | within grant |
+| 33 | `mandate.child_tighter` | `mandate.issue_intent` with `parentId` | child amount_range / budget / SKUs / payees / max autonomy wider than parent | — | child is a subset |
+| 34 | `payment.parent_budget` | spend against a child intent | `parentSpent + amount > parent budget` | — | parent remaining ≥ amount |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
@@ -916,6 +924,8 @@ export interface AetherError {
 | `hire.test.ts` | deliver before funded denied; self-deal denied |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |
+| `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |
+| `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` + `aether_demo_sub_hire` |
 
 Determinism: same fixture + frozen clock ⇒ bit-identical `payloadHash` sequence from seq 1 onward (seq 0 nonce is fixture-fixed).
 

@@ -119,6 +119,17 @@ paths:
       operationId: receiptGet
       responses:
         "200": { description: Receipt }
+  /v1/demo/sub-hire:
+    post:
+      operationId: demoSubHire
+      responses:
+        "200": { description: Nested-slip TAP report }
+        "500": { description: Assertions failed }
+  /v1/snapshot:
+    get:
+      operationId: snapshot
+      responses:
+        "200": { description: Runtime snapshot }
   /v1/audit/verify:
     post:
       operationId: auditVerify

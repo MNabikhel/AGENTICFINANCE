@@ -19,7 +19,8 @@
       "@aether/kya": ["packages/aether-kya/src/index.ts"],
       "@aether/runtime": ["packages/aether-runtime/src/index.ts"],
       "@aether/sprint": ["packages/aether-runtime/src/sprint-procurement.ts"],
-      "@aether/night-watch": ["packages/aether-runtime/src/night-watch.ts"]
+      "@aether/night-watch": ["packages/aether-runtime/src/night-watch.ts"],
+      "@aether/sub-hire": ["packages/aether-runtime/src/sub-hire.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

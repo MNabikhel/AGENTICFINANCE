@@ -221,6 +221,8 @@ export interface IntentMandate {
   subjectId: AgentId;
   task: string;
   constraints: MandateConstraint[];
+  /** Parent intent when an L4+ agent hands a smaller slip to another agent. */
+  parentId?: MandateId;
   iat: number;
   exp: number;
 }
@@ -536,6 +538,11 @@ export interface PolicyContext {
   exposureLimit?: number;
   /** Know-Your-Agent resolution. Absent means the command is not KYA-gated. */
   kya?: KyaResolution;
+  /** Parent intent when spending against a sub-slip, or when issuing one. */
+  parentIntent?: Signed<IntentMandate>;
+  parentSpent?: number;
+  /** Constraints on a to-be-issued sub-intent. Used by mandate.child_tighter. */
+  proposedConstraints?: MandateConstraint[];
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluate } from "@aether/policy";
 import { RULE_IDS } from "@aether/policy";
-import type { Agent, PolicyContext } from "@aether/types";
+import type { Agent, IntentMandate, MandateConstraint, PolicyContext, Signed } from "@aether/types";
 
 function agent(over: Partial<Agent> = {}): Agent {
   return {
@@ -35,9 +35,29 @@ function ctx(over: Partial<PolicyContext> = {}): PolicyContext {
   };
 }
 
+function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMandate> = {}): Signed<IntentMandate> {
+  return {
+    issuer: "did:aether:human",
+    kid: "k",
+    alg: "EdDSA",
+    jws: "x",
+    payload: {
+      vct: "aether.mandate.intent.open.1",
+      id: "mid_01J6AETHERMAND00000000001",
+      issuerId: "aid_human",
+      subjectId: "aid_01J6AETHERAGENT00000000001",
+      task: "t",
+      constraints,
+      iat: 1,
+      exp: 9_999_999_999,
+      ...over,
+    },
+  };
+}
+
 describe("policy catalog", () => {
-  it("has 32 rules", () => {
-    expect(RULE_IDS).toHaveLength(32);
+  it("has 34 rules", () => {
+    expect(RULE_IDS).toHaveLength(34);
   });
 
   it("denies frozen actors", () => {
@@ -228,6 +248,55 @@ describe("policy catalog", () => {
     );
     expect(d.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "payment.amount_range")?.verdict).toBe("deny");
+    expect(d.verdict).toBe("deny");
+  });
+
+  it("denies a sub-intent wider than its parent", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 900000 }],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.verdict).toBe("deny");
+  });
+
+  it("allows a tighter sub-intent", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      { type: "payment.budget", currency: "USD_SIM", max: 1000000 },
+      { type: "aether.allowed_skus", allowed: ["research.brief", "research.deep"] },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 200000 },
+          { type: "payment.budget", currency: "USD_SIM", max: 300000 },
+          { type: "aether.allowed_skus", allowed: ["research.brief"] },
+        ],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+  });
+
+  it("denies child spend that exhausts the parent budget", () => {
+    const parent = signedIntent([{ type: "payment.budget", currency: "USD_SIM", max: 100000 }]);
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 30000, currency: "USD_SIM" },
+        parentIntent: parent,
+        parentSpent: 80000,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.parent_budget")?.verdict).toBe("deny");
     expect(d.verdict).toBe("deny");
   });
 });

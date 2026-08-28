@@ -7,6 +7,16 @@
       "description": "Register an agent identity, DID, Ed25519 key, and cash account."
     },
     {
+      "name": "aether_identity_freeze",
+      "commandType": "identity.freeze",
+      "description": "Freeze an agent: autonomy drops to L0, spend denied. Unfreeze restores the prior rung."
+    },
+    {
+      "name": "aether_identity_unfreeze",
+      "commandType": "identity.unfreeze",
+      "description": "Lift a freeze. Counts as a kill-switch test required before L5."
+    },
+    {
       "name": "aether_mandate_issue_intent",
       "commandType": "mandate.issue_intent",
       "description": "Issue a signed open or closed intent mandate with constraints."
@@ -40,6 +50,16 @@
       "name": "aether_hire_accept",
       "commandType": "hire.accept",
       "description": "Seller accepts a hire. Escrow must already exist."
+    },
+    {
+      "name": "aether_hire_fund",
+      "commandType": "hire.fund",
+      "description": "Buyer funds escrow. Budget is consumed here, not at deliver/submit."
+    },
+    {
+      "name": "aether_hire_deliver",
+      "commandType": "hire.deliver",
+      "description": "Seller marks work delivered. Hire must be funded."
     },
     {
       "name": "aether_payment_require",
@@ -100,6 +120,11 @@
       "name": "aether_demo_night_watch",
       "commandType": "demo.night-watch",
       "description": "Run the Night Watch standing-mandate TAP demo: KYA, L5, circuit, freeze, revoke."
+    },
+    {
+      "name": "aether_demo_sub_hire",
+      "commandType": "demo.sub-hire",
+      "description": "Run the L4 sub-intent TAP demo: nested slips, parent budget, revoke child handshake."
     }
   ]
 }

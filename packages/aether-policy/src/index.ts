@@ -39,6 +39,13 @@ function findConstraint<T extends MandateConstraint["type"]>(
   return constraintsOf(ctx).find((c): c is Extract<MandateConstraint, { type: T }> => c.type === type);
 }
 
+function listed<T extends MandateConstraint["type"]>(
+  list: MandateConstraint[] | undefined,
+  type: T,
+): Extract<MandateConstraint, { type: T }> | undefined {
+  return list?.find((c): c is Extract<MandateConstraint, { type: T }> => c.type === type);
+}
+
 function minLevelFor(ctx: PolicyContext): AutonomyLevel {
   const commandType = ctx.commandType;
   if (commandType === "mandate.issue_intent" || commandType === "kya.attest" || commandType === "kya.revoke") {
@@ -485,6 +492,72 @@ export const RULES: readonly Rule[] = [
         return v("kya.capability_subset", "deny", `actor L${ctx.actor.autonomyLevel} > granted max L${granted}`);
       }
       return v("kya.capability_subset", "allow", "capability within grant");
+    },
+  },
+  {
+    id: "mandate.child_tighter",
+    evaluate: (ctx) => {
+      if (ctx.commandType !== "mandate.issue_intent" || !ctx.parentIntent || !ctx.proposedConstraints) {
+        return v("mandate.child_tighter", "allow", "not a sub-intent");
+      }
+      const parent = ctx.parentIntent.payload.constraints;
+      const child = ctx.proposedConstraints;
+      const parentRange = listed(parent, "payment.amount_range");
+      const childRange = listed(child, "payment.amount_range");
+      if (parentRange && (!childRange || childRange.max > parentRange.max)) {
+        return v("mandate.child_tighter", "deny", "child amount_range wider than parent", {
+          parentMax: parentRange.max,
+          childMax: childRange?.max ?? null,
+        });
+      }
+      const parentBudget = listed(parent, "payment.budget");
+      const childBudget = listed(child, "payment.budget");
+      if (parentBudget && (!childBudget || childBudget.max > parentBudget.max)) {
+        return v("mandate.child_tighter", "deny", "child budget wider than parent");
+      }
+      const parentSkus = listed(parent, "aether.allowed_skus");
+      const childSkus = listed(child, "aether.allowed_skus");
+      if (parentSkus && (!childSkus || childSkus.allowed.some((s) => !parentSkus.allowed.includes(s)))) {
+        return v("mandate.child_tighter", "deny", "child skus not a subset of parent");
+      }
+      const parentPayees = listed(parent, "payment.allowed_payees");
+      const childPayees = listed(child, "payment.allowed_payees");
+      if (
+        parentPayees &&
+        (!childPayees ||
+          childPayees.allowed.some((m) => !parentPayees.allowed.some((p) => p.id === m.id)))
+      ) {
+        return v("mandate.child_tighter", "deny", "child payees not a subset of parent");
+      }
+      const parentMax = listed(parent, "aether.max_autonomy");
+      const childMax = listed(child, "aether.max_autonomy");
+      if (parentMax && (!childMax || childMax.max > parentMax.max)) {
+        return v("mandate.child_tighter", "deny", "child max autonomy wider than parent");
+      }
+      return v("mandate.child_tighter", "allow", "sub-intent tighter than parent");
+    },
+  },
+  {
+    id: "payment.parent_budget",
+    evaluate: (ctx) => {
+      if (!ctx.parentIntent) return v("payment.parent_budget", "allow", "no parent intent");
+      if (ctx.hire && (ctx.hire.state === "funded" || ctx.hire.state === "delivered" || ctx.hire.state === "released")) {
+        return v("payment.parent_budget", "allow", "parent budget reserved at fund");
+      }
+      const c = listed(ctx.parentIntent.payload.constraints, "payment.budget");
+      if (!c || !ctx.amount) return v("payment.parent_budget", "allow", "no parent budget constraint");
+      if (ctx.amount.currency !== c.currency) {
+        return v("payment.parent_budget", "deny", "parent budget currency mismatch");
+      }
+      const spent = ctx.parentSpent ?? 0;
+      if (spent + ctx.amount.amount > c.max) {
+        return v("payment.parent_budget", "deny", "parent budget exhausted", {
+          spent,
+          requested: ctx.amount.amount,
+          max: c.max,
+        });
+      }
+      return v("payment.parent_budget", "allow", "parent budget remaining");
     },
   },
 ];

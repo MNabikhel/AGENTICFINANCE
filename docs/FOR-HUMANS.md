@@ -97,6 +97,5 @@ You do not have to read `DESIGN.md`. That file is the contract between machines.
 You can:
 
 1. Read this page.
-2. Run `pnpm demo` (shopping trip) and `pnpm demo night-watch` (standing permission).
-3. Open the control room (`pnpm dev`) and press the buttons.
-4. Come back for the next chapter — real payment rails as adapters, never as the brain. The handshake graph already exists so TAP, Skyfire, and ERC-8004 can plug in later.
+2. Run `pnpm demo` (shopping trip), `pnpm demo night-watch` (standing permission), and `pnpm demo sub-hire` (one agent handing a smaller slip to another).
+3. Come back for the next chapter — real payment rails as adapters, never as the brain. The handshake graph already exists so TAP, Skyfire, and ERC-8004 can plug in later.

@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "exports": {
-    ".": "./src/server.ts"
+    ".": "./src/host.ts",
+    "./server": "./src/server.ts"
   },
   "dependencies": {
     "@aether/runtime": "workspace:*"

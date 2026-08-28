@@ -232,6 +232,8 @@ export class Runtime {
         ...a,
         balance: this.ledger.balance(a.id),
       })),
+      intents: [...this.intents.values()].map((s) => s.payload),
+      spentByIntent: Object.fromEntries(this.spentByIntent),
       hires: [...this.hires.values()],
       rfqs: [...this.rfqs.values()],
       quotes: [...this.quotes.values()],
@@ -407,7 +409,17 @@ export class Runtime {
       ctx.projectedExposure = this.clearing.projected(actor.id, payeeId, amount.currency, amount.amount);
       ctx.exposureLimit = this.clearing.defaultBilateralLimit;
     }
-    ctx.kya = this.resolveKya(cmd, actor, intent, body);
+    const parentId =
+      (typeof body.parentId === "string" ? (body.parentId as MandateId) : undefined) ?? intent?.payload.parentId;
+    const parentIntent = parentId ? this.intents.get(parentId) : undefined;
+    if (parentIntent) {
+      ctx.parentIntent = parentIntent;
+      ctx.parentSpent = this.spentByIntent.get(parentIntent.payload.id) ?? 0;
+    }
+    if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
+      ctx.proposedConstraints = body.constraints as MandateConstraint[];
+    }
+    ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent);
     return ctx;
   }
 
@@ -769,6 +781,7 @@ export class Runtime {
       iat: unixSeconds(this.clock.now()),
       exp: unixSeconds(this.clock.now()) + 7 * 24 * 3600,
     };
+    if (typeof body.parentId === "string") payload.parentId = body.parentId as MandateId;
     const signed = signMandate(payload, actor.did, this.keypair(actor.id));
     this.intents.set(payload.id, signed);
     this.audit.append({
@@ -1160,7 +1173,13 @@ export class Runtime {
   }
 
   private noteSpend(hire: HireContract) {
-    this.spentByIntent.set(hire.intentId, (this.spentByIntent.get(hire.intentId) ?? 0) + hire.price.amount);
+    let cursor: MandateId | undefined = hire.intentId;
+    const seen = new Set<MandateId>();
+    while (cursor && !seen.has(cursor)) {
+      seen.add(cursor);
+      this.spentByIntent.set(cursor, (this.spentByIntent.get(cursor) ?? 0) + hire.price.amount);
+      cursor = this.intents.get(cursor)?.payload.parentId;
+    }
     this.occurrences.set(hire.intentId, (this.occurrences.get(hire.intentId) ?? 0) + 1);
     this.clearing.record(hire.buyerId, hire.sellerId, hire.price.amount, hire.price.currency);
     this.noteVolume(hire.price.amount);
@@ -1185,11 +1204,15 @@ export class Runtime {
     actor: Agent,
     intent: Signed<IntentMandate> | undefined,
     body: Record<string, unknown>,
+    parentIntent?: Signed<IntentMandate>,
   ) {
     const required = this.kyaRequired(cmd, actor);
     let principalId = intent?.payload.issuerId;
     if (cmd.type === "kya.attest") {
       principalId = (body.principalId as AgentId | undefined) ?? actor.supervisors[0] ?? actor.id;
+    }
+    if (cmd.type === "mandate.issue_intent" && !principalId) {
+      principalId = parentIntent?.payload.issuerId ?? actor.supervisors[0];
     }
     const principal = principalId ? this.identity.get(principalId) : undefined;
     const proposed = typeof body.maxAutonomy === "number" ? (body.maxAutonomy as AutonomyLevel) : undefined;
@@ -1234,7 +1257,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { err, fail, ok, settlementFail };
 export type { Clock };

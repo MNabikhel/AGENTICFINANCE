@@ -5,7 +5,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./sprint": "./src/sprint-procurement.ts",
-    "./night-watch": "./src/night-watch.ts"
+    "./night-watch": "./src/night-watch.ts",
+    "./sub-hire": "./src/sub-hire.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

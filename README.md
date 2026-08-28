@@ -1,6 +1,8 @@
 # Aether — a rulebook for software that spends money
 
-**If this looks heavy:** read [`docs/FOR-HUMANS.md`](docs/FOR-HUMANS.md) first, then run `pnpm dev` and press **Shopping trip** or **Night watch**. You do not need the protocol map to understand what this is.
+**If you are an agent:** read [`AGENTS.md`](AGENTS.md). Speak MCP (`pnpm mcp`) or HTTP (`POST /v1/*`). Every mutating verb is a `Command`. Policy runs first. Deny never mutates. There is no website you need.
+
+**If you are a human:** [`docs/FOR-HUMANS.md`](docs/FOR-HUMANS.md) is the kitchen-table version. A short summary is enough. This repo is a foundation other agents run, not a product you click through.
 
 Aether is a machine-first economic operating system for software agents. A human writes a permission slip. Agents hire and pay each other. A referee that never guesses says yes, no, or ask a grown-up. A notary writes it down. An auditor may read the book and may not spend.
 
@@ -15,12 +17,15 @@ pnpm install
 pnpm test
 pnpm demo                 # shopping trip (human in the loop)
 pnpm demo night-watch     # standing permission, handshake, fuse, freeze
-pnpm dev                  # control room at http://127.0.0.1:8787
+pnpm demo sub-hire        # L4 nested slips: one agent hands a smaller budget to another
+pnpm mcp                  # stdio MCP — this is the agent face
 ```
 
 **Sprint Procurement:** seven agents, a $5,000 per-item cap, an $800 data buy that is allowed, a $6,400 compute buy that is refused, a new slip plus treasury sign-off, receipts bound to payment hashes, a 0.2% FX window, and an auditor who cannot spend.
 
 **Night Watch:** a founder shakes hands with an overnight agent (Know Your Agent), climbs it to L5 after testing the freeze, lets it buy $200 and $6,000 without waking treasury, stops a $9,000 overpay, blows a sticky daily fuse, freezes the founder (the agent still cannot spend), then revokes the handshake. L5 is not god mode.
+
+**Sub-hire:** a desk at L4 issues a tighter child slip to a scout. The scout hires a vendor for $800. A $2,500 hire is refused by the child cap. Spend counts against the parent budget. Revoking the desk→scout handshake stops the scout without deleting it.
 
 ## The loop
 
@@ -45,7 +50,7 @@ Human writes a permission slip (mandate)
 
 2025–2026 produced a **payments stack**, not an economy — AP2 for authorization, x402/MPP for HTTP settlement, ACP/UCP for checkout, TAP/KYA for “is this bot real?”, A2A/MCP for talk. The missing layer is still the one that matters when agents actually run parts of the economy: **permission → referee → hire → escrow → receipt → replay**, with a ladder from human-in-the-loop to human-out-of-the-loop.
 
-[`docs/THESIS.md`](docs/THESIS.md) is the market map. [`DESIGN.md`](DESIGN.md) is the machine contract. [`docs/FOR-HUMANS.md`](docs/FOR-HUMANS.md) is the kitchen table.
+[`docs/THESIS.md`](docs/THESIS.md) is the market map. [`DESIGN.md`](DESIGN.md) is the machine contract. [`AGENTS.md`](AGENTS.md) is how another agent uses this. [`docs/FOR-HUMANS.md`](docs/FOR-HUMANS.md) is the kitchen table.
 
 ## Autonomy ladder
 
@@ -62,14 +67,16 @@ Human writes a permission slip (mandate)
 
 | Path | Role |
 |---|---|
-| `packages/aether-policy` | Referee. 32 ordered rules. No LLM. No I/O. |
+| `AGENTS.md` | How another agent talks to Aether |
+| `packages/aether-policy` | Referee. 34 ordered rules. No LLM. No I/O. |
 | `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
+| `packages/aether-mcp` | Real MCP host. One Runtime. Tools are commands. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |
-| `packages/aether-runtime` | Command bus + English story beats |
+| `packages/aether-runtime` | Command bus |
 | `packages/aether-audit` | Notary. Hash-chained log. |
 | `packages/aether-ledger` | Double-entry, integer cents |
-| `apps/runtime-http` | Control room + `/.well-known/agent-card.json` |
-| `docs/FOR-HUMANS.md` | Start here |
+| `apps/runtime-http` | HTTP command bus + `/.well-known/agent-card.json` |
+| `docs/FOR-HUMANS.md` | Kitchen table |
 
 Amounts are integer minor units. Never floats. Canonical JSON is what we hash.
 

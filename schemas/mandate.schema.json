@@ -43,6 +43,7 @@
         "subjectId": { "type": "string" },
         "task": { "type": "string" },
         "constraints": { "type": "array" },
+        "parentId": { "type": "string", "pattern": "^mid_" },
         "iat": { "type": "integer" },
         "exp": { "type": "integer" }
       }

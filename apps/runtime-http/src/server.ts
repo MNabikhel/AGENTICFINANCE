@@ -6,12 +6,14 @@ import { encodeRequired, encodeResponse } from "@aether/envelope";
 import { Runtime, cmd, type DispatchResult } from "@aether/runtime";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
+import { loadSubHire, runSubHire } from "@aether/sub-hire";
 import type { AgentId, CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(here, "../public");
 const fixture = join(process.cwd(), "fixtures/demo/sprint-procurement/scenario.json");
 const nightWatchFixture = join(process.cwd(), "fixtures/demo/night-watch/scenario.json");
+const subHireFixture = join(process.cwd(), "fixtures/demo/sub-hire/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -119,6 +121,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
           skills: [
             { id: "sprint-procurement", name: "Sprint Procurement", description: "POST /v1/demo/sprint-procurement" },
             { id: "night-watch", name: "Night Watch", description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker" },
+            { id: "sub-hire", name: "Sub-hire", description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake" },
             { id: "command-bus", name: "Command bus", description: "Same commands as MCP and CLI" },
           ],
           defaultInputModes: ["application/json"],
@@ -145,6 +148,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runNightWatch(loadNightWatch(nightWatchFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "night-watch" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/sub-hire") {
+        const report = runSubHire(loadSubHire(subHireFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "sub-hire" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

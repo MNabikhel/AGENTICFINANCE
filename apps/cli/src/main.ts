@@ -2,6 +2,7 @@
 import { resolve } from "node:path";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
+import { loadSubHire, runSubHire } from "@aether/sub-hire";
 
 const [, , command, name] = process.argv;
 
@@ -39,6 +40,12 @@ if (command === "demo" && (name === "night-watch" || name === "standing-mandate"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "sub-hire" || name === "subhire")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/sub-hire/scenario.json");
+  printReport(runSubHire(loadSubHire(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -46,5 +53,7 @@ if (command === "audit" && process.argv[3] === "verify") {
 console.log(`aether ${command ?? ""}
 usage:
   pnpm demo
-  pnpm demo night-watch`);
+  pnpm demo night-watch
+  pnpm demo sub-hire
+  pnpm mcp`);
 process.exit(command ? 1 : 0);

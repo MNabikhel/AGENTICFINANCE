@@ -1,54 +1,48 @@
-import { readFileSync } from "node:fs";
+#!/usr/bin/env node
 import { stdin as input, stdout as output } from "node:process";
-import { loadScenario, runSprintProcurement } from "@aether/sprint";
-import { loadNightWatch, runNightWatch } from "@aether/night-watch";
+import { AetherMcp, type JsonRpcReq } from "./host.js";
 
-const tools = JSON.parse(readFileSync(new URL("./tools.json", import.meta.url), "utf8"));
+const host = new AetherMcp();
 
-async function handle(msg: { method?: string; id?: unknown; params?: { name?: string } }) {
-  if (msg.method === "initialize") {
-    return {
-      protocolVersion: "2024-11-05",
-      serverInfo: { name: "aether", version: "0.0.1" },
-      capabilities: { tools: {} },
-    };
-  }
-  if (msg.method === "tools/list") {
-    return {
-      tools: tools.tools.map((t: { name: string; description: string }) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: { type: "object" },
-      })),
-    };
-  }
-  if (msg.method === "tools/call" && msg.params?.name === "aether_demo_sprint") {
-    const report = runSprintProcurement(loadScenario("fixtures/demo/sprint-procurement/scenario.json"));
-    return {
-      content: [{ type: "text", text: JSON.stringify({ ok: report.ok, results: report.results }, null, 2) }],
-    };
-  }
-  if (msg.method === "tools/call" && msg.params?.name === "aether_demo_night_watch") {
-    const report = runNightWatch(loadNightWatch("fixtures/demo/night-watch/scenario.json"));
-    return {
-      content: [{ type: "text", text: JSON.stringify({ ok: report.ok, results: report.results }, null, 2) }],
-    };
-  }
-  return { content: [{ type: "text", text: "Use the HTTP command bus or `pnpm demo`. Each MCP tool maps 1:1 to a CommandType." }] };
+function write(msg: object) {
+  const json = JSON.stringify(msg);
+  output.write(`Content-Length: ${Buffer.byteLength(json, "utf8")}\r\n\r\n${json}`);
 }
 
-let buf = "";
-input.setEncoding("utf8");
-input.on("data", async (chunk) => {
-  buf += chunk;
+let buf = Buffer.alloc(0);
+
+function consume(): void {
   while (true) {
-    const idx = buf.indexOf("\n");
-    if (idx < 0) break;
-    const line = buf.slice(0, idx).trim();
-    buf = buf.slice(idx + 1);
-    if (!line) continue;
-    const msg = JSON.parse(line) as { id?: unknown; method?: string; params?: { name?: string } };
-    const result = await handle(msg);
-    output.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id ?? null, result }) + "\n");
+    const headerEnd = buf.indexOf("\r\n\r\n");
+    if (headerEnd >= 0) {
+      const header = buf.subarray(0, headerEnd).toString("utf8");
+      const match = header.match(/Content-Length:\s*(\d+)/i);
+      if (!match) {
+        buf = buf.subarray(headerEnd + 4);
+        continue;
+      }
+      const len = Number(match[1]);
+      const start = headerEnd + 4;
+      if (buf.length < start + len) return;
+      const body = buf.subarray(start, start + len).toString("utf8");
+      buf = buf.subarray(start + len);
+      const msg = JSON.parse(body) as JsonRpcReq;
+      const res = host.handle(msg);
+      if (res) write(res);
+      continue;
+    }
+    const nl = buf.indexOf(0x0a);
+    if (nl < 0) return;
+    const line = buf.subarray(0, nl).toString("utf8").trim();
+    buf = buf.subarray(nl + 1);
+    if (!line || line.startsWith("Content-Length")) continue;
+    const msg = JSON.parse(line) as JsonRpcReq;
+    const res = host.handle(msg);
+    if (res) write(res);
   }
+}
+
+input.on("data", (chunk: Buffer | string) => {
+  buf = Buffer.concat([buf, Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)]);
+  consume();
 });

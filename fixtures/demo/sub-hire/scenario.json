@@ -1,0 +1,40 @@
+{
+  "id": "sub-hire",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000003",
+  "opening": {
+    "treasury:cash": { "amount": 2000000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 300000, "currency": "USD_SIM" },
+  "parent": {
+    "task": "Desk may buy research. Max $5,000 per hire, $10,000 total.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 1000000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 4 }
+    ]
+  },
+  "wideChild": {
+    "task": "Illegal widening: max $9,000.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 900000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 1000000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "child": {
+    "task": "Scout may buy research briefs. Max $2,000 per hire, $3,000 total.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 200000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 300000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "cheap": { "amount": 80000, "currency": "USD_SIM" },
+    "over": { "amount": 250000, "currency": "USD_SIM" }
+  }
+}

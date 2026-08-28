@@ -25,6 +25,9 @@ export const SPRINT_TLDR =
 export const NIGHT_WATCH_TLDR =
   "A founder shook hands with a night-watch agent (Know Your Agent) and gave it standing permission to buy research while everyone slept. The agent bought a cheap brief, then a $6,000 one without waking treasury — L5 skips the grown-up, not the rulebook. A $9,000 overpay was refused and blew the daily fuse, which stuck. Freezing the founder froze the agent’s spending. Revoking the handshake left the agent alive but broke. L5 is not god mode.";
 
+export const SUBHIRE_TLDR =
+  "A desk agent at L4 handed a smaller permission slip to a scout. The scout hired a vendor for $800. A $2,500 hire was refused because the child slip was tighter than the parent. Revoking the desk→scout handshake stopped the scout without deleting it. Agents hiring agents is the economy; nested slips are how authority stays bounded.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -56,10 +59,21 @@ export function autoBeat(input: {
   if (cmd.type === "ledger.balances" || cmd.type === "receipt.get") return undefined;
 
   if (cmd.type === "mandate.issue_intent") {
+    const parented = typeof (cmd.body as { parentId?: string }).parentId === "string";
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} tried to hand down a wider slip and was refused`,
+        body: "A sub-intent must be tighter than its parent: smaller caps, smaller budget, fewer SKUs. Delegation is not a laundering step.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
     return {
       seq: input.seq,
       at: input.at,
-      headline: `${who} wrote a permission slip`,
+      headline: parented ? `${who} handed a smaller permission slip to another agent` : `${who} wrote a permission slip`,
       body: input.task
         ? `The slip says: ${input.task}`
         : "A signed intent now bounds what an agent may spend, on whom, and how far.",
