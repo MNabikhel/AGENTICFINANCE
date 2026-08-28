@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluate, remediationFor } from "@aether/policy";
 import { RULE_IDS } from "@aether/policy";
-import type { Agent, HireContract, IntentMandate, MandateConstraint, PolicyContext, Signed } from "@aether/types";
+import type { Agent, CartMandate, HireContract, IntentMandate, MandateConstraint, PaymentMandate, PolicyContext, Signed } from "@aether/types";
 
 function agent(over: Partial<Agent> = {}): Agent {
   return {
@@ -66,6 +66,54 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
       subjectId: "aid_01J6AETHERAGENT00000000001",
       task: "t",
       constraints,
+      iat: 1,
+      exp: 9_999_999_999,
+      ...over,
+    },
+  };
+}
+
+const HASH = "0".repeat(64);
+const MERCHANT = {
+  id: "aid_01J6AETHERAGENT00000000002" as const,
+  name: "Vendor",
+  website: "https://data_vendor.aether.test",
+};
+
+function signedCart(over: Partial<CartMandate> = {}): Signed<CartMandate> {
+  return {
+    issuer: "did:aether:vendor",
+    kid: "k",
+    alg: "EdDSA",
+    jws: "x",
+    payload: {
+      vct: "aether.mandate.cart.1",
+      id: "mid_01J6AETHERCART00000000001",
+      intentId: "mid_01J6AETHERMAND00000000001",
+      intentHash: HASH,
+      merchant: MERCHANT,
+      line_items: [],
+      total: { amount: 80_000, currency: "USD_SIM" },
+      expiresAt: "2026-08-29T00:00:00.000Z",
+      userConfirmationRequired: false,
+      ...over,
+    },
+  };
+}
+
+function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandate> {
+  return {
+    issuer: "did:aether:proc",
+    kid: "k",
+    alg: "EdDSA",
+    jws: "x",
+    payload: {
+      vct: "aether.mandate.payment.1",
+      id: "mid_01J6AETHERPAY000000000001",
+      transaction_id: HASH,
+      payee: MERCHANT,
+      payment_amount: { amount: 80_000, currency: "USD_SIM" },
+      payment_instrument: { id: "sim-ledger", type: "sim_ledger", description: "sim" },
       iat: 1,
       exp: 9_999_999_999,
       ...over,
@@ -785,11 +833,15 @@ describe("policy catalog", () => {
         hire: hire({ state: "accepted" }),
         hireKnown: true,
         fundsOk: false,
+        intent: signedIntent([]),
+        cart: signedCart(),
+        payment: signedPayment(),
         amount: { amount: 80_000, currency: "USD_SIM" },
       }),
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
