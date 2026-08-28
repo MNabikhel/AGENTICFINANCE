@@ -148,4 +148,22 @@ describe("delegation graph", () => {
     );
     expect(g.attestations.get("dlg_1" as DelegationId)?.revokedAt).toBeUndefined();
   });
+
+  it("labels an expired hop expired in the graph view, not live", () => {
+    const g = new DelegationGraph();
+    g.attest(att({ id: "dlg_1" as DelegationId, grantorId: founder, delegateId: watch, expiresAt: expiredAt }));
+    const snap = g.snapshot(now);
+    expect(snap.edges).toHaveLength(1);
+    expect(snap.edges[0]?.status).toBe("expired");
+    const beforeExpiry = g.snapshot("2026-08-26T00:00:00.000Z");
+    expect(beforeExpiry.edges[0]?.status).toBe("live");
+  });
+
+  it("labels a live hop live and a revoked hop revoked even if the window has closed", () => {
+    const g = new DelegationGraph();
+    g.attest(att({ id: "dlg_1" as DelegationId, grantorId: founder, delegateId: watch }));
+    expect(g.snapshot(now).edges[0]?.status).toBe("live");
+    g.revoke({ principalId: founder, delegateId: watch, at: later });
+    expect(g.snapshot("2099-01-01T00:00:00.000Z").edges[0]?.status).toBe("revoked");
+  });
 });

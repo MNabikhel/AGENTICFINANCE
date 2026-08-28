@@ -1151,6 +1151,32 @@ describe("kya.mint_window", () => {
   });
 });
 
+describe("kya graph view", () => {
+  it("labels a hop expired after the window, and unique_live still occupies the pair", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, {
+          delegateId: desk.id,
+          maxAutonomy: 3,
+          expiresAt: "2026-08-28T12:00:00.000Z",
+        }),
+      ),
+      "attest",
+    );
+    expect(rt.kyaSnapshot().edges.some((e) => e.status === "live" && e.to === desk.id)).toBe(true);
+    rt.clock.set("2026-08-29T00:00:00.000Z");
+    expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("expired");
+    const liveBefore = [...rt.kya.attestations.values()].filter((a) => !a.revokedAt).length;
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(liveBefore);
+  });
+});
+
 describe("known speaker", () => {
   it("refuses a command from a missing actor as actor.known, not a throw before policy", () => {
     const rt = boot();

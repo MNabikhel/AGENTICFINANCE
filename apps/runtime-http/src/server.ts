@@ -177,7 +177,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         return;
       }
       if (req.method === "GET" && path === "/v1/kya") {
-        json(res, 200, runtime.kya.snapshot());
+        json(res, 200, runtime.kyaSnapshot());
         return;
       }
       if (req.method === "GET" && (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json")) {

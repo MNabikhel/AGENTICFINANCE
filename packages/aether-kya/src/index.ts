@@ -149,7 +149,8 @@ export class DelegationGraph {
     return undefined;
   }
 
-  snapshot() {
+  snapshot(nowIso: Instant) {
+    const now = Date.parse(nowIso);
     return {
       attestations: [...this.attestations.values()],
       blocked: [...this.blocked],
@@ -157,7 +158,11 @@ export class DelegationGraph {
         from: a.grantorId,
         to: a.delegateId,
         principalId: a.principalId,
-        status: a.revokedAt ? ("revoked" as const) : ("live" as const),
+        status: (a.revokedAt
+          ? "revoked"
+          : Date.parse(a.expiresAt) > now
+            ? "live"
+            : "expired") as "live" | "expired" | "revoked",
         maxAutonomy: a.maxAutonomy,
       })),
     };

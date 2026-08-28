@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.68.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.69.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -110,6 +110,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 67. A leftover `nonce` on a transfer (or any verb that is not `envelope.submit`) is not a settled payment. `idempotency.nonce` binds submit. Reuse on submit stays a deny. Additional properties stay allowed; they do not steal first deny.
 68. A handshake cannot be born dead (`kya.mint_fresh`). `kya.attest` with `expiresAt` ≤ now, or an unparseable Instant, is a refuse, not a written corpse that then fails spend as `kya.attestation_fresh` while still occupying the pair. Omit `expiresAt` is one year. Ghost, self, party, a second live hop, and an over-grant keep first deny. An expired hop still occupies the pair until revoke.
 69. A handshake cannot outlive one year (`kya.mint_window`). The omit default is the ceiling, not a suggestion. Year 9999 is not standing identity. A corpse mint stays `kya.mint_fresh`. Ghost, self, party, a second live hop, and an over-grant keep first deny.
+70. The KYA graph view (`GET /v1/kya`, snapshot `kya.edges`) labels an expired hop `expired`, not `live`. Revoked wins over expired. An expired hop still occupies the pair until revoke (`kya.unique_live`). Spend still names `kya.attestation_fresh`.
 
 ## Autonomy
 

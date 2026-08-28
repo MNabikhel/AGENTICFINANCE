@@ -370,13 +370,21 @@ export class Runtime {
       story: this.story,
       analog: this.analogDoc,
       tldr: this.tldr,
-      kya: this.kya.snapshot(),
+      kya: this.kyaSnapshot(),
       circuit: { dailySpend: this.dailySpend, dailyLimit: this.dailyLimit, tripped: this.circuitTripped },
       clearing: this.clearing.snapshot(),
       agentCards: this.identity.all().map((a) => this.agentCard(a)),
       audit: { length: this.audit.length, verify, head: this.audit.head(), tail: this.audit.all().slice(-12) },
       decisions: this.decisions.slice(-40),
     };
+  }
+
+  /**
+   * Graph view for other agents. Expired hops are `expired`, not `live`.
+   * Revoked wins over expired. The pair still occupies until revoke.
+   */
+  kyaSnapshot() {
+    return this.kya.snapshot(this.clock.now());
   }
 
   protocolCard() {
