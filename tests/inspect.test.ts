@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
 import { offerHire, completeHire, inviteQuote, fundHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
-import type { ApprovalTicket, DelegationAttestation, HireContract, MandateId, Receipt, Rfq } from "@aether/types";
+import { HOUR_MS, type ApprovalTicket, type CartMandate, type DelegationAttestation, type HireContract, type MandateId, type Receipt, type Rfq, type Signed } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -670,6 +670,24 @@ describe("payment inspect", () => {
     expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
   });
 
+  it("labels a payment expired when the parent cart dies while the payment exp still lives", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const cart = rt.carts.get(cartId as MandateId) as Signed<CartMandate>;
+    const cartExp = Date.parse(cart.payload.expiresAt);
+    rt.clock.set(new Date(cartExp - HOUR_MS).toISOString());
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    const payment = rt.payments.get(paymentId as MandateId);
+    const afterCart = new Date(cartExp + 1000).toISOString();
+    expect(payment?.payload.exp).toBeGreaterThan(Math.floor(Date.parse(afterCart) / 1000));
+    rt.clock.set(afterCart);
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().payments.find((p) => p.payload.id === paymentId)?.status).toBe("expired");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+  });
+
   it("labels a funded payment funded even after the window has closed", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
@@ -752,6 +770,69 @@ describe("payment inspect", () => {
     if (r.ok) return;
     expect(r.error.decision?.remediation?.ruleId).toBe("mandate.chain_integrity");
     expect(rt.hires.get(hireId)?.state).toBe("accepted");
+  });
+
+  it("still names mandate.chain_integrity when funding after the parent cart dies and the payment exp still lives", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
+    const cart = rt.carts.get(cartId as MandateId) as Signed<CartMandate>;
+    const cartExp = Date.parse(cart.payload.expiresAt);
+    rt.clock.set(new Date(cartExp - HOUR_MS).toISOString());
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    const afterCart = new Date(cartExp + 1000).toISOString();
+    expect(rt.payments.get(paymentId as MandateId)?.payload.exp).toBeGreaterThan(Math.floor(Date.parse(afterCart) / 1000));
+    rt.clock.set(afterCart);
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("expired");
+    const r = rt.dispatch(cmd("hire.fund", desk.id, { hireId, paymentMandateId: paymentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.chain_integrity");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+  });
+
+  it("labels a funded payment funded even after the parent cart dies while the payment exp still lives", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
+    const cart = rt.carts.get(cartId as MandateId) as Signed<CartMandate>;
+    const cartExp = Date.parse(cart.payload.expiresAt);
+    rt.clock.set(new Date(cartExp - HOUR_MS).toISOString());
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    must(rt.dispatch(cmd("hire.fund", desk.id, { hireId })), "fund");
+    const afterCart = new Date(cartExp + 1000).toISOString();
+    expect(rt.payments.get(paymentId as MandateId)?.payload.exp).toBeGreaterThan(Math.floor(Date.parse(afterCart) / 1000));
+    rt.clock.set(afterCart);
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("funded");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
   });
 });
 

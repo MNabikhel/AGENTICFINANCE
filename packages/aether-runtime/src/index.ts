@@ -560,12 +560,18 @@ export class Runtime {
   /**
    * Payment view for other agents. A payment whose hire has moved escrow is
    * `funded`, not `live`. Funded wins over expired (refunded and released still
-   * funded — the mandate was drawn). A cart this payment occupies is not funded
-   * — that occupancy lives on the cart (`bound`). The store stays raw (`exp` only).
+   * funded — the mandate was drawn). Expired includes the payment `exp` and a
+   * dead parent cart, even when this check's own window still lives. A cart this
+   * payment occupies is not funded — that occupancy lives on the cart (`bound`).
+   * The store stays raw (`exp` only).
    */
   paymentView(payment: Signed<PaymentMandate>): Signed<PaymentMandate> & { status: PaymentStatus } {
     if (this.hireDrawnPayment(payment)) return { ...payment, status: "funded" };
     if (payment.payload.exp <= unixSeconds(this.clock.now())) {
+      return { ...payment, status: "expired" };
+    }
+    const cart = this.cartMatchingPayment(payment);
+    if (!cart || Date.parse(cart.payload.expiresAt) <= Date.parse(this.clock.now())) {
       return { ...payment, status: "expired" };
     }
     return { ...payment, status: "live" };
@@ -619,7 +625,8 @@ export class Runtime {
    * funded is escrow-moved occupancy against this slip and wins over expired;
    * carts include derived live | expired | bound;
    * bound is unique_payment occupancy and wins over expired; payments include derived
-   * live | expired | funded; funded is escrow-moved occupancy and wins over expired),
+   * live | expired | funded; funded is escrow-moved occupancy and wins over expired;
+   * expired includes a dead parent cart even when the payment `exp` still lives),
    * rid_ receipt, apd_ approval, rfq_ / qte_ market (rfq_ includes derived live | expired;
    * qte_ includes derived live | expired | spent | held;
    * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
@@ -2645,6 +2652,13 @@ export class Runtime {
     const hash = cartHash(cart.payload);
     for (const p of this.payments.values()) {
       if (p.payload.transaction_id === hash) return p;
+    }
+    return undefined;
+  }
+
+  private cartMatchingPayment(payment: Signed<PaymentMandate>): Signed<CartMandate> | undefined {
+    for (const c of this.carts.values()) {
+      if (cartHash(c.payload) === payment.payload.transaction_id) return c;
     }
     return undefined;
   }

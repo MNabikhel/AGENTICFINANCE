@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.92.0",
+  version: "0.93.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
@@ -315,9 +315,10 @@ export type CartStatus = "live" | "expired" | "bound";
 
 /**
  * Inspect / snapshot view. Funded (escrow moved, including later refund/release)
- * wins over expired. A cart that this payment occupies is not funded — that
- * occupancy lives on the cart (`mandate.unique_payment` / bound).
- * The store stays raw (`exp` only).
+ * wins over expired. Expired includes the payment `exp` and a dead parent cart
+ * (`expiresAt`), even when this check's own window still lives. A cart that this
+ * payment occupies is not funded — that occupancy lives on the cart
+ * (`mandate.unique_payment` / bound). The store stays raw (`exp` only).
  */
 export type PaymentStatus = "live" | "expired" | "funded";
 
