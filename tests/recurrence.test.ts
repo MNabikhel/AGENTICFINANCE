@@ -92,4 +92,137 @@ describe("recurrence", () => {
     const later = offerHire(rt, { ...brief, buyer: desk.id, seller: vendor.id, intentId });
     expect(later.attempt.ok).toBe(true);
   });
+
+  it("refuses a slip born with no slots as mandate.occurrence_fresh, not a written corpse", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt, []);
+    const before = rt.intents.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy research zero times",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+          {
+            type: "payment.allowed_payees",
+            allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+          },
+          { type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 0 },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.occurrence_fresh");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.intents.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("cannot mint a cadence with no slots"))).toBe(true);
+  });
+
+  it("refuses a negative max_occurrences as mandate.occurrence_fresh", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt, []);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy research negative times",
+        constraints: [{ type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: -1 }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.occurrence_fresh");
+    expect(rt.intents.size).toBe(before);
+  });
+
+  it("still writes a one-slot cadence", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt, []);
+    const before = rt.intents.size;
+    const r = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy research once",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+            { type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 1 },
+          ],
+        }),
+      ),
+      "one-slot slip",
+    );
+    expect(r.decision.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("allow");
+    expect(rt.intents.size).toBe(before + 1);
+  });
+
+  it("still writes an unlimited cadence when max_occurrences is omitted", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt, []);
+    const before = rt.intents.size;
+    const r = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy research on demand",
+          constraints: [{ type: "payment.agent_recurrence", frequency: "ON_DEMAND" }],
+        }),
+      ),
+      "unlimited slip",
+    );
+    expect(r.decision.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(rt.intents.size).toBe(before + 1);
+  });
+
+  it("still names identity.known first when the subject is missing", () => {
+    const rt = boot();
+    const { founder } = economy(rt, []);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: "aid_01J6AETHERGHOSTREC00000001",
+        task: "buy for nobody zero times",
+        constraints: [{ type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 0 }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
+    expect(rt.intents.size).toBe(before);
+  });
+
+  it("still names mandate.known_parent first when the parent is missing", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt, []);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        parentId: "mid_01J6AETHERGHOSTREC00000001",
+        task: "child of nobody zero times",
+        constraints: [{ type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 0 }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.known_parent");
+    expect(rt.intents.size).toBe(before);
+  });
 });

@@ -1182,6 +1182,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.window_reach", "deny", "execution window opens after the slip dies");
     },
   },
+  {
+    id: "mandate.occurrence_fresh",
+    evaluate: (ctx) => {
+      if (ctx.occurrenceMintOk === undefined) return v("mandate.occurrence_fresh", "allow", "not a recurrence mint");
+      return ctx.occurrenceMintOk
+        ? v("mandate.occurrence_fresh", "allow", "cadence still has a first slot")
+        : v("mandate.occurrence_fresh", "deny", "cadence already exhausted at mint");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1428,6 +1437,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.window_reach": {
     kind: "none",
     hint: "A slip lives seven days. A not_before at or after that exp never opens. Name an earlier Instant, or omit not_before. A closed calendar stays mandate.window_fresh.",
+  },
+  "mandate.occurrence_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with a cadence that has no slots. Name max_occurrences of at least one, or omit the cap. A non-number is not a cap. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.recurrence.",
   },
   "payment.execution_date": {
     kind: "none",

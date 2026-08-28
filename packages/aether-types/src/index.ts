@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.72.0",
+  version: "0.73.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -894,6 +894,15 @@ export interface PolicyContext {
    * keep first deny.
    */
   windowReachOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write a recurrence cap that cannot
+   * admit a first hire (`max_occurrences` ≤ 0, or not a finite number).
+   * Absent = not issue_intent, or the slip has no agent_recurrence constraint.
+   * Omit max_occurrences is unlimited and still mints. Hire/fund still names
+   * `payment.recurrence`. Ghost subject, missing parent, and a wider child
+   * keep first deny.
+   */
+  occurrenceMintOk?: boolean;
   /**
    * False when issue_cart names a live hire that already has a cartId.
    * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).

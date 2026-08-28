@@ -664,6 +664,7 @@ export interface PolicyContext {
   kyaMintWindowOk?: boolean;        // false when kya.attest would write expiresAt after now + one year (omit is the ceiling)
   windowMintFresh?: boolean;        // false when issue_intent would write an execution_date that cannot contain now
   windowReachOk?: boolean;          // false when issue_intent would write a not_before at or after the slip's seven-day exp
+  occurrenceMintOk?: boolean;       // false when issue_intent would write a recurrence cap that cannot admit a first hire
 }
 ```
 
@@ -772,7 +773,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 08 | `payment.budget` | settle if constraint present | `spentAgainstIntent + amount > max` | — | remaining ≥ amount |
 | 09 | `payment.allowed_payees` | settle if constraint present | payee not in list | — | listed |
 | 10 | `payment.allowed_skus` | settle/hire if constraint present | sku not listed | — | listed |
-| 11 | `payment.recurrence` | hire.create / hire.fund if constraint present | `occurrenceCount >= max` or last fund inside the frequency gap (`DAILY` 24h, `WEEKLY` 7d, `MONTHLY` 30d). `ON_DEMAND` has no gap. Completing a funded hire is not a new occurrence. | — | under cap and past the gap |
+| 11 | `payment.recurrence` | hire.create / hire.fund if constraint present | `occurrenceCount >= max` or last fund inside the frequency gap (`DAILY` 24h, `WEEKLY` 7d, `MONTHLY` 30d). `ON_DEMAND` has no gap. Completing a funded hire is not a new occurrence. Minting a cap that cannot admit a first hire is `mandate.occurrence_fresh`. | — | under cap and past the gap |
 | 12 | `payment.execution_date` | hire.create / hire.fund if constraint present | now outside `[not_before, not_after]`. Completing a funded hire is not a new spend. Minting a already-closed window is `mandate.window_fresh`. | — | in window |
 | 13 | `ladder.min_level` | settle/hire/sub-intent | actor.level < required **and** command is not escalatable | actor.level < required **and** command is escalatable (no ticket yet) | level ≥ required, or an approved ticket waived the hire/settle rung |
 | 14 | `ladder.max_autonomy_constraint` | settle if `aether.max_autonomy` present | actor.level > max (over-autonomy abuse) | — | actor.level ≤ max |
@@ -842,6 +843,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 78 | `kya.mint_window` | kya.attest | expiresAt after now + one year (omit is that ceiling) | — | handshake expires within one year |
 | 79 | `mandate.window_fresh` | issue_intent with execution_date | not_after already past, inverted window, or unparseable Instant (a future not_before still mints if it opens while the slip lives) | — | window can still contain a now |
 | 80 | `mandate.window_reach` | issue_intent with execution_date | not_before at or after the slip's seven-day exp | — | window opens while the intent is live |
+| 81 | `mandate.occurrence_fresh` | issue_intent with agent_recurrence | max_occurrences ≤ 0, or not a finite number (omit is unlimited and still mints) | — | cadence can still admit a first hire |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations. L5 cannot be minted at `identity.register` (`ladder.birth_rung`); that rung is a climb after a freeze that was actually tested.
 
@@ -1032,6 +1034,7 @@ export interface AetherError {
 | `ladder.test.ts` | Skip 2→4 is `ladder.legal`; L5 before freeze test is `ladder.legal`; minting L5 at register is `ladder.birth_rung`; freeze restores the prior rung |
 | `hire.test.ts` | deliver before funded denied; self-deal denied; illegal arrows and payment-required before deliver are `hire.state`; funding without cash is `ledger.sufficient`; quoting an FX SKU without a window is `market.fx_window` |
 | `window.test.ts` | Completing a funded hire after `not_after` is legal; a new hire is `payment.execution_date`; minting a closed, inverted, or unparseable window is `mandate.window_fresh`, not a written corpse; a future `not_before` still mints if it opens while the slip lives; a window that opens after the seven-day exp is `mandate.window_reach`; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
+| `recurrence.test.ts` | First hire with `max_occurrences: 1` then a second create is `payment.recurrence`; DAILY gap binds until 24h; minting `max_occurrences` ≤ 0 is `mandate.occurrence_fresh`, not a written corpse; one slot still mints; ghost subject stays `identity.known`; ghost parent stays `mandate.known_parent` |
 | `envelope.test.ts` | 402 header round-trip; nonce reuse denied |
 | `demo.test.ts` | Sprint Procurement assertions above |
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |

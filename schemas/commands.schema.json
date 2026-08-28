@@ -59,7 +59,7 @@
         "parentId": { "type": "string" },
         "constraints": {
           "type": "array",
-          "description": "An execution_date that has already closed, is inverted, or is unparseable is mandate.window_fresh. A not_before at or after the slip's seven-day exp is mandate.window_reach.",
+          "description": "An execution_date that has already closed, is inverted, or is unparseable is mandate.window_fresh. A not_before at or after the slip's seven-day exp is mandate.window_reach. A recurrence max_occurrences that cannot admit a first hire is mandate.occurrence_fresh.",
           "items": {
             "type": "object",
             "required": ["type"],

@@ -145,6 +145,13 @@ function executionWindowReachable(c: { not_before?: unknown }, nowIso: Instant):
   return before < (unixSeconds(nowIso) + INTENT_TTL_SEC) * 1000;
 }
 
+/** A cap that cannot admit a first hire (count starts at 0) is not a cadence. Omit is unlimited. */
+function recurrenceMintable(c: { max_occurrences?: unknown }): boolean {
+  if (c.max_occurrences === undefined) return true;
+  if (typeof c.max_occurrences !== "number" || !Number.isFinite(c.max_occurrences)) return false;
+  return c.max_occurrences > 0;
+}
+
 const SIM_INSTRUMENT = {
   id: "sim-ledger",
   type: "sim_ledger" as const,
@@ -940,6 +947,8 @@ export class Runtime {
         ctx.windowMintFresh = executionWindowMintable(win, this.clock.now());
         ctx.windowReachOk = executionWindowReachable(win, this.clock.now());
       }
+      const rec = ctx.proposedConstraints.find((c) => c.type === "payment.agent_recurrence");
+      if (rec) ctx.occurrenceMintOk = recurrenceMintable(rec);
     }
     const namedIds = this.namedAgentIds(cmd, body);
     if (namedIds.length > 0) {
@@ -1705,6 +1714,10 @@ export class Runtime {
     }
     if (win && !executionWindowReachable(win, this.clock.now())) {
       throw new Error("intent window unreachable");
+    }
+    const rec = constraints.find((c) => c.type === "payment.agent_recurrence");
+    if (rec && !recurrenceMintable(rec)) {
+      throw new Error("intent recurrence already exhausted");
     }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",

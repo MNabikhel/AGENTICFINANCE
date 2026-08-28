@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 80 rules", () => {
-    expect(RULE_IDS).toHaveLength(80);
+  it("has 81 rules", () => {
+    expect(RULE_IDS).toHaveLength(81);
   });
 
   it("denies frozen actors", () => {
@@ -2170,5 +2170,91 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
+  });
+
+  it("denies a slip born with no slots as mandate.occurrence_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.occurrence_fresh");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.occurrence_fresh when the cadence still has a first slot", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.occurrence_fresh when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names identity.known first when a ghost subject is also born with no slots", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: false,
+        occurrenceMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+  });
+
+  it("still names mandate.known_parent first when a ghost parent is also born with no slots", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: false,
+        occurrenceMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
+  });
+
+  it("still names mandate.child_tighter first when a wider child is also born with no slots", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 200_000 },
+          { type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 0 },
+        ],
+        occurrenceMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
   });
 });
