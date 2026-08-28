@@ -875,6 +875,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.known_parent", "deny", "parent hop not found");
     },
   },
+  {
+    id: "ledger.known_account",
+    evaluate: (ctx) => {
+      if (ctx.accountsKnown === undefined) return v("ledger.known_account", "allow", "not an account-name command");
+      return ctx.accountsKnown
+        ? v("ledger.known_account", "allow", "account exists")
+        : v("ledger.known_account", "deny", "account not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1009,6 +1018,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.known_parent": {
     kind: "none",
     hint: "That parentId is not in this world’s graph. Attest the parent hop first. A missing parent is not a live nested handshake.",
+  },
+  "ledger.known_account": {
+    kind: "none",
+    hint: "That account name is not in this world. Register the agent (or open the book) first. A missing book is not an allocation.",
   },
   "payment.execution_date": {
     kind: "none",

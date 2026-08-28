@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.27.0",
+  version: "0.28.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -693,6 +693,11 @@ export interface PolicyContext {
    * that flag is for issue_intent and would steal first deny as mandate.known_parent.
    */
   kyaParentKnown?: boolean;
+  /**
+   * False when ledger.transfer or a named ledger.balances points at a book that is not in this world.
+   * Absent = not an account-name command (full balance listing has no name).
+   */
+  accountsKnown?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

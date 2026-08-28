@@ -135,15 +135,27 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
-  if (cmd.type === "ledger.transfer" && amt) {
-    return {
-      seq: input.seq,
-      at: input.at,
-      headline: `${who} moved ${amt} into an operating account`,
-      body: "Cash left treasury. The working agent can hire vendors without touching the rest of the company.",
-      tone: "allow",
-      commandType: cmd.type,
-    };
+  if (cmd.type === "ledger.transfer") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} tried to move money through a missing book`,
+        body: "That account name is not in this world. A missing book is not an allocation.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (amt) {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} moved ${amt} into an operating account`,
+        body: "Cash left treasury. The working agent can hire vendors without touching the rest of the company.",
+        tone: "allow",
+        commandType: cmd.type,
+      };
+    }
   }
   if (cmd.type === "market.rfq") {
     return {

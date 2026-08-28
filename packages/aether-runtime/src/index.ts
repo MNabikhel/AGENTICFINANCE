@@ -799,6 +799,18 @@ export class Runtime {
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
     }
+    if (cmd.type === "ledger.transfer") {
+      ctx.accountsKnown =
+        this.ledger.accountsByName.has(String(body.fromAccount)) &&
+        this.ledger.accountsByName.has(String(body.toAccount));
+    }
+    if (cmd.type === "ledger.balances") {
+      if (typeof body.name === "string") {
+        ctx.accountsKnown = this.ledger.accountsByName.has(body.name);
+      } else if (typeof body.accountId === "string") {
+        ctx.accountsKnown = this.ledger.accounts.has(body.accountId as AccountId);
+      }
+    }
     if (cmd.type === "ladder.set" && ctx.targetKnown === true && namedIds[0]) {
       const target = this.identity.get(namedIds[0]);
       if (target && typeof body.to === "number") {
@@ -1756,6 +1768,9 @@ export class Runtime {
   private mutBalances(body: Record<string, unknown>) {
     if (typeof body.name === "string") return this.ledger.balanceByName(body.name);
     if (typeof body.accountId === "string") {
+      if (!this.ledger.accounts.has(body.accountId as AccountId)) {
+        throw new Error(`unknown account ${body.accountId}`);
+      }
       return { amount: this.ledger.balance(body.accountId as AccountId) };
     }
     return [...this.ledger.accounts.values()].map((a) => ({

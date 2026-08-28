@@ -78,7 +78,7 @@ describe("SIM_RAIL", () => {
     expect(SIM_RAIL.live).toBe(false);
     expect(SIM_RAIL.id).toBe(PROTOCOL.rail);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.27.0");
+    expect(PROTOCOL.version).toBe("0.28.0");
   });
 });
 
@@ -204,5 +204,93 @@ describe("hire.refund", () => {
     if (!again.ok) return;
     expect(again.value.replayed).toBe(true);
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cashBefore);
+  });
+});
+
+const GHOST_BOOK = "nobody:cash";
+const GHOST_ACCT = "acct_01J6AETHERGHOSTACCT0000001";
+
+describe("ledger.known_account", () => {
+  it("refuses a treasury allocation to a missing book as ledger.known_account, not a mutate throw", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const clockBefore = rt.clock.now();
+    const journalsBefore = rt.journals.length;
+    const treasuryBefore = rt.ledger.balanceByName("treasury:cash").amount;
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "treasury:cash",
+        toAccount: GHOST_BOOK,
+        amount: { amount: 1000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.known_account");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.journals.length).toBe(journalsBefore);
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(treasuryBefore);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("missing book"))).toBe(true);
+  });
+
+  it("refuses a transfer from a missing book as ledger.known_account", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: GHOST_BOOK,
+        toAccount: "procurement:cash",
+        amount: { amount: 1000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.known_account");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(1_500_000);
+  });
+
+  it("still allocates when both books exist", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const r = must(
+      rt.dispatch(
+        cmd("ledger.transfer", treasury.id, {
+          fromAccount: "treasury:cash",
+          toAccount: "procurement:cash",
+          amount: { amount: 1_000, currency: "USD_SIM" },
+        }),
+      ),
+      "allocate",
+    );
+    expect((r.data as { description: string }).description).toContain("treasury:cash");
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(4_999_000);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(1_501_000);
+  });
+
+  it("refuses a named balance of a missing book as ledger.known_account, not a zero", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const r = rt.dispatch(cmd("ledger.balances", founder.id, { name: GHOST_BOOK }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.known_account");
+  });
+
+  it("refuses a balance by a missing account id as ledger.known_account, not a silent zero", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const r = rt.dispatch(cmd("ledger.balances", founder.id, { accountId: GHOST_ACCT }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.known_account");
   });
 });

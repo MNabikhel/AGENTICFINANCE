@@ -74,8 +74,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 53 rules", () => {
-    expect(RULE_IDS).toHaveLength(53);
+  it("has 54 rules", () => {
+    expect(RULE_IDS).toHaveLength(54);
   });
 
   it("denies frozen actors", () => {
@@ -720,6 +720,22 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("kya.known_parent");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a transfer to a missing book as ledger.known_account, not a mutate throw", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        accountsKnown: false,
+        amount: { amount: 1000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.known_account");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
