@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.73.0",
+  version: "0.74.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -575,6 +575,9 @@ export interface DelegationAttestation {
   expiresAt: Instant;
   revokedAt?: Instant;
 }
+
+/** Graph and inspect view. Revoked wins over expired. The store stays raw. */
+export type KyaHopStatus = "live" | "expired" | "revoked";
 
 export interface KyaResolution {
   required: boolean;

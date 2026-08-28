@@ -20,7 +20,7 @@ import { isOperatingBook, Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
 import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout, isFxSku } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
-import { DelegationGraph, resolveKya } from "@aether/kya";
+import { DelegationGraph, hopStatus, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
 import { SIM_RAIL, settlementFail } from "@aether/settlement";
 import { commandShapeError } from "./command-schema.js";
@@ -48,6 +48,7 @@ import type {
   IntentMandate,
   JournalEntry,
   KyaIssuerKind,
+  KyaHopStatus,
   LadderExtraGate,
   LineItem,
   MandateConstraint,
@@ -439,6 +440,14 @@ export class Runtime {
     return ticket;
   }
 
+  /**
+   * Hop view for other agents. Same derivation as the graph edges.
+   * The store stays raw (expiresAt / revokedAt). Unique_live still occupies.
+   */
+  hopView(att: DelegationAttestation): DelegationAttestation & { status: KyaHopStatus } {
+    return { ...att, status: hopStatus(att, this.clock.now()) };
+  }
+
   protocolCard() {
     return {
       ...PROTOCOL,
@@ -453,7 +462,7 @@ export class Runtime {
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
    * aid_ agent, hid_ hire, mid_ mandate, rid_ receipt, apd_ approval,
-   * rfq_ / qte_ market, acct_ / name account, dlg_ KYA hop.
+   * rfq_ / qte_ market, acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -493,7 +502,7 @@ export class Runtime {
     }
     if (id.startsWith("dlg_")) {
       const att = this.kya.attestations.get(id as DelegationId);
-      return att ? { type: "delegation", id: att.id, value: att } : undefined;
+      return att ? { type: "delegation", id: att.id, value: this.hopView(att) } : undefined;
     }
     if (id.startsWith("acct_")) {
       const account = [...this.ledger.accounts.values()].find((a) => a.id === id);

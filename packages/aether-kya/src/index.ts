@@ -6,11 +6,18 @@ import {
   type DelegationAttestation,
   type DelegationId,
   type Instant,
+  type KyaHopStatus,
   type KyaResolution,
 } from "@aether/types";
 
 function pairKey(principal: AgentId, delegate: AgentId): string {
   return `${principal}>${delegate}`;
+}
+
+/** Revoked wins. Equal expiresAt is expired (same exclusive end as the graph view). */
+export function hopStatus(a: { revokedAt?: Instant; expiresAt: Instant }, nowIso: Instant): KyaHopStatus {
+  if (a.revokedAt) return "revoked";
+  return Date.parse(a.expiresAt) > Date.parse(nowIso) ? "live" : "expired";
 }
 
 /**
@@ -150,7 +157,6 @@ export class DelegationGraph {
   }
 
   snapshot(nowIso: Instant) {
-    const now = Date.parse(nowIso);
     return {
       attestations: [...this.attestations.values()],
       blocked: [...this.blocked],
@@ -158,11 +164,7 @@ export class DelegationGraph {
         from: a.grantorId,
         to: a.delegateId,
         principalId: a.principalId,
-        status: (a.revokedAt
-          ? "revoked"
-          : Date.parse(a.expiresAt) > now
-            ? "live"
-            : "expired") as "live" | "expired" | "revoked",
+        status: hopStatus(a, nowIso),
         maxAutonomy: a.maxAutonomy,
       })),
     };

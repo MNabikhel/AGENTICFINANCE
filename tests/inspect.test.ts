@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
 import { offerHire, completeHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
-import type { ApprovalTicket, HireContract, MandateId, Receipt } from "@aether/types";
+import type { ApprovalTicket, DelegationAttestation, HireContract, MandateId, Receipt } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -148,6 +148,52 @@ describe("approval expiry", () => {
     expect(rt.approvals.get(ticket.id)?.status).toBe("pending");
     expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("expired");
     expect(rt.snapshotState().approvals.find((a) => a.id === ticket.id)?.status).toBe("expired");
+  });
+});
+
+describe("delegation inspect", () => {
+  it("labels an expired hop expired in inspect, not live, and does not write status into the store", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const issued = must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, {
+          delegateId: desk.id,
+          maxAutonomy: 3,
+          expiresAt: "2026-08-28T12:00:00.000Z",
+        }),
+      ),
+      "attest",
+    );
+    const hop = issued.data as DelegationAttestation;
+    expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("live");
+    expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("live");
+    expect("status" in (rt.kya.attestations.get(hop.id) ?? {})).toBe(false);
+
+    rt.clock.set("2026-08-29T00:00:00.000Z");
+    expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("expired");
+    expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("expired");
+    expect(rt.kya.attestations.get(hop.id)?.revokedAt).toBeUndefined();
+    expect("status" in (rt.kya.attestations.get(hop.id) ?? {})).toBe(false);
+
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+  });
+
+  it("labels a revoked hop revoked even after the window has closed", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const issued = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const hop = issued.data as DelegationAttestation;
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: hop.id })), "revoke");
+    rt.clock.set("2027-09-01T00:00:00.000Z");
+    expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("revoked");
   });
 });
 

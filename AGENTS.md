@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.73.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.74.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -115,6 +115,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 72. A permission slip cannot be born with a closed calendar (`mandate.window_fresh`). `mandate.issue_intent` with `not_after` already past, an inverted window, or an unparseable Instant is a refuse, not a written corpse that then fails hire as `payment.execution_date`. A future `not_before` still mints if it opens while the slip lives. Ghost subject, missing parent, and a wider child keep first deny. Hire/fund still names `payment.execution_date`.
 73. A window that opens after the slip dies is not a window (`mandate.window_reach`). Intent `exp` is seven days. `not_before` at or after that Instant never overlaps a live slip. A closed calendar stays `mandate.window_fresh`. Ghost subject, missing parent, and a wider child keep first deny.
 74. A cadence with no slots is not a cadence (`mandate.occurrence_fresh`). `mandate.issue_intent` with `max_occurrences` ≤ 0, or a non-number cap, is a refuse, not a written corpse that then fails hire as `payment.recurrence`. Omit `max_occurrences` is unlimited and still mints. One slot still mints; a second hire still names `payment.recurrence`. Ghost subject, missing parent, and a wider child keep first deny.
+75. Fetching one hop by id (`aether_get` / `GET /v1/objects/dlg_*`) labels it `live`, `expired`, or `revoked` — the same derivation as the graph. The store stays raw. Unique_live still occupies. Spend still names `kya.attestation_fresh`.
 
 ## Autonomy
 
