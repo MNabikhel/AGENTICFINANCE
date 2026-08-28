@@ -140,6 +140,7 @@ export class Runtime {
   readonly occurrences = new Map<MandateId, number>();
   readonly lastOccurrence = new Map<MandateId, Instant>();
   readonly consumedQuotes = new Set<string>();
+  readonly reservedQuotes = new Map<string, ApprovalId>();
   readonly settleEvents: { at: string; volume: number }[] = [];
   dailySpend = 0;
   dailyLimit: number;
@@ -301,6 +302,7 @@ export class Runtime {
       if (decision.verdict === "escalate") {
         this.pushStory(cmd, actor, decision, ctx);
         const ticket = this.openTicket(cmd, decision);
+        this.reserveQuote(cmd, ticket.id);
         const result = ok({ kind: "escalated" as const, decision, data: { ticket }, ticket });
         if (key) this.idempotency.set(key, cloneResult(result));
         return result;
@@ -478,6 +480,7 @@ export class Runtime {
       occurrences: [...this.occurrences.entries()],
       lastOccurrence: [...this.lastOccurrence.entries()],
       consumedQuotes: [...this.consumedQuotes],
+      reservedQuotes: [...this.reservedQuotes.entries()],
       settledFxQuotes: [...this.consumedQuotes],
       settleEvents: [...this.settleEvents],
       decisions: [...this.decisions],
@@ -548,6 +551,10 @@ export class Runtime {
     this.consumedQuotes.clear();
     for (const id of world.consumedQuotes ?? []) this.consumedQuotes.add(id);
     for (const id of world.settledFxQuotes ?? []) this.consumedQuotes.add(id);
+    this.reservedQuotes.clear();
+    for (const [quoteId, ticketId] of world.reservedQuotes ?? []) {
+      this.reservedQuotes.set(quoteId, ticketId as ApprovalId);
+    }
     this.settleEvents.splice(0, this.settleEvents.length, ...world.settleEvents);
     this.decisions.splice(0, this.decisions.length, ...world.decisions);
     this.story.splice(0, this.story.length, ...world.story);
@@ -614,6 +621,7 @@ export class Runtime {
       if (ticket.status !== "pending") continue;
       if (Date.parse(ticket.expiresAt) > now) continue;
       this.approvals.set(id, { ...ticket, status: "expired" });
+      this.unreserveQuoteForTicket(id);
       const pending = this.pending.get(id);
       if (pending) {
         const k = idempotencyKeyOf(pending);
@@ -638,6 +646,18 @@ export class Runtime {
     this.approvals.set(id, ticket);
     this.pending.set(id, cmd);
     return ticket;
+  }
+
+  private reserveQuote(cmd: Command, ticketId: ApprovalId): void {
+    if (cmd.type !== "hire.create") return;
+    const quote = this.quotes.get(String((cmd.body as Record<string, unknown>).quoteId));
+    if (quote) this.reservedQuotes.set(quote.id, ticketId);
+  }
+
+  private unreserveQuoteForTicket(ticketId: ApprovalId): void {
+    for (const [quoteId, heldBy] of this.reservedQuotes) {
+      if (heldBy === ticketId) this.reservedQuotes.delete(quoteId);
+    }
   }
 
   private snapshot(cmd: Command, actor: Agent, thresholdWaived: boolean): PolicyContext {
@@ -749,7 +769,7 @@ export class Runtime {
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
     }
-    const market = this.marketFlags(cmd, body, hire, actor);
+    const market = this.marketFlags(cmd, body, hire, actor, thresholdWaived);
     if (market.skuListed !== undefined) ctx.skuListed = market.skuListed;
     if (market.marketFresh !== undefined) ctx.marketFresh = market.marketFresh;
     if (market.sellerInvited !== undefined) ctx.sellerInvited = market.sellerInvited;
@@ -779,6 +799,7 @@ export class Runtime {
     body: Record<string, unknown>,
     hire: HireContract | undefined,
     actor: Agent,
+    thresholdWaived: boolean,
   ): {
     skuListed?: boolean;
     marketFresh?: boolean;
@@ -826,12 +847,18 @@ export class Runtime {
         out.marketFresh = Date.parse(quote.expiresAt) > now && Date.parse(rfq.expiresAt) > now;
         const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
         out.sellerInvited = invited.length === 0 || invited.includes(quote.sellerId);
-        out.quoteUnspent = !this.consumedQuotes.has(quote.id);
+        const consumed = this.consumedQuotes.has(quote.id);
+        const reserved = this.reservedQuotes.has(quote.id);
+        out.quoteUnspent = thresholdWaived && reserved && !consumed ? true : !consumed && !reserved;
       }
       return out;
     }
     if (cmd.type === "market.fx_settle") {
-      const live = Boolean(quote?.fx) && quote !== undefined && !this.consumedQuotes.has(quote.id);
+      const live =
+        Boolean(quote?.fx) &&
+        quote !== undefined &&
+        !this.consumedQuotes.has(quote.id) &&
+        !this.reservedQuotes.has(quote.id);
       out.fxQuoteLive = live;
       if (quote?.fx && live) {
         const fxOk = Date.parse(quote.fx.validUntil) > now;
@@ -1393,6 +1420,7 @@ export class Runtime {
       createdAt: this.clock.now(),
     };
     this.hires.set(hire.id, hire);
+    this.reservedQuotes.delete(quote.id);
     this.consumedQuotes.add(quote.id);
     this.audit.append({
       clock: this.clock,
@@ -1567,7 +1595,9 @@ export class Runtime {
   private mutFx(body: Record<string, unknown>, actor: Agent) {
     const quote = this.quoteOf(body);
     if (!quote?.fx) throw new Error("quote is not FX");
-    if (this.consumedQuotes.has(quote.id)) throw new Error("fx quote already settled");
+    if (this.consumedQuotes.has(quote.id) || this.reservedQuotes.has(quote.id)) {
+      throw new Error("fx quote already settled");
+    }
     const payout = fxPayout(quote.price.amount, quote.fx.rateE6);
     const vendorUsd = this.ledger.account(`${this.keyOf(actor.id)}:cash`);
     const vendorUsdc = this.ledger.account(`${this.keyOf(actor.id)}:usdc`);
@@ -1603,6 +1633,7 @@ export class Runtime {
           if (k) this.idempotency.delete(k);
         }
       }
+      this.unreserveQuoteForTicket(ticket.id);
       throw new Error("approval expired");
     }
     if (ticket.status !== "pending") throw new Error(`approval already ${ticket.status}`);
@@ -1628,6 +1659,7 @@ export class Runtime {
         const k = idempotencyKeyOf(pending);
         if (k) this.idempotency.delete(k);
       }
+      this.unreserveQuoteForTicket(ticket.id);
       return next;
     }
     const pending = this.pending.get(ticket.id);

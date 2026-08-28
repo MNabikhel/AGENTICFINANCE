@@ -1,7 +1,10 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
 import { inviteQuote, offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
-import type { HireContract, MandateId } from "@aether/types";
+import type { Agent, HireContract, MandateId } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -31,6 +34,7 @@ function economy(rt: Runtime) {
   const founder = rt.alias("ops-human");
   for (const a of [
     { key: "procurement", displayName: "Desk", role: "procurement", autonomyLevel: 3 },
+    { key: "treasury", displayName: "Treasury", role: "treasury", autonomyLevel: 3 },
     { key: "vendor", displayName: "Vendor", role: "data_vendor", autonomyLevel: 2 },
   ] as const) {
     must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
@@ -54,7 +58,27 @@ function economy(rt: Runtime) {
     ),
     "intent",
   );
-  return { founder, desk, vendor, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
+  return { founder, desk, treasury: rt.alias("treasury"), vendor, intentId: (intent.data as { payload: { id: MandateId } }).payload.id };
+}
+
+function overCapIntent(rt: Runtime, founder: Agent, desk: Agent, vendor: Agent, task: string): MandateId {
+  const issued = must(
+    rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task,
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 700_000 },
+          {
+            type: "payment.allowed_payees",
+            allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+          },
+        ],
+      }),
+    ),
+    task,
+  );
+  return (issued.data as { payload: { id: MandateId } }).payload.id;
 }
 
 describe("hire quote is one-shot", () => {
@@ -162,5 +186,202 @@ describe("hire quote is one-shot", () => {
     if (!retry.ok) return;
     expect(retry.value.kind).toBe("escalated");
     expect(retry.value.decision.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+  });
+
+  it("holds the quote while an approval ticket is open", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+    });
+    const big = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy deep research",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 700_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "big slip",
+    );
+    const intentId = (big.data as { payload: { id: MandateId } }).payload.id;
+    const paused = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(paused.ok).toBe(true);
+    if (!paused.ok) return;
+    expect(paused.value.kind).toBe("escalated");
+    const other = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "same quote other slip",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 700_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "other slip",
+    );
+    const sneak = rt.dispatch(
+      cmd("hire.create", desk.id, {
+        quoteId: invited.quoteId,
+        intentId: (other.data as { payload: { id: MandateId } }).payload.id,
+      }),
+    );
+    expect(sneak.ok).toBe(false);
+    if (sneak.ok) return;
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+    expect(sneak.error.decision?.remediation?.ruleId).toBe("hire.quote_unspent");
+    expect(sneak.error.decision?.remediation?.hint).toMatch(/approval ticket/);
+    expect(rt.reservedQuotes.get(invited.quoteId)).toBe(paused.value.ticket?.id);
+  });
+
+  it("releases the quote when the ticket is rejected", () => {
+    const rt = boot();
+    const { founder, desk, treasury, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+    });
+    const big = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy deep research",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 700_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "big slip",
+    );
+    const intentId = (big.data as { payload: { id: MandateId } }).payload.id;
+    const paused = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "escalate");
+    const ticketId = (paused.data as { ticket: { id: string } }).ticket.id;
+    must(rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticketId, decision: "rejected" })), "reject");
+    const again = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.value.kind).toBe("escalated");
+    expect(again.value.decision.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(rt.reservedQuotes.get(invited.quoteId)).toBe(again.value.ticket?.id);
+  });
+
+  it("releases the quote when the ticket expires", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+    });
+    const intentId = overCapIntent(rt, founder, desk, vendor, "buy deep research");
+    const paused = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "escalate");
+    const ticketId = paused.ticket!.id;
+    const live = rt.approvals.get(ticketId)!;
+    rt.approvals.set(ticketId, { ...live, expiresAt: rt.clock.now() });
+    must(rt.dispatch(cmd("market.catalog", desk.id, {})), "tick");
+    expect(rt.approvals.get(ticketId)?.status).toBe("expired");
+    expect(rt.reservedQuotes.has(invited.quoteId)).toBe(false);
+    const again = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.value.kind).toBe("escalated");
+    expect(again.value.decision.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+  });
+
+  it("lets the waived approval consume the reserved quote", () => {
+    const rt = boot();
+    const { founder, desk, treasury, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+    });
+    const intentId = overCapIntent(rt, founder, desk, vendor, "buy deep research");
+    const paused = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "escalate");
+    const approved = must(
+      rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: paused.ticket!.id, decision: "approved" })),
+      "approve",
+    );
+    const hireId = (approved.data as { hire: HireContract }).hire.id;
+    expect(hireId).toMatch(/^hid_/);
+    expect(rt.reservedQuotes.has(invited.quoteId)).toBe(false);
+    expect(rt.consumedQuotes.has(invited.quoteId)).toBe(true);
+    const sneak = rt.dispatch(
+      cmd("hire.create", desk.id, {
+        quoteId: invited.quoteId,
+        intentId: overCapIntent(rt, founder, desk, vendor, "same quote other slip"),
+      }),
+    );
+    expect(sneak.ok).toBe(false);
+    if (sneak.ok) return;
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+  });
+
+  it("keeps a reserved quote reserved across durable reboot", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aether-quote-reserve-"));
+    try {
+      const a = new Runtime({
+        startIso: "2026-08-28T00:00:00.000Z",
+        genesisNonce: "01J6AETHERGENESISQUOTERES0001",
+        dailyLimit: 10_000_000,
+        dataDir: dir,
+      });
+      const { founder, desk, vendor } = economy(a);
+      const invited = inviteQuote(a, {
+        buyer: desk.id,
+        seller: vendor.id,
+        sku: "research.deep",
+        spec: "needs a grown-up",
+        price: { amount: 640_000, currency: "USD_SIM" },
+      });
+      const intentId = overCapIntent(a, founder, desk, vendor, "buy deep research");
+      const paused = must(a.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "escalate");
+      expect(a.reservedQuotes.get(invited.quoteId)).toBe(paused.ticket?.id);
+
+      const b = new Runtime({
+        startIso: "2026-08-28T00:00:00.000Z",
+        genesisNonce: "01J6AETHERGENESISQUOTERES0001",
+        dailyLimit: 10_000_000,
+        dataDir: dir,
+      });
+      expect(b.reservedQuotes.get(invited.quoteId)).toBe(paused.ticket?.id);
+      const sneak = b.dispatch(
+        cmd("hire.create", desk.id, {
+          quoteId: invited.quoteId,
+          intentId: overCapIntent(b, founder, desk, vendor, "same quote other slip"),
+        }),
+      );
+      expect(sneak.ok).toBe(false);
+      if (sneak.ok) return;
+      expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

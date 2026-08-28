@@ -218,4 +218,63 @@ describe("FX quote is a one-shot", () => {
     if (sneak.ok) return;
     expect(sneak.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
   });
+
+  it("refuses to FX-settle a quote held by an open hire ticket", () => {
+    const rt = boot();
+    const { desk, vendor, mm } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "expensive window",
+          invitedSellerIds: [mm.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 640_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-29T00:00:00.000Z",
+          },
+          rateE6: 998_000,
+        }),
+      ),
+      "fx quote",
+    );
+    const quoteId = (quoted.data as { id: string }).id;
+    const intent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "hire the expensive window",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 700_000 }],
+        }),
+      ),
+      "intent",
+    );
+    const paused = must(
+      rt.dispatch(
+        cmd("hire.create", desk.id, {
+          quoteId,
+          intentId: (intent.data as { payload: { id: string } }).payload.id,
+        }),
+      ),
+      "escalate hire",
+    );
+    expect(paused.kind).toBe("escalated");
+    expect(rt.reservedQuotes.has(quoteId)).toBe(true);
+    const sneak = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
+    expect(sneak.ok).toBe(false);
+    if (sneak.ok) return;
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(sneak.error.decision?.remediation?.ruleId).toBe("market.fx_quote");
+  });
 });

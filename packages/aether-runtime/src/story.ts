@@ -164,7 +164,7 @@ export function autoBeat(input: {
       } else if (ruleId === "market.known_rfq") {
         body = "That quote or RFQ is not in this world. A missing room is not a missing SKU.";
       } else if (ruleId === "hire.quote_unspent") {
-        body = "That quote already produced a hire or an FX settle. A price promise is used once. A deny does not consume it; a void does not restore it.";
+        body = "That quote already produced a hire, an FX settle, or is held by an open approval. A price promise is used once. A deny does not consume it; a void does not restore it.";
       } else if (ruleId === "mandate.known_intent") {
         body = "That permission slip is not in this world. A missing slip is not a missing handshake.";
       } else if (ruleId === "payment.recurrence") {

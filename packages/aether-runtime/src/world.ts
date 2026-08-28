@@ -71,6 +71,8 @@ export interface WorldState {
   settledFxQuotes?: string[];
   /** Quote ids consumed by hire.create or fx_settle. Optional so old worlds boot. */
   consumedQuotes?: string[];
+  /** Quote id → pending approval id. Optional so old worlds boot. */
+  reservedQuotes?: Array<[string, string]>;
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];

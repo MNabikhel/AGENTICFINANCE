@@ -846,11 +846,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.fx_quote": {
     kind: "none",
-    hint: "An FX quote is a one-shot window. A missing quote, a research quote, or a spent quote is not a second settle.",
+    hint: "An FX quote is a one-shot window. A missing quote, a research quote, a spent quote, or a quote held by an open hire ticket is not a second settle.",
   },
   "hire.quote_unspent": {
     kind: "none",
-    hint: "That quote already produced a hire or an FX settle. A price promise is used once. Issue a new RFQ. A deny does not consume it; a void does not restore it.",
+    hint: "That quote already produced a hire, an FX settle, or is held by an open approval ticket. A price promise is used once. A deny does not consume it. Reject or wait for expiry to release a reservation. A void does not restore it.",
   },
   "hire.known": {
     kind: "none",
