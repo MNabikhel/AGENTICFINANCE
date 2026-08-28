@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.13.0",
+  version: "0.14.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -606,10 +606,16 @@ export interface PolicyContext {
   /** False when the RFQ (or the quote’s RFQ) does not exist. Absent = not an RFQ-gated command. */
   rfqKnown?: boolean;
   /**
-   * False when `market.fx_settle` has no quote, a non-FX quote, or a quote already settled.
+   * False when `market.fx_settle` has no quote, a non-FX quote, or a quote already used.
    * Absent = not an FX-settle command. An FX quote is a one-shot window.
    */
   fxQuoteLive?: boolean;
+  /**
+   * False when `hire.create` would reuse a quote that already produced a hire or an FX settle.
+   * Absent = not a hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * A deny or escalate does not consume the quote. A void/refund does not restore it.
+   */
+  quoteUnspent?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

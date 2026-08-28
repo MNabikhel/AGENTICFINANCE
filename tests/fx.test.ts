@@ -161,4 +161,61 @@ describe("FX quote is a one-shot", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("refuses to hire a quote that already settled as FX", () => {
+    const rt = boot();
+    const { desk, vendor, mm } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const quoteId = fxQuote(rt, desk.id, mm.id);
+    must(rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId })), "settle");
+    const intent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "hire the window",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }],
+        }),
+      ),
+      "intent",
+    );
+    const sneak = rt.dispatch(
+      cmd("hire.create", desk.id, {
+        quoteId,
+        intentId: (intent.data as { payload: { id: string } }).payload.id,
+      }),
+    );
+    expect(sneak.ok).toBe(false);
+    if (sneak.ok) return;
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+  });
+
+  it("refuses to FX-settle a quote that already produced a hire", () => {
+    const rt = boot();
+    const { desk, vendor, mm } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const quoteId = fxQuote(rt, desk.id, mm.id);
+    const intent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "hire the window",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }],
+        }),
+      ),
+      "intent",
+    );
+    must(
+      rt.dispatch(
+        cmd("hire.create", desk.id, {
+          quoteId,
+          intentId: (intent.data as { payload: { id: string } }).payload.id,
+        }),
+      ),
+      "hire fx quote",
+    );
+    const sneak = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
+    expect(sneak.ok).toBe(false);
+    if (sneak.ok) return;
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+  });
 });

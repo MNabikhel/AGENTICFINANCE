@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 40 rules", () => {
-    expect(RULE_IDS).toHaveLength(40);
+  it("has 41 rules", () => {
+    expect(RULE_IDS).toHaveLength(41);
   });
 
   it("denies frozen actors", () => {
@@ -457,6 +457,14 @@ describe("policy catalog", () => {
     const d = evaluate(ctx({ commandType: "hire.fund", cartMatchesHire: false }));
     expect(d.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies hiring on a quote that is already used", () => {
+    const d = evaluate(ctx({ commandType: "hire.create", quoteUnspent: false, rfqKnown: true, skuListed: true }));
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("hire.quote_unspent");
   });
 
   it("denies FX settle without a live unused FX quote", () => {

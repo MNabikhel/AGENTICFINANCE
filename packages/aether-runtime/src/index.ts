@@ -129,7 +129,7 @@ export class Runtime {
   readonly spentByIntent = new Map<MandateId, number>();
   readonly occurrences = new Map<MandateId, number>();
   readonly lastOccurrence = new Map<MandateId, Instant>();
-  readonly settledFx = new Set<string>();
+  readonly consumedQuotes = new Set<string>();
   readonly settleEvents: { at: string; volume: number }[] = [];
   dailySpend = 0;
   dailyLimit: number;
@@ -467,7 +467,8 @@ export class Runtime {
       spentByIntent: [...this.spentByIntent.entries()],
       occurrences: [...this.occurrences.entries()],
       lastOccurrence: [...this.lastOccurrence.entries()],
-      settledFxQuotes: [...this.settledFx],
+      consumedQuotes: [...this.consumedQuotes],
+      settledFxQuotes: [...this.consumedQuotes],
       settleEvents: [...this.settleEvents],
       decisions: [...this.decisions],
       story: [...this.story],
@@ -534,8 +535,9 @@ export class Runtime {
     for (const [id, n] of world.occurrences) this.occurrences.set(id, n);
     this.lastOccurrence.clear();
     for (const [id, at] of world.lastOccurrence ?? []) this.lastOccurrence.set(id, at);
-    this.settledFx.clear();
-    for (const id of world.settledFxQuotes ?? []) this.settledFx.add(id);
+    this.consumedQuotes.clear();
+    for (const id of world.consumedQuotes ?? []) this.consumedQuotes.add(id);
+    for (const id of world.settledFxQuotes ?? []) this.consumedQuotes.add(id);
     this.settleEvents.splice(0, this.settleEvents.length, ...world.settleEvents);
     this.decisions.splice(0, this.decisions.length, ...world.decisions);
     this.story.splice(0, this.story.length, ...world.story);
@@ -731,6 +733,7 @@ export class Runtime {
     if (market.sellerInvited !== undefined) ctx.sellerInvited = market.sellerInvited;
     if (market.rfqKnown !== undefined) ctx.rfqKnown = market.rfqKnown;
     if (market.fxQuoteLive !== undefined) ctx.fxQuoteLive = market.fxQuoteLive;
+    if (market.quoteUnspent !== undefined) ctx.quoteUnspent = market.quoteUnspent;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent);
@@ -760,6 +763,7 @@ export class Runtime {
     sellerInvited?: boolean;
     rfqKnown?: boolean;
     fxQuoteLive?: boolean;
+    quoteUnspent?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -777,6 +781,7 @@ export class Runtime {
       sellerInvited?: boolean;
       rfqKnown?: boolean;
       fxQuoteLive?: boolean;
+      quoteUnspent?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -799,11 +804,12 @@ export class Runtime {
         out.marketFresh = Date.parse(quote.expiresAt) > now && Date.parse(rfq.expiresAt) > now;
         const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
         out.sellerInvited = invited.length === 0 || invited.includes(quote.sellerId);
+        out.quoteUnspent = !this.consumedQuotes.has(quote.id);
       }
       return out;
     }
     if (cmd.type === "market.fx_settle") {
-      const live = Boolean(quote?.fx) && quote !== undefined && !this.settledFx.has(quote.id);
+      const live = Boolean(quote?.fx) && quote !== undefined && !this.consumedQuotes.has(quote.id);
       out.fxQuoteLive = live;
       if (quote?.fx && live) {
         const fxOk = Date.parse(quote.fx.validUntil) > now;
@@ -1339,6 +1345,7 @@ export class Runtime {
     const quote = this.quotes.get(String(body.quoteId));
     const rfq = quote ? this.rfqs.get(quote.rfqId) : undefined;
     if (!quote || !rfq) throw new Error("unknown quote");
+    if (this.consumedQuotes.has(quote.id)) throw new Error("quote already used");
     const hireId = this.ids.next("hid") as HireId;
     const escrow = this.ledger.openAccount({
       id: this.ids.next("acct") as AccountId,
@@ -1362,6 +1369,7 @@ export class Runtime {
       createdAt: this.clock.now(),
     };
     this.hires.set(hire.id, hire);
+    this.consumedQuotes.add(quote.id);
     this.audit.append({
       clock: this.clock,
       actorId: actor.id,
@@ -1535,7 +1543,7 @@ export class Runtime {
   private mutFx(body: Record<string, unknown>, actor: Agent) {
     const quote = this.quoteOf(body);
     if (!quote?.fx) throw new Error("quote is not FX");
-    if (this.settledFx.has(quote.id)) throw new Error("fx quote already settled");
+    if (this.consumedQuotes.has(quote.id)) throw new Error("fx quote already settled");
     const payout = fxPayout(quote.price.amount, quote.fx.rateE6);
     const vendorUsd = this.ledger.account(`${this.keyOf(actor.id)}:cash`);
     const vendorUsdc = this.ledger.account(`${this.keyOf(actor.id)}:usdc`);
@@ -1555,7 +1563,7 @@ export class Runtime {
       this.clearing.record(mm.id, actor.id, payout, quote.fx.to);
     }
     this.noteVolume(quote.price.amount);
-    this.settledFx.add(quote.id);
+    this.consumedQuotes.add(quote.id);
     return { payout, rateE6: quote.fx.rateE6 };
   }
 

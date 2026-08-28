@@ -163,6 +163,8 @@ export function autoBeat(input: {
         body = "That seller was not on the RFQ. A named invite list is a closed room.";
       } else if (ruleId === "market.known_rfq") {
         body = "That quote or RFQ is not in this world. A missing room is not a missing SKU.";
+      } else if (ruleId === "hire.quote_unspent") {
+        body = "That quote already produced a hire or an FX settle. A price promise is used once. A deny does not consume it; a void does not restore it.";
       } else if (ruleId === "payment.recurrence") {
         body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
       }

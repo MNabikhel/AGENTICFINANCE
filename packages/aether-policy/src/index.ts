@@ -725,6 +725,15 @@ export const RULES: readonly Rule[] = [
         : v("market.fx_quote", "deny", "need a live unused FX quote");
     },
   },
+  {
+    id: "hire.quote_unspent",
+    evaluate: (ctx) => {
+      if (ctx.quoteUnspent === undefined) return v("hire.quote_unspent", "allow", "not a hire.create");
+      return ctx.quoteUnspent
+        ? v("hire.quote_unspent", "allow", "quote has not been used")
+        : v("hire.quote_unspent", "deny", "quote already used");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -807,6 +816,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.fx_quote": {
     kind: "none",
     hint: "An FX quote is a one-shot window. A missing quote, a research quote, or a spent quote is not a second settle.",
+  },
+  "hire.quote_unspent": {
+    kind: "none",
+    hint: "That quote already produced a hire or an FX settle. A price promise is used once. Issue a new RFQ. A deny does not consume it; a void does not restore it.",
   },
   "payment.execution_date": {
     kind: "none",
