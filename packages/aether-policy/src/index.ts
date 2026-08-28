@@ -400,6 +400,21 @@ export const RULES: readonly Rule[] = [
         : v("human.signature_present", "deny", "L0/L1 payment requires human JWS");
     },
   },
+  {
+    id: "clearing.bilateral_limit",
+    evaluate: (ctx) => {
+      if (ctx.projectedExposure === undefined || ctx.exposureLimit === undefined) {
+        return v("clearing.bilateral_limit", "allow", "no exposure snapshot");
+      }
+      if (ctx.projectedExposure > ctx.exposureLimit) {
+        return v("clearing.bilateral_limit", "deny", "bilateral exposure limit exceeded", {
+          projected: ctx.projectedExposure,
+          limit: ctx.exposureLimit,
+        });
+      }
+      return v("clearing.bilateral_limit", "allow", "exposure inside limit");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);

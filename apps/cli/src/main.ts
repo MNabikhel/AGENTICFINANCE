@@ -13,6 +13,13 @@ if (command === "demo" && (name === "sprint-procurement" || name === undefined))
   const fixture = resolve(process.cwd(), "fixtures/demo/sprint-procurement/scenario.json");
   const scenario = loadScenario(fixture);
   const report = runSprintProcurement(scenario);
+  console.log("");
+  console.log(report.snapshot.tldr);
+  console.log("");
+  for (const beat of report.snapshot.story) {
+    console.log(`- ${beat.headline}`);
+  }
+  console.log("");
   for (const r of report.results) {
     const line = `${r.ok ? "ok" : "not ok"} ${r.id}  ${r.name}${r.detail ? ` (${r.detail})` : ""}`;
     console.log(line);

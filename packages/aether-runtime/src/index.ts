@@ -15,8 +15,10 @@ import {
 import { Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
 import { fxPayout } from "@aether/market";
+import { ExposureBook } from "@aether/clearing";
 import { evaluate } from "@aether/policy";
 import { issueReceipt, paymentRequired, settlementFail, settlementOk } from "@aether/settlement";
+import { autoBeat, analog, SPRINT_TLDR, type StoryBeat } from "./story.js";
 import type {
   AccountId,
   Agent,
@@ -96,6 +98,8 @@ export class Runtime {
   dailyLimit: number;
   readonly decisions: { at: string; type: CommandType; decision: PolicyDecision }[] = [];
   readonly journals: JournalEntry[] = [];
+  readonly story: StoryBeat[] = [];
+  readonly clearing = new ExposureBook();
 
   constructor(opts: { startIso: string; genesisNonce: string; dailyLimit?: number; auditPath?: string; ledgerPath?: string }) {
     this.clock = new ManualClock(opts.startIso);
@@ -169,6 +173,7 @@ export class Runtime {
     const ctx = this.snapshot(cmd, actor, opts?.thresholdWaived === true);
     const decision = evaluate(ctx);
     this.decisions.push({ at: this.clock.now(), type: cmd.type, decision });
+    this.pushStory(cmd, actor, decision, ctx);
     this.audit.append({
       clock: this.clock,
       actorId: cmd.actorId,
@@ -215,9 +220,34 @@ export class Runtime {
       quotes: [...this.quotes.values()],
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()],
+      story: this.story,
+      analog: analog(),
+      tldr: SPRINT_TLDR,
+      clearing: this.clearing.snapshot(),
+      agentCards: this.identity.all().map((a) => this.agentCard(a)),
       audit: { length: this.audit.length, verify, head: this.audit.head(), tail: this.audit.all().slice(-12) },
       decisions: this.decisions.slice(-40),
     };
+  }
+
+  agentCard(agent: Agent) {
+    return {
+      protocolVersion: "0.2.1",
+      name: agent.displayName,
+      description: `${agent.role} on Aether sim:aether-1`,
+      url: `http://127.0.0.1:8787/v1/agents/${agent.id}`,
+      did: agent.did,
+      role: agent.role,
+      autonomyLevel: agent.autonomyLevel,
+      frozen: agent.frozen,
+      skills: skillsFor(agent.role),
+    };
+  }
+
+  tell(beat: Omit<StoryBeat, "seq" | "at">): StoryBeat {
+    const full: StoryBeat = { ...beat, seq: this.story.length, at: this.clock.now() };
+    this.story.push(full);
+    return full;
   }
 
   private systemActor(): Agent {
@@ -354,7 +384,28 @@ export class Runtime {
     if (mmInventoryOk !== undefined) ctx.mmInventoryOk = mmInventoryOk;
     if (chainOk !== undefined) ctx.chainOk = chainOk;
     if (thresholdWaived) ctx.thresholdWaived = true;
+    if (payeeId && amount) {
+      ctx.projectedExposure = this.clearing.projected(actor.id, payeeId, amount.currency, amount.amount);
+      ctx.exposureLimit = this.clearing.defaultBilateralLimit;
+    }
     return ctx;
+  }
+
+  private pushStory(cmd: Command, actor: Agent, decision: PolicyDecision, ctx: PolicyContext): void {
+    const counterpart = ctx.payeeId ? this.identity.get(ctx.payeeId) : undefined;
+    const body = cmd.body as Record<string, unknown>;
+    const beat = autoBeat({
+      seq: this.story.length,
+      at: this.clock.now(),
+      cmd,
+      actor,
+      decision,
+      ...(counterpart?.displayName ? { counterpartName: counterpart.displayName } : {}),
+      ...(ctx.amount ? { amountMinor: ctx.amount.amount } : {}),
+      ...(ctx.hire?.sku || typeof body.sku === "string" ? { sku: ctx.hire?.sku ?? String(body.sku) } : {}),
+      ...(typeof body.task === "string" ? { task: String(body.task) } : {}),
+    });
+    if (beat) this.story.push(beat);
   }
 
   private quoteOf(body: Record<string, unknown>): Quote | undefined {
@@ -902,6 +953,11 @@ export class Runtime {
       { accountId: vendorUsdc.id, debit: payout, credit: 0 },
       { accountId: mmUsdc.id, debit: 0, credit: payout },
     ]);
+    const mm = [...this.identity.all()].find((a) => a.role === "market_maker");
+    if (mm) {
+      this.clearing.record(actor.id, mm.id, quote.price.amount, quote.fx.from);
+      this.clearing.record(mm.id, actor.id, payout, quote.fx.to);
+    }
     this.noteVolume(quote.price.amount);
     return { payout, rateE6: quote.fx.rateE6 };
   }
@@ -991,6 +1047,7 @@ export class Runtime {
   private noteSpend(hire: HireContract) {
     this.spentByIntent.set(hire.intentId, (this.spentByIntent.get(hire.intentId) ?? 0) + hire.price.amount);
     this.occurrences.set(hire.intentId, (this.occurrences.get(hire.intentId) ?? 0) + 1);
+    this.clearing.record(hire.buyerId, hire.sellerId, hire.price.amount, hire.price.currency);
     this.noteVolume(hire.price.amount);
   }
 
@@ -1009,5 +1066,23 @@ export function cmd(type: CommandType, actorId: AgentId | "system", body: unknow
   return { type, actorId, body };
 }
 
+function skillsFor(role: AgentRole): Array<{ id: string; name: string; description: string }> {
+  const skills: Record<AgentRole, Array<{ id: string; name: string; description: string }>> = {
+    human_operator: [{ id: "mandate", name: "Issue mandates", description: "Write permission slips agents must obey." }],
+    treasury: [
+      { id: "fund", name: "Allocate cash", description: "Move cash to operating agents." },
+      { id: "approve", name: "Approve exceptions", description: "Sign escalation tickets above threshold." },
+    ],
+    procurement: [{ id: "hire", name: "Hire vendors", description: "RFQ, hire, escrow, and settle against a mandate." }],
+    data_vendor: [{ id: "sell-data", name: "Sell data", description: "Quote and deliver datasets once escrow is funded." }],
+    compute_vendor: [{ id: "sell-compute", name: "Sell compute", description: "Quote and deliver GPU hours once escrow is funded." }],
+    market_maker: [{ id: "fx-window", name: "FX window", description: "Convert USD_SIM to USDC_SIM inside a 200 bps band." }],
+    auditor: [{ id: "verify", name: "Verify audit chain", description: "Replay the notary book. Cannot spend." }],
+  };
+  return skills[role];
+}
+
+export { analog, SPRINT_TLDR };
+export type { StoryBeat };
 export { err, fail, ok, settlementFail };
 export type { Clock };

@@ -488,6 +488,9 @@ export interface PolicyContext {
   chainOk?: boolean;
   /** True when replaying a command after a matching ApprovalTicket. */
   thresholdWaived?: boolean;
+  /** Current + this command’s amount vs bilateral exposure limit. */
+  projectedExposure?: number;
+  exposureLimit?: number;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

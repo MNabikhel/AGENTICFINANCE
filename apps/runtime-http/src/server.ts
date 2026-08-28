@@ -90,6 +90,26 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, 200, runtime.snapshotState());
         return;
       }
+      if (req.method === "GET" && (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json")) {
+        json(res, 200, {
+          protocolVersion: "0.2.1",
+          name: "Aether Economic Runtime",
+          description: "Policy, mandate, hire, escrow, settlement, and audit for software agents. Simulated rail sim:aether-1.",
+          url: "http://127.0.0.1:8787",
+          capabilities: { streaming: false, pushNotifications: false },
+          skills: [
+            { id: "sprint-procurement", name: "Sprint Procurement", description: "POST /v1/demo/sprint-procurement" },
+            { id: "command-bus", name: "Command bus", description: "Same commands as MCP and CLI" },
+          ],
+          defaultInputModes: ["application/json"],
+          defaultOutputModes: ["application/json"],
+        });
+        return;
+      }
+      if (req.method === "GET" && path === "/v1/story") {
+        json(res, 200, { tldr: runtime.snapshotState().tldr, analog: runtime.snapshotState().analog, story: runtime.story });
+        return;
+      }
       if (req.method === "GET" && path === "/v1/demo/last") {
         json(res, 200, lastDemo ?? { ok: false, detail: "run POST /v1/demo/sprint-procurement" });
         return;

@@ -21,6 +21,7 @@ export default defineConfig({
       "@aether/escrow": alias("aether-escrow"),
       "@aether/market": alias("aether-market"),
       "@aether/settlement": alias("aether-settlement"),
+      "@aether/clearing": alias("aether-clearing"),
       "@aether/runtime": alias("aether-runtime"),
       "@aether/sprint": path.resolve(__dirname, "packages/aether-runtime/src/sprint-procurement.ts"),
     },

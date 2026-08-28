@@ -37,7 +37,7 @@ function ctx(over: Partial<PolicyContext> = {}): PolicyContext {
 
 describe("policy catalog", () => {
   it("has 26 rules", () => {
-    expect(RULE_IDS).toHaveLength(26);
+    expect(RULE_IDS).toHaveLength(27);
   });
 
   it("denies frozen actors", () => {
@@ -144,5 +144,18 @@ describe("policy catalog", () => {
       }),
     );
     expect(d.trace.find((t) => t.ruleId === "hire.no_self_deal")?.verdict).toBe("deny");
+  });
+
+  it("denies when bilateral exposure would exceed the limit", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 50, currency: "USD_SIM" },
+        projectedExposure: 200,
+        exposureLimit: 100,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "clearing.bilateral_limit")?.verdict).toBe("deny");
+    expect(d.verdict).toBe("deny");
   });
 });

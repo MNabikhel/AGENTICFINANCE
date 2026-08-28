@@ -45,6 +45,12 @@ importers:
         specifier: workspace:*
         version: link:../aether-types
 
+  packages/aether-clearing:
+    dependencies:
+      '@aether/types':
+        specifier: workspace:*
+        version: link:../aether-types
+
   packages/aether-envelope:
     dependencies:
       '@aether/kernel':
@@ -118,6 +124,9 @@ importers:
       '@aether/audit':
         specifier: workspace:*
         version: link:../aether-audit
+      '@aether/clearing':
+        specifier: workspace:*
+        version: link:../aether-clearing
       '@aether/envelope':
         specifier: workspace:*
         version: link:../aether-envelope

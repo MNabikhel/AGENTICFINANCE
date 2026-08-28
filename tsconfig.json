@@ -15,6 +15,7 @@
       "@aether/escrow": ["packages/aether-escrow/src/index.ts"],
       "@aether/market": ["packages/aether-market/src/index.ts"],
       "@aether/settlement": ["packages/aether-settlement/src/index.ts"],
+      "@aether/clearing": ["packages/aether-clearing/src/index.ts"],
       "@aether/runtime": ["packages/aether-runtime/src/index.ts"],
       "@aether/sprint": ["packages/aether-runtime/src/sprint-procurement.ts"]
     }

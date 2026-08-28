@@ -17,6 +17,7 @@
     "@aether/market": "workspace:*",
     "@aether/policy": "workspace:*",
     "@aether/settlement": "workspace:*",
+    "@aether/clearing": "workspace:*",
     "@aether/types": "workspace:*"
   }
 }

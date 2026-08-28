@@ -9,5 +9,8 @@ describe("sprint procurement demo", () => {
     const failed = report.results.filter((r) => !r.ok);
     expect(failed, JSON.stringify(failed, null, 2)).toEqual([]);
     expect(report.ok).toBe(true);
+    expect(report.snapshot.story.some((b) => b.tone === "deny")).toBe(true);
+    expect(report.snapshot.story.some((b) => b.tone === "escalate")).toBe(true);
+    expect(report.snapshot.clearing.usd.netting.length).toBeGreaterThan(0);
   });
 });
