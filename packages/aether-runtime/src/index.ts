@@ -898,6 +898,9 @@ export class Runtime {
     if (market.quoteUnspent !== undefined) ctx.quoteUnspent = market.quoteUnspent;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
+    if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
+      ctx.cartUnbound = hire.cartId === undefined;
+    }
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire);
     return ctx;
   }
@@ -1455,6 +1458,9 @@ export class Runtime {
   }
 
   private mutCart(body: Record<string, unknown>, actor: Agent) {
+    const boundHire =
+      typeof body.hireId === "string" ? this.hires.get(body.hireId as HireId) : undefined;
+    if (boundHire?.cartId) throw new Error("hire already has a cart");
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
     const merchantAgent = this.identity.require(body.merchantId as AgentId);
@@ -1479,9 +1485,8 @@ export class Runtime {
     };
     const signed = signMandate(payload, merchantAgent.did, this.keypair(merchantAgent.id));
     this.carts.set(payload.id, signed);
-    if (typeof body.hireId === "string") {
-      const hire = this.hires.get(body.hireId as HireId);
-      if (hire) this.hires.set(hire.id, { ...hire, cartId: payload.id });
+    if (boundHire) {
+      this.hires.set(boundHire.id, { ...boundHire, cartId: payload.id });
     }
     this.audit.append({
       clock: this.clock,

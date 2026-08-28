@@ -1004,6 +1004,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.unique_live", "deny", "live handshake already exists for this pair");
     },
   },
+  {
+    id: "hire.unique_cart",
+    evaluate: (ctx) => {
+      if (ctx.cartUnbound === undefined) return v("hire.unique_cart", "allow", "not binding a cart to a hire");
+      return ctx.cartUnbound
+        ? v("hire.unique_cart", "allow", "hire has no cart yet")
+        : v("hire.unique_cart", "deny", "hire already has a cart");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1174,6 +1183,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.unique_live": {
     kind: "none",
     hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant.",
+  },
+  "hire.unique_cart": {
+    kind: "none",
+    hint: "That hire already has a cart. A hire takes one cart. Issue payment against the existing cart. A second cart is not a pointer swap.",
   },
   "payment.execution_date": {
     kind: "none",

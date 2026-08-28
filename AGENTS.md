@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.44.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.45.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Canonical JSON (sorted keys) is what is hashed.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 62 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 63 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -62,7 +62,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 19. Non-empty `invitedSellerIds` is a closed RFQ (`market.invited_seller`). Empty or omitted is open; any listed seller role may quote.
 20. Missing required body fields, non-integer cents, a non-sim currency, a listed enum miss (role, decision, issuer kind, clearing currency), an integer outside its schema range (ladder rung, autonomy), a listed field with the wrong JSON type (a number where a string id belongs, a string where an array belongs), a nested cart line / intent constraint missing its fields, an unknown constraint type, a listed constraint missing its value fields (an `amount_range` without `max`), or an FX window missing from/to/rateE6/validUntil are `command.malformed` (HTTP 400). That is syntax, not policy. The clock does not step. The notary does not write. `evaluate()` does not run.
 21. `payment.agent_recurrence` binds. `max_occurrences` and the frequency gap are checked on `hire.create` and `hire.fund`. Completing a funded hire is not a new occurrence. A refund does not restore a slot. Child slips may not be more frequent than the parent.
-22. A cart bound to a hire must match it (`hire.cart_matches`): same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount.
+22. A cart bound to a hire must match it (`hire.cart_matches`): same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount. A hire takes one cart (`hire.unique_cart`). A second cart is not a pointer swap.
 23. `payment.execution_date` binds on new spends (`hire.create`, `hire.fund`). Completing a funded hire after `not_after` is legal. Child windows may not outlive the parent.
 24. Quoting or hiring against an unknown RFQ or quote is `market.known_rfq`. It is not a missing SKU. SKU, expiry, and invite flags are only set once the room exists.
 25. An FX quote is a one-shot window (`market.fx_quote`). Settling a missing quote, a non-FX quote, a spent quote, or a quote held by an open hire ticket is a policy deny, not a mutate throw after an allow. A retry of the same command still replays. The 200bps band (`mm.spread_bound`) binds the nested `fx.rateE6` that is stored and settled — a decoy top-level `rateE6` does not.
@@ -87,6 +87,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 44. A receiptId that is not in this world is `receipt.known`. It is not an empty success. Policy denies; mutate does not return nothing after an allow. Inspect of a miss still returns nothing.
 45. Unfreezing someone who is not frozen, or freezing someone who is already frozen, is `identity.freeze_state`. A no-op freeze is not a notary line after yes. Ghost freeze stays `identity.known`. Freeze then unfreeze is still the kill-switch test.
 46. A second live handshake for the same principal→delegate pair is `kya.unique_live`. One live hop per pair. Revoke, then attest again. A second live hop is not a tighter grant. The graph still throws if policy ever lies.
+47. A hire takes one cart (`hire.unique_cart`). Binding a second cart to a live hire is a policy deny, not a silent pointer swap. Mutate does not throw `hire already has a cart` after an allow.
 
 ## Autonomy
 

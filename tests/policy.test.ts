@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 62 rules", () => {
-    expect(RULE_IDS).toHaveLength(62);
+  it("has 63 rules", () => {
+    expect(RULE_IDS).toHaveLength(63);
   });
 
   it("denies frozen actors", () => {
@@ -1117,6 +1117,20 @@ describe("policy catalog", () => {
       }),
     );
     expect(d.trace.find((t) => t.ruleId === "payment.execution_date")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a second cart on a hire that already has one", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "mandate.issue_cart",
+        hire: hire({ cartId: "mid_01J6AETHERCART00000000001" }),
+        cartUnbound: false,
+        cartMatchesHire: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.unique_cart")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 });

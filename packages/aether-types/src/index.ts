@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.44.0",
+  version: "0.45.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -763,6 +763,12 @@ export interface PolicyContext {
    * (`identity.known` / `kya.not_self` handle those). Revoke, then attest again.
    */
   kyaLiveFree?: boolean;
+  /**
+   * False when issue_cart names a live hire that already has a cartId.
+   * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).
+   * A hire takes one cart. A second cart is not a pointer swap.
+   */
+  cartUnbound?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
