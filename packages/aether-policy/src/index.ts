@@ -747,6 +747,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.known", "deny", "hire not found");
     },
   },
+  {
+    id: "mandate.known_intent",
+    evaluate: (ctx) => {
+      if (ctx.intentKnown === undefined) return v("mandate.known_intent", "allow", "not an intent-gated command");
+      return ctx.intentKnown
+        ? v("mandate.known_intent", "allow", "intent exists")
+        : v("mandate.known_intent", "deny", "intent not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -837,6 +846,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.known": {
     kind: "none",
     hint: "That hire id is not in this world. Create the hire first. A missing contract is not a broken mandate chain.",
+  },
+  "mandate.known_intent": {
+    kind: "none",
+    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake.",
   },
   "payment.execution_date": {
     kind: "none",

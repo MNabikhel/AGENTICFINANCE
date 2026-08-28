@@ -165,6 +165,8 @@ export function autoBeat(input: {
         body = "That quote or RFQ is not in this world. A missing room is not a missing SKU.";
       } else if (ruleId === "hire.quote_unspent") {
         body = "That quote already produced a hire or an FX settle. A price promise is used once. A deny does not consume it; a void does not restore it.";
+      } else if (ruleId === "mandate.known_intent") {
+        body = "That permission slip is not in this world. A missing slip is not a missing handshake.";
       } else if (ruleId === "payment.recurrence") {
         body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
       }

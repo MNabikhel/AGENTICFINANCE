@@ -719,6 +719,9 @@ export class Runtime {
     ) {
       ctx.hireKnown = Boolean(hire && hire.id !== "hid_draft");
     }
+    if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart") {
+      ctx.intentKnown = Boolean(intent);
+    }
     if (amount) ctx.amount = amount;
     if (payeeId) ctx.payeeId = payeeId;
     if (fxRateE6 !== undefined) ctx.fxRateE6 = fxRateE6;
@@ -1361,6 +1364,8 @@ export class Runtime {
     const quote = this.quotes.get(String(body.quoteId));
     const rfq = quote ? this.rfqs.get(quote.rfqId) : undefined;
     if (!quote || !rfq) throw new Error("unknown quote");
+    const intent = this.intents.get(body.intentId as MandateId);
+    if (!intent) throw new Error("unknown intent");
     if (this.consumedQuotes.has(quote.id)) throw new Error("quote already used");
     const hireId = this.ids.next("hid") as HireId;
     const escrow = this.ledger.openAccount({
@@ -1749,9 +1754,10 @@ export class Runtime {
     this.settleEvents.push({ at: this.clock.now(), volume });
   }
 
-  private kyaRequired(cmd: Command, actor: Agent, hire?: HireContract): boolean {
+  private kyaRequired(cmd: Command, actor: Agent, hire?: HireContract, intent?: Signed<IntentMandate>): boolean {
     if (!KYA_GATED_COMMANDS.includes(cmd.type)) return false;
     if (HIRE_LIVE_COMMANDS.has(cmd.type) && (!hire || hire.id === "hid_draft")) return false;
+    if (cmd.type === "hire.create" && !intent) return false;
     if (cmd.type === "mandate.issue_intent" || cmd.type === "kya.attest") {
       if (actor.role === "human_operator" || actor.role === "treasury") return false;
     }
@@ -1766,7 +1772,7 @@ export class Runtime {
     parentIntent: Signed<IntentMandate> | undefined,
     hire: HireContract | undefined,
   ) {
-    const required = this.kyaRequired(cmd, actor, hire);
+    const required = this.kyaRequired(cmd, actor, hire, intent);
     let principalId = intent?.payload.issuerId;
     if (cmd.type === "kya.attest") {
       principalId = (body.principalId as AgentId | undefined) ?? actor.supervisors[0] ?? actor.id;

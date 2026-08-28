@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 42 rules", () => {
-    expect(RULE_IDS).toHaveLength(42);
+  it("has 43 rules", () => {
+    expect(RULE_IDS).toHaveLength(43);
   });
 
   it("denies frozen actors", () => {
@@ -473,6 +473,14 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("hire.known");
+  });
+
+  it("denies a missing intent as known_intent, not a missing handshake", () => {
+    const d = evaluate(ctx({ commandType: "hire.create", intentKnown: false, rfqKnown: true, skuListed: true }));
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_intent");
   });
 
   it("denies FX settle without a live unused FX quote", () => {
