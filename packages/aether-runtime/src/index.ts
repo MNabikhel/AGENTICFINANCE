@@ -1060,7 +1060,7 @@ export class Runtime {
           ]);
       }
     }
-    ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire);
+    ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire, ctx);
     return ctx;
   }
 
@@ -1527,7 +1527,7 @@ export class Runtime {
       principalId,
       grantorId: actor.id,
       delegateId,
-      maxAutonomy: (body.maxAutonomy as AutonomyLevel | undefined) ?? 5,
+      maxAutonomy: this.kyaGrantCeiling(body, actor),
       maxDepth: KYA_MAX_DEPTH,
       createdAt: this.clock.now(),
       expiresAt:
@@ -2329,6 +2329,7 @@ export class Runtime {
     body: Record<string, unknown>,
     parentIntent: Signed<IntentMandate> | undefined,
     hire: HireContract | undefined,
+    ctx: PolicyContext,
   ) {
     const required = this.kyaRequired(cmd, actor, hire, intent);
     let principalId = intent?.payload.issuerId;
@@ -2339,7 +2340,7 @@ export class Runtime {
       principalId = parentIntent?.payload.issuerId ?? actor.supervisors[0];
     }
     const principal = principalId ? this.identity.get(principalId) : undefined;
-    const proposed = typeof body.maxAutonomy === "number" ? (body.maxAutonomy as AutonomyLevel) : undefined;
+    const proposed = this.proposedKyaGrant(cmd, body, ctx);
     const input: Parameters<typeof resolveKya>[0] = {
       required,
       actor,
@@ -2350,6 +2351,38 @@ export class Runtime {
     if (principal) input.principal = principal;
     if (proposed !== undefined) input.proposedMaxAutonomy = proposed;
     return resolveKya(input);
+  }
+
+  /** Omitted maxAutonomy is L5. An agent may not grant a ceiling above its own rung. */
+  private kyaGrantCeiling(body: Record<string, unknown>, actor: Agent): AutonomyLevel {
+    const ceiling = (typeof body.maxAutonomy === "number" ? body.maxAutonomy : 5) as AutonomyLevel;
+    if (actor.role !== "human_operator" && actor.role !== "treasury" && ceiling > actor.autonomyLevel) {
+      throw new Error("kya capability");
+    }
+    return ceiling;
+  }
+
+  /**
+   * Snapshot the mutate default (omit → 5) only on a clean attest, so unique_live /
+   * party / not_self / known_parent keep first deny. Explicit maxAutonomy always binds.
+   */
+  private proposedKyaGrant(
+    cmd: Command,
+    body: Record<string, unknown>,
+    ctx: PolicyContext,
+  ): AutonomyLevel | undefined {
+    if (typeof body.maxAutonomy === "number") return body.maxAutonomy as AutonomyLevel;
+    if (cmd.type !== "kya.attest") return undefined;
+    if (
+      ctx.kyaNotSelf === true &&
+      ctx.kyaPartyOk === true &&
+      ctx.kyaLiveFree === true &&
+      ctx.targetKnown === true &&
+      ctx.kyaParentKnown !== false
+    ) {
+      return 5;
+    }
+    return undefined;
   }
 
   private registerBookNames(role: AgentRole, key: string): { cashName: string; usdcName?: string } {

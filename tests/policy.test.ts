@@ -853,6 +853,92 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("denies an L4 grant of L5 as kya.capability_subset, not a standing-mandate handshake", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 0,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          proposedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name kya.capability_subset when the grant is within the actor’s rung", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 0,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          proposedMaxAutonomy: 4,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.capability_subset when a human grants L5", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kya: {
+          required: false,
+          pathOk: true,
+          implicit: false,
+          depth: 0,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          proposedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+  });
+
   it("denies a reused register alias as identity.unique_key", () => {
     const d = evaluate(
       ctx({

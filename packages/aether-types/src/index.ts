@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.60.0",
+  version: "0.61.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -573,6 +573,12 @@ export interface KyaResolution {
   expired: boolean;
   revoked: boolean;
   grantedMaxAutonomy?: AutonomyLevel;
+  /**
+   * Ceiling this attest would write. Omitted `maxAutonomy` is 5 (standing mandate).
+   * An agent may not propose above its own rung (`kya.capability_subset`).
+   * Humans and treasury may grant L5. Absent = not an attest, or an earlier
+   * refuse (`kya.unique_live` / `kya.party` / `kya.not_self`) keeps first deny.
+   */
   proposedMaxAutonomy?: AutonomyLevel;
   hops: DelegationAttestation[];
 }

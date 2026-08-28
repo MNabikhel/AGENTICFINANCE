@@ -694,6 +694,131 @@ describe("kya.unique_live", () => {
   });
 });
 
+describe("kya.capability_subset", () => {
+  it("refuses an L4 desk omitting maxAutonomy as kya.capability_subset, not an L5 grant", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: scout.id }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.capability_subset");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("cannot grant a ceiling"))).toBe(true);
+  });
+
+  it("refuses an L4 desk naming maxAutonomy 5 as kya.capability_subset", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    const r = rt.dispatch(
+      cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: scout.id, maxAutonomy: 5 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.capability_subset");
+    expect(rt.kya.attestations.size).toBe(0);
+  });
+
+  it("still grants at the desk’s own rung", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    const r = must(
+      rt.dispatch(
+        cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: scout.id, maxAutonomy: 4 }),
+      ),
+      "grant L4",
+    );
+    expect((r.data as { maxAutonomy: number }).maxAutonomy).toBe(4);
+  });
+
+  it("still lets a founder omit maxAutonomy and write L5", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const r = must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id })), "omit");
+    expect((r.data as { maxAutonomy: number }).maxAutonomy).toBe(5);
+  });
+
+  it("still names kya.unique_live first when L5 would also be an over-grant", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    must(
+      rt.dispatch(
+        cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: scout.id, maxAutonomy: 4 }),
+      ),
+      "first hop",
+    );
+    const before = [...rt.kya.attestations.values()].filter((a) => !a.revokedAt).length;
+    const r = rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: scout.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(before);
+  });
+});
+
 describe("known speaker", () => {
   it("refuses a command from a missing actor as actor.known, not a throw before policy", () => {
     const rt = boot();

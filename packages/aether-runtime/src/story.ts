@@ -613,6 +613,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.capability_subset") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot grant a ceiling they do not hold`,
+          body: "Omitted maxAutonomy is L5. An agent may not grant standing-mandate ceiling above its own rung. Name a ceiling you hold. A human or treasury may grant L5.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

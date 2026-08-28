@@ -1194,6 +1194,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     commandType: "kya.attest",
     hint: "The handshake expired. Issue a new attestation.",
   },
+  "kya.capability_subset": {
+    kind: "none",
+    hint: "Omitted maxAutonomy is L5. An agent may not grant a standing-mandate ceiling above its own rung. Name a ceiling you hold. A human or treasury may grant L5.",
+  },
   "market.known_sku": {
     kind: "none",
     hint: "This is not a storefront. Only catalog SKUs can be hired. Read market.catalog.",
