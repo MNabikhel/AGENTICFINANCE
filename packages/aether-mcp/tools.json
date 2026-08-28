@@ -19,7 +19,7 @@
     {
       "name": "aether_mandate_issue_intent",
       "commandType": "mandate.issue_intent",
-      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused."
+      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused. A child of an expired parent is refused."
     },
     {
       "name": "aether_mandate_issue_cart",

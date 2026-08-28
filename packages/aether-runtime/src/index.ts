@@ -948,6 +948,13 @@ export class Runtime {
       ctx.parentOccurrenceCount = this.occurrences.get(parentIntent.payload.id) ?? 0;
       const parentLast = this.lastOccurrence.get(parentIntent.payload.id);
       if (parentLast) ctx.parentLastOccurrenceAt = parentLast;
+      if (
+        cmd.type === "mandate.issue_intent" ||
+        cmd.type === "hire.create" ||
+        cmd.type === "hire.fund"
+      ) {
+        ctx.parentFresh = parentIntent.payload.exp > unixSeconds(this.clock.now());
+      }
     }
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
@@ -1739,7 +1746,9 @@ export class Runtime {
       exp: unixSeconds(this.clock.now()) + INTENT_TTL_SEC,
     };
     if (typeof body.parentId === "string") {
-      if (!this.intents.get(body.parentId as MandateId)) throw new Error("unknown parent intent");
+      const parent = this.intents.get(body.parentId as MandateId);
+      if (!parent) throw new Error("unknown parent intent");
+      if (parent.payload.exp <= unixSeconds(this.clock.now())) throw new Error("parent intent expired");
       payload.parentId = body.parentId as MandateId;
     }
     const signed = signMandate(payload, actor.did, this.keypair(actor.id));
@@ -1891,6 +1900,12 @@ export class Runtime {
     if (!quote || !rfq) throw new Error("unknown quote");
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
+    if (intent.payload.parentId) {
+      const parent = this.intents.get(intent.payload.parentId);
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+        throw new Error("parent intent expired");
+      }
+    }
     if (this.consumedQuotes.has(quote.id)) throw new Error("quote already used");
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, quote.price.currency)) {
       throw new Error("sku currency");
@@ -1949,6 +1964,13 @@ export class Runtime {
   private mutHireFund(body: Record<string, unknown>, actor: Agent) {
     const hire = this.requireHire(body.hireId as HireId);
     if (!this.hireMandateBound(hire)) throw new Error("hire has no bound cart");
+    const fundedIntent = this.intents.get(hire.intentId);
+    if (fundedIntent?.payload.parentId) {
+      const parent = this.intents.get(fundedIntent.payload.parentId);
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+        throw new Error("parent intent expired");
+      }
+    }
     const buyer = this.identity.require(hire.buyerId);
     if (this.ledger.balance(buyer.accountId) < hire.price.amount) {
       throw new Error("insufficient funds");

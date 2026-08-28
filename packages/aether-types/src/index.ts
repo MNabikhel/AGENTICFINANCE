@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.74.0",
+  version: "0.75.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -906,6 +906,14 @@ export interface PolicyContext {
    * keep first deny.
    */
   occurrenceMintOk?: boolean;
+  /**
+   * False when the parent intent is past `exp` (unix seconds).
+   * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
+   * Absent = no parent, or not those verbs (completing a funded hire after the parent
+   * dies is legal). Ghost parent stays `mandate.known_parent`. The child's own
+   * expiry stays `mandate.not_expired`.
+   */
+  parentFresh?: boolean;
   /**
    * False when issue_cart names a live hire that already has a cartId.
    * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).

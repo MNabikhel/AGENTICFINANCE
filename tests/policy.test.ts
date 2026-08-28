@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 81 rules", () => {
-    expect(RULE_IDS).toHaveLength(81);
+  it("has 82 rules", () => {
+    expect(RULE_IDS).toHaveLength(82);
   });
 
   it("denies frozen actors", () => {
@@ -2256,5 +2256,116 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
+  });
+
+  it("denies minting under an expired parent as mandate.parent_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }], { exp: 1 }),
+        parentFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.parent_fresh");
+    expect(remediationFor(d)?.kind).toBe("issue_intent");
+  });
+
+  it("does not name mandate.parent_fresh when the parent still lives", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        parentFresh: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.parent_fresh when the speaker is not minting or starting a spend", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.parent_fresh when completing a funded hire", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.deliver",
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }], { exp: 1 }),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_parent first when the parent is missing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
+  });
+
+  it("still names mandate.child_tighter first when a wider child is also under a dead parent", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }], { exp: 1 }),
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200_000 }],
+        parentFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
+  });
+
+  it("still names mandate.not_expired first when the child itself is dead", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }], { exp: 1 }),
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 200_000 }], { exp: 1 }),
+        parentFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.not_expired");
+  });
+
+  it("denies a new hire against a live child of a dead parent as mandate.parent_fresh", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 200_000 }], { exp: 1 }),
+        parentFresh: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.parent_fresh");
   });
 });

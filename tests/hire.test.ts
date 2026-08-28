@@ -189,6 +189,136 @@ describe("known parent", () => {
   });
 });
 
+describe("parent freshness", () => {
+  it("refuses a child of an expired parent as mandate.parent_fresh, not a written slip", () => {
+    const rt = boot();
+    const { desk, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    rt.clock.set("2026-09-05T00:00:00.000Z");
+    const before = rt.intents.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        parentId: intentId,
+        task: "hand down after the parent died",
+        constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.parent_fresh");
+    expect(r.error.decision?.remediation?.kind).toBe("issue_intent");
+    expect(rt.intents.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("whose parent is dead"))).toBe(true);
+  });
+
+  it("still writes a tighter child while the parent lives", () => {
+    const rt = boot();
+    const { desk, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const before = rt.intents.size;
+    const r = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down a smaller budget",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        }),
+      ),
+      "child",
+    );
+    expect(r.decision.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(rt.intents.size).toBe(before + 1);
+    expect((r.data as { payload: { parentId?: string } }).payload.parentId).toBe(intentId);
+  });
+
+  it("refuses a new hire against a live child after the parent dies as mandate.parent_fresh", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    rt.clock.set("2026-09-03T00:00:00.000Z");
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down before the parent dies",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: MandateId } }).payload.id;
+    rt.clock.set("2026-09-05T00:00:00.000Z");
+    const late = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "too late",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId: childId,
+    });
+    expect(late.attempt.ok).toBe(false);
+    if (late.attempt.ok) return;
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(late.attempt.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(late.attempt.error.decision?.remediation?.ruleId).toBe("mandate.parent_fresh");
+  });
+
+  it("lets a funded child hire finish after the parent dies", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    rt.clock.set("2026-09-03T12:00:00.000Z");
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down before the parent dies",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: MandateId } }).payload.id;
+    const offeredChild = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId: childId,
+    });
+    expect(offeredChild.attempt.ok).toBe(true);
+    if (!offeredChild.attempt.ok) return;
+    const hireId = (offeredChild.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId: childId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set("2026-09-04T06:00:00.000Z");
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    expect(delivered.ok && delivered.value.decision.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe(
+      "allow",
+    );
+  });
+});
+
 function offered(rt: ReturnType<typeof boot>) {
   const { desk, vendor, intentId } = economy(rt);
   const live = offerHire(rt, {

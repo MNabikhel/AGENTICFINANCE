@@ -1191,6 +1191,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.occurrence_fresh", "deny", "cadence already exhausted at mint");
     },
   },
+  {
+    id: "mandate.parent_fresh",
+    evaluate: (ctx) => {
+      if (ctx.parentFresh === undefined) return v("mandate.parent_fresh", "allow", "not a parented mint or spend");
+      return ctx.parentFresh
+        ? v("mandate.parent_fresh", "allow", "parent intent still lives")
+        : v("mandate.parent_fresh", "deny", "parent intent expired");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1441,6 +1450,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.occurrence_fresh": {
     kind: "none",
     hint: "A slip cannot be born with a cadence that has no slots. Name max_occurrences of at least one, or omit the cap. A non-number is not a cap. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.recurrence.",
+  },
+  "mandate.parent_fresh": {
+    kind: "issue_intent",
+    commandType: "mandate.issue_intent",
+    hint: "A dead parent is not a parent. Issue a new parent slip, then a tighter child. Completing a funded hire after the parent dies is legal. Ghost parent stays mandate.known_parent. The child's own expiry stays mandate.not_expired.",
   },
   "payment.execution_date": {
     kind: "none",

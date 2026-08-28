@@ -184,6 +184,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "mandate.parent_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot hand down a slip whose parent is dead`,
+          body: "A dead parent is not a parent. Issue a new parent permission slip, then a tighter child. Completing a funded hire after the parent dies is still legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -349,6 +359,8 @@ export function autoBeat(input: {
         body = "That permission slip is not in this world. A missing slip is not a missing handshake.";
       } else if (ruleId === "payment.recurrence") {
         body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
+      } else if (ruleId === "mandate.parent_fresh") {
+        body = "The parent permission slip has expired. A dead parent is not a parent. Completing a funded hire after that is legal; a new hire is not.";
       }
       return {
         seq: input.seq,
