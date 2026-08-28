@@ -1,15 +1,23 @@
 /**
  * Shape check against schemas/commands.schema.json.
- * Syntax, not economics: a miss or a float is HTTP 400, not a policy deny.
- * Policy never sees a command that failed this gate.
+ * Syntax, not economics: a miss, a float, a listed enum miss, or a rung outside 0–5
+ * is HTTP 400, not a policy deny. Policy never sees a command that failed this gate.
  */
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+type PropSchema = {
+  type?: string;
+  enum?: unknown[];
+  minimum?: number;
+  maximum?: number;
+};
+
 type BodySchema = {
   required?: string[];
+  properties?: Record<string, PropSchema>;
 };
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -90,11 +98,47 @@ export function malformedMoneyFields(type: string, body: unknown): string[] {
   return out;
 }
 
+/** Listed enum miss when the field is present (role, decision, issuerKind, currency). */
+export function malformedEnumFields(type: string, body: unknown): string[] {
+  const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const props = COMMAND_BODIES[type]?.properties ?? {};
+  const out: string[] = [];
+  for (const [key, prop] of Object.entries(props)) {
+    if (!prop.enum) continue;
+    const v = rec[key];
+    if (v === undefined || v === null) continue;
+    if (!prop.enum.includes(v)) out.push(key);
+  }
+  return out;
+}
+
+/** Top-level schema integers (ladder `to`, autonomy, audit limit) outside min/max. */
+export function malformedIntegerFields(type: string, body: unknown): string[] {
+  const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const props = COMMAND_BODIES[type]?.properties ?? {};
+  const out: string[] = [];
+  for (const [key, prop] of Object.entries(props)) {
+    if (prop.type !== "integer") continue;
+    const v = rec[key];
+    if (v === undefined || v === null) continue;
+    const min = prop.minimum ?? Number.NEGATIVE_INFINITY;
+    const max = prop.maximum ?? Number.POSITIVE_INFINITY;
+    if (typeof v !== "number" || !Number.isInteger(v) || !Number.isFinite(v) || v < min || v > max) {
+      out.push(key);
+    }
+  }
+  return out;
+}
+
 /** Human-readable reason, or undefined if the body is well-formed. */
 export function commandShapeError(type: string, body: unknown): string | undefined {
   const missing = missingCommandFields(type, body);
   if (missing.length > 0) return `missing required fields: ${missing.join(", ")}`;
   const money = malformedMoneyFields(type, body);
   if (money.length > 0) return `invalid integer money: ${money.join(", ")}`;
+  const enums = malformedEnumFields(type, body);
+  if (enums.length > 0) return `invalid enum: ${enums.join(", ")}`;
+  const ints = malformedIntegerFields(type, body);
+  if (ints.length > 0) return `invalid integer: ${ints.join(", ")}`;
   return undefined;
 }

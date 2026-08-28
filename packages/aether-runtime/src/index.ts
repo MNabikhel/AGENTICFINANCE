@@ -64,7 +64,7 @@ import type {
   WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, PROTOCOL, SIM_RAIL_ID, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -1210,6 +1210,7 @@ export class Runtime {
 
   private mutRegister(body: Record<string, unknown>, actor: Agent) {
     const role = body.role as AgentRole;
+    if (!(role in ROLE_CAPABILITY)) throw new Error("unknown role");
     const key = String(body.key ?? body.displayName);
     const kp = this.identity.mintKey(`kid_${key}`);
     const cashName =
@@ -2033,4 +2034,11 @@ export { WORLD_VERSION };
 export type { WorldState };
 export { err, fail, ok, settlementFail };
 export type { Clock };
-export { missingCommandFields, commandBodySchema, commandShapeError, malformedMoneyFields } from "./command-schema.js";
+export {
+  missingCommandFields,
+  commandBodySchema,
+  commandShapeError,
+  malformedMoneyFields,
+  malformedEnumFields,
+  malformedIntegerFields,
+} from "./command-schema.js";

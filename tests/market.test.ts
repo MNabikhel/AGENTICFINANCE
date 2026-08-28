@@ -267,4 +267,40 @@ describe("command schema", () => {
     expect(r.error.decision).toBeUndefined();
     expect(rt.clock.now()).toBe(clockBefore);
   });
+
+  it("refuses a role that is not an agent role before minting anyone", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const before = rt.identity.all().length;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("identity.register", founder.id, { key: "chaos", displayName: "Chaos", role: "god" }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("role");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.identity.all()).toHaveLength(before);
+    expect(rt.clock.now()).toBe(clockBefore);
+  });
+
+  it("refuses an approval decision that is not approved or rejected before policy", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const r = rt.dispatch(
+      cmd("approval.resolve", founder.id, { approvalId: "apd_01J6AETHERGHOSTTICKET0001", decision: "maybe" }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("decision");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.clock.now()).toBe(clockBefore);
+    expect(rt.audit.length).toBe(auditBefore);
+  });
 });
