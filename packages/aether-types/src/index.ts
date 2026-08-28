@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.57.0",
+  version: "0.58.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -796,6 +796,15 @@ export interface PolicyContext {
    * (buyer on refund, seller on release) would overflow. IEEE rounding is not a mint.
    */
   balancesSafe?: boolean;
+  /**
+   * False when ledger.transfer would journal against equity or escrow
+   * (or any non-asset book). Absent = not a transfer, or a book is missing / mixed / overdrawn
+   * (`ledger.known_account` / `ledger.same_currency` / `ledger.sufficient` handle those).
+   * Dest overflow of operating cash stays `ledger.safe_balance`.
+   * Opening cash is `seedOpening`. Escrow moves through hire.fund / refund / release.
+   * A transfer is not a mint, and it cannot pick the escrow lock.
+   */
+  operatingBooksOk?: boolean;
   /**
    * False when receipt.get names a receipt that is not in this world.
    * Absent = not a receipt.get. A missing receipt is not an empty success.

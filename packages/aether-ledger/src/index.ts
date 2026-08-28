@@ -199,3 +199,13 @@ export function signedDelta(type: AccountType, debit: number, credit: number): n
   const normalDebit = type === "asset" || type === "expense";
   return normalDebit ? debit - credit : credit - debit;
 }
+
+export const ESCROW_BOOK_PREFIX = "escrow:";
+
+/**
+ * Operating cash (agent USD/USDC, MM inventory). Not equity, not hire escrow.
+ * `ledger.transfer` may only move between these books.
+ */
+export function isOperatingBook(account: { type: AccountType; name: string }): boolean {
+  return account.type === "asset" && !account.name.startsWith(ESCROW_BOOK_PREFIX);
+}

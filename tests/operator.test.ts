@@ -78,7 +78,7 @@ describe("SIM_RAIL", () => {
     expect(SIM_RAIL.live).toBe(false);
     expect(SIM_RAIL.id).toBe(PROTOCOL.rail);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.57.0");
+    expect(PROTOCOL.version).toBe("0.58.0");
   });
 });
 
@@ -435,6 +435,7 @@ describe("ledger.safe_balance", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.safe_balance");
     expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(rt.journals.length).toBe(journalsBefore);
@@ -475,7 +476,106 @@ describe("ledger.safe_balance", () => {
     if (r.ok) return;
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(Number.MAX_SAFE_INTEGER);
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(5_000_000);
+  });
+});
+
+describe("ledger.operating_book", () => {
+  it("refuses a transfer from equity as ledger.operating_book, not a mint", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const equityBefore = rt.ledger.balanceByName("system:equity").amount;
+    const cashBefore = rt.ledger.balanceByName("procurement:cash").amount;
+    const clockBefore = rt.clock.now();
+    const journalsBefore = rt.journals.length;
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "system:equity",
+        toAccount: "procurement:cash",
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.operating_book");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.journals.length).toBe(journalsBefore);
+    expect(rt.ledger.balanceByName("system:equity").amount).toBe(equityBefore);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cashBefore);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("not a mint"))).toBe(true);
+  });
+
+  it("refuses a transfer out of escrow as ledger.operating_book, not an allocation", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const escrowName = `escrow:${hireId}`;
+    const escrowBefore = rt.ledger.balanceByName(escrowName).amount;
+    const treasuryBefore = rt.ledger.balanceByName("treasury:cash").amount;
+    expect(escrowBefore).toBe(80_000);
+    const treasury = rt.alias("treasury");
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: escrowName,
+        toAccount: "treasury:cash",
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.operating_book");
+    expect(rt.ledger.balanceByName(escrowName).amount).toBe(escrowBefore);
+    expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(treasuryBefore);
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("funded");
+    expect(rt.story.some((b) => b.headline.includes("escrow is not an allocation"))).toBe(true);
+  });
+
+  it("still names ledger.sufficient first when operating cash cannot cover the amount", () => {
+    const rt = boot();
+    economy(rt);
+    const treasury = rt.alias("treasury");
+    const r = rt.dispatch(
+      cmd("ledger.transfer", treasury.id, {
+        fromAccount: "treasury:cash",
+        toAccount: "procurement:cash",
+        amount: { amount: 5_000_001, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
     expect(rt.ledger.balanceByName("treasury:cash").amount).toBe(5_000_000);
   });
 });

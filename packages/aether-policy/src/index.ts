@@ -1119,6 +1119,17 @@ export const RULES: readonly Rule[] = [
         : v("actor.system_scope", "deny", "system cannot run this command");
     },
   },
+  {
+    id: "ledger.operating_book",
+    evaluate: (ctx) => {
+      if (ctx.operatingBooksOk === undefined) {
+        return v("ledger.operating_book", "allow", "not a transfer of non-operating books");
+      }
+      return ctx.operatingBooksOk
+        ? v("ledger.operating_book", "allow", "both books are operating cash")
+        : v("ledger.operating_book", "deny", "transfer is not against operating cash");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1337,6 +1348,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "actor.system_scope": {
     kind: "none",
     hint: "System is the runtime, not a treasurer. It may bootstrap the first human and read the catalog, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
+  },
+  "ledger.operating_book": {
+    kind: "none",
+    hint: "A transfer moves operating cash. Equity is not a source — opening cash is seedOpening. Escrow moves through hire.fund / refund / release. A transfer cannot mint, burn, or pick the escrow lock.",
   },
   "payment.execution_date": {
     kind: "none",

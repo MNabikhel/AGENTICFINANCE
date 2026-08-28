@@ -197,6 +197,20 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "ledger.operating_book") {
+        const from = String((cmd.body as { fromAccount?: unknown }).fromAccount ?? "");
+        const escrow = from.startsWith("escrow:");
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: escrow ? "escrow is not an allocation" : "a transfer is not a mint",
+          body: escrow
+            ? "Escrow moves through hire.fund, refund, or release. A transfer cannot pick the lock."
+            : "Opening cash is seedOpening. A transfer moves operating cash. Equity is not a source.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

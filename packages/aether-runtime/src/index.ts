@@ -16,7 +16,7 @@ import {
   type Clock,
   type Ed25519Keypair,
 } from "@aether/kernel";
-import { Ledger } from "@aether/ledger";
+import { isOperatingBook, Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
 import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout, isFxSku } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
@@ -921,6 +921,7 @@ export class Runtime {
         if (ctx.accountsSameCurrency && stated && typeof stated.amount === "number") {
           ctx.fundsOk = this.ledger.balance(fromAcct.id) >= stated.amount;
           if (ctx.fundsOk) {
+            ctx.operatingBooksOk = isOperatingBook(fromAcct) && isOperatingBook(toAcct);
             ctx.balancesSafe = this.ledger.balancesStaySafe([
               { accountId: toAcct.id, debit: stated.amount, credit: 0 },
               { accountId: fromAcct.id, debit: 0, credit: stated.amount },
@@ -2136,6 +2137,9 @@ export class Runtime {
     const to = this.ledger.account(String(body.toAccount));
     if (from.currency !== to.currency || amount.currency !== from.currency) {
       throw new Error("mixed currency; split FX into two entries");
+    }
+    if (!isOperatingBook(from) || !isOperatingBook(to)) {
+      throw new Error("operating book");
     }
     if (this.ledger.balance(from.id) < amount.amount) {
       throw new Error("insufficient funds");

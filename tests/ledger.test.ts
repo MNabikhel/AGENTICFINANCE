@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { IdFactory, ManualClock } from "@aether/kernel";
-import { Ledger } from "@aether/ledger";
+import { Ledger, isOperatingBook } from "@aether/ledger";
 import type { AccountId, JournalId } from "@aether/types";
 
 describe("ledger", () => {
@@ -109,5 +109,35 @@ describe("ledger", () => {
     expect(overflow.error.detail).toContain("safe integer");
     expect(ledger.balance(cash.id)).toBe(Number.MAX_SAFE_INTEGER);
     expect(ledger.balance(equity.id)).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
+  it("treats agent cash as operating and equity or escrow as not", () => {
+    const clock = new ManualClock("2026-08-28T00:00:00.000Z");
+    const ids = new IdFactory(clock);
+    const ledger = new Ledger();
+    const cash = ledger.openAccount({
+      id: ids.next("acct") as AccountId,
+      ownerId: "system",
+      name: "desk:cash",
+      type: "asset",
+      currency: "USD_SIM",
+    });
+    const equity = ledger.openAccount({
+      id: ids.next("acct") as AccountId,
+      ownerId: "system",
+      name: "system:equity",
+      type: "equity",
+      currency: "USD_SIM",
+    });
+    const escrow = ledger.openAccount({
+      id: ids.next("acct") as AccountId,
+      ownerId: "system",
+      name: "escrow:hid_01J6AETHERHIRE00000000001",
+      type: "asset",
+      currency: "USD_SIM",
+    });
+    expect(isOperatingBook(cash)).toBe(true);
+    expect(isOperatingBook(equity)).toBe(false);
+    expect(isOperatingBook(escrow)).toBe(false);
   });
 });

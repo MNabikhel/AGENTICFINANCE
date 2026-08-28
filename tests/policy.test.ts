@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 74 rules", () => {
-    expect(RULE_IDS).toHaveLength(74);
+  it("has 75 rules", () => {
+    expect(RULE_IDS).toHaveLength(75);
   });
 
   it("denies frozen actors", () => {
@@ -1069,6 +1069,7 @@ describe("policy catalog", () => {
         accountsSameCurrency: true,
         fundsOk: true,
         balancesSafe: false,
+        operatingBooksOk: true,
         amount: { amount: 1, currency: "USD_SIM" },
       }),
     );
@@ -1077,6 +1078,7 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("ledger.safe_balance");
     expect(remediationFor(d)?.kind).toBe("none");
@@ -1095,6 +1097,7 @@ describe("policy catalog", () => {
     );
     expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("ledger.sufficient");
   });
 
@@ -1586,5 +1589,49 @@ describe("policy catalog", () => {
   it("does not name actor.system_scope when the speaker is a registered agent", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+  });
+
+  it("denies a transfer against equity as ledger.operating_book, not a mint", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        accountsKnown: true,
+        accountsSameCurrency: true,
+        fundsOk: true,
+        balancesSafe: true,
+        operatingBooksOk: false,
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.safe_balance")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.operating_book");
+  });
+
+  it("does not name ledger.operating_book when the books are operating cash", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.transfer",
+        accountsKnown: true,
+        accountsSameCurrency: true,
+        fundsOk: true,
+        balancesSafe: true,
+        operatingBooksOk: true,
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
+  });
+
+  it("does not name ledger.operating_book when the speaker is not transferring", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
   });
 });
