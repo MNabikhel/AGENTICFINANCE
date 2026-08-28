@@ -53,7 +53,22 @@ export function autoBeat(input: {
   const other = input.counterpartName;
   const sku = input.sku;
 
-  if (cmd.type === "identity.register") return undefined;
+  if (cmd.type === "identity.register") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.unique_key") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not register that agent`,
+          body: "That runtime alias (or its cash book) is already taken. Two agents cannot share one operating book.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+    }
+    return undefined;
+  }
   if (cmd.type === "mandate.issue_cart" || cmd.type === "mandate.issue_payment") return undefined;
   if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
     if (decision.verdict === "deny") {

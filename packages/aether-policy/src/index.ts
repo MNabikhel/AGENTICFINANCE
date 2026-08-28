@@ -922,6 +922,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.party", "deny", "actor is not the handshake principal");
     },
   },
+  {
+    id: "identity.unique_key",
+    evaluate: (ctx) => {
+      if (ctx.aliasFree === undefined) return v("identity.unique_key", "allow", "not a register");
+      return ctx.aliasFree
+        ? v("identity.unique_key", "allow", "alias and cash book are free")
+        : v("identity.unique_key", "deny", "alias or cash book already taken");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1076,6 +1085,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.party": {
     kind: "none",
     hint: "You can only mint or tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
+  },
+  "identity.unique_key": {
+    kind: "none",
+    hint: "That runtime alias (or its cash book) is already taken. Pick a free key. Two agents cannot share one operating book. Same-body retries still replay.",
   },
   "payment.execution_date": {
     kind: "none",

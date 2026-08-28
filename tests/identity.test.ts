@@ -394,3 +394,71 @@ describe("kya.party", () => {
     expect([...rt.kya.attestations.values()].some((a) => a.revokedAt)).toBe(true);
   });
 });
+
+describe("identity.unique_key", () => {
+  it("refuses a new body that reuses an alias as identity.unique_key, not a journal throw", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.identity.all().length;
+    const aliasBefore = rt.aliases.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("identity.register", founder.id, {
+        key: "procurement",
+        displayName: "Other Desk",
+        role: "procurement",
+        autonomyLevel: 3,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.unique_key");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.identity.all()).toHaveLength(before);
+    expect(rt.aliases.size).toBe(aliasBefore);
+    expect(rt.alias("procurement").id).toBe(desk.id);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses a second market maker as identity.unique_key because they share one cash book", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "mm-a",
+          displayName: "Maker A",
+          role: "market_maker",
+          autonomyLevel: 2,
+        }),
+      ),
+      "mm-a",
+    );
+    const before = rt.identity.all().length;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("identity.register", founder.id, {
+        key: "mm-b",
+        displayName: "Maker B",
+        role: "market_maker",
+        autonomyLevel: 2,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.unique_key");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.identity.all()).toHaveLength(before);
+    expect(rt.aliases.has("mm-b")).toBe(false);
+    expect(rt.ledger.accountsByName.has("market_maker:cash_usd")).toBe(true);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});

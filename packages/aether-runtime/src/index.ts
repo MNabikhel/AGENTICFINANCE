@@ -804,6 +804,12 @@ export class Runtime {
       ctx.kyaPartyOk =
         actor.role === "human_operator" || actor.role === "treasury" || actor.id === principalId;
     }
+    if (cmd.type === "identity.register") {
+      const key = String(body.key ?? body.displayName);
+      const role = body.role as AgentRole;
+      const cashName = role === "market_maker" ? "market_maker:cash_usd" : `${key}:cash`;
+      ctx.aliasFree = !this.aliases.has(key) && !this.ledger.accountsByName.has(cashName);
+    }
     if (cmd.type === "kya.revoke" && typeof body.attestationId === "string") {
       const named = this.kya.attestations.get(body.attestationId as DelegationId);
       const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;

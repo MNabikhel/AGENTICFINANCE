@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 58 rules", () => {
-    expect(RULE_IDS).toHaveLength(58);
+  it("has 59 rules", () => {
+    expect(RULE_IDS).toHaveLength(59);
   });
 
   it("denies frozen actors", () => {
@@ -823,6 +823,22 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("kya.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a reused register alias as identity.unique_key", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "identity.register",
+        aliasFree: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.unique_key");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

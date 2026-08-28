@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.36.0",
+  version: "0.37.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -706,6 +706,12 @@ export interface PolicyContext {
    * An L4 desk cannot mint or tombstone a founder’s handshake by filling in the ids.
    */
   kyaPartyOk?: boolean;
+  /**
+   * False when identity.register would reuse a runtime alias or its cash book.
+   * Absent = not a register. Two agents cannot share one operating book.
+   * A second market maker collides on `market_maker:cash_usd` even with a new alias.
+   */
+  aliasFree?: boolean;
   /**
    * False when ledger.transfer, a named ledger.balances, or market.fx_settle points at a book
    * that is not in this world. FX settle needs the actor’s USDC book (compute vendors and
