@@ -67,6 +67,7 @@ import type {
   Receipt,
   Result,
   Rfq,
+  RfqStatus,
   Signed,
   SubscriptionId,
   WindowId,
@@ -449,7 +450,7 @@ export class Runtime {
       carts: [...this.carts.values()].map((c) => this.cartView(c)),
       payments: [...this.payments.values()].map((p) => this.paymentView(p)),
       hires: [...this.hires.values()],
-      rfqs: [...this.rfqs.values()],
+      rfqs: [...this.rfqs.values()].map((r) => this.rfqView(r)),
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
@@ -495,8 +496,9 @@ export class Runtime {
 
   /**
    * Quote view for other agents. Spent (consumed) and held (live reserved ticket)
-   * win over expired. Expired includes the quote envelope and a lapsed FX validUntil.
-   * A reservation whose ticket is past expiresAt is not held.
+   * win over expired. Expired includes the quote envelope, a lapsed FX validUntil,
+   * and (for a hire quote) a dead parent RFQ. An FX quote is a window on the quote,
+   * not the room. A reservation whose ticket is past expiresAt is not held.
    * The store stays raw (expiresAt / validUntil only).
    */
   quoteView(quote: Quote): Quote & { status: QuoteStatus } {
@@ -521,8 +523,24 @@ export class Runtime {
       if (!Number.isFinite(until) || until <= now) {
         return { ...quote, status: "expired" };
       }
+    } else {
+      const rfq = this.rfqs.get(quote.rfqId);
+      if (!rfq || Date.parse(rfq.expiresAt) <= now) {
+        return { ...quote, status: "expired" };
+      }
     }
     return { ...quote, status: "live" };
+  }
+
+  /**
+   * RFQ view for other agents. A room past expiresAt is `expired`, not `live`.
+   * The store stays raw (expiresAt only). Quoting or hiring still names `market.not_expired`.
+   */
+  rfqView(rfq: Rfq): Rfq & { status: RfqStatus } {
+    if (Date.parse(rfq.expiresAt) <= Date.parse(this.clock.now())) {
+      return { ...rfq, status: "expired" };
+    }
+    return { ...rfq, status: "live" };
   }
 
   /**
@@ -602,8 +620,10 @@ export class Runtime {
    * carts include derived live | expired | bound;
    * bound is unique_payment occupancy and wins over expired; payments include derived
    * live | expired | funded; funded is escrow-moved occupancy and wins over expired),
-   * rid_ receipt, apd_ approval, rfq_ / qte_ market (qte_ includes derived live | expired | spent | held;
-   * expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
+   * rid_ receipt, apd_ approval, rfq_ / qte_ market (rfq_ includes derived live | expired;
+   * qte_ includes derived live | expired | spent | held;
+   * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
+   * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
    * hsb_ host subscription (raw; spend is not gated on the row).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
@@ -636,7 +656,7 @@ export class Runtime {
     }
     if (id.startsWith("rfq_")) {
       const rfq = this.rfqs.get(id);
-      return rfq ? { type: "rfq", id: rfq.id, value: rfq } : undefined;
+      return rfq ? { type: "rfq", id: rfq.id, value: this.rfqView(rfq) } : undefined;
     }
     if (id.startsWith("qte_")) {
       const quote = this.quotes.get(id);

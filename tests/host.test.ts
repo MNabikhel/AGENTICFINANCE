@@ -65,7 +65,7 @@ describe("host card", () => {
     const r = must(rt.dispatch(cmd("host.card", "system", {})), "host.card");
     const card = r.data as ReturnType<Runtime["protocolCard"]>;
     expect(card.spec).toBe("aether.protocol.1");
-    expect(card.version).toBe("0.90.0");
+    expect(card.version).toBe("0.91.0");
     expect(card.liveMoney).toBe(false);
     expect(card.evaluateLlm).toBe(false);
     expect(card.hosted).toBe(false);
@@ -118,7 +118,7 @@ describe("host card", () => {
     expect(card.hosted).toBe(true);
     expect(card.authority.subscribeAvailable).toBe(true);
     expect(PROTOCOL.hosted).toBe(false);
-    expect(PROTOCOL.version).toBe("0.90.0");
+    expect(PROTOCOL.version).toBe("0.91.0");
   });
 });
 

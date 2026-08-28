@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.90.0",
+  version: "0.91.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
@@ -471,6 +471,12 @@ export interface Rfq {
   expiresAt: Instant;
 }
 
+/**
+ * Inspect / snapshot view. A room past `expiresAt` is `expired`, not `live`.
+ * The store stays raw (`expiresAt` only). Quoting or hiring still names `market.not_expired`.
+ */
+export type RfqStatus = "live" | "expired";
+
 export interface Quote {
   id: QuoteId;
   rfqId: RfqId;
@@ -488,7 +494,9 @@ export interface Quote {
 
 /**
  * Inspect / snapshot view. Spent and held win over expired. Expired includes the
- * quote envelope and a lapsed FX `validUntil`. The store stays raw.
+ * quote envelope, a lapsed FX `validUntil`, and (for a hire quote) a dead parent RFQ.
+ * An FX quote is a window on the quote, not the room — RFQ death does not expire it.
+ * The store stays raw.
  */
 export type QuoteStatus = "live" | "expired" | "spent" | "held";
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
 import { offerHire, completeHire, inviteQuote, fundHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
-import type { ApprovalTicket, DelegationAttestation, HireContract, MandateId, Receipt } from "@aether/types";
+import type { ApprovalTicket, DelegationAttestation, HireContract, MandateId, Receipt, Rfq } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -291,6 +291,106 @@ describe("quote inspect", () => {
     expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
   });
 
+  it("labels a live RFQ live, without writing status into the store", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().rfqs.find((r) => r.id === rfqId)?.status).toBe("live");
+    expect("status" in (rt.rfqs.get(rfqId) ?? {})).toBe(false);
+  });
+
+  it("labels a stale RFQ expired, not an open room", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    rt.clock.set("2026-08-29T00:01:00.000Z");
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().rfqs.find((r) => r.id === rfqId)?.status).toBe("expired");
+    expect("status" in (rt.rfqs.get(rfqId) ?? {})).toBe(false);
+    const late = rt.dispatch(
+      cmd("market.quote", vendor.id, { rfqId, price: { amount: 90_000, currency: "USD_SIM" } }),
+    );
+    expect(late.ok).toBe(false);
+    if (late.ok) return;
+    expect(late.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+  });
+
+  it("labels a hire quote expired when the parent RFQ dies while the quote envelope still lives", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    const rfq = rt.rfqs.get(rfqId) as Rfq;
+    rt.rfqs.set(rfqId, { ...rfq, expiresAt: rt.clock.now() });
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("expired");
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("expired");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+    const hire = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(hire.ok).toBe(false);
+    if (hire.ok) return;
+    expect(hire.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+  });
+
+  it("labels a spent hire quote spent even after the parent RFQ dies", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const rfqId = (offered.rfq.data as { id: string }).id;
+    const rfq = rt.rfqs.get(rfqId) as Rfq;
+    rt.rfqs.set(rfqId, { ...rfq, expiresAt: rt.clock.now() });
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("spent");
+  });
+
+  it("labels a held hire quote held even after the parent RFQ dies", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect(offered.attempt.value.kind).toBe("escalated");
+    const rfqId = (offered.rfq.data as { id: string }).id;
+    const rfq = rt.rfqs.get(rfqId) as Rfq;
+    rt.rfqs.set(rfqId, { ...rfq, expiresAt: rt.clock.now() });
+    expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("held");
+  });
+
   it("labels a spent quote spent even after the window has closed", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
@@ -306,6 +406,55 @@ describe("quote inspect", () => {
     if (!offered.attempt.ok) return;
     rt.clock.set("2026-08-28T02:00:00.000Z");
     expect((rt.inspect(offered.quoteId)?.value as { status: string }).status).toBe("spent");
+  });
+
+  it("does not expire an FX quote when the parent RFQ dies — the window lives on the quote", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "mm-room",
+          displayName: "Market Maker",
+          role: "market_maker",
+          autonomyLevel: 2,
+        }),
+      ),
+      "mm-room",
+    );
+    const mm = rt.alias("mm-room");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [mm.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-28T12:00:00.000Z",
+          },
+        }),
+      ),
+      "fx quote",
+    );
+    const rfqId = (rfq.data as { id: string }).id;
+    const quoteId = (quoted.data as { id: string }).id;
+    const room = rt.rfqs.get(rfqId) as Rfq;
+    rt.rfqs.set(rfqId, { ...room, expiresAt: rt.clock.now() });
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("expired");
+    expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("live");
+    expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
   });
 
   it("does not label a quote held when the pause is already dead", () => {
