@@ -1,7 +1,8 @@
 /**
  * Shape check against schemas/commands.schema.json.
  * Syntax, not economics: a miss, a float, a listed enum miss, a rung outside 0–5,
- * or a listed field with the wrong JSON type is HTTP 400, not a policy deny.
+ * a listed field with the wrong JSON type, or a nested cart line / constraint
+ * missing its fields is HTTP 400, not a policy deny.
  * Policy never sees a command that failed this gate.
  */
 
@@ -157,6 +158,36 @@ export function malformedTypeFields(type: string, body: unknown): string[] {
   return out;
 }
 
+/** Nested objects the kernel totals or hashes: cart lines and intent constraints. */
+export function malformedNestedFields(type: string, body: unknown): string[] {
+  const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const out: string[] = [];
+  if (type === "mandate.issue_cart" && Array.isArray(rec.line_items)) {
+    rec.line_items.forEach((line, i) => {
+      if (!line || typeof line !== "object" || Array.isArray(line)) {
+        out.push(`line_items[${i}]`);
+        return;
+      }
+      const l = line as Record<string, unknown>;
+      if (typeof l.sku !== "string" || l.sku.length === 0) out.push(`line_items[${i}].sku`);
+      if (typeof l.description !== "string") out.push(`line_items[${i}].description`);
+      if (l.quantity === undefined || l.quantity === null) out.push(`line_items[${i}].quantity`);
+      if (l.unitAmount === undefined || l.unitAmount === null) out.push(`line_items[${i}].unitAmount`);
+    });
+  }
+  if (type === "mandate.issue_intent" && Array.isArray(rec.constraints)) {
+    rec.constraints.forEach((raw, i) => {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        out.push(`constraints[${i}]`);
+        return;
+      }
+      const c = raw as Record<string, unknown>;
+      if (typeof c.type !== "string" || c.type.length === 0) out.push(`constraints[${i}].type`);
+    });
+  }
+  return out;
+}
+
 /** Human-readable reason, or undefined if the body is well-formed. */
 export function commandShapeError(type: string, body: unknown): string | undefined {
   const missing = missingCommandFields(type, body);
@@ -169,5 +200,7 @@ export function commandShapeError(type: string, body: unknown): string | undefin
   if (ints.length > 0) return `invalid integer: ${ints.join(", ")}`;
   const types = malformedTypeFields(type, body);
   if (types.length > 0) return `invalid type: ${types.join(", ")}`;
+  const nested = malformedNestedFields(type, body);
+  if (nested.length > 0) return `invalid nested: ${nested.join(", ")}`;
   return undefined;
 }

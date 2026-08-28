@@ -128,4 +128,26 @@ describe("hire cart match", () => {
     );
     expect((cart.data as { payload: { total: { amount: number } } }).payload.total.amount).toBe(80_000);
   });
+
+  it("refuses a cart line with no amount as command.malformed, not a mutate throw", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const before = rt.carts.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_cart", desk.id, {
+        intentId,
+        merchantId: vendor.id,
+        line_items: [{}],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("line_items[0]");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.carts.size).toBe(before);
+    expect(rt.clock.now()).toBe(clockBefore);
+  });
 });

@@ -54,7 +54,14 @@
         "subjectId": { "type": "string" },
         "task": { "type": "string" },
         "parentId": { "type": "string" },
-        "constraints": { "type": "array" }
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": { "type": { "type": "string" } }
+          }
+        }
       }
     },
     "mandate.issue_cart": {
@@ -64,7 +71,21 @@
         "intentId": { "type": "string" },
         "merchantId": { "type": "string" },
         "hireId": { "type": "string" },
-        "line_items": { "type": "array", "minItems": 1, "description": "Must total the hire price. Same seller, same SKU, integer cents." }
+        "line_items": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Must total the hire price. Same seller, same SKU, integer cents.",
+          "items": {
+            "type": "object",
+            "required": ["sku", "description", "quantity", "unitAmount"],
+            "properties": {
+              "sku": { "type": "string" },
+              "description": { "type": "string" },
+              "quantity": { "type": "integer", "minimum": 1 },
+              "unitAmount": { "type": "object" }
+            }
+          }
+        }
       }
     },
     "mandate.issue_payment": {

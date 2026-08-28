@@ -63,4 +63,32 @@ describe("command shape enums and integer ranges", () => {
       "invalid type: line_items",
     );
   });
+
+  it("rejects a cart line with no sku or amount", () => {
+    expect(commandShapeError("mandate.issue_cart", { intentId: "mid_x", merchantId: "aid_x", line_items: [{}] })).toBe(
+      "invalid nested: line_items[0].sku, line_items[0].description, line_items[0].quantity, line_items[0].unitAmount",
+    );
+  });
+
+  it("rejects an intent constraint that is not an object with a type", () => {
+    expect(commandShapeError("mandate.issue_intent", { subjectId: "aid_x", task: "t", constraints: ["cap"] })).toBe(
+      "invalid nested: constraints[0]",
+    );
+  });
+
+  it("rejects an intent constraint object with no type", () => {
+    expect(commandShapeError("mandate.issue_intent", { subjectId: "aid_x", task: "t", constraints: [{}] })).toBe(
+      "invalid nested: constraints[0].type",
+    );
+  });
+
+  it("accepts a cart line with an empty description", () => {
+    expect(
+      commandShapeError("mandate.issue_cart", {
+        intentId: "mid_x",
+        merchantId: "aid_x",
+        line_items: [{ sku: "x", description: "", quantity: 1, unitAmount: { amount: 1, currency: "USD_SIM" } }],
+      }),
+    ).toBeUndefined();
+  });
 });

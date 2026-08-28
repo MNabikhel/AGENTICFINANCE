@@ -1450,6 +1450,9 @@ export class Runtime {
     if (!intent) throw new Error("unknown intent");
     const merchantAgent = this.identity.require(body.merchantId as AgentId);
     const lineItems = body.line_items as CartMandate["line_items"];
+    if (!lineItems[0]?.unitAmount || typeof lineItems[0].quantity !== "number") {
+      throw new Error("cart line missing unitAmount");
+    }
     const total = lineItems.reduce(
       (s, l) => ({ amount: s.amount + l.unitAmount.amount * l.quantity, currency: l.unitAmount.currency }),
       { amount: 0, currency: lineItems[0]!.unitAmount.currency },
@@ -2084,4 +2087,5 @@ export {
   malformedEnumFields,
   malformedIntegerFields,
   malformedTypeFields,
+  malformedNestedFields,
 } from "./command-schema.js";
