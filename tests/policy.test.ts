@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 71 rules", () => {
-    expect(RULE_IDS).toHaveLength(71);
+  it("has 72 rules", () => {
+    expect(RULE_IDS).toHaveLength(72);
   });
 
   it("denies frozen actors", () => {
@@ -1419,5 +1419,21 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("market.fx_quote");
+  });
+
+  it("denies a command whose speaker is not in this world", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances", actorKnown: false }));
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.not_frozen")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("actor.known");
+  });
+
+  it("does not name actor.known when the speaker is registered", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
   });
 });

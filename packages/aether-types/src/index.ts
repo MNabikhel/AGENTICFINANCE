@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.54.0",
+  version: "0.55.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -825,6 +825,12 @@ export interface PolicyContext {
    * Passing cartId on fund is not a pointer. Issue the cart with hireId.
    */
   cartBound?: boolean;
+  /**
+   * False when the command’s actorId is not `system` and is not a registered agent.
+   * Absent = the speaker is system or a live agent (`identity.known` is for *named targets*, not the speaker).
+   * A missing speaker is not a 500 after yes.
+   */
+  actorKnown?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

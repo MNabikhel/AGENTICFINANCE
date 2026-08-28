@@ -150,14 +150,17 @@ function executionWindowDeny(
 export const RULES: readonly Rule[] = [
   {
     id: "actor.not_frozen",
-    evaluate: (ctx) =>
-      ctx.actor.frozen
+    evaluate: (ctx) => {
+      if (ctx.actorKnown === false) return v("actor.not_frozen", "allow", "speaker is not registered");
+      return ctx.actor.frozen
         ? v("actor.not_frozen", "deny", "actor is frozen")
-        : v("actor.not_frozen", "allow", "actor not frozen"),
+        : v("actor.not_frozen", "allow", "actor not frozen");
+    },
   },
   {
     id: "actor.role_capability",
     evaluate: (ctx) => {
+      if (ctx.actorKnown === false) return v("actor.role_capability", "allow", "speaker is not registered");
       const allowed = ROLE_CAPABILITY[ctx.actor.role];
       const cmd = ctx.commandType as CommandType;
       return allowed.includes(cmd)
@@ -1089,6 +1092,15 @@ export const RULES: readonly Rule[] = [
         : v("mm.known", "deny", "no market maker");
     },
   },
+  {
+    id: "actor.known",
+    evaluate: (ctx) => {
+      if (ctx.actorKnown === undefined) return v("actor.known", "allow", "speaker is registered");
+      return ctx.actorKnown
+        ? v("actor.known", "allow", "speaker is registered")
+        : v("actor.known", "deny", "actor not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1295,6 +1307,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mm.known": {
     kind: "none",
     hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books.",
+  },
+  "actor.known": {
+    kind: "none",
+    hint: "That actorId is not in this world. Register them first. A missing speaker is not a 500. identity.known is for named targets, not the speaker.",
   },
   "payment.execution_date": {
     kind: "none",

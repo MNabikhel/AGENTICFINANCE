@@ -543,3 +543,35 @@ describe("kya.unique_live", () => {
     expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(1);
   });
 });
+
+describe("known speaker", () => {
+  it("refuses a command from a missing actor as actor.known, not a throw before policy", () => {
+    const rt = boot();
+    economy(rt);
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const r = rt.dispatch(cmd("ledger.balances", GHOST, {}));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.known");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.audit.length).toBeGreaterThan(auditBefore);
+  });
+
+  it("does not name actor.known when a live agent freezes a missing target", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const r = rt.dispatch(cmd("identity.freeze", founder.id, { agentId: GHOST }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
+  });
+});

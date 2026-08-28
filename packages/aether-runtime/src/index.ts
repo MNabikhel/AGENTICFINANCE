@@ -270,8 +270,12 @@ export class Runtime {
     }
     if (!opts?.skipStep) this.clock.step();
     this.expireApprovals();
-    const actor = cmd.actorId === "system" ? this.systemActor() : this.identity.require(cmd.actorId);
-    const ctx = this.snapshot(cmd, actor, opts?.thresholdWaived === true);
+    const found =
+      cmd.actorId === "system" ? this.systemActor() : this.identity.get(cmd.actorId as AgentId);
+    const actor = found ?? this.unknownSpeaker(cmd.actorId as AgentId);
+    const ctx = found
+      ? this.snapshot(cmd, actor, opts?.thresholdWaived === true)
+      : this.unknownActorContext(cmd, actor);
     const decision = evaluate(ctx);
     const rem = remediationFor(decision);
     if (rem) decision.remediation = rem;
@@ -579,6 +583,44 @@ export class Runtime {
       createdAt: this.clock.now(),
       frozen: false,
     };
+  }
+
+  /** Speaker stub for evaluate() when actorId is not in this world. Does not enter mutate. */
+  private unknownSpeaker(id: AgentId): Agent {
+    return {
+      id,
+      did: "did:aether:unknown",
+      displayName: "unknown",
+      role: "treasury",
+      autonomyLevel: 0,
+      keys: [],
+      accountId: this.ledger.account("system:equity").id,
+      supervisors: [],
+      createdAt: this.clock.now(),
+      frozen: false,
+    };
+  }
+
+  private unknownActorContext(cmd: Command, actor: Agent): PolicyContext {
+    const audit = this.audit.verify();
+    const velocity = this.velocity();
+    const ctx: PolicyContext = {
+      clock: this.clock.now(),
+      actor,
+      counterparties: this.identity.all(),
+      commandType: cmd.type,
+      spentAgainstIntent: 0,
+      occurrenceCount: 0,
+      velocity,
+      circuit: {
+        dailySpend: this.dailySpend,
+        dailyLimit: this.dailyLimit,
+        tripped: this.circuitTripped,
+      },
+      auditHealthy: audit.ok,
+      actorKnown: false,
+    };
+    return ctx;
   }
 
   private postJournal(
