@@ -754,6 +754,13 @@ export class Runtime {
           ticket.status === "pending" && Date.parse(ticket.expiresAt) > Date.parse(this.clock.now());
       }
     }
+    if (hire && hire.id !== "hid_draft") {
+      if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
+        ctx.hirePartyOk = hire.sellerId === actor.id;
+      } else if (cmd.type === "hire.refund" || cmd.type === "hire.release") {
+        ctx.hirePartyOk = hire.buyerId === actor.id || actor.role === "treasury";
+      }
+    }
     if (amount) ctx.amount = amount;
     if (payeeId) ctx.payeeId = payeeId;
     if (fxRateE6 !== undefined) ctx.fxRateE6 = fxRateE6;
@@ -1080,12 +1087,12 @@ export class Runtime {
       case "hire.refund":
         return this.mutHireRefund(body, actor);
       case "hire.deliver":
-        return this.mutHireDeliver(body);
+        return this.mutHireDeliver(body, actor);
       case "hire.release":
       case "envelope.submit":
         return this.mutRelease(body, actor, cmd.type);
       case "envelope.require":
-        return this.mutRequire(body);
+        return this.mutRequire(body, actor);
       case "approval.resolve":
         return this.mutApprove(body, actor);
       case "ledger.transfer":
@@ -1510,8 +1517,9 @@ export class Runtime {
     return next;
   }
 
-  private mutHireDeliver(body: Record<string, unknown>) {
+  private mutHireDeliver(body: Record<string, unknown>, actor: Agent) {
     const hire = this.requireHire(body.hireId as HireId);
+    if (hire.sellerId !== actor.id) throw new Error("only seller may deliver");
     const next = transitionHire(hire, "delivered");
     next.deliverableHash = payloadHash(body.deliverable ?? { ok: true });
     this.hires.set(next.id, next);
@@ -1525,8 +1533,9 @@ export class Runtime {
     return next;
   }
 
-  private mutRequire(body: Record<string, unknown>) {
+  private mutRequire(body: Record<string, unknown>, actor: Agent) {
     const hire = this.requireHire(body.hireId as HireId);
+    if (hire.sellerId !== actor.id) throw new Error("only seller may require payment");
     const seller = this.identity.require(hire.sellerId);
     const required = SIM_RAIL.require({
       url: `aether://hire/${hire.id}/release`,
@@ -1549,6 +1558,9 @@ export class Runtime {
 
   private mutRelease(body: Record<string, unknown>, actor: Agent, type: CommandType) {
     const hire = this.requireHire(body.hireId as HireId);
+    if (type === "hire.release" && hire.buyerId !== actor.id && actor.role !== "treasury") {
+      throw new Error("only buyer or treasury may release");
+    }
     if (type === "envelope.submit") {
       const nonce = String(body.nonce ?? this.ids.next("nonce"));
       if (this.nonces.has(nonce)) throw new Error("nonce reuse");

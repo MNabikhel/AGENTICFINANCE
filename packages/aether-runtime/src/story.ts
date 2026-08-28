@@ -55,7 +55,19 @@ export function autoBeat(input: {
 
   if (cmd.type === "identity.register") return undefined;
   if (cmd.type === "mandate.issue_cart" || cmd.type === "mandate.issue_payment") return undefined;
-  if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") return undefined;
+  if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} is not the seller on that hire`,
+        body: "Accept, deliver, and payment-required belong to the vendor who quoted. A missing hire is hire.known.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return undefined;
+  }
   if (cmd.type === "ledger.balances" || cmd.type === "receipt.get") return undefined;
 
   if (cmd.type === "mandate.issue_intent") {
@@ -258,7 +270,7 @@ export function autoBeat(input: {
         seq: input.seq,
         at: input.at,
         headline: `${who} could not unwind escrow${amt ? ` (${amt})` : ""}`,
-        body: "Refund is only legal while the hire is funded and work has not been delivered. The referee still checks who may pull the money back.",
+        body: "Refund is the buyer or treasury, and only while the hire is funded. The other side of the table does not unwind escrow.",
         tone: "deny",
         commandType: cmd.type,
       };

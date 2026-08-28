@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.19.0",
+  version: "0.20.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -643,6 +643,12 @@ export interface PolicyContext {
    * Absent = not an approval.resolve, or the ticket is unknown (`approvalKnown` handles that).
    */
   approvalPending?: boolean;
+  /**
+   * False when the actor is not the counterparty this hire command belongs to.
+   * Accept / deliver / envelope.require are the seller. Refund / release are the buyer or treasury.
+   * Absent = not a party-gated command, or the hire is unknown (`hireKnown` handles that).
+   */
+  hirePartyOk?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

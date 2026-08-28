@@ -783,6 +783,15 @@ export const RULES: readonly Rule[] = [
         : v("approval.pending", "deny", "ticket is not pending");
     },
   },
+  {
+    id: "hire.party",
+    evaluate: (ctx) => {
+      if (ctx.hirePartyOk === undefined) return v("hire.party", "allow", "not a party-gated hire command");
+      return ctx.hirePartyOk
+        ? v("hire.party", "allow", "actor is the hire counterparty")
+        : v("hire.party", "deny", "actor is not the hire counterparty");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -889,6 +898,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "approval.pending": {
     kind: "none",
     hint: "That ticket is expired or already resolved. Resolving it is a refuse, not a late yes. Retry the original command if it is still legal.",
+  },
+  "hire.party": {
+    kind: "none",
+    hint: "This command belongs to a party on the hire. Accept, deliver, and payment-required are the seller. Refund and release are the buyer or treasury.",
   },
   "payment.execution_date": {
     kind: "none",

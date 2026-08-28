@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 46 rules", () => {
-    expect(RULE_IDS).toHaveLength(46);
+  it("has 47 rules", () => {
+    expect(RULE_IDS).toHaveLength(47);
   });
 
   it("denies frozen actors", () => {
@@ -519,6 +519,36 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "approval.pending")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("approval.pending");
+  });
+
+  it("denies a non-seller accepting a hire as hire.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "hire.accept",
+        hireKnown: true,
+        hirePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.party");
+  });
+
+  it("denies a non-buyer refunding a hire as hire.party", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.refund",
+        hireKnown: true,
+        hirePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
   });
 
   it("denies FX settle without a live unused FX quote", () => {
