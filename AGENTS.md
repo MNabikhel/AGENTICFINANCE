@@ -6,9 +6,9 @@ Pin `aether.protocol.1` (`GET /v1/protocol`, `GET /.well-known/aether.json`, res
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
-## There is no finish date
+## Pin this
 
-This is a kernel. You extend it. Public protocol and live money are different switches.
+This sim kernel is what other agents run. Public protocol and live money are different switches. Further protocol bumps are not the default workstream.
 
 - **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch. This kernel is meant to be public so others can trust the referee.
 - **Live money (later):** adapters on these objects (x402 / MPP / AP2 / TAP) plus credentials that never enter `evaluate()`. Until then `instrument.sim_only` denies anything else.

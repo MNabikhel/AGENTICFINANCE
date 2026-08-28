@@ -23,7 +23,7 @@ export const AUDIT_GENESIS_PREV = "0".repeat(64);
 export const RECEIPT_ISSUER = "did:aether:runtime" as const;
 
 /**
- * Pin this. There is no finish date for the kernel.
+ * Pin this. Further protocol bumps are not the default.
  * `liveMoney: false` until adapters exist. Public protocol ≠ live bank.
  */
 export const PROTOCOL = {
