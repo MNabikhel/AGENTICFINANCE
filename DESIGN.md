@@ -498,7 +498,7 @@ export interface Quote {
 }
 ```
 
-RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. A cartId that is not in this world is `mandate.known_cart` — not a broken payment chain. An approvalId that is not in this world is `approval.known` — not a late yes. An expired or already-resolved ticket is `approval.pending`. Accept, deliver, and payment-required belong to the seller; refund and release belong to the buyer or treasury (`hire.party`). Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. A quote or hire against an unknown RFQ/quote is `market.known_rfq` — not a missing SKU. `market.fx_settle` requires a live unused FX quote (`market.fx_quote`). A research quote is not FX. A spent FX quote is not a second window. `hire.create` consumes the quote (`hire.quote_unspent`); so does FX settle. A deny does not consume it. An escalate reserves it until the ticket is approved, rejected, or expired. A void does not restore it. A hireId that is not in this world is `hire.known` — not a broken mandate chain. An intentId that is not in this world is `mandate.known_intent` — not a missing handshake. A cartId that is not in this world is `mandate.known_cart` — not a broken payment chain. An approvalId that is not in this world is `approval.known` — not a late yes. An expired or already-resolved ticket is `approval.pending`. Accept, deliver, and payment-required belong to the seller; refund and release belong to the buyer or treasury (`hire.party`). A parentId that is not in this world is `mandate.known_parent` — not a tighter child. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
 
 Hire state machine (illegal arrows throw `HIRE_ILLEGAL_TRANSITION`):
 
@@ -632,6 +632,7 @@ export interface PolicyContext {
   approvalKnown?: boolean;          // false when approvalId is not in this world
   approvalPending?: boolean;        // false when the ticket is expired or already resolved
   hirePartyOk?: boolean;            // false when the actor is not the hire counterparty
+  parentKnown?: boolean;            // false when issue_intent.parentId is not in this world
 }
 ```
 
@@ -777,6 +778,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 45 | `approval.known` | approval.resolve | approvalId not in this world | — | ticket exists |
 | 46 | `approval.pending` | approval.resolve | ticket expired or already resolved | — | ticket pending |
 | 47 | `hire.party` | accept / deliver / envelope.require / refund / release | actor is not the seller (accept/deliver/require) or not the buyer/treasury (refund/release) | — | right party |
+| 48 | `mandate.known_parent` | issue_intent with parentId | parentId not in this world | — | parent exists |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 

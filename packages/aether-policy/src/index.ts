@@ -792,6 +792,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.party", "deny", "actor is not the hire counterparty");
     },
   },
+  {
+    id: "mandate.known_parent",
+    evaluate: (ctx) => {
+      if (ctx.parentKnown === undefined) return v("mandate.known_parent", "allow", "not a sub-intent");
+      return ctx.parentKnown
+        ? v("mandate.known_parent", "allow", "parent exists")
+        : v("mandate.known_parent", "deny", "parent intent not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -902,6 +911,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.party": {
     kind: "none",
     hint: "This command belongs to a party on the hire. Accept, deliver, and payment-required are the seller. Refund and release are the buyer or treasury.",
+  },
+  "mandate.known_parent": {
+    kind: "none",
+    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child.",
   },
   "payment.execution_date": {
     kind: "none",

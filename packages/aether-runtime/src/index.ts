@@ -775,6 +775,9 @@ export class Runtime {
     const parentId =
       (typeof body.parentId === "string" ? (body.parentId as MandateId) : undefined) ?? intent?.payload.parentId;
     const parentIntent = parentId ? this.intents.get(parentId) : undefined;
+    if (cmd.type === "mandate.issue_intent" && typeof body.parentId === "string") {
+      ctx.parentKnown = Boolean(parentIntent);
+    }
     if (parentIntent) {
       ctx.parentIntent = parentIntent;
       ctx.parentSpent = this.spentByIntent.get(parentIntent.payload.id) ?? 0;
@@ -1293,7 +1296,10 @@ export class Runtime {
       iat: unixSeconds(this.clock.now()),
       exp: unixSeconds(this.clock.now()) + 7 * 24 * 3600,
     };
-    if (typeof body.parentId === "string") payload.parentId = body.parentId as MandateId;
+    if (typeof body.parentId === "string") {
+      if (!this.intents.get(body.parentId as MandateId)) throw new Error("unknown parent intent");
+      payload.parentId = body.parentId as MandateId;
+    }
     const signed = signMandate(payload, actor.did, this.keypair(actor.id));
     this.intents.set(payload.id, signed);
     this.audit.append({

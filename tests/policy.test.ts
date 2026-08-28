@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 47 rules", () => {
-    expect(RULE_IDS).toHaveLength(47);
+  it("has 48 rules", () => {
+    expect(RULE_IDS).toHaveLength(48);
   });
 
   it("denies frozen actors", () => {
@@ -548,6 +548,23 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a sub-intent against a missing parent as known_parent, not child_tighter", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        parentKnown: false,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100 }],
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

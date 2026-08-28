@@ -156,3 +156,33 @@ describe("known cart", () => {
     expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
+
+describe("known parent", () => {
+  it("refuses a sub-intent against a missing parent as known_parent, not a mutate throw", () => {
+    const rt = boot();
+    const { desk } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        parentId: "mid_01J6AETHERGHOSTPARENT00001",
+        task: "hand down to nobody",
+        constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100 }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.known_parent");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.intents.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.audit.length).toBeGreaterThan(auditBefore);
+  });
+});

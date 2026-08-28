@@ -73,6 +73,17 @@ export function autoBeat(input: {
   if (cmd.type === "mandate.issue_intent") {
     const parented = typeof (cmd.body as { parentId?: string }).parentId === "string";
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "mandate.known_parent") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} tried to hand down a slip with no parent`,
+          body: "A missing parent is not a tighter child. Issue the parent permission slip first.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
