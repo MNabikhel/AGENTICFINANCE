@@ -51,7 +51,25 @@ What happens:
 7. The data vendor swaps its $800 into USDC at a 0.2% window. Not a trading floor.
 8. The auditor checks the notary chain. Then the auditor tries to spend a dollar. **No.**
 
-If you run `pnpm dev` and press **Tell me what happened**, you will see that story in English, then you can open “the machinery” if you want hashes and rule IDs.
+If you run `pnpm dev` and press **Shopping trip**, you will see that story in English, then you can open “the machinery” if you want hashes and rule IDs.
+
+## The second demo: Night Watch (standing permission)
+
+This is the one about **humans stepping back**.
+
+A founder shakes hands with a night-watch agent (that handshake is Know Your Agent — not a password, a revocable permission to spend in someone’s name). They write a standing slip: buy research overnight, max $8,000 each, $20,000 total. They climb the ladder one rung at a time, **freeze the agent on purpose** to prove the kill switch works, then grant L5.
+
+What happens:
+
+1. A $200 brief is allowed. Nobody is at the keyboard.
+2. A $6,000 brief is also allowed. At L3 that would have asked treasury. At L5 it does not — the slip still caps it.
+3. A $9,000 brief is refused. The slip said $8,000. L5 cannot wink that through. That attempt also blows the **daily fuse**, which sticks.
+4. A $200 follow-up is refused too. The fuse stays blown until a human resets it.
+5. Treasury freezes the **founder**. Night Watch still has keys. It still cannot spend. Authority is a graph, not a token in a bot.
+6. The founder revokes the handshake. The agent still exists. It is broke on purpose.
+7. The auditor reads the book and still cannot spend.
+
+Run it with `pnpm demo night-watch`, or press **Night watch** in the control room.
 
 ## The ladder (how humans step back without disappearing)
 
@@ -64,7 +82,7 @@ If you run `pnpm dev` and press **Tell me what happened**, you will see that sto
 | L4 | The agent may hand a smaller slip to another agent. |
 | L5 | Standing permission. Humans still hold freeze, daily circuit breakers, and the notary. **Not god mode.** |
 
-The point of L5 is not “the machines won.” It is “the human is no longer in every click, and that is only safe because the referee, the freeze, and the book are still there.”
+The point of L5 is not “the machines won.” It is “the human is no longer in every click, and that is only safe because the referee, the freeze, the handshake, and the book are still there.”
 
 ## What we are not building
 
@@ -79,6 +97,6 @@ You do not have to read `DESIGN.md`. That file is the contract between machines.
 You can:
 
 1. Read this page.
-2. Run `pnpm demo` and read the English story it prints.
-3. Open the control room (`pnpm dev`) and press the button.
-4. Come back when the next chapter lands — clearing (who owes whom after a thousand tiny payments) is already sprouting, then real payment rails as adapters, never as the brain.
+2. Run `pnpm demo` (shopping trip) and `pnpm demo night-watch` (standing permission).
+3. Open the control room (`pnpm dev`) and press the buttons.
+4. Come back for the next chapter — real payment rails as adapters, never as the brain. The handshake graph already exists so TAP, Skyfire, and ERC-8004 can plug in later.

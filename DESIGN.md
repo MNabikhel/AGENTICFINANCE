@@ -21,7 +21,7 @@ This document is the implementation contract. Another engineer should be able to
 
 **Clock:** inject `Clock.now(): Instant`. Default is system UTC. Demo uses a frozen/steppable clock. Never call `Date.now()` inside policy or hashing.
 
-**IDs:** `aid_<ulid>` agents, `mid_<ulid>` mandates, `hid_<ulid>` hires, `tid_<ulid>` transfers, `rid_<ulid>` receipts, `apd_<ulid>` approvals, `jnl_<ulid>` journal entries, `rfq_<ulid>` RFQs, `qte_<ulid>` quotes. ULID Crockford base32, 26 chars.
+**IDs:** `aid_<ulid>` agents, `mid_<ulid>` mandates, `hid_<ulid>` hires, `tid_<ulid>` transfers, `rid_<ulid>` receipts, `apd_<ulid>` approvals, `jnl_<ulid>` journal entries, `rfq_<ulid>` RFQs, `qte_<ulid>` quotes, `dlg_<ulid>` KYA delegations. ULID Crockford base32, 26 chars.
 
 **Money:** integer **minor units** only. `USD_SIM` and `USDC_SIM` both have `decimals = 2`. Never use IEEE floats for amounts. JSON encodes `amount` as integer, `currency` as string.
 
@@ -727,6 +727,14 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 24 | `mm.inventory` | MM accept FX | MM cash in `to` currency < payout | — | inventory exists |
 | 25 | `audit.writable` | always (runtime injects) | audit head missing / verify dirty | — | chain healthy |
 | 26 | `human.signature_present` | settle at L0/L1 | payment JWS issuer is not a `human_operator` supervisor | — | human signed |
+| 27 | `clearing.bilateral_limit` | hire/settle when exposure snapshot present | projected gross > bilateral limit | — | inside limit |
+| 28 | `kya.chain_intact` | spend / sub-intent / attest by an agent | no live path from principal, or revoke tombstone | — | live path, implicit supervisor, or not required |
+| 29 | `kya.delegation_depth` | when a KYA path exists | hop count > 3 | — | depth ≤ 3 |
+| 30 | `kya.principal_not_frozen` | KYA-gated spend | principal frozen (delegate keys still work) | — | principal active |
+| 31 | `kya.attestation_fresh` | KYA-gated spend | path exists but expired | — | in window |
+| 32 | `kya.capability_subset` | attest / spend | agent grants above own level, or acts above granted max | — | within grant |
+
+L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
 
 **Role capability matrix** (`actor.role_capability`):
 
@@ -737,6 +745,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | Quote / hire as seller | no | no | yes | FX only | no | no |
 | Spend / submit payment | yes | yes | receive only | FX settle | **never** | approve only |
 | Audit verify / freeze | yes | no | no | no | yes | yes |
+| KYA attest / revoke | yes | L4+ | no | no | no | yes |
 
 **Default thresholds** (`approval.threshold`), fixture-overridable:
 
@@ -746,8 +755,6 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | treasury | 2_000_000 |
 | vendors (outbound, should be rare) | 50_000 |
 
-L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations.
-
 **Escalation object:** on `escalate`, runtime writes `ApprovalTicket` with `commandHash = sha256(JCS(command))`. Resolver must replay the **same** command bytes. Mutation proceeds only after `status=approved` and re-evaluation returns `allow`.
 
 ---
@@ -756,7 +763,7 @@ L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen
 
 **Goal:** prove agents can hire/pay each other, hit a policy wall, escalate, then settle with receipts — all offline.
 
-**Command:** `pnpm aether demo sprint-procurement`  
+**Command:** `pnpm demo` / `pnpm aether demo sprint-procurement`  
 **Clock start:** `2026-08-28T00:00:00.000Z`, step +1s per command.  
 **Fixture dir:** `fixtures/demo/sprint-procurement/`.
 

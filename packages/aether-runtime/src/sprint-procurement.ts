@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { payloadHash } from "@aether/kernel";
-import type { AgentId, MandateConstraint, PolicyDecision } from "@aether/types";
+import type { MandateConstraint, PolicyDecision } from "@aether/types";
 import { Runtime, cmd } from "./index.js";
+import { analog, SPRINT_TLDR } from "./story.js";
+import { completeHire, finishHire, mustDispatch } from "./hire-flow.js";
 
 export interface Scenario {
   id: string;
@@ -46,11 +48,9 @@ export function runSprintProcurement(scenario: Scenario): DemoReport {
     genesisNonce: scenario.genesisNonce,
     dailyLimit: scenario.circuit.dailyLimit,
   });
-
-  const must = (r: ReturnType<Runtime["dispatch"]>, label: string) => {
-    if (!r.ok) throw new Error(`${label}: ${r.error.error.detail}`);
-    return r.value;
-  };
+  rt.tldr = SPRINT_TLDR;
+  rt.analogDoc = analog();
+  const must = mustDispatch;
 
   must(
     rt.dispatch(
@@ -126,7 +126,6 @@ export function runSprintProcurement(scenario: Scenario): DemoReport {
   const dataHire = completeHire(rt, {
     buyer: procurement.id,
     seller: dataVendor.id,
-    sellerKey: "data-vendor",
     sku: "data.ticks.2026Q1",
     spec: "1e6 rows of Q1 ticks",
     price: scenario.quotes["data.ticks.2026Q1"]!,
@@ -294,114 +293,4 @@ export function runSprintProcurement(scenario: Scenario): DemoReport {
     step13: step13Decision,
     step17: step17Decision,
   };
-}
-
-function completeHire(
-  rt: Runtime,
-  input: {
-    buyer: AgentId;
-    seller: AgentId;
-    sellerKey: string;
-    sku: string;
-    spec: string;
-    price: { amount: number; currency: "USD_SIM" | "USDC_SIM" };
-    intentId: string;
-    qty: number;
-    deliverable: unknown;
-  },
-) {
-  const must = (r: ReturnType<Runtime["dispatch"]>, label: string) => {
-    if (!r.ok) throw new Error(`${label}: ${r.error.error.detail}`);
-    return r.value;
-  };
-  const rfq = must(
-    rt.dispatch(cmd("market.rfq", input.buyer, { sku: input.sku, spec: input.spec, invitedSellerIds: [input.seller] })),
-    `rfq ${input.sku}`,
-  );
-  const quote = must(
-    rt.dispatch(cmd("market.quote", input.seller, { rfqId: (rfq.data as { id: string }).id, price: input.price })),
-    `quote ${input.sku}`,
-  );
-  const hire = must(
-    rt.dispatch(cmd("hire.create", input.buyer, { quoteId: (quote.data as { id: string }).id, intentId: input.intentId })),
-    `hire ${input.sku}`,
-  );
-  const hireId = (hire.data as { id: string }).id;
-  finishHire(rt, {
-    hireId,
-    buyer: input.buyer,
-    seller: input.seller,
-    sku: input.sku,
-    intentId: input.intentId,
-    qty: input.qty,
-    unitAmount: input.price.amount / input.qty,
-    deliverable: input.deliverable,
-  });
-  return { hireId };
-}
-
-function finishHire(
-  rt: Runtime,
-  input: {
-    hireId: string;
-    buyer: AgentId;
-    seller: AgentId;
-    sku: string;
-    intentId: string;
-    qty: number;
-    unitAmount: number;
-    deliverable: unknown;
-  },
-) {
-  const must = (r: ReturnType<Runtime["dispatch"]>, label: string) => {
-    if (!r.ok) {
-      const extra = r.error.decision.trace.filter((t) => t.verdict !== "allow").map((t) => `${t.ruleId}:${t.verdict}`).join(",");
-      throw new Error(`${label}: ${r.error.error.detail} [${extra}]`);
-    }
-    return r.value;
-  };
-  must(rt.dispatch(cmd("hire.accept", input.seller, { hireId: input.hireId })), "accept");
-  const cart = must(
-    rt.dispatch(
-      cmd("mandate.issue_cart", input.buyer, {
-        intentId: input.intentId,
-        merchantId: input.seller,
-        hireId: input.hireId,
-        line_items: [
-          {
-            sku: input.sku,
-            description: input.sku,
-            quantity: input.qty,
-            unitAmount: { amount: input.unitAmount, currency: "USD_SIM" },
-          },
-        ],
-      }),
-    ),
-    "cart",
-  );
-  const payment = must(
-    rt.dispatch(cmd("mandate.issue_payment", input.buyer, { cartId: (cart.data as { payload: { id: string } }).payload.id })),
-    "payment",
-  );
-  must(
-    rt.dispatch(
-      cmd("hire.fund", input.buyer, {
-        hireId: input.hireId,
-        paymentMandateId: (payment.data as { payload: { id: string } }).payload.id,
-      }),
-    ),
-    "fund",
-  );
-  must(rt.dispatch(cmd("hire.deliver", input.seller, { hireId: input.hireId, deliverable: input.deliverable })), "deliver");
-  must(rt.dispatch(cmd("envelope.require", input.seller, { hireId: input.hireId })), "require");
-  must(
-    rt.dispatch(
-      cmd("envelope.submit", input.buyer, {
-        hireId: input.hireId,
-        paymentMandateId: (payment.data as { payload: { id: string } }).payload.id,
-        nonce: `nonce-${input.hireId}`,
-      }),
-    ),
-    "submit",
-  );
 }

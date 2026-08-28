@@ -16,9 +16,10 @@ import { Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
 import { fxPayout } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
+import { DelegationGraph, resolveKya } from "@aether/kya";
 import { evaluate } from "@aether/policy";
 import { issueReceipt, paymentRequired, settlementFail, settlementOk } from "@aether/settlement";
-import { autoBeat, analog, SPRINT_TLDR, type StoryBeat } from "./story.js";
+import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
 import type {
   AccountId,
   Agent,
@@ -32,17 +33,19 @@ import type {
   Command,
   CommandType,
   CurrencyCode,
+  DelegationAttestation,
+  DelegationId,
   HireContract,
   HireId,
   IntentMandate,
   JournalEntry,
+  KyaIssuerKind,
   LadderExtraGate,
   MandateConstraint,
   MandateId,
   Merchant,
   Money,
   PaymentMandate,
-  PaymentPayload,
   PolicyContext,
   PolicyDecision,
   Quote,
@@ -52,7 +55,7 @@ import type {
   Signed,
 } from "@aether/types";
 import { err } from "@aether/kernel";
-import { SIM_RAIL_ID, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, SIM_RAIL_ID, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -100,6 +103,11 @@ export class Runtime {
   readonly journals: JournalEntry[] = [];
   readonly story: StoryBeat[] = [];
   readonly clearing = new ExposureBook();
+  readonly kya = new DelegationGraph();
+  readonly killSwitchTested = new Set<AgentId>();
+  circuitTripped = false;
+  tldr = IDLE_TLDR;
+  analogDoc: Analog = analog();
 
   constructor(opts: { startIso: string; genesisNonce: string; dailyLimit?: number; auditPath?: string; ledgerPath?: string }) {
     this.clock = new ManualClock(opts.startIso);
@@ -160,11 +168,15 @@ export class Runtime {
       }
     }
     const usdTotal = usdLines.reduce((s, l) => s + l.debit, 0);
-    usdLines.push({ accountId: this.ledger.account("system:equity").id, debit: 0, credit: usdTotal });
+    if (usdLines.length) {
+      usdLines.push({ accountId: this.ledger.account("system:equity").id, debit: 0, credit: usdTotal });
+      this.postJournal("Opening USD cash", usdLines);
+    }
     const usdcTotal = usdcLines.reduce((s, l) => s + l.debit, 0);
-    usdcLines.push({ accountId: this.ledger.account("system:equity_usdc").id, debit: 0, credit: usdcTotal });
-    this.postJournal("Opening USD cash", usdLines);
-    this.postJournal("Opening USDC cash", usdcLines);
+    if (usdcLines.length) {
+      usdcLines.push({ accountId: this.ledger.account("system:equity_usdc").id, debit: 0, credit: usdcTotal });
+      this.postJournal("Opening USDC cash", usdcLines);
+    }
   }
 
   dispatch(cmd: Command, opts?: { thresholdWaived?: boolean; skipStep?: boolean }): DispatchResult {
@@ -173,7 +185,6 @@ export class Runtime {
     const ctx = this.snapshot(cmd, actor, opts?.thresholdWaived === true);
     const decision = evaluate(ctx);
     this.decisions.push({ at: this.clock.now(), type: cmd.type, decision });
-    this.pushStory(cmd, actor, decision, ctx);
     this.audit.append({
       clock: this.clock,
       actorId: cmd.actorId,
@@ -182,6 +193,10 @@ export class Runtime {
       payload: { type: cmd.type, verdict: decision.verdict, trace: decision.trace.map((t) => ({ ruleId: t.ruleId, verdict: t.verdict })) },
     });
     if (decision.verdict === "deny") {
+      if (decision.trace.some((t) => t.ruleId === "circuit.daily" && t.verdict === "deny")) {
+        this.circuitTripped = true;
+      }
+      this.pushStory(cmd, actor, decision, ctx);
       const rule = decision.trace.find((t) => t.verdict === "deny");
       return fail({
         error: err("policy.deny", "Policy deny", 422, rule?.message ?? "denied", { ruleId: rule?.ruleId }),
@@ -189,11 +204,13 @@ export class Runtime {
       });
     }
     if (decision.verdict === "escalate") {
+      this.pushStory(cmd, actor, decision, ctx);
       const ticket = this.openTicket(cmd, decision);
       return ok({ kind: "escalated", decision, data: { ticket }, ticket });
     }
     try {
       const data = this.mutate(cmd, actor);
+      this.pushStory(cmd, actor, decision, ctx);
       return ok({ kind: "allow", decision, data });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -221,8 +238,10 @@ export class Runtime {
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()],
       story: this.story,
-      analog: analog(),
-      tldr: SPRINT_TLDR,
+      analog: this.analogDoc,
+      tldr: this.tldr,
+      kya: this.kya.snapshot(),
+      circuit: { dailySpend: this.dailySpend, dailyLimit: this.dailyLimit, tripped: this.circuitTripped },
       clearing: this.clearing.snapshot(),
       agentCards: this.identity.all().map((a) => this.agentCard(a)),
       audit: { length: this.audit.length, verify, head: this.audit.head(), tail: this.audit.all().slice(-12) },
@@ -369,7 +388,7 @@ export class Runtime {
       circuit: {
         dailySpend: this.dailySpend,
         dailyLimit: this.dailyLimit,
-        tripped: false,
+        tripped: this.circuitTripped,
       },
       auditHealthy: audit.ok,
     };
@@ -388,6 +407,7 @@ export class Runtime {
       ctx.projectedExposure = this.clearing.projected(actor.id, payeeId, amount.currency, amount.amount);
       ctx.exposureLimit = this.clearing.defaultBilateralLimit;
     }
+    ctx.kya = this.resolveKya(cmd, actor, intent, body);
     return ctx;
   }
 
@@ -469,7 +489,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -520,6 +540,14 @@ export class Runtime {
         return this.mutRegister(body, actor);
       case "identity.freeze":
         return this.mutFreeze(body, actor);
+      case "identity.unfreeze":
+        return this.mutUnfreeze(body, actor);
+      case "kya.attest":
+        return this.mutKyaAttest(body, actor);
+      case "kya.revoke":
+        return this.mutKyaRevoke(body, actor);
+      case "circuit.reset":
+        return this.mutCircuitReset(actor);
       case "ladder.set":
         return this.mutLadder(body, actor);
       case "mandate.issue_intent":
@@ -621,12 +649,99 @@ export class Runtime {
     return agent;
   }
 
+  private mutUnfreeze(body: Record<string, unknown>, actor: Agent) {
+    const before = this.identity.require(body.agentId as AgentId);
+    const wasFrozen = before.frozen;
+    const agent = this.identity.unfreeze(body.agentId as AgentId);
+    if (wasFrozen) this.killSwitchTested.add(agent.id);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "UNFREEZE",
+      subjects: [{ type: "agent", id: agent.id }],
+      payload: { id: agent.id, restored: agent.autonomyLevel, killSwitchTested: wasFrozen },
+    });
+    return agent;
+  }
+
+  private mutKyaAttest(body: Record<string, unknown>, actor: Agent) {
+    const delegateId = body.delegateId as AgentId;
+    this.identity.require(delegateId);
+    const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
+    const att: DelegationAttestation = {
+      id: this.ids.next("dlg") as DelegationId,
+      vct: "aether.kya.delegation.1",
+      issuerKind: (body.issuerKind as KyaIssuerKind | undefined) ?? "aether.self",
+      principalId,
+      grantorId: actor.id,
+      delegateId,
+      maxAutonomy: (body.maxAutonomy as AutonomyLevel | undefined) ?? 5,
+      maxDepth: KYA_MAX_DEPTH,
+      createdAt: this.clock.now(),
+      expiresAt:
+        typeof body.expiresAt === "string"
+          ? body.expiresAt
+          : new Date(Date.parse(this.clock.now()) + 365 * 24 * 3600 * 1000).toISOString(),
+    };
+    if (typeof body.parentId === "string") att.parentId = body.parentId as DelegationId;
+    this.kya.attest(att);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "KYA_ATTEST",
+      subjects: [
+        { type: "delegation", id: att.id },
+        { type: "delegate", id: delegateId },
+      ],
+      payload: { id: att.id, principalId, delegateId, maxAutonomy: att.maxAutonomy, issuerKind: att.issuerKind },
+    });
+    return att;
+  }
+
+  private mutKyaRevoke(body: Record<string, unknown>, actor: Agent) {
+    const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
+    const opts: { principalId: AgentId; at: string; id?: DelegationId; delegateId?: AgentId } = {
+      principalId,
+      at: this.clock.now(),
+    };
+    if (typeof body.attestationId === "string") opts.id = body.attestationId as DelegationId;
+    if (typeof body.delegateId === "string") opts.delegateId = body.delegateId as AgentId;
+    const revoked = this.kya.revoke(opts);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "KYA_REVOKE",
+      subjects: revoked.map((a) => ({ type: "delegation", id: a.id })),
+      payload: { principalId, delegateId: body.delegateId ?? null, count: revoked.length },
+    });
+    return { revoked, blocked: [...this.kya.blocked] };
+  }
+
+  private mutCircuitReset(actor: Agent) {
+    const before = { dailySpend: this.dailySpend, tripped: this.circuitTripped };
+    this.dailySpend = 0;
+    this.circuitTripped = false;
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "CIRCUIT_RESET",
+      payload: before,
+    });
+    return { dailySpend: 0, tripped: false, previous: before };
+  }
+
   private mutLadder(body: Record<string, unknown>, actor: Agent) {
     const target = this.identity.require(body.agentId as AgentId);
     const to = body.to as AutonomyLevel;
     const legal = legalLadderTransition(target.autonomyLevel, to);
     if (!legal) throw new Error(`illegal ladder ${target.autonomyLevel} -> ${to}`);
     const gates = (body.gates as LadderExtraGate[] | undefined) ?? [];
+    if (legal.extraGates.includes("kill_switch_tested") && !this.killSwitchTested.has(target.id)) {
+      throw new Error("missing gates kill_switch_tested");
+    }
+    if (legal.extraGates.includes("circuit_breaker_configured") && !(this.dailyLimit > 0 && this.dailyLimit < 100_000_000)) {
+      throw new Error("missing gates circuit_breaker_configured");
+    }
     const missing = missingGates(legal.extraGates, gates);
     if (missing.length) throw new Error(`missing gates ${missing.join(",")}`);
     if (legal.requiredApproverRoles.length && !legal.requiredApproverRoles.includes(actor.role) && to !== 0) {
@@ -1053,7 +1168,41 @@ export class Runtime {
 
   private noteVolume(volume: number) {
     this.dailySpend += volume;
+    if (this.dailySpend > this.dailyLimit) this.circuitTripped = true;
     this.settleEvents.push({ at: this.clock.now(), volume });
+  }
+
+  private kyaRequired(cmd: Command, actor: Agent): boolean {
+    if (!KYA_GATED_COMMANDS.includes(cmd.type)) return false;
+    if (cmd.type === "mandate.issue_intent" || cmd.type === "kya.attest") {
+      if (actor.role === "human_operator" || actor.role === "treasury") return false;
+    }
+    return true;
+  }
+
+  private resolveKya(
+    cmd: Command,
+    actor: Agent,
+    intent: Signed<IntentMandate> | undefined,
+    body: Record<string, unknown>,
+  ) {
+    const required = this.kyaRequired(cmd, actor);
+    let principalId = intent?.payload.issuerId;
+    if (cmd.type === "kya.attest") {
+      principalId = (body.principalId as AgentId | undefined) ?? actor.supervisors[0] ?? actor.id;
+    }
+    const principal = principalId ? this.identity.get(principalId) : undefined;
+    const proposed = typeof body.maxAutonomy === "number" ? (body.maxAutonomy as AutonomyLevel) : undefined;
+    const input: Parameters<typeof resolveKya>[0] = {
+      required,
+      actor,
+      graph: this.kya,
+      nowIso: this.clock.now(),
+    };
+    if (principalId) input.principalId = principalId;
+    if (principal) input.principal = principal;
+    if (proposed !== undefined) input.proposedMaxAutonomy = proposed;
+    return resolveKya(input);
   }
 
   private keyOf(id: AgentId): string {
@@ -1068,7 +1217,10 @@ export function cmd(type: CommandType, actorId: AgentId | "system", body: unknow
 
 function skillsFor(role: AgentRole): Array<{ id: string; name: string; description: string }> {
   const skills: Record<AgentRole, Array<{ id: string; name: string; description: string }>> = {
-    human_operator: [{ id: "mandate", name: "Issue mandates", description: "Write permission slips agents must obey." }],
+    human_operator: [
+      { id: "mandate", name: "Issue mandates", description: "Write permission slips agents must obey." },
+      { id: "kya", name: "Know Your Agent", description: "Handshake and revoke who may spend in your name." },
+    ],
     treasury: [
       { id: "fund", name: "Allocate cash", description: "Move cash to operating agents." },
       { id: "approve", name: "Approve exceptions", description: "Sign escalation tickets above threshold." },
@@ -1082,7 +1234,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, SPRINT_TLDR };
-export type { StoryBeat };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, nightWatchAnalog };
+export type { Analog, StoryBeat };
 export { err, fail, ok, settlementFail };
 export type { Clock };

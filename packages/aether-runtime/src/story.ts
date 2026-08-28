@@ -11,8 +11,19 @@ export interface StoryBeat {
   commandType?: CommandType;
 }
 
+export interface Analog {
+  title: string;
+  lines: string[];
+}
+
+export const IDLE_TLDR =
+  "Aether is a rulebook for software that spends money. Run a demo to see a human write a permission slip, an agent try to spend, and a referee that never guesses say yes, no, or ask a grown-up.";
+
 export const SPRINT_TLDR =
   "A human gave an agent a $15,000 shopping list with a $5,000 per-item cap. The agent bought $800 of market data legally, was blocked on a $6,400 compute bill, got a new permission slip plus a treasury sign-off, paid, then swapped the data proceeds into USDC. An auditor confirmed the books and was not allowed to spend.";
+
+export const NIGHT_WATCH_TLDR =
+  "A founder shook hands with a night-watch agent (Know Your Agent) and gave it standing permission to buy research while everyone slept. The agent bought a cheap brief, then a $6,000 one without waking treasury — L5 skips the grown-up, not the rulebook. A $9,000 overpay was refused and blew the daily fuse, which stuck. Freezing the founder froze the agent’s spending. Revoking the handshake left the agent alive but broke. L5 is not god mode.";
 
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -60,8 +71,8 @@ export function autoBeat(input: {
     return {
       seq: input.seq,
       at: input.at,
-      headline: `Treasury funded the shopping trip with ${amt}`,
-      body: "Cash moved from the treasury account to procurement. The agent can now hire vendors without touching the rest of the company.",
+      headline: `${who} moved ${amt} into an operating account`,
+      body: "Cash left treasury. The working agent can hire vendors without touching the rest of the company.",
       tone: "allow",
       commandType: cmd.type,
     };
@@ -89,11 +100,24 @@ export function autoBeat(input: {
   if (cmd.type === "hire.create") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
+      const ruleId = rule?.ruleId ?? "unknown";
+      let body = `The referee (policy kernel) said no. Rule: ${ruleId}. ${rule?.message ?? ""}`;
+      if (ruleId === "payment.amount_range") {
+        body += " Hard constraints cannot be waved through by a manager — someone has to issue a new permission slip.";
+      } else if (ruleId === "circuit.daily") {
+        body = "The daily fuse blew. Standing permission does not mean unlimited. Until a human resets the circuit, even a tiny hire is refused.";
+      } else if (ruleId === "kya.principal_not_frozen") {
+        body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move.";
+      } else if (ruleId === "kya.chain_intact") {
+        body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists.";
+      } else if (ruleId === "actor.not_frozen") {
+        body = "This agent is frozen. Freeze is a kill switch: autonomy drops to L0 and spend is denied.";
+      }
       return {
         seq: input.seq,
         at: input.at,
         headline: `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
-        body: `The referee (policy kernel) said no. Rule: ${rule?.ruleId ?? "unknown"}. ${rule?.message ?? ""} Hard constraints cannot be waved through by a manager — someone has to issue a new permission slip.`,
+        body,
         tone: "deny",
         commandType: cmd.type,
       };
@@ -168,6 +192,77 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "identity.freeze") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not freeze anyone`,
+        body: "Freeze is a kill switch. The referee still checks who is allowed to pull it.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} pulled the freeze`,
+      body: "The target drops to L0 and cannot spend. Anyone they had shaken hands with also cannot spend in their name.",
+      tone: "deny",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "identity.unfreeze") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} lifted the freeze`,
+      body: "The agent returns to the rung it held before the freeze. This is also how we prove the kill switch works before standing permission (L5).",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "kya.attest") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} shook hands with an agent`,
+      body: "Know Your Agent: a signed handshake that says this software may spend in a human’s name, up to a listed autonomy, until revoked. TAP, Skyfire, and ERC-8004 can hang off this object later. The kernel already consults it.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "kya.revoke") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} revoked the handshake`,
+      body: "The agent still exists. Its keys still work. It still cannot spend — implicit supervisor grants die with the tombstone. Revoke cascades to anyone it had hired underneath.",
+      tone: "deny",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "ladder.set") {
+    const to = (cmd.body as { to?: number }).to;
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} moved an agent to L${to ?? "?"}`,
+      body: "Rungs cannot be skipped. L5 also requires a working circuit breaker and a tested freeze. The human is stepping back, not disappearing.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "circuit.reset") {
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} reset the daily fuse`,
+      body: "The circuit breaker is sticky: once it blows, even a tiny spend is refused until a human or treasury resets it. Mandate budgets are unchanged.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "audit.verify") {
     return {
       seq: input.seq,
@@ -181,7 +276,7 @@ export function autoBeat(input: {
   return undefined;
 }
 
-export function analog(): { title: string; lines: string[] } {
+export function analog(): Analog {
   return {
     title: "The kitchen-table version",
     lines: [
@@ -191,6 +286,19 @@ export function analog(): { title: string; lines: string[] } {
       "If yes, money sits in escrow until the work is done, then a receipt is written that points back at the slip.",
       "A notary (the audit log) writes every decision in ink that smudges if you try to rewrite yesterday.",
       "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
+    ],
+  };
+}
+
+export function nightWatchAnalog(): Analog {
+  return {
+    title: "Standing permission, in English",
+    lines: [
+      "A handshake (Know Your Agent) is not a password. It is a revocable permission to spend in a human’s name.",
+      "Standing permission (L5) means nobody clicks yes on each purchase. The slip, the daily fuse, and the freeze still bind.",
+      "If the founder’s account is frozen, agents holding their handshake cannot spend either. Authority is a graph, not a token sitting in a bot.",
+      "Revoke the handshake and the agent is still there — it just cannot move money. That is how you fire software without deleting it.",
+      "A tested freeze is required before L5. We do not give standing permission to something we have never paused.",
     ],
   };
 }

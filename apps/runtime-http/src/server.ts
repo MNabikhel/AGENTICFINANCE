@@ -5,11 +5,13 @@ import { fileURLToPath } from "node:url";
 import { encodeRequired, encodeResponse } from "@aether/envelope";
 import { Runtime, cmd, type DispatchResult } from "@aether/runtime";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
+import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import type { AgentId, CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(here, "../public");
 const fixture = join(process.cwd(), "fixtures/demo/sprint-procurement/scenario.json");
+const nightWatchFixture = join(process.cwd(), "fixtures/demo/night-watch/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -86,8 +88,25 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         res.end(html);
         return;
       }
+      if (req.method === "GET" && path === "/favicon.svg") {
+        const file = join(publicDir, "favicon.svg");
+        if (existsSync(file)) {
+          res.writeHead(200, { "content-type": "image/svg+xml" });
+          res.end(readFileSync(file));
+          return;
+        }
+      }
+      if (req.method === "GET" && path === "/favicon.ico") {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
       if (req.method === "GET" && path === "/v1/snapshot") {
         json(res, 200, runtime.snapshotState());
+        return;
+      }
+      if (req.method === "GET" && path === "/v1/kya") {
+        json(res, 200, runtime.kya.snapshot());
         return;
       }
       if (req.method === "GET" && (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json")) {
@@ -99,6 +118,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
           capabilities: { streaming: false, pushNotifications: false },
           skills: [
             { id: "sprint-procurement", name: "Sprint Procurement", description: "POST /v1/demo/sprint-procurement" },
+            { id: "night-watch", name: "Night Watch", description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker" },
             { id: "command-bus", name: "Command bus", description: "Same commands as MCP and CLI" },
           ],
           defaultInputModes: ["application/json"],
@@ -117,7 +137,14 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       if (req.method === "POST" && path === "/v1/demo/sprint-procurement") {
         const report = runSprintProcurement(loadScenario(fixture));
         runtime = report.runtime;
-        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot };
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "sprint-procurement" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/night-watch") {
+        const report = runNightWatch(loadNightWatch(nightWatchFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "night-watch" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
@@ -142,6 +169,9 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
 
       const routes: Record<string, CommandType> = {
         "/v1/identities": "identity.register",
+        "/v1/kya/attest": "kya.attest",
+        "/v1/kya/revoke": "kya.revoke",
+        "/v1/circuit/reset": "circuit.reset",
         "/v1/mandates/intent": "mandate.issue_intent",
         "/v1/mandates/cart": "mandate.issue_cart",
         "/v1/mandates/payment": "mandate.issue_payment",
@@ -187,6 +217,16 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const autonomy = path.match(/^\/v1\/agents\/([^/]+)\/autonomy$/);
       if (req.method === "POST" && autonomy) {
         handleDispatch(res, "ladder.set", { ...body, agentId: autonomy[1] });
+        return;
+      }
+      const freeze = path.match(/^\/v1\/agents\/([^/]+)\/freeze$/);
+      if (req.method === "POST" && freeze) {
+        handleDispatch(res, "identity.freeze", { ...body, agentId: freeze[1] });
+        return;
+      }
+      const unfreeze = path.match(/^\/v1\/agents\/([^/]+)\/unfreeze$/);
+      if (req.method === "POST" && unfreeze) {
+        handleDispatch(res, "identity.unfreeze", { ...body, agentId: unfreeze[1] });
         return;
       }
       const account = path.match(/^\/v1\/accounts\/([^/]+)$/);

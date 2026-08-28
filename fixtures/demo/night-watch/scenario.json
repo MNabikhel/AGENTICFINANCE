@@ -1,0 +1,32 @@
+{
+  "id": "night-watch",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000002",
+  "opening": {
+    "treasury:cash": { "amount": 5000000, "currency": "USD_SIM" }
+  },
+  "agents": [
+    { "key": "ops-human", "role": "human_operator", "autonomyLevel": 0, "displayName": "Founder" },
+    { "key": "treasury", "role": "treasury", "autonomyLevel": 3, "displayName": "Treasury" },
+    { "key": "night-watch", "role": "procurement", "autonomyLevel": 0, "displayName": "Night Watch" },
+    { "key": "research-vendor", "role": "data_vendor", "autonomyLevel": 2, "displayName": "Research Vendor" },
+    { "key": "auditor", "role": "auditor", "autonomyLevel": 0, "displayName": "Auditor" }
+  ],
+  "circuit": { "dailyLimit": 650000 },
+  "allocation": { "amount": 2000000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "Standing permission: buy research briefs overnight. Max $8,000 per hire, $20,000 total.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 800000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 2000000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 5 }
+    ]
+  },
+  "quotes": {
+    "cheap": { "amount": 20000, "currency": "USD_SIM" },
+    "big": { "amount": 600000, "currency": "USD_SIM" },
+    "over": { "amount": 900000, "currency": "USD_SIM" },
+    "fuse": { "amount": 50000, "currency": "USD_SIM" }
+  }
+}

@@ -81,6 +81,12 @@ importers:
         specifier: workspace:*
         version: link:../aether-types
 
+  packages/aether-kya:
+    dependencies:
+      '@aether/types':
+        specifier: workspace:*
+        version: link:../aether-types
+
   packages/aether-ledger:
     dependencies:
       '@aether/kernel':
@@ -139,6 +145,9 @@ importers:
       '@aether/kernel':
         specifier: workspace:*
         version: link:../aether-kernel
+      '@aether/kya':
+        specifier: workspace:*
+        version: link:../aether-kya
       '@aether/ledger':
         specifier: workspace:*
         version: link:../aether-ledger

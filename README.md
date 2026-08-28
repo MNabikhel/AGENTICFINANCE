@@ -1,6 +1,6 @@
 # Aether — a rulebook for software that spends money
 
-**If this looks heavy:** read [`docs/FOR-HUMANS.md`](docs/FOR-HUMANS.md) first, then run `pnpm dev` and press **Tell me what happened**. You do not need the protocol map to understand what this is.
+**If this looks heavy:** read [`docs/FOR-HUMANS.md`](docs/FOR-HUMANS.md) first, then run `pnpm dev` and press **Shopping trip** or **Night watch**. You do not need the protocol map to understand what this is.
 
 Aether is a machine-first economic operating system for software agents. A human writes a permission slip. Agents hire and pay each other. A referee that never guesses says yes, no, or ask a grown-up. A notary writes it down. An auditor may read the book and may not spend.
 
@@ -13,11 +13,14 @@ It is not a trading bot, not a checkout clone, and not a wallet.
 ```bash
 pnpm install
 pnpm test
-pnpm demo          # prints the story in English, then TAP proofs
-pnpm dev           # control room at http://127.0.0.1:8787
+pnpm demo                 # shopping trip (human in the loop)
+pnpm demo night-watch     # standing permission, handshake, fuse, freeze
+pnpm dev                  # control room at http://127.0.0.1:8787
 ```
 
-**Sprint Procurement** (the demo): seven agents, a $5,000 per-item cap, an $800 data buy that is allowed, a $6,400 compute buy that is refused, a new slip plus treasury sign-off, receipts bound to payment hashes, a 0.2% FX window, and an auditor who cannot spend.
+**Sprint Procurement:** seven agents, a $5,000 per-item cap, an $800 data buy that is allowed, a $6,400 compute buy that is refused, a new slip plus treasury sign-off, receipts bound to payment hashes, a 0.2% FX window, and an auditor who cannot spend.
+
+**Night Watch:** a founder shakes hands with an overnight agent (Know Your Agent), climbs it to L5 after testing the freeze, lets it buy $200 and $6,000 without waking treasury, stops a $9,000 overpay, blows a sticky daily fuse, freezes the founder (the agent still cannot spend), then revokes the handshake. L5 is not god mode.
 
 ## The loop
 
@@ -59,7 +62,8 @@ Human writes a permission slip (mandate)
 
 | Path | Role |
 |---|---|
-| `packages/aether-policy` | Referee. 27 ordered rules. No LLM. No I/O. |
+| `packages/aether-policy` | Referee. 32 ordered rules. No LLM. No I/O. |
+| `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |
 | `packages/aether-runtime` | Command bus + English story beats |
 | `packages/aether-audit` | Notary. Hash-chained log. |

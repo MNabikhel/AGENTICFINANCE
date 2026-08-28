@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { stdin as input, stdout as output } from "node:process";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
+import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 
 const tools = JSON.parse(readFileSync(new URL("./tools.json", import.meta.url), "utf8"));
 
@@ -23,6 +24,12 @@ async function handle(msg: { method?: string; id?: unknown; params?: { name?: st
   }
   if (msg.method === "tools/call" && msg.params?.name === "aether_demo_sprint") {
     const report = runSprintProcurement(loadScenario("fixtures/demo/sprint-procurement/scenario.json"));
+    return {
+      content: [{ type: "text", text: JSON.stringify({ ok: report.ok, results: report.results }, null, 2) }],
+    };
+  }
+  if (msg.method === "tools/call" && msg.params?.name === "aether_demo_night_watch") {
+    const report = runNightWatch(loadNightWatch("fixtures/demo/night-watch/scenario.json"));
     return {
       content: [{ type: "text", text: JSON.stringify({ ok: report.ok, results: report.results }, null, 2) }],
     };

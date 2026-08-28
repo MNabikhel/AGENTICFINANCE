@@ -57,6 +57,21 @@
       "description": "Approve or reject an escalation ticket. Replay uses commandHash."
     },
     {
+      "name": "aether_kya_attest",
+      "commandType": "kya.attest",
+      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped."
+    },
+    {
+      "name": "aether_kya_revoke",
+      "commandType": "kya.revoke",
+      "description": "Revoke a handshake. Cascades to sub-delegates. Blocks implicit supervisor grants."
+    },
+    {
+      "name": "aether_circuit_reset",
+      "commandType": "circuit.reset",
+      "description": "Reset a tripped daily circuit breaker. Mandate budgets are unchanged."
+    },
+    {
       "name": "aether_ladder_set",
       "commandType": "ladder.set",
       "description": "Move an agent one rung. Skipping rungs is illegal. any→L0 always allowed."
@@ -80,6 +95,11 @@
       "name": "aether_demo_sprint",
       "commandType": "demo.sprint",
       "description": "Run the Sprint Procurement TAP demo on sim:aether-1."
+    },
+    {
+      "name": "aether_demo_night_watch",
+      "commandType": "demo.night-watch",
+      "description": "Run the Night Watch standing-mandate TAP demo: KYA, L5, circuit, freeze, revoke."
     }
   ]
 }

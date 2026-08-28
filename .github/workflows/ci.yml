@@ -18,3 +18,4 @@ jobs:
       - run: pnpm install
       - run: pnpm test
       - run: pnpm demo
+      - run: pnpm demo:night-watch

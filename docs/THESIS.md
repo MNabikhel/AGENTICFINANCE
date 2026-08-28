@@ -54,9 +54,9 @@ Not a superintelligence at the Fed.
 
 It looks like **procurement agents buying data and compute from vendor agents**, **treasury agents allocating cash under a mandate**, **market-maker agents quoting a tightly bounded FX window**, and **auditor agents who can verify everything and spend nothing** — with a human who issued the intent still holding the freeze.
 
-Sprint Procurement in this repo is that picture, shrunk to a TAP test.
+Sprint Procurement in this repo is that picture, shrunk to a TAP test. Night Watch is the same loop with the human off the click path: a KYA handshake, standing permission, a sticky daily fuse, freeze that cascades through the graph, and revoke.
 
-Next revisions (not v0): rail adapters (x402 facilitator, MPP challenge, AP2 SD-JWT, TAP HTTP signatures), bilateral credit limits and multilateral netting (the CCP-in-a-box), and a portable KYA graph that *imports* Skyfire/TAP/ERC-8004 as issuers instead of becoming one.
+Next revisions: rail adapters (x402 facilitator, MPP challenge, AP2 SD-JWT, TAP HTTP signatures) hanging off these objects, bilateral credit limits that actually net and settle a window, and importing Skyfire/TAP/ERC-8004 as *issuers* on the KYA graph that already exists.
 
 ## 5. Sources (starting points)
 

@@ -22,8 +22,10 @@ export default defineConfig({
       "@aether/market": alias("aether-market"),
       "@aether/settlement": alias("aether-settlement"),
       "@aether/clearing": alias("aether-clearing"),
+      "@aether/kya": alias("aether-kya"),
       "@aether/runtime": alias("aether-runtime"),
       "@aether/sprint": path.resolve(__dirname, "packages/aether-runtime/src/sprint-procurement.ts"),
+      "@aether/night-watch": path.resolve(__dirname, "packages/aether-runtime/src/night-watch.ts"),
     },
   },
 });

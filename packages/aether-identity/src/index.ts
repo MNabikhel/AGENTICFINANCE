@@ -41,7 +41,24 @@ export class IdentityRegistry {
 
   freeze(id: AgentId): Agent {
     const agent = this.require(id);
-    const next: Agent = { ...agent, frozen: true, autonomyLevel: 0 };
+    if (agent.frozen) return agent;
+    const next: Agent = {
+      ...agent,
+      frozen: true,
+      autonomyBeforeFreeze: agent.autonomyLevel,
+      autonomyLevel: 0,
+    };
+    this.agents.set(id, next);
+    this.byDid.set(next.did, next);
+    return next;
+  }
+
+  unfreeze(id: AgentId): Agent {
+    const agent = this.require(id);
+    if (!agent.frozen) return agent;
+    const restored = agent.autonomyBeforeFreeze ?? agent.autonomyLevel;
+    const next: Agent = { ...agent, frozen: false, autonomyLevel: restored };
+    delete next.autonomyBeforeFreeze;
     this.agents.set(id, next);
     this.byDid.set(next.did, next);
     return next;

@@ -41,7 +41,7 @@ function findConstraint<T extends MandateConstraint["type"]>(
 
 function minLevelFor(ctx: PolicyContext): AutonomyLevel {
   const commandType = ctx.commandType;
-  if (commandType === "mandate.issue_intent") {
+  if (commandType === "mandate.issue_intent" || commandType === "kya.attest" || commandType === "kya.revoke") {
     if (ctx.actor.role === "human_operator" || ctx.actor.role === "treasury") {
       return MIN_LEVEL_FOR_ACTION.draft;
     }
@@ -263,6 +263,9 @@ export const RULES: readonly Rule[] = [
     id: "approval.threshold",
     evaluate: (ctx) => {
       if (!ctx.amount) return v("approval.threshold", "allow", "no amount");
+      if (ctx.commandType === "ledger.transfer") {
+        return v("approval.threshold", "allow", "internal allocation");
+      }
       if (ctx.thresholdWaived) {
         return v("approval.threshold", "allow", "threshold waived by approved ticket");
       }
@@ -293,6 +296,11 @@ export const RULES: readonly Rule[] = [
   {
     id: "circuit.daily",
     evaluate: (ctx) => {
+      const spend = ctx.commandType === "hire.create" || ctx.commandType === "hire.fund" || ctx.commandType === "envelope.submit" || ctx.commandType === "hire.release" || ctx.commandType === "market.fx_settle";
+      if (!spend) return v("circuit.daily", "allow", "not a spend");
+      if (ctx.hire && (ctx.hire.state === "funded" || ctx.hire.state === "delivered" || ctx.hire.state === "released")) {
+        return v("circuit.daily", "allow", "spend counted at fund");
+      }
       if (ctx.circuit.tripped) return v("circuit.daily", "deny", "circuit tripped");
       const next = ctx.circuit.dailySpend + (ctx.amount?.amount ?? 0);
       if (ctx.amount && next > ctx.circuit.dailyLimit) {
@@ -413,6 +421,70 @@ export const RULES: readonly Rule[] = [
         });
       }
       return v("clearing.bilateral_limit", "allow", "exposure inside limit");
+    },
+  },
+  {
+    id: "kya.chain_intact",
+    evaluate: (ctx) => {
+      if (!ctx.kya?.required) return v("kya.chain_intact", "allow", "kya not required");
+      if (ctx.kya.pathOk) return v("kya.chain_intact", "allow", ctx.kya.implicit ? "implicit supervisor grant" : "live delegation path");
+      return v("kya.chain_intact", "deny", ctx.kya.revoked ? "delegation revoked" : "no delegation from principal", {
+        principalId: ctx.kya.principalId,
+      });
+    },
+  },
+  {
+    id: "kya.delegation_depth",
+    evaluate: (ctx) => {
+      if (!ctx.kya?.required || !ctx.kya.pathOk) return v("kya.delegation_depth", "allow", "depth not applicable");
+      return ctx.kya.depth > ctx.kya.maxDepth
+        ? v("kya.delegation_depth", "deny", `delegation depth ${ctx.kya.depth} > ${ctx.kya.maxDepth}`, {
+            depth: ctx.kya.depth,
+            max: ctx.kya.maxDepth,
+          })
+        : v("kya.delegation_depth", "allow", `depth ${ctx.kya.depth} ≤ ${ctx.kya.maxDepth}`);
+    },
+  },
+  {
+    id: "kya.principal_not_frozen",
+    evaluate: (ctx) => {
+      if (!ctx.kya?.required) return v("kya.principal_not_frozen", "allow", "kya not required");
+      if (ctx.kya.principalId && ctx.actor.id === ctx.kya.principalId) {
+        return v("kya.principal_not_frozen", "allow", "actor is principal");
+      }
+      return ctx.kya.principalFrozen
+        ? v("kya.principal_not_frozen", "deny", "principal is frozen")
+        : v("kya.principal_not_frozen", "allow", "principal not frozen");
+    },
+  },
+  {
+    id: "kya.attestation_fresh",
+    evaluate: (ctx) => {
+      if (!ctx.kya?.required) return v("kya.attestation_fresh", "allow", "kya not required");
+      return ctx.kya.expired
+        ? v("kya.attestation_fresh", "deny", "delegation expired")
+        : v("kya.attestation_fresh", "allow", "attestation in window");
+    },
+  },
+  {
+    id: "kya.capability_subset",
+    evaluate: (ctx) => {
+      if (!ctx.kya?.required) return v("kya.capability_subset", "allow", "kya not required");
+      const proposed = ctx.kya.proposedMaxAutonomy;
+      if (
+        proposed !== undefined &&
+        ctx.commandType === "kya.attest" &&
+        ctx.actor.role !== "human_operator" &&
+        ctx.actor.role !== "treasury" &&
+        proposed > ctx.actor.autonomyLevel
+      ) {
+        return v("kya.capability_subset", "deny", `cannot grant L${proposed} above own L${ctx.actor.autonomyLevel}`);
+      }
+      const granted = ctx.kya.grantedMaxAutonomy;
+      if (granted !== undefined && ctx.actor.autonomyLevel > granted) {
+        return v("kya.capability_subset", "deny", `actor L${ctx.actor.autonomyLevel} > granted max L${granted}`);
+      }
+      return v("kya.capability_subset", "allow", "capability within grant");
     },
   },
 ];

@@ -36,8 +36,8 @@ function ctx(over: Partial<PolicyContext> = {}): PolicyContext {
 }
 
 describe("policy catalog", () => {
-  it("has 26 rules", () => {
-    expect(RULE_IDS).toHaveLength(27);
+  it("has 32 rules", () => {
+    expect(RULE_IDS).toHaveLength(32);
   });
 
   it("denies frozen actors", () => {
@@ -156,6 +156,78 @@ describe("policy catalog", () => {
       }),
     );
     expect(d.trace.find((t) => t.ruleId === "clearing.bilateral_limit")?.verdict).toBe("deny");
+    expect(d.verdict).toBe("deny");
+  });
+
+  it("denies spend when KYA path is missing", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        kya: {
+          required: true,
+          pathOk: false,
+          implicit: false,
+          depth: 0,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: true,
+          hops: [],
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("deny");
+    expect(d.verdict).toBe("deny");
+  });
+
+  it("denies spend when the principal is frozen", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: true,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.principal_not_frozen")?.verdict).toBe("deny");
+  });
+
+  it("allows L5 to skip the approval threshold while amount_range still denies", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 5 }),
+        commandType: "hire.create",
+        amount: { amount: 900000, currency: "USD_SIM" },
+        circuit: { dailySpend: 0, dailyLimit: 10_000_000, tripped: false },
+        intent: {
+          issuer: "did:aether:human",
+          kid: "k",
+          alg: "EdDSA",
+          jws: "x",
+          payload: {
+            vct: "aether.mandate.intent.open.1",
+            id: "mid_01J6AETHERMAND00000000001",
+            issuerId: "aid_human",
+            subjectId: "aid_01J6AETHERAGENT00000000001",
+            task: "t",
+            constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 800000 }],
+            iat: 1,
+            exp: 9_999_999_999,
+          },
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "payment.amount_range")?.verdict).toBe("deny");
     expect(d.verdict).toBe("deny");
   });
 });

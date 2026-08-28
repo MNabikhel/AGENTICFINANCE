@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Aether — a rulebook for software that spends money</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -35,6 +36,7 @@
       cursor: pointer;
     }
     #run { background: var(--btn); color: #111; }
+    #run-night { background: #e4c27a; color: #111; }
     .ghost { background: transparent; color: var(--ink); border: 1px solid var(--line) !important; }
     button:disabled { opacity: 0.5; cursor: wait; }
     .tldr {
@@ -82,10 +84,11 @@
       A notary writes it down. An auditor may read the book — and may not spend.
     </p>
     <div class="actions">
-      <button id="run">Tell me what happened</button>
+      <button id="run">Shopping trip</button>
+      <button id="run-night">Night watch (standing permission)</button>
       <button class="ghost" id="toggle">Show the machinery</button>
     </div>
-    <p class="status" id="status">Press the button. Seven agents will run a sprint: buy data, get blocked on a too-expensive computer bill, get permission, pay, convert currency, and prove the auditor cannot spend.</p>
+    <p class="status" id="status">Two stories. The shopping trip is a human in the loop. Night watch is standing permission — L5 — with a handshake, a daily fuse, and a freeze that actually works.</p>
 
     <div class="tldr" id="tldr">The story appears here after you run it. Nothing is connected to a bank. These are simulated dollars, on purpose.</div>
 
@@ -111,6 +114,9 @@
         <div id="balances"></div>
       </div>
     </div>
+
+    <h2>Who is allowed to spend for whom (KYA)</h2>
+    <div class="card" id="kya"><p class="body">After Night Watch, this is the handshake graph — live or revoked.</p></div>
 
     <h2>Who owes whom (clearing)</h2>
     <div class="card" id="clearing"><p class="body">After the sprint, this is the net picture — the seed of a clearing house for agents.</p></div>
@@ -160,6 +166,18 @@
             <div>${n.currency === "USDC_SIM" ? "USDC" : "USD"} ${money(n.net)}</div></div>`).join("")
         : "<p class='body'>No net exposure yet.</p>";
 
+      const edges = s.kya?.edges || [];
+      const fuse = s.circuit
+        ? `<div class="row"><div>Daily fuse</div><div class="${s.circuit.tripped ? "deny" : "ok"}">${s.circuit.tripped ? "TRIPPED" : "intact"} · spent ${money(s.circuit.dailySpend)} / ${money(s.circuit.dailyLimit)}</div></div>`
+        : "";
+      $("kya").innerHTML =
+        fuse +
+        (edges.length
+          ? edges.map((e) => `<div class="row"><div>${names[e.from] || e.from} → ${names[e.to] || e.to}
+              <div class="mono">max L${e.maxAutonomy}</div></div>
+              <div class="tag ${e.status === "live" ? "allow" : "deny"}">${e.status}</div></div>`).join("")
+          : "<p class='body'>No handshakes yet. Run Night Watch to see Know Your Agent.</p>");
+
       $("tap").innerHTML = (report.results || []).map((r) =>
         `<div class="${r.ok ? "ok" : "deny"}">${r.ok ? "ok" : "not ok"}  ${r.name}</div>`
       ).join("") || "<div class='mono'>Proof lines appear after a run.</div>";
@@ -176,11 +194,12 @@
       $("toggle").textContent = hidden ? "Show the machinery" : "Hide the machinery";
     };
 
-    $("run").onclick = async () => {
+    async function runDemo(path, label) {
       $("run").disabled = true;
-      $("status").textContent = "Running the sprint on simulated dollars…";
+      $("run-night").disabled = true;
+      $("status").textContent = label;
       try {
-        const res = await fetch("/v1/demo/sprint-procurement", { method: "POST" });
+        const res = await fetch(path, { method: "POST" });
         const report = await res.json();
         render(report);
         $("status").textContent = report.ok
@@ -191,8 +210,12 @@
         $("status").textContent = String(e);
       } finally {
         $("run").disabled = false;
+        $("run-night").disabled = false;
       }
-    };
+    }
+
+    $("run").onclick = () => runDemo("/v1/demo/sprint-procurement", "Running the shopping trip on simulated dollars…");
+    $("run-night").onclick = () => runDemo("/v1/demo/night-watch", "Running night watch — standing permission, handshake, fuse, freeze…");
   </script>
 </body>
 </html>

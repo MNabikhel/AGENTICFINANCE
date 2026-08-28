@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./sprint": "./src/sprint-procurement.ts"
+    "./sprint": "./src/sprint-procurement.ts",
+    "./night-watch": "./src/night-watch.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
@@ -12,6 +13,7 @@
     "@aether/escrow": "workspace:*",
     "@aether/identity": "workspace:*",
     "@aether/kernel": "workspace:*",
+    "@aether/kya": "workspace:*",
     "@aether/ledger": "workspace:*",
     "@aether/mandate": "workspace:*",
     "@aether/market": "workspace:*",

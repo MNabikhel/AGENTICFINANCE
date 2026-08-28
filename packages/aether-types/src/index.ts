@@ -87,6 +87,7 @@ export type ApprovalId = `apd_${Ulid}`;
 export type JournalId = `jnl_${Ulid}`;
 export type RfqId = `rfq_${Ulid}`;
 export type QuoteId = `qte_${Ulid}`;
+export type DelegationId = `dlg_${Ulid}`;
 export type Did = `did:aether:${string}`;
 
 export interface Agent {
@@ -100,6 +101,8 @@ export interface Agent {
   supervisors: AgentId[];
   createdAt: Instant;
   frozen: boolean;
+  /** Captured on freeze so unfreeze restores the rung, not a silent demotion. */
+  autonomyBeforeFreeze?: AutonomyLevel;
 }
 
 export type LadderExtraGate =
@@ -461,6 +464,46 @@ export interface CircuitState {
   tripped: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// KYA — Know Your Agent (runtime graph the kernel consults)
+// ---------------------------------------------------------------------------
+
+export type KyaIssuerKind = "aether.self" | "tap.http-sig" | "skyfire.kya" | "erc8004.agent";
+
+export const KYA_MAX_DEPTH = 3;
+
+export interface DelegationAttestation {
+  id: DelegationId;
+  vct: "aether.kya.delegation.1";
+  issuerKind: KyaIssuerKind;
+  /** Money owner at the root of this chain. */
+  principalId: AgentId;
+  /** Who signed this hop. */
+  grantorId: AgentId;
+  delegateId: AgentId;
+  parentId?: DelegationId;
+  maxAutonomy: AutonomyLevel;
+  maxDepth: number;
+  createdAt: Instant;
+  expiresAt: Instant;
+  revokedAt?: Instant;
+}
+
+export interface KyaResolution {
+  required: boolean;
+  pathOk: boolean;
+  implicit: boolean;
+  depth: number;
+  maxDepth: number;
+  principalId?: AgentId;
+  principalFrozen: boolean;
+  expired: boolean;
+  revoked: boolean;
+  grantedMaxAutonomy?: AutonomyLevel;
+  proposedMaxAutonomy?: AutonomyLevel;
+  hops: DelegationAttestation[];
+}
+
 export interface PolicyContext {
   clock: Instant;
   actor: Agent;
@@ -491,6 +534,8 @@ export interface PolicyContext {
   /** Current + this command’s amount vs bilateral exposure limit. */
   projectedExposure?: number;
   exposureLimit?: number;
+  /** Know-Your-Agent resolution. Absent means the command is not KYA-gated. */
+  kya?: KyaResolution;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
@@ -548,6 +593,10 @@ export type AuditAction =
   | "JOURNAL_POST"
   | "RECEIPT_ISSUE"
   | "FREEZE"
+  | "UNFREEZE"
+  | "KYA_ATTEST"
+  | "KYA_REVOKE"
+  | "CIRCUIT_RESET"
   | "AUDIT_VERIFY";
 
 export interface AuditSubject {
@@ -589,6 +638,10 @@ export type AuditVerifyResult = AuditVerifyOk | AuditVerifyFail;
 export type CommandType =
   | "identity.register"
   | "identity.freeze"
+  | "identity.unfreeze"
+  | "kya.attest"
+  | "kya.revoke"
+  | "circuit.reset"
   | "mandate.issue_intent"
   | "mandate.issue_cart"
   | "mandate.issue_payment"
@@ -618,6 +671,16 @@ export interface Command<T extends CommandType = CommandType, B = unknown> {
   idempotencyKey?: string;
 }
 
+/** Commands that spend, close, or hand down authority. The kernel consults KYA. */
+export const KYA_GATED_COMMANDS: readonly CommandType[] = [
+  "hire.create",
+  "hire.fund",
+  "hire.release",
+  "envelope.submit",
+  "mandate.issue_intent",
+  "kya.attest",
+];
+
 export const ROLE_CAPABILITY: Record<
   AgentRole,
   readonly CommandType[]
@@ -625,6 +688,10 @@ export const ROLE_CAPABILITY: Record<
   treasury: [
     "identity.register",
     "identity.freeze",
+    "identity.unfreeze",
+    "kya.attest",
+    "kya.revoke",
+    "circuit.reset",
     "mandate.issue_intent",
     "mandate.issue_cart",
     "mandate.issue_payment",
@@ -645,6 +712,9 @@ export const ROLE_CAPABILITY: Record<
     "receipt.get",
   ],
   procurement: [
+    "mandate.issue_intent",
+    "kya.attest",
+    "kya.revoke",
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
@@ -685,10 +755,14 @@ export const ROLE_CAPABILITY: Record<
     "ledger.balances",
     "receipt.get",
   ],
-  auditor: ["audit.verify", "identity.freeze", "ledger.balances", "receipt.get"],
+  auditor: ["audit.verify", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get"],
   human_operator: [
     "identity.register",
     "identity.freeze",
+    "identity.unfreeze",
+    "kya.attest",
+    "kya.revoke",
+    "circuit.reset",
     "mandate.issue_intent",
     "approval.resolve",
     "ladder.set",
