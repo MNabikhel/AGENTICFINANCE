@@ -67,6 +67,11 @@
       "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release."
     },
     {
+      "name": "aether_hire_release",
+      "commandType": "hire.release",
+      "description": "Release funded+delivered escrow to the seller without an x402 envelope. Same books as envelope.submit."
+    },
+    {
       "name": "aether_payment_require",
       "commandType": "envelope.require",
       "description": "Return an x402-shaped PaymentRequired envelope (HTTP 402)."

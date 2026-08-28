@@ -246,6 +246,7 @@ export class Runtime {
       }
     }
     if (!opts?.skipStep) this.clock.step();
+    this.expireApprovals();
     const actor = cmd.actorId === "system" ? this.systemActor() : this.identity.require(cmd.actorId);
     const ctx = this.snapshot(cmd, actor, opts?.thresholdWaived === true);
     const decision = evaluate(ctx);
@@ -340,6 +341,65 @@ export class Runtime {
       auditHead: this.audit.head(),
       auditLength: this.audit.length,
     };
+  }
+
+  /**
+   * Fetch one object by id (or alias). Prefix selects the table:
+   * aid_ agent, hid_ hire, mid_ mandate, rid_ receipt, apd_ approval,
+   * rfq_ / qte_ market, acct_ / name account, dlg_ KYA hop.
+   */
+  inspect(id: string): { type: string; id: string; value: unknown } | undefined {
+    const alias = this.aliases.get(id);
+    if (alias) return this.inspect(alias);
+    if (id.startsWith("aid_")) {
+      const agent = this.identity.get(id as AgentId);
+      return agent ? { type: "agent", id: agent.id, value: agent } : undefined;
+    }
+    if (id.startsWith("hid_")) {
+      const hire = this.hires.get(id as HireId);
+      return hire ? { type: "hire", id: hire.id, value: hire } : undefined;
+    }
+    if (id.startsWith("mid_")) {
+      const intent = this.intents.get(id as MandateId);
+      if (intent) return { type: "intent", id, value: intent };
+      const cart = this.carts.get(id as MandateId);
+      if (cart) return { type: "cart", id, value: cart };
+      const payment = this.payments.get(id as MandateId);
+      if (payment) return { type: "payment", id, value: payment };
+      return undefined;
+    }
+    if (id.startsWith("rid_")) {
+      const receipt = this.receipts.get(id);
+      return receipt ? { type: "receipt", id: receipt.id, value: receipt } : undefined;
+    }
+    if (id.startsWith("apd_")) {
+      const ticket = this.approvals.get(id as ApprovalId);
+      return ticket ? { type: "approval", id: ticket.id, value: ticket } : undefined;
+    }
+    if (id.startsWith("rfq_")) {
+      const rfq = this.rfqs.get(id);
+      return rfq ? { type: "rfq", id: rfq.id, value: rfq } : undefined;
+    }
+    if (id.startsWith("qte_")) {
+      const quote = this.quotes.get(id);
+      return quote ? { type: "quote", id: quote.id, value: quote } : undefined;
+    }
+    if (id.startsWith("dlg_")) {
+      const att = this.kya.attestations.get(id as DelegationId);
+      return att ? { type: "delegation", id: att.id, value: att } : undefined;
+    }
+    if (id.startsWith("acct_")) {
+      const account = [...this.ledger.accounts.values()].find((a) => a.id === id);
+      return account
+        ? { type: "account", id: account.id, value: { ...account, balance: this.ledger.balance(account.id) } }
+        : undefined;
+    }
+    try {
+      const account = this.ledger.account(id);
+      return { type: "account", id: account.id, value: { ...account, balance: this.ledger.balance(account.id) } };
+    } catch {
+      return undefined;
+    }
   }
 
   agentCard(agent: Agent) {
@@ -516,6 +576,20 @@ export class Runtime {
     if (!ticketId) return true;
     const live = this.approvals.get(ticketId);
     return !live || live.status === "pending";
+  }
+
+  private expireApprovals(): void {
+    const now = Date.parse(this.clock.now());
+    for (const [id, ticket] of this.approvals) {
+      if (ticket.status !== "pending") continue;
+      if (Date.parse(ticket.expiresAt) > now) continue;
+      this.approvals.set(id, { ...ticket, status: "expired" });
+      const pending = this.pending.get(id);
+      if (pending) {
+        const k = idempotencyKeyOf(pending);
+        if (k) this.idempotency.delete(k);
+      }
+    }
   }
 
   private openTicket(cmd: Command, decision: PolicyDecision): ApprovalTicket {
@@ -1335,6 +1409,18 @@ export class Runtime {
   private mutApprove(body: Record<string, unknown>, actor: Agent) {
     const ticket = this.approvals.get(body.approvalId as ApprovalId);
     if (!ticket) throw new Error("unknown approval");
+    if (ticket.status === "expired" || Date.parse(ticket.expiresAt) <= Date.parse(this.clock.now())) {
+      if (ticket.status === "pending") {
+        this.approvals.set(ticket.id, { ...ticket, status: "expired" });
+        const pendingCmd = this.pending.get(ticket.id);
+        if (pendingCmd) {
+          const k = idempotencyKeyOf(pendingCmd);
+          if (k) this.idempotency.delete(k);
+        }
+      }
+      throw new Error("approval expired");
+    }
+    if (ticket.status !== "pending") throw new Error(`approval already ${ticket.status}`);
     const decision = String(body.decision);
     if (decision !== "approved" && decision !== "rejected") throw new Error("decision");
     const next: ApprovalTicket = {

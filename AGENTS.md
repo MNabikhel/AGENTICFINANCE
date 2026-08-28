@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.5.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -27,9 +27,13 @@ Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. 
 MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
+- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`.
 - `aether_protocol` / resource `aether://protocol`
+- `aether://commands` — JSON Schema for every command body
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
 - `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
+
+`tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
 Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
@@ -50,6 +54,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 13. `PolicyDecision.remediation.kind` is a machine enum (`issue_intent`, `wait_approval`, `attest_kya`, `unfreeze_actor`, `unfreeze_principal`, `reset_circuit`, `role_forbidden`, `none`). Do not parse English `hint`.
 14. `hire.refund` is legal only from `funded` (not after deliver/release). It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
 15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
+16. Approval tickets expire. Resolving an expired ticket is a refuse, not a late yes. The original command may be retried (new ticket).
 
 ## Autonomy
 

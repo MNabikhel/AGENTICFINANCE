@@ -765,7 +765,7 @@ L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen
 | treasury | 2_000_000 |
 | vendors (outbound, should be rare) | 50_000 |
 
-**Escalation object:** on `escalate`, runtime writes `ApprovalTicket` with `commandHash = sha256(JCS(command))`. Resolver must replay the **same** command bytes. Mutation proceeds only after `status=approved` and re-evaluation returns `allow`.
+**Escalation object:** on `escalate`, runtime writes `ApprovalTicket` with `commandHash = sha256(JCS(command))`. Resolver must replay the **same** command bytes. Mutation proceeds only after `status=approved` and re-evaluation returns `allow`. Tickets past `expiresAt` become `expired`; resolve is a refuse; the original command may be retried (new ticket). Inspect any id with `Runtime.inspect` / `GET /v1/objects/:id` / MCP `aether_get`. Command bodies: `schemas/commands.schema.json`.
 
 ---
 
@@ -934,7 +934,7 @@ export interface AetherError {
 | `night-watch.test.ts` | KYA, L5, sticky circuit, freeze principal, revoke |
 | `mcp.test.ts` | Sub-hire TAP + MCP `tools/list` + `identity.register` replay + `aether_hire_refund` |
 | `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false` |
-| `world.test.ts` | Durable boot restores keys and audit head; settlement window restores |
+| `inspect.test.ts` | `aether_get` / inspect by id; MCP command schemas; expired approval tickets refuse resolve |
 | `world.test.ts` | Durable boot restores keys and audit head; settlement window restores |
 
 Determinism: same fixture + frozen clock ⇒ bit-identical `payloadHash` sequence from seq 1 onward (seq 0 nonce is fixture-fixed).

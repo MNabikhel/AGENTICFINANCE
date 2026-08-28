@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aether.dev/schemas/commands.schema.json",
+  "title": "Aether command bodies",
+  "description": "Body fields for each CommandType. MCP/HTTP merge actor + idempotencyKey on top. additionalProperties stay allowed so aliases can evolve; listed properties are what the kernel reads.",
+  "commands": {
+    "identity.register": {
+      "type": "object",
+      "required": ["displayName", "role"],
+      "properties": {
+        "key": { "type": "string", "description": "Runtime alias (ops-human, desk, scout)." },
+        "displayName": { "type": "string" },
+        "role": {
+          "enum": ["treasury", "procurement", "data_vendor", "compute_vendor", "market_maker", "auditor", "human_operator"]
+        },
+        "autonomyLevel": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "identity.freeze": {
+      "type": "object",
+      "required": ["agentId"],
+      "properties": { "agentId": { "type": "string" } }
+    },
+    "identity.unfreeze": {
+      "type": "object",
+      "required": ["agentId"],
+      "properties": { "agentId": { "type": "string" } }
+    },
+    "kya.attest": {
+      "type": "object",
+      "required": ["delegateId"],
+      "properties": {
+        "delegateId": { "type": "string" },
+        "principalId": { "type": "string" },
+        "maxAutonomy": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "parentId": { "type": "string" },
+        "issuerKind": { "enum": ["aether.self", "tap.http-sig", "skyfire.kya", "erc8004.agent"] },
+        "expiresAt": { "type": "string" }
+      }
+    },
+    "kya.revoke": {
+      "type": "object",
+      "properties": {
+        "principalId": { "type": "string" },
+        "delegateId": { "type": "string" },
+        "attestationId": { "type": "string" }
+      }
+    },
+    "circuit.reset": { "type": "object", "properties": {} },
+    "mandate.issue_intent": {
+      "type": "object",
+      "required": ["subjectId", "task", "constraints"],
+      "properties": {
+        "subjectId": { "type": "string" },
+        "task": { "type": "string" },
+        "parentId": { "type": "string" },
+        "constraints": { "type": "array" }
+      }
+    },
+    "mandate.issue_cart": {
+      "type": "object",
+      "required": ["intentId", "merchantId", "line_items"],
+      "properties": {
+        "intentId": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "hireId": { "type": "string" },
+        "line_items": { "type": "array" }
+      }
+    },
+    "mandate.issue_payment": {
+      "type": "object",
+      "required": ["cartId"],
+      "properties": { "cartId": { "type": "string" } }
+    },
+    "market.rfq": {
+      "type": "object",
+      "required": ["sku", "spec"],
+      "properties": {
+        "sku": { "type": "string" },
+        "spec": { "type": "string" },
+        "invitedSellerIds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "market.quote": {
+      "type": "object",
+      "required": ["rfqId", "price"],
+      "properties": {
+        "rfqId": { "type": "string" },
+        "price": { "type": "object" },
+        "fx": { "type": "object" }
+      }
+    },
+    "market.fx_settle": {
+      "type": "object",
+      "required": ["quoteId"],
+      "properties": { "quoteId": { "type": "string" } }
+    },
+    "hire.create": {
+      "type": "object",
+      "required": ["quoteId", "intentId"],
+      "properties": {
+        "quoteId": { "type": "string" },
+        "intentId": { "type": "string" }
+      }
+    },
+    "hire.accept": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "hire.fund": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": { "type": "string" },
+        "paymentMandateId": { "type": "string" }
+      }
+    },
+    "hire.deliver": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": { "type": "string" },
+        "deliverable": {}
+      }
+    },
+    "hire.release": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "hire.refund": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "envelope.require": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": { "hireId": { "type": "string" } }
+    },
+    "envelope.submit": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": { "type": "string" },
+        "paymentMandateId": { "type": "string" },
+        "nonce": { "type": "string" }
+      }
+    },
+    "approval.resolve": {
+      "type": "object",
+      "required": ["approvalId", "decision"],
+      "properties": {
+        "approvalId": { "type": "string" },
+        "decision": { "enum": ["approved", "rejected"] }
+      }
+    },
+    "ladder.set": {
+      "type": "object",
+      "required": ["agentId", "to"],
+      "properties": {
+        "agentId": { "type": "string" },
+        "to": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "ledger.transfer": {
+      "type": "object",
+      "required": ["fromAccount", "toAccount", "amount"],
+      "properties": {
+        "fromAccount": { "type": "string" },
+        "toAccount": { "type": "string" },
+        "amount": { "type": "object" }
+      }
+    },
+    "ledger.balances": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "accountId": { "type": "string" }
+      }
+    },
+    "clearing.settle_window": {
+      "type": "object",
+      "properties": { "currency": { "enum": ["USD_SIM", "USDC_SIM"] } }
+    },
+    "audit.verify": { "type": "object", "properties": {} },
+    "receipt.get": {
+      "type": "object",
+      "required": ["receiptId"],
+      "properties": { "receiptId": { "type": "string" } }
+    }
+  }
+}

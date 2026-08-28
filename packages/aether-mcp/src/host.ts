@@ -34,8 +34,21 @@ type ToolDef = {
   description: string;
 };
 
+type JsonSchema = {
+  type?: string;
+  properties?: Record<string, unknown>;
+  required?: string[];
+  additionalProperties?: boolean;
+  [k: string]: unknown;
+};
+
 const here = dirname(fileURLToPath(import.meta.url));
 const catalog = JSON.parse(readFileSync(join(here, "../tools.json"), "utf8")) as { tools: ToolDef[] };
+const commandBodies = (
+  JSON.parse(readFileSync(join(here, "../../../schemas/commands.schema.json"), "utf8")) as {
+    commands: Record<string, JsonSchema>;
+  }
+).commands;
 
 const COMMAND_BY_TOOL = new Map(
   catalog.tools.filter((t) => t.commandType && !t.commandType.startsWith("demo.")).map((t) => [t.name, t.commandType as CommandType]),
@@ -43,18 +56,23 @@ const COMMAND_BY_TOOL = new Map(
 
 const DEMO_TOOLS = new Set(["aether_demo_sprint", "aether_demo_night_watch", "aether_demo_sub_hire"]);
 
-const ACTOR_SCHEMA = {
-  type: "object",
-  properties: {
-    actor: { type: "string", description: "Runtime alias (ops-human, desk, scout) or aid_/system" },
-    actorId: { type: "string" },
-    idempotencyKey: {
-      type: "string",
-      description: "Stable key for money-moving retries. Denies are never cached. Same key + allow = replay, not a second spend.",
-    },
+const ACTOR_PROPERTIES = {
+  actor: { type: "string", description: "Runtime alias (ops-human, desk, scout) or aid_/system" },
+  actorId: { type: "string" },
+  idempotencyKey: {
+    type: "string",
+    description: "Stable key for money-moving retries. Denies are never cached. Same key + allow = replay, not a second spend.",
   },
-  additionalProperties: true,
 } as const;
+
+function inputSchemaFor(commandType: string): JsonSchema {
+  const body = commandBodies[commandType] ?? { type: "object", properties: {} };
+  return {
+    type: "object",
+    properties: { ...ACTOR_PROPERTIES, ...(body.properties ?? {}) },
+    additionalProperties: true,
+  };
+}
 
 function dataDir(): string | undefined {
   const dir = process.env.AETHER_DATA_DIR;
@@ -124,7 +142,7 @@ export class AetherMcp {
     if (method === "initialize") {
       return {
         protocolVersion: "2024-11-05",
-        serverInfo: { name: "aether", version: "0.1.0" },
+        serverInfo: { name: "aether", version: PROTOCOL.version },
         capabilities: { tools: {}, resources: {} },
         instructions:
           "Aether is a rulebook for software that spends money on sim:aether-1. Dispatch commands with actor aliases. Policy is deterministic. No live rails. Read AGENTS.md.",
@@ -138,12 +156,25 @@ export class AetherMcp {
           ...catalog.tools.map((t) => ({
             name: t.name,
             description: t.description,
-            inputSchema: DEMO_TOOLS.has(t.name) ? { type: "object", properties: {} } : ACTOR_SCHEMA,
+            inputSchema: DEMO_TOOLS.has(t.name)
+              ? { type: "object", properties: {} }
+              : t.commandType
+                ? inputSchemaFor(t.commandType)
+                : { type: "object", properties: {} },
           })),
           {
             name: "aether_snapshot",
             description: "Read-only runtime snapshot: agents, mandates, hires, KYA, clearing, audit head.",
             inputSchema: { type: "object", properties: {} },
+          },
+          {
+            name: "aether_get",
+            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name).",
+            inputSchema: {
+              type: "object",
+              properties: { id: { type: "string" } },
+              required: ["id"],
+            },
           },
           {
             name: "aether_protocol",
@@ -176,6 +207,11 @@ export class AetherMcp {
             name: "runtime agent card",
             mimeType: "application/json",
           },
+          {
+            uri: "aether://commands",
+            name: "command body schemas",
+            mimeType: "application/json",
+          },
         ],
       };
     }
@@ -203,6 +239,15 @@ export class AetherMcp {
           ],
         };
       }
+      if (uri === "aether://commands") {
+        return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(commandBodies) }] };
+      }
+      const objectUri = uri?.match(/^aether:\/\/(?:object|hire|intent|receipt|approval|agent)\/(.+)$/);
+      if (objectUri?.[1]) {
+        const found = this.runtime.inspect(decodeURIComponent(objectUri[1]));
+        if (!found) throw new Error(`unknown object ${objectUri[1]}`);
+        return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(found) }] };
+      }
       throw new Error(`unknown resource ${uri}`);
     }
     if (method === "tools/call") {
@@ -215,6 +260,12 @@ export class AetherMcp {
   callTool(name: string, args: Record<string, unknown>): unknown {
     if (name === "aether_snapshot") return this.runtime.snapshotState();
     if (name === "aether_protocol") return this.runtime.protocolCard();
+    if (name === "aether_get") {
+      const id = String(args.id ?? "");
+      const found = this.runtime.inspect(id);
+      if (!found) throw new Error(`unknown object ${id}`);
+      return found;
+    }
     if (name === "aether_reset") {
       const dir = dataDir();
       if (dir) {

@@ -114,6 +114,51 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, 200, runtime.protocolCard());
         return;
       }
+      if (req.method === "GET" && path === "/v1/commands") {
+        const spec = join(process.cwd(), "schemas/commands.schema.json");
+        json(res, 200, JSON.parse(readFileSync(spec, "utf8")));
+        return;
+      }
+      const objectGet = path.match(/^\/v1\/objects\/([^/]+)$/);
+      if (req.method === "GET" && objectGet) {
+        const found = runtime.inspect(decodeURIComponent(objectGet[1]!));
+        if (!found) {
+          json(res, 404, { title: "not found", id: objectGet[1] });
+          return;
+        }
+        json(res, 200, found);
+        return;
+      }
+      const hireGet = path.match(/^\/v1\/hires\/([^/]+)$/);
+      if (req.method === "GET" && hireGet) {
+        const found = runtime.inspect(hireGet[1]!);
+        if (!found || found.type !== "hire") {
+          json(res, 404, { title: "not found", id: hireGet[1] });
+          return;
+        }
+        json(res, 200, found.value);
+        return;
+      }
+      const agentGet = path.match(/^\/v1\/agents\/([^/]+)$/);
+      if (req.method === "GET" && agentGet) {
+        const found = runtime.inspect(decodeURIComponent(agentGet[1]!));
+        if (!found || found.type !== "agent") {
+          json(res, 404, { title: "not found", id: agentGet[1] });
+          return;
+        }
+        json(res, 200, found.value);
+        return;
+      }
+      const approvalGet = path.match(/^\/v1\/approvals\/([^/]+)$/);
+      if (req.method === "GET" && approvalGet) {
+        const found = runtime.inspect(approvalGet[1]!);
+        if (!found || found.type !== "approval") {
+          json(res, 404, { title: "not found", id: approvalGet[1] });
+          return;
+        }
+        json(res, 200, found.value);
+        return;
+      }
       if (req.method === "GET" && path === "/v1/kya") {
         json(res, 200, runtime.kya.snapshot());
         return;

@@ -28,7 +28,7 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 
 **Sub-hire:** a desk at L4 issues a tighter child slip to a scout. The scout hires a vendor for $800. A $2,500 hire is refused by the child cap. Spend counts against the parent budget. Revoking the desk→scout handshake stops the scout without deleting it.
 
-There is no finish date. Public protocol (`aether.protocol.1` v0.4.0, `liveMoney: false`) is what other agents pin. Live bank/chain rails are adapters on these objects, later. A durable world (`AETHER_DATA_DIR`) is what you host. Retries of money-moving commands replay; a deny comes with a typed next step; funded escrow can be unwound.
+There is no finish date. Public protocol (`aether.protocol.1` v0.5.0, `liveMoney: false`) is what other agents pin. Live bank/chain rails are adapters on these objects, later. A durable world (`AETHER_DATA_DIR`) is what you host. Retries of money-moving commands replay; a deny comes with a typed next step; funded escrow can be unwound. Fetch one object with `aether_get` / `GET /v1/objects/:id`. Command bodies are in `schemas/commands.schema.json`.
 
 ## The loop
 
