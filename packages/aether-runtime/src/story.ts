@@ -513,11 +513,15 @@ export function autoBeat(input: {
   }
   if (cmd.type === "kya.revoke") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
       return {
         seq: input.seq,
         at: input.at,
         headline: `${who} could not revoke that handshake`,
-        body: "That agent is not in this world. A missing agent is not a tombstone.",
+        body:
+          rule?.ruleId === "kya.known_attestation"
+            ? "That handshake is not in this world for this principal. A missing attestation is not a tombstone. You cannot tombstone someone else’s handshake by guessing its id."
+            : "That agent is not in this world. A missing agent is not a tombstone.",
         tone: "deny",
         commandType: cmd.type,
       };

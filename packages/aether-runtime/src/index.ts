@@ -799,6 +799,11 @@ export class Runtime {
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
     }
+    if (cmd.type === "kya.revoke" && typeof body.attestationId === "string") {
+      const named = this.kya.attestations.get(body.attestationId as DelegationId);
+      const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
+      ctx.kyaAttestationKnown = Boolean(named && named.principalId === principalId);
+    }
     if (cmd.type === "ledger.transfer") {
       const fromAcct = this.ledger.accountsByName.get(String(body.fromAccount));
       const toAcct = this.ledger.accountsByName.get(String(body.toAccount));
@@ -1314,6 +1319,10 @@ export class Runtime {
     if (typeof body.principalId === "string") this.identity.require(body.principalId as AgentId);
     if (typeof body.delegateId === "string") this.identity.require(body.delegateId as AgentId);
     const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
+    if (typeof body.attestationId === "string") {
+      const named = this.kya.attestations.get(body.attestationId as DelegationId);
+      if (!named || named.principalId !== principalId) throw new Error("unknown attestation");
+    }
     const opts: { principalId: AgentId; at: string; id?: DelegationId; delegateId?: AgentId } = {
       principalId,
       at: this.clock.now(),

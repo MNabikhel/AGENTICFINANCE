@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 56 rules", () => {
-    expect(RULE_IDS).toHaveLength(56);
+  it("has 57 rules", () => {
+    expect(RULE_IDS).toHaveLength(57);
   });
 
   it("denies frozen actors", () => {
@@ -768,6 +768,24 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("kya.known_parent");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies revoking a missing handshake as kya.known_attestation, not a silent tombstone", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.revoke",
+        kyaAttestationKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.known_attestation");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

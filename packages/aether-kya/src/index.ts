@@ -49,6 +49,12 @@ export class DelegationGraph {
     delegateId?: AgentId;
     at: Instant;
   }): DelegationAttestation[] {
+    if (opts.id) {
+      const named = this.attestations.get(opts.id);
+      if (!named || named.principalId !== opts.principalId) {
+        throw new Error("kya unknown attestation");
+      }
+    }
     const revoked: DelegationAttestation[] = [];
     const targets = new Set<DelegationId>();
     if (opts.id) targets.add(opts.id);

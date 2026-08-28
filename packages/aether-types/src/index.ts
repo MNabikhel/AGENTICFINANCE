@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.32.0",
+  version: "0.33.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -693,6 +693,13 @@ export interface PolicyContext {
    * that flag is for issue_intent and would steal first deny as mandate.known_parent.
    */
   kyaParentKnown?: boolean;
+  /**
+   * False when kya.revoke points at an attestationId that is not in this world’s graph,
+   * or that belongs to a different principal. Absent = not a named-attestation revoke.
+   * Do not reuse `kyaParentKnown` — that flag is for nested attest and would steal first deny.
+   * Revoke by principal+delegate with no attestationId still tombstones implicit grants.
+   */
+  kyaAttestationKnown?: boolean;
   /**
    * False when ledger.transfer or a named ledger.balances points at a book that is not in this world.
    * Absent = not an account-name command (full balance listing has no name).

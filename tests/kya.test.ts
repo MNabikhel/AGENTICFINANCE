@@ -120,4 +120,20 @@ describe("delegation graph", () => {
       ),
     ).toThrow(/unknown parent hop/);
   });
+
+  it("forbids revoking an attestation that is not in the graph", () => {
+    const g = new DelegationGraph();
+    expect(() =>
+      g.revoke({ id: "dlg_ghost" as DelegationId, principalId: founder, at: later }),
+    ).toThrow(/unknown attestation/);
+  });
+
+  it("forbids revoking an attestation that belongs to another principal", () => {
+    const g = new DelegationGraph();
+    g.attest(att({ id: "dlg_1" as DelegationId, grantorId: founder, delegateId: watch }));
+    expect(() => g.revoke({ id: "dlg_1" as DelegationId, principalId: extra, at: later })).toThrow(
+      /unknown attestation/,
+    );
+    expect(g.attestations.get("dlg_1" as DelegationId)?.revokedAt).toBeUndefined();
+  });
 });

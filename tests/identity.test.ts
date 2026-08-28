@@ -3,6 +3,7 @@ import { Runtime, cmd } from "@aether/runtime";
 
 const GHOST = "aid_01J6AETHERGHOSTAGEN0000001";
 const GHOST_PARENT = "dlg_01J6AETHERGHOSTPARENT00001";
+const GHOST_ATT = "dlg_01J6AETHERGHOSTATTEST00001";
 
 function boot() {
   return new Runtime({
@@ -219,5 +220,83 @@ describe("kya.known_parent", () => {
     );
     expect((r.data as { parentId?: string }).parentId).toBe(parentId);
     expect(rt.kya.attestations.size).toBe(before + 1);
+  });
+});
+
+describe("kya.known_attestation", () => {
+  it("refuses to revoke a missing handshake as kya.known_attestation, not a silent tombstone", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const live = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const liveId = (live.data as { id: string }).id;
+    const clockBefore = rt.clock.now();
+    const blockedBefore = rt.kya.blocked.size;
+    const r = rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: GHOST_ATT }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.known_attestation");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect([...rt.kya.attestations.values()].find((a) => a.id === liveId)?.revokedAt).toBeUndefined();
+    expect([...rt.kya.attestations.values()].every((a) => !a.revokedAt)).toBe(true);
+    expect(rt.kya.blocked.size).toBe(blockedBefore);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still revokes when the named handshake belongs to this principal", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const live = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const liveId = (live.data as { id: string }).id;
+    const r = must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: liveId })), "revoke by id");
+    expect((r.data as { revoked: Array<{ id: string }> }).revoked.map((a) => a.id)).toEqual([liveId]);
+    expect([...rt.kya.attestations.values()].find((a) => a.id === liveId)?.revokedAt).toBeTruthy();
+  });
+
+  it("refuses to revoke someone else’s handshake by id as kya.known_attestation", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "treasury",
+          displayName: "Treasury",
+          role: "treasury",
+          autonomyLevel: 3,
+        }),
+      ),
+      "treasury",
+    );
+    const treasury = rt.alias("treasury");
+    const live = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const liveId = (live.data as { id: string }).id;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("kya.revoke", treasury.id, { attestationId: liveId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.known_attestation");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect([...rt.kya.attestations.values()].find((a) => a.id === liveId)?.revokedAt).toBeUndefined();
+    expect(rt.kya.blocked.size).toBe(0);
+    expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });

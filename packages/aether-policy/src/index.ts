@@ -902,6 +902,17 @@ export const RULES: readonly Rule[] = [
         : v("ledger.sufficient", "deny", "insufficient funds");
     },
   },
+  {
+    id: "kya.known_attestation",
+    evaluate: (ctx) => {
+      if (ctx.kyaAttestationKnown === undefined) {
+        return v("kya.known_attestation", "allow", "not a named-attestation revoke");
+      }
+      return ctx.kyaAttestationKnown
+        ? v("kya.known_attestation", "allow", "attestation exists for this principal")
+        : v("kya.known_attestation", "deny", "attestation not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1048,6 +1059,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "ledger.sufficient": {
     kind: "none",
     hint: "The source book does not have that many cents. A transfer is not an overdraft. Escrow cannot lock on empty cash. An FX settle cannot spend USD the vendor does not hold. Seed or allocate first.",
+  },
+  "kya.known_attestation": {
+    kind: "none",
+    hint: "That attestation id is not in this world’s graph for this principal. A missing handshake is not a tombstone. You cannot revoke someone else’s handshake by guessing its id.",
   },
   "payment.execution_date": {
     kind: "none",
