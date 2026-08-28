@@ -39,8 +39,12 @@ function findConstraint<T extends MandateConstraint["type"]>(
   return constraintsOf(ctx).find((c): c is Extract<MandateConstraint, { type: T }> => c.type === type);
 }
 
-function minLevelFor(commandType: string): AutonomyLevel {
+function minLevelFor(ctx: PolicyContext): AutonomyLevel {
+  const commandType = ctx.commandType;
   if (commandType === "mandate.issue_intent") {
+    if (ctx.actor.role === "human_operator" || ctx.actor.role === "treasury") {
+      return MIN_LEVEL_FOR_ACTION.draft;
+    }
     return MIN_LEVEL_FOR_ACTION.issueSubIntent;
   }
   if (commandType === "hire.create") {
@@ -81,10 +85,13 @@ export const RULES: readonly Rule[] = [
     id: "mandate.chain_integrity",
     evaluate: (ctx) => {
       if (!ctx.payment || !ctx.cart || !ctx.intent) {
-        if (ctx.commandType.startsWith("envelope.") || ctx.commandType === "hire.fund") {
+        if (ctx.commandType === "envelope.submit" || ctx.commandType === "hire.fund") {
           return v("mandate.chain_integrity", "deny", "settle requires intent+cart+payment");
         }
         return v("mandate.chain_integrity", "allow", "no chain required");
+      }
+      if (ctx.chainOk === false) {
+        return v("mandate.chain_integrity", "deny", "verifyChain failed");
       }
       if (ctx.cart.payload.intentId !== ctx.intent.payload.id) {
         return v("mandate.chain_integrity", "deny", "cart.intentId !== intent.id");
@@ -166,6 +173,9 @@ export const RULES: readonly Rule[] = [
     evaluate: (ctx) => {
       const c = findConstraint(ctx, "payment.budget");
       if (!c || !ctx.amount) return v("payment.budget", "allow", "no budget constraint");
+      if (ctx.hire && (ctx.hire.state === "funded" || ctx.hire.state === "delivered" || ctx.hire.state === "released")) {
+        return v("payment.budget", "allow", "budget reserved at fund");
+      }
       if (ctx.amount.currency !== c.currency) {
         return v("payment.budget", "deny", "budget currency mismatch");
       }
@@ -229,7 +239,7 @@ export const RULES: readonly Rule[] = [
   {
     id: "ladder.min_level",
     evaluate: (ctx) => {
-      const required = minLevelFor(ctx.commandType);
+      const required = minLevelFor(ctx);
       if (ctx.actor.autonomyLevel >= required) {
         return v("ladder.min_level", "allow", `L${ctx.actor.autonomyLevel} >= L${required}`);
       }
@@ -253,6 +263,12 @@ export const RULES: readonly Rule[] = [
     id: "approval.threshold",
     evaluate: (ctx) => {
       if (!ctx.amount) return v("approval.threshold", "allow", "no amount");
+      if (ctx.thresholdWaived) {
+        return v("approval.threshold", "allow", "threshold waived by approved ticket");
+      }
+      if (ctx.hire && ctx.hire.id !== "hid_draft" && (ctx.commandType === "hire.fund" || ctx.commandType === "hire.release" || ctx.commandType === "envelope.submit" || ctx.commandType === "hire.accept" || ctx.commandType === "hire.deliver")) {
+        return v("approval.threshold", "allow", "hire already authorized at create");
+      }
       if (ctx.actor.autonomyLevel === 5 && !ctx.circuit.tripped) {
         return v("approval.threshold", "allow", "L5 skips per-tx threshold");
       }
@@ -328,7 +344,10 @@ export const RULES: readonly Rule[] = [
   },
   {
     id: "idempotency.nonce",
-    evaluate: () => v("idempotency.nonce", "allow", "nonce uniqueness enforced by settlement store"),
+    evaluate: (ctx) =>
+      ctx.nonceSeen
+        ? v("idempotency.nonce", "deny", "nonce already settled")
+        : v("idempotency.nonce", "allow", "nonce unused"),
   },
   {
     id: "mm.spread_bound",
@@ -337,7 +356,7 @@ export const RULES: readonly Rule[] = [
         return v("mm.spread_bound", "allow", "not an MM quote");
       }
       // rate lives on the command; runtime must copy it onto ctx.hire.spec or amount evidence.
-      const rate = (ctx as PolicyContext & { fxRateE6?: number }).fxRateE6;
+      const rate = ctx.fxRateE6;
       if (rate === undefined) return v("mm.spread_bound", "allow", "no fx rate on context");
       if (rate < MM_RATE_BAND_E6.min || rate > MM_RATE_BAND_E6.max) {
         return v("mm.spread_bound", "deny", `rateE6 ${rate} outside 200bps band`);
@@ -347,11 +366,22 @@ export const RULES: readonly Rule[] = [
   },
   {
     id: "mm.inventory",
-    evaluate: () => v("mm.inventory", "allow", "inventory check performed in settlement against MM cash books"),
+    evaluate: (ctx) => {
+      if (ctx.commandType !== "market.fx_settle") {
+        return v("mm.inventory", "allow", "not an FX settle");
+      }
+      if (ctx.mmInventoryOk === false) {
+        return v("mm.inventory", "deny", "MM inventory insufficient");
+      }
+      return v("mm.inventory", "allow", "MM inventory sufficient");
+    },
   },
   {
     id: "audit.writable",
-    evaluate: () => v("audit.writable", "allow", "runtime aborts if audit append throws"),
+    evaluate: (ctx) =>
+      ctx.auditHealthy === false
+        ? v("audit.writable", "deny", "audit chain unhealthy")
+        : v("audit.writable", "allow", "audit chain healthy"),
   },
   {
     id: "human.signature_present",

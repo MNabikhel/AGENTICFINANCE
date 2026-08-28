@@ -1,0 +1,22 @@
+{
+  "name": "@aether/runtime",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sprint": "./src/sprint-procurement.ts"
+  },
+  "dependencies": {
+    "@aether/audit": "workspace:*",
+    "@aether/envelope": "workspace:*",
+    "@aether/escrow": "workspace:*",
+    "@aether/identity": "workspace:*",
+    "@aether/kernel": "workspace:*",
+    "@aether/ledger": "workspace:*",
+    "@aether/mandate": "workspace:*",
+    "@aether/market": "workspace:*",
+    "@aether/policy": "workspace:*",
+    "@aether/settlement": "workspace:*",
+    "@aether/types": "workspace:*"
+  }
+}

@@ -1,0 +1,71 @@
+# Aether thesis — the economic OS above the payment rails
+
+Montaz asked for a foundation for **agentic finance**: not a trading bot, and not a guess at a product, but something agents can actually run as the economy shifts from human-click checkout to machine-speed obligation.
+
+This note is the research brief behind the runtime in this repo.
+
+## 1. The market as of 2026
+
+The industry did not pick a winner. It stacked layers.
+
+**Authorization.** Google’s Agent Payments Protocol (AP2), now moving into FIDO, uses Intent / Cart / Payment mandates as verifiable credentials. Mastercard’s Verifiable Intent is the same idea from the network side. These answer: *did a human (or a scoped standing instruction) authorize this?* They do not move money.
+
+**Settlement.** Coinbase’s x402 revived HTTP 402 for stablecoin micropayments. Stripe + Tempo’s Machine Payments Protocol (MPP) does the same with `charge` and `session` intents, including fiat via Shared Payment Tokens. These answer: *how does the byte actually pay?* They do not know who the agent is allowed to be.
+
+**Checkout.** OpenAI + Stripe Agentic Commerce Protocol (ACP) and Google’s Universal Commerce Protocol (UCP) are merchant shopping journeys. Useful for buying a toaster through ChatGPT or Gemini. Useless as a hiring market, a treasury, an FX window, or a credit book.
+
+**Identity.** “Know Your Agent” became a category, not a standard. Visa Trusted Agent Protocol, Skyfire KYA/KYAPay JWTs, Experian H2A binding, ERC-8004 on-chain registries, Catena ACK DIDs. Every network shipped a different “is this bot real?” primitive.
+
+**Talk.** MCP is agent-to-tool. A2A is agent-to-agent. Neither is money.
+
+Crypto-native “agent economies” (Virtuals ACP, ElizaOS, Olas, Fetch.ai) proved agents can be listed, tokenized, and escrowed on an L2. They did not produce a policy compiler, a dual-control primitive, or a replayable audit log a bank examiner could read.
+
+Central banks noticed. BIS **Project Logos** (with the Bank of England and Bundesbank) is simulating LLM portfolio agents specifically to watch herding. BoE Deputy Governor Sarah Breeden has already asked whether markets need **kill switches** for autonomous trading. The FSB published sound practices. There is still no AI-specific financial license: function is what gets you regulated, not the fact that a model pressed the button.
+
+## 2. The hole
+
+Retail checkout is atomic and prepaid. An economy is **gross exposure, netting, credit, interruption, and replay**.
+
+Nobody in the 2025–26 stack ships:
+
+1. A **deterministic policy kernel** whose output is `allow | deny | escalate`, with a full rule trace, and no LLM in the loop.
+2. A **delegation graph**: principal → agent → sub-agent, with capability envelopes and instant revoke.
+3. **Agent-to-agent hiring** with escrow and a mandate chain that is not a shopping cart.
+4. A **double-entry ledger** plus **hash-chained audit** that can replay to the same decision.
+5. An **autonomy ladder** that can be climbed and, more importantly, slammed back to L0.
+
+That is Aether.
+
+## 3. Design bets that should still be true in five years
+
+**Rails churn. Objects do not.** Intent, cart, payment, hire, quote, policy decision, settlement instruction, receipt, audit event. We speak AP2 and x402 *shape* so adapters stay thin.
+
+**Agents are economically capable, never economically sovereign.** L5 skips per-transaction humans. It does not skip amount ranges, budgets, circuit breakers, freezes, or nonces.
+
+**Policy is a pure function.** `evaluate(context) → decision`. Every rule always runs. The trace is the artifact. If a model proposed the command, that is upstream of the kernel.
+
+**Simulation first.** `sim:aether-1`, USD_SIM / USDC_SIM, integer minor units. If the demo cannot close a hire, hit a wall, escalate, settle, and prove an auditor cannot spend — offline — it is not a foundation.
+
+**Kill switches are graduated.** Freeze an actor. Trip a daily circuit. Demote to L0. Do not build a single global button that DoS-es the market (the IMF has already flagged that failure mode).
+
+## 4. What “agents running the economy” actually looks like
+
+Not a superintelligence at the Fed.
+
+It looks like **procurement agents buying data and compute from vendor agents**, **treasury agents allocating cash under a mandate**, **market-maker agents quoting a tightly bounded FX window**, and **auditor agents who can verify everything and spend nothing** — with a human who issued the intent still holding the freeze.
+
+Sprint Procurement in this repo is that picture, shrunk to a TAP test.
+
+Next revisions (not v0): rail adapters (x402 facilitator, MPP challenge, AP2 SD-JWT, TAP HTTP signatures), bilateral credit limits and multilateral netting (the CCP-in-a-box), and a portable KYA graph that *imports* Skyfire/TAP/ERC-8004 as issuers instead of becoming one.
+
+## 5. Sources (starting points)
+
+- AP2: https://ap2-protocol.org/ and https://github.com/google-agentic-commerce/AP2
+- x402: https://x402.org/ and https://github.com/coinbase/x402
+- MPP: https://mpp.dev/ and https://stripe.com/blog/machine-payments-protocol
+- ACP: https://www.agenticcommerce.dev/
+- UCP: https://ucp.dev/
+- A2A: https://a2a-protocol.org/latest/
+- Skyfire KYA: https://docs.skyfire.xyz/
+- BIS Project Logos: https://www.bis.org/about/bisih/topics/suptech_regtech/logos.htm
+- BoE, Sarah Breeden, “Agents of change” (June 2026)

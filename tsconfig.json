@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "@aether/types": ["packages/aether-types/src/index.ts"],
+      "@aether/kernel": ["packages/aether-kernel/src/index.ts"],
+      "@aether/audit": ["packages/aether-audit/src/index.ts"],
+      "@aether/policy": ["packages/aether-policy/src/index.ts"],
+      "@aether/ledger": ["packages/aether-ledger/src/index.ts"],
+      "@aether/identity": ["packages/aether-identity/src/index.ts"],
+      "@aether/mandate": ["packages/aether-mandate/src/index.ts"],
+      "@aether/envelope": ["packages/aether-envelope/src/index.ts"],
+      "@aether/escrow": ["packages/aether-escrow/src/index.ts"],
+      "@aether/market": ["packages/aether-market/src/index.ts"],
+      "@aether/settlement": ["packages/aether-settlement/src/index.ts"],
+      "@aether/runtime": ["packages/aether-runtime/src/index.ts"],
+      "@aether/sprint": ["packages/aether-runtime/src/sprint-procurement.ts"]
+    }
+  },
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@aether/ledger",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aether/kernel": "workspace:*",
+    "@aether/types": "workspace:*"
+  }
+}

@@ -476,6 +476,18 @@ export interface PolicyContext {
   occurrenceCount: number;
   velocity: VelocityWindow;
   circuit: CircuitState;
+  /** Market-maker FX rate in millionths. Absent unless quoting/settling FX. */
+  fxRateE6?: number;
+  /** True when envelope nonce was already settled. */
+  nonceSeen?: boolean;
+  /** False when MM cannot pay the `to` currency. */
+  mmInventoryOk?: boolean;
+  /** False when the audit chain fails verify(). */
+  auditHealthy?: boolean;
+  /** False when verifyChain failed for the attached mandate triple. */
+  chainOk?: boolean;
+  /** True when replaying a command after a matching ApprovalTicket. */
+  thresholdWaived?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
@@ -573,11 +585,13 @@ export type AuditVerifyResult = AuditVerifyOk | AuditVerifyFail;
 
 export type CommandType =
   | "identity.register"
+  | "identity.freeze"
   | "mandate.issue_intent"
   | "mandate.issue_cart"
   | "mandate.issue_payment"
   | "market.rfq"
   | "market.quote"
+  | "market.fx_settle"
   | "hire.create"
   | "hire.accept"
   | "hire.fund"
@@ -588,6 +602,7 @@ export type CommandType =
   | "envelope.submit"
   | "approval.resolve"
   | "ladder.set"
+  | "ledger.transfer"
   | "ledger.balances"
   | "audit.verify"
   | "receipt.get";
@@ -606,10 +621,12 @@ export const ROLE_CAPABILITY: Record<
 > = {
   treasury: [
     "identity.register",
+    "identity.freeze",
     "mandate.issue_intent",
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
+    "market.fx_settle",
     "hire.create",
     "hire.accept",
     "hire.fund",
@@ -619,6 +636,7 @@ export const ROLE_CAPABILITY: Record<
     "envelope.submit",
     "approval.resolve",
     "ladder.set",
+    "ledger.transfer",
     "ledger.balances",
     "audit.verify",
     "receipt.get",
@@ -638,6 +656,7 @@ export const ROLE_CAPABILITY: Record<
   ],
   data_vendor: [
     "market.quote",
+    "market.fx_settle",
     "hire.accept",
     "hire.deliver",
     "envelope.require",
@@ -647,6 +666,7 @@ export const ROLE_CAPABILITY: Record<
   ],
   compute_vendor: [
     "market.quote",
+    "market.fx_settle",
     "hire.accept",
     "hire.deliver",
     "envelope.require",
@@ -656,14 +676,16 @@ export const ROLE_CAPABILITY: Record<
   ],
   market_maker: [
     "market.quote",
+    "market.fx_settle",
     "envelope.require",
     "envelope.submit",
     "ledger.balances",
     "receipt.get",
   ],
-  auditor: ["audit.verify", "ledger.balances", "receipt.get"],
+  auditor: ["audit.verify", "identity.freeze", "ledger.balances", "receipt.get"],
   human_operator: [
     "identity.register",
+    "identity.freeze",
     "mandate.issue_intent",
     "approval.resolve",
     "ladder.set",

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aether — Agent Economic Runtime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #07090d;
+      --panel: #10141c;
+      --panel-2: #161c27;
+      --line: #243044;
+      --text: #e8eef8;
+      --muted: #8b9bb4;
+      --allow: #3dd68c;
+      --deny: #ff5d73;
+      --escalate: #f5c542;
+      --accent: #6ea8ff;
+      --gold: #d7b56d;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+    body { min-height: 100vh; }
+    header {
+      padding: 28px 32px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+    }
+    h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: 0.02em; }
+    h1 span { color: var(--gold); }
+    .thesis { color: var(--muted); max-width: 720px; line-height: 1.5; margin: 8px 0 0; font-size: 14px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      background: var(--accent); color: #061018; border: 0; border-radius: 6px;
+      padding: 10px 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    main { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; padding: 16px 32px 40px; }
+    @media (max-width: 980px) { main { grid-template-columns: 1fr; } header { flex-direction: column; } }
+    section {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px;
+    }
+    h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 0 0 12px; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #1b2433; font-size: 13px; }
+    .row:last-child { border-bottom: 0; }
+    .pill { padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+    .allow { background: #163627; color: var(--allow); }
+    .deny { background: #3a1520; color: var(--deny); }
+    .escalate { background: #3a3014; color: var(--escalate); }
+    .tap { display: flex; flex-direction: column; gap: 6px; }
+    .tap div { font-size: 13px; }
+    .ok { color: var(--allow); }
+    .bad { color: var(--deny); }
+    pre { white-space: pre-wrap; word-break: break-all; color: var(--muted); font-size: 11px; margin: 0; max-height: 280px; overflow: auto; }
+    .ladder { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .rung { font-size: 11px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); }
+    .rung.on { border-color: var(--gold); color: var(--gold); }
+    .status { font-size: 13px; color: var(--muted); padding: 0 32px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Aether <span>control room</span></h1>
+      <p class="thesis">
+        Payments protocols move money. Aether decides whether money <em>should</em> move:
+        identity, mandate, policy, hire, escrow, x402-shaped settlement, receipt, and a hash-chained audit log.
+        Simulated rail <span class="mono">sim:aether-1</span> — no live bank or chain credentials.
+      </p>
+    </div>
+    <div class="actions">
+      <button id="run">Run Sprint Procurement</button>
+      <button class="secondary" id="refresh">Refresh snapshot</button>
+    </div>
+  </header>
+  <p class="status" id="status">Idle. Run the demo to watch seven agents hire, hit a policy wall, escalate, settle, and convert FX.</p>
+  <main>
+    <section>
+      <h2>Autonomy ladder</h2>
+      <div class="ladder">
+        <div class="rung">L0 human-executes</div>
+        <div class="rung">L1 human-approves</div>
+        <div class="rung">L2 constrained-auto</div>
+        <div class="rung on">L3 budget-auto</div>
+        <div class="rung">L4 delegated-hire</div>
+        <div class="rung">L5 out-of-loop</div>
+      </div>
+      <h2>Agents</h2>
+      <div id="agents"></div>
+    </section>
+    <section>
+      <h2>TAP assertions</h2>
+      <div class="tap" id="tap"><div class="mono">No demo yet.</div></div>
+    </section>
+    <section>
+      <h2>Balances (minor units)</h2>
+      <div id="balances"></div>
+    </section>
+    <section>
+      <h2>Hires</h2>
+      <div id="hires"></div>
+    </section>
+    <section>
+      <h2>Latest policy decisions</h2>
+      <div id="decisions"></div>
+    </section>
+    <section>
+      <h2>Audit head</h2>
+      <pre class="mono" id="audit"></pre>
+    </section>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const money = (n) => (n / 100).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+    async function snapshot() {
+      const res = await fetch("/v1/snapshot");
+      return res.json();
+    }
+
+    function renderSnap(s) {
+      $("agents").innerHTML = (s.agents || []).map(a => `
+        <div class="row">
+          <div><strong>${a.displayName}</strong><div class="mono" style="color:var(--muted);font-size:11px">${a.role} · L${a.autonomyLevel}${a.frozen ? " · FROZEN" : ""}</div></div>
+          <div class="mono">${a.id.slice(0, 18)}…</div>
+        </div>`).join("") || "<div class='mono'>No agents. Run the demo.</div>";
+
+      $("balances").innerHTML = (s.accounts || []).filter(a => a.balance !== 0 || a.name.includes("cash") || a.name.includes("equity")).map(a => `
+        <div class="row"><div class="mono">${a.name}</div><div class="mono">${a.currency} ${money(a.balance)}</div></div>
+      `).join("");
+
+      $("hires").innerHTML = (s.hires || []).map(h => `
+        <div class="row"><div>${h.sku}<div class="mono" style="color:var(--muted);font-size:11px">${h.id}</div></div>
+        <div><span class="pill ${h.state === "released" ? "allow" : "escalate"}">${h.state}</span></div></div>
+      `).join("") || "<div class='mono'>None.</div>";
+
+      $("decisions").innerHTML = (s.decisions || []).slice(-8).reverse().map(d => {
+        const v = d.decision.verdict;
+        return `<div class="row"><div class="mono">${d.type}</div><div class="pill ${v}">${v}</div></div>`;
+      }).join("") || "<div class='mono'>None.</div>";
+
+      $("audit").textContent = JSON.stringify(s.audit, null, 2);
+    }
+
+    async function refresh() {
+      renderSnap(await snapshot());
+    }
+
+    $("refresh").onclick = refresh;
+    $("run").onclick = async () => {
+      $("run").disabled = true;
+      $("status").textContent = "Running Sprint Procurement on sim:aether-1…";
+      try {
+        const res = await fetch("/v1/demo/sprint-procurement", { method: "POST" });
+        const report = await res.json();
+        $("tap").innerHTML = (report.results || []).map(r =>
+          `<div class="mono ${r.ok ? "ok" : "bad"}">${r.ok ? "ok" : "not ok"} ${r.id}  ${r.name}${r.detail ? " ("+r.detail+")" : ""}</div>`
+        ).join("");
+        $("status").textContent = report.ok
+          ? "Demo passed. Agents hired, a hard constraint denied $6,400, treasury approved the exception, receipts bound to payment hashes, auditor could not spend."
+          : "Demo failed — inspect TAP lines.";
+        renderSnap(report.snapshot);
+      } catch (e) {
+        $("status").textContent = String(e);
+      } finally {
+        $("run").disabled = false;
+      }
+    };
+    refresh();
+  </script>
+</body>
+</html>

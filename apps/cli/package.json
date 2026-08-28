@@ -1,10 +1,9 @@
 {
-  "name": "@aether/mcp",
+  "name": "@aether/cli",
   "version": "0.0.1",
   "type": "module",
-  "private": true,
-  "exports": {
-    ".": "./src/server.ts"
+  "bin": {
+    "aether": "./src/main.ts"
   },
   "dependencies": {
     "@aether/runtime": "workspace:*"

@@ -1,48 +1,100 @@
 # Aether — Agent Economic Runtime
 
-**Thesis:** Aether is a machine-first economic runtime that lets software agents hire, pay, escalate, and settle against a deterministic policy engine — using an in-memory/file ledger today and AP2/x402-*shaped* envelopes tomorrow — without becoming a trading bot or a checkout clone.
+**Thesis:** Payments protocols move money. Aether decides whether money *should* move.
 
-This repo is a greenfield TypeScript specification plus the canonical types, hash-chain, and policy catalog. **Implement from [`DESIGN.md`](./DESIGN.md).** Types win if prose and code disagree.
+This repository is a machine-first economic operating system for software agents. It runs **today** on a simulated ledger (`sim:aether-1`) with no bank, card, or chain credentials. The object model is shaped to sit *above* AP2 (mandates), x402/MPP (HTTP settlement envelopes), ACP/UCP (checkout), and TAP/KYA (identity issuers) when those rails are ready.
 
-## What is here
+It is not a trading bot, not a checkout clone, and not a wallet.
 
-| Path | What it is |
-|---|---|
-| [`DESIGN.md`](./DESIGN.md) | Full implementation contract: architecture, types, 26 policy rules, Sprint Procurement demo, anti-goals |
-| [`packages/aether-types`](./packages/aether-types) | Canonical TypeScript object model |
-| [`packages/aether-kernel`](./packages/aether-kernel) | SHA-256, JCS subset, money, clock |
-| [`packages/aether-audit`](./packages/aether-audit) | Hash-chained append-only audit log |
-| [`packages/aether-policy`](./packages/aether-policy) | Ordered deterministic rule table |
-| [`schemas/`](./schemas) | JSON Schema (draft 2020-12) |
-| [`packages/aether-openapi/openapi.yaml`](./packages/aether-openapi/openapi.yaml) | HTTP face |
-| [`packages/aether-mcp/tools.json`](./packages/aether-mcp/tools.json) | MCP tool face |
-| [`fixtures/demo/sprint-procurement/`](./fixtures/demo/sprint-procurement) | Demo inputs + TAP assertions |
+```
+Human issues Intent (constraints)
+        │
+        ▼
+ Agent RFQs vendors ──► Quotes
+        │
+        ▼
+ Hire + Cart (merchant-bound) ──► PolicyEngine
+        │                     deny → stop + structured trace
+        │                     escalate → ApprovalTicket
+        ▼                     allow
+ PaymentMandate (hash-bound to cart)
+        │
+        ▼
+ x402-shaped envelopes on sim:aether-1
+        │
+        ▼
+ Balanced journal + escrow release
+        │
+        ▼
+ Receipt.reference = sha256(payment)     audit.jsonl hash-chain += n
+        │
+        ▼
+ Auditor verifies the chain and cannot spend
+```
 
-## What is not here (and must not be)
+## Why this exists
 
-Live bank or chain credentials. An order book. A checkout UI. Copied AP2/x402 SDKs. An LLM inside `evaluate()`.
+2025–2026 produced a **layered payments stack**, not an economy:
+
+| Layer | What it is | What it is not |
+|---|---|---|
+| AP2 / Verifiable Intent | Cryptographic *authorization* (mandates) | Settlement, credit, hiring, policy kernel |
+| x402 / MPP | HTTP-native *settlement* | Consent, KYA graph, netting |
+| ACP / UCP | Agent ↔ merchant *checkout* | Agent ↔ agent jobs, treasury, FX |
+| TAP / Skyfire KYA / ERC-8004 | “Is this agent real?” | Capability envelopes + revocation graph |
+| A2A / MCP | How agents talk and use tools | Money |
+
+The missing layer is the one that still matters when agents actually run parts of the economy: **identity → mandate → policy decision → quote/match → escrow → settlement instruction → receipt → replayable audit**, with an autonomy ladder from human-in-the-loop to human-out-of-the-loop.
+
+Read [`docs/THESIS.md`](docs/THESIS.md) for the market map. [`DESIGN.md`](DESIGN.md) is the implementation contract.
+
+## Quick start
+
+```bash
+pnpm install
+pnpm test
+pnpm demo
+pnpm dev          # control room at http://127.0.0.1:8787
+```
+
+`pnpm demo` runs **Sprint Procurement**: seven agents (ops human, treasury, procurement, data vendor, compute vendor, market maker, auditor) hire and pay each other, hit a hard `$5,000` amount-range wall, escalate a `$6,400` compute hire to treasury, settle with receipts bound to payment hashes, convert USD_SIM → USDC_SIM inside a 200 bps FX window, then prove the auditor cannot spend.
 
 ## Autonomy ladder
 
-`L0` human-executes → `L1` human-approves → `L2` constrained-auto → `L3` budget-auto → `L4` delegated-hire → `L5` human-out-of-the-loop (kill switch + circuit breakers still bind).
+| Level | Meaning |
+|---|---|
+| L0 | Human executes. Agent drafts. |
+| L1 | Human approves each cart. |
+| L2 | Agent closes payments that satisfy an open intent. |
+| L3 | Budget-auto. May hire vendors against an existing intent. |
+| L4 | May issue sub-intents (delegate budget). |
+| L5 | Standing mandate. Humans hold the kill switch and circuit breakers — not “god mode.” |
 
-## Simulated economy
+Skipping rungs is illegal. `any → L0` is always allowed (freeze / demote).
 
-Treasury, procurement, data vendor, compute vendor, market maker (dumb FX window, ±200 bps), auditor (cannot spend).
+## Repository map
 
-## Implementer start
+| Path | Role |
+|---|---|
+| `packages/aether-policy` | 26 ordered rules. Pure. No LLM. No I/O. |
+| `packages/aether-runtime` | Command bus: snapshot → evaluate → audit → mutate |
+| `packages/aether-audit` | Hash-chained append-only log (`aether-audit-v1`) |
+| `packages/aether-ledger` | Double-entry, integer minor units |
+| `packages/aether-mandate` | AP2-*shaped* Intent → Cart → Payment chain |
+| `packages/aether-envelope` | x402-*shaped* PAYMENT-* headers |
+| `apps/cli` | `pnpm demo` |
+| `apps/runtime-http` | OpenAPI-ish HTTP + control room |
+| `packages/aether-mcp` | MCP tool face of the same commands |
+| `fixtures/demo/sprint-procurement` | TAP assertions |
 
-```
-1. aether-kernel
-2. aether-types + schemas
-3. aether-audit + aether-ledger
-4. identity + ladder
-5. mandate verifyChain
-6. policy tests (one allow + one deny per ruleId)
-7. escrow + market
-8. envelope + settlement
-9. runtime.dispatch
-10. HTTP + MCP + `aether demo sprint-procurement`
-```
+Amounts are **integer minor units**. Never IEEE floats. Canonical JSON is an RFC 8785 subset; that bytestring is what we hash.
 
-Acceptance: the ten TAP assertions in the fixture must pass. See DESIGN.md §4.
+## What we will not add
+
+Live rails in v0. An order book. A storefront. Copied AP2/x402 SDKs. An LLM inside `evaluate()`. Silent re-spend retries. Mutable history.
+
+Adapters for real x402, MPP, AP2, TAP, and ACK belong in a later revision that keeps this kernel.
+
+## License
+
+Apache-2.0

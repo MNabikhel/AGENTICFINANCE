@@ -34,7 +34,7 @@
     {
       "name": "aether_hire_create",
       "commandType": "hire.create",
-      "description": "Offer a hire contract with an escrow account. Requires L4+ or escalation."
+      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent."
     },
     {
       "name": "aether_hire_accept",
@@ -75,6 +75,11 @@
       "name": "aether_receipt_get",
       "commandType": "receipt.get",
       "description": "Fetch a receipt. reference must equal sha256(payment mandate)."
+    },
+    {
+      "name": "aether_demo_sprint",
+      "commandType": "demo.sprint",
+      "description": "Run the Sprint Procurement TAP demo on sim:aether-1."
     }
   ]
 }
