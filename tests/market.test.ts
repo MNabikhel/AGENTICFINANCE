@@ -167,6 +167,49 @@ describe("RFQ invites", () => {
   });
 });
 
+describe("known RFQ", () => {
+  it("refuses a quote against a missing RFQ as known_rfq, not known_sku", () => {
+    const rt = boot();
+    const { vendor } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: "rfq_01J6AETHERGHOSTRFQ00000001",
+        price: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.audit.length).toBeGreaterThan(auditBefore);
+  });
+
+  it("refuses to hire on an unknown quote as known_rfq", () => {
+    const rt = boot();
+    const { desk, intentId } = economy(rt);
+    const r = rt.dispatch(
+      cmd("hire.create", desk.id, {
+        quoteId: "qte_01J6AETHERGHOSTQTE00000001",
+        intentId,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
+  });
+});
+
 describe("command schema", () => {
   it("refuses missing required fields before policy or the clock", () => {
     const rt = boot();

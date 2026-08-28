@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 38 rules", () => {
-    expect(RULE_IDS).toHaveLength(38);
+  it("has 39 rules", () => {
+    expect(RULE_IDS).toHaveLength(39);
   });
 
   it("denies frozen actors", () => {
@@ -457,6 +457,21 @@ describe("policy catalog", () => {
     const d = evaluate(ctx({ commandType: "hire.fund", cartMatchesHire: false }));
     expect(d.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("deny");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies a quote against an unknown RFQ as known_rfq, not known_sku", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
   });
 
   it("does not freeze a funded hire when the execution window has closed", () => {

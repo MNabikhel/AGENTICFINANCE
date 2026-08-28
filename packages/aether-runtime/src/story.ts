@@ -114,6 +114,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "market.known_rfq") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a room that does not exist`,
+          body: "A missing RFQ is not a missing SKU. Issue the request first, then quote it.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -151,6 +161,8 @@ export function autoBeat(input: {
         body = "This agent is frozen. Freeze is a kill switch: autonomy drops to L0 and spend is denied.";
       } else if (ruleId === "market.invited_seller") {
         body = "That seller was not on the RFQ. A named invite list is a closed room.";
+      } else if (ruleId === "market.known_rfq") {
+        body = "That quote or RFQ is not in this world. A missing room is not a missing SKU.";
       } else if (ruleId === "payment.recurrence") {
         body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
       }

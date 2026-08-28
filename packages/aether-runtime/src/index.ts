@@ -725,6 +725,7 @@ export class Runtime {
     if (market.skuListed !== undefined) ctx.skuListed = market.skuListed;
     if (market.marketFresh !== undefined) ctx.marketFresh = market.marketFresh;
     if (market.sellerInvited !== undefined) ctx.sellerInvited = market.sellerInvited;
+    if (market.rfqKnown !== undefined) ctx.rfqKnown = market.rfqKnown;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent);
@@ -748,7 +749,7 @@ export class Runtime {
     body: Record<string, unknown>,
     hire: HireContract | undefined,
     actor: Agent,
-  ): { skuListed?: boolean; marketFresh?: boolean; sellerInvited?: boolean } {
+  ): { skuListed?: boolean; marketFresh?: boolean; sellerInvited?: boolean; rfqKnown?: boolean } {
     const now = Date.parse(this.clock.now());
     const quote =
       this.quoteOf(body) ?? (hire?.quoteId && hire.id !== "hid_draft" ? this.quotes.get(hire.quoteId) : undefined);
@@ -759,24 +760,34 @@ export class Runtime {
           ? this.rfqs.get(String(body.rfqId))
           : undefined;
     const sku = typeof body.sku === "string" ? body.sku : (rfq?.sku ?? hire?.sku);
-    const out: { skuListed?: boolean; marketFresh?: boolean; sellerInvited?: boolean } = {};
-    if (cmd.type === "market.rfq" || cmd.type === "market.quote" || cmd.type === "hire.create") {
+    const out: { skuListed?: boolean; marketFresh?: boolean; sellerInvited?: boolean; rfqKnown?: boolean } = {};
+    if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
+      return out;
     }
-    if (cmd.type === "market.quote" && rfq) {
-      out.marketFresh = Date.parse(rfq.expiresAt) > now;
+    if (cmd.type === "market.quote") {
+      out.rfqKnown = Boolean(rfq);
+      if (rfq) {
+        out.skuListed = typeof sku === "string" && isCatalogSku(sku);
+        out.marketFresh = Date.parse(rfq.expiresAt) > now;
+        const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
+        out.sellerInvited = invited.length === 0 || invited.includes(actor.id);
+      }
+      return out;
     }
-    if (cmd.type === "hire.create" && quote && rfq) {
-      out.marketFresh = Date.parse(quote.expiresAt) > now && Date.parse(rfq.expiresAt) > now;
+    if (cmd.type === "hire.create") {
+      out.rfqKnown = Boolean(quote && rfq);
+      if (quote && rfq) {
+        out.skuListed = typeof sku === "string" && isCatalogSku(sku);
+        out.marketFresh = Date.parse(quote.expiresAt) > now && Date.parse(rfq.expiresAt) > now;
+        const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
+        out.sellerInvited = invited.length === 0 || invited.includes(quote.sellerId);
+      }
+      return out;
     }
     if (cmd.type === "market.fx_settle" && quote) {
       const fxOk = quote.fx ? Date.parse(quote.fx.validUntil) > now : true;
       out.marketFresh = Date.parse(quote.expiresAt) > now && fxOk;
-    }
-    if (cmd.type === "market.quote" || cmd.type === "hire.create") {
-      const sellerId = cmd.type === "market.quote" ? actor.id : quote?.sellerId;
-      const invited = rfq && Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
-      out.sellerInvited = Boolean(rfq && sellerId && (invited.length === 0 || invited.includes(sellerId)));
     }
     return out;
   }

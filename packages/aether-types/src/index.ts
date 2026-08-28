@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.11.0",
+  version: "0.12.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -603,6 +603,8 @@ export interface PolicyContext {
    * Absent = command is not cart-gated.
    */
   cartMatchesHire?: boolean;
+  /** False when the RFQ (or the quote’s RFQ) does not exist. Absent = not an RFQ-gated command. */
+  rfqKnown?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

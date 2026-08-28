@@ -707,6 +707,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.cart_matches", "deny", "cart does not match hire price, seller, or sku");
     },
   },
+  {
+    id: "market.known_rfq",
+    evaluate: (ctx) => {
+      if (ctx.rfqKnown === undefined) return v("market.known_rfq", "allow", "not an RFQ-gated command");
+      return ctx.rfqKnown
+        ? v("market.known_rfq", "allow", "rfq exists")
+        : v("market.known_rfq", "deny", "rfq or quote not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -781,6 +790,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.cart_matches": {
     kind: "none",
     hint: "The cart must equal the hire: same seller, same SKU, same integer cents. Escrow moves the hire price. A cheaper cart is not a discount.",
+  },
+  "market.known_rfq": {
+    kind: "none",
+    hint: "That RFQ or quote id is unknown. Issue a real RFQ, then quote it. A missing room is not a missing SKU.",
   },
   "payment.execution_date": {
     kind: "none",
