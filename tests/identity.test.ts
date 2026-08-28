@@ -134,4 +134,45 @@ describe("known agent", () => {
     deniedKnown(r);
     expect(rt.intents.size).toBe(before);
   });
+
+  it("refuses to attest a missing principal as identity.known, not a handshake with nobody", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: desk.id, principalId: GHOST, maxAutonomy: 3 }),
+    );
+    deniedKnown(r);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("refuses to revoke a missing agent as identity.known, not a silent tombstone", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const r = rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: GHOST }));
+    deniedKnown(r);
+    expect(rt.kya.blocked.size).toBe(0);
+  });
+});
+
+describe("kya.not_self", () => {
+  it("refuses to attest yourself as kya.not_self, not a mutate throw", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: founder.id, maxAutonomy: 3 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.not_self");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
 });

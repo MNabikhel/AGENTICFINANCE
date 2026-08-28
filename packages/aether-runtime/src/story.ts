@@ -435,6 +435,17 @@ export function autoBeat(input: {
   }
   if (cmd.type === "kya.attest") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "kya.not_self") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot shake hands with themselves`,
+          body: "A handshake is with another agent. Know Your Agent is a grant, not a mirror.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -454,6 +465,16 @@ export function autoBeat(input: {
     };
   }
   if (cmd.type === "kya.revoke") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not revoke that handshake`,
+        body: "That agent is not in this world. A missing agent is not a tombstone.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
     return {
       seq: input.seq,
       at: input.at,

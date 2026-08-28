@@ -74,8 +74,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 51 rules", () => {
-    expect(RULE_IDS).toHaveLength(51);
+  it("has 52 rules", () => {
+    expect(RULE_IDS).toHaveLength(52);
   });
 
   it("denies frozen actors", () => {
@@ -664,6 +664,24 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("ladder.legal");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies attesting yourself as kya.not_self, not a missing agent", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.not_self");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

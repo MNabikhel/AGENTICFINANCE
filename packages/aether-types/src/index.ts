@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.24.0",
+  version: "0.25.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -666,8 +666,8 @@ export interface PolicyContext {
    */
   parentKnown?: boolean;
   /**
-   * False when freeze / unfreeze / ladder.set / kya.attest / issue_cart / issue_intent
-   * names an agent that is not in this world.
+   * False when freeze / unfreeze / ladder.set / kya.attest / kya.revoke / issue_cart / issue_intent
+   * names an agent that is not in this world (delegate, principal, merchant, subject, or freeze target).
    * Absent = command does not require a registered target agent.
    */
   targetKnown?: boolean;
@@ -677,6 +677,11 @@ export interface PolicyContext {
    * Absent = not a ladder.set, or the target agent is unknown (`identity.known` handles that).
    */
   ladderLegal?: boolean;
+  /**
+   * False when kya.attest would make the grantor the delegate.
+   * Absent = not a kya.attest, or the delegate is unknown (`identity.known` handles that).
+   */
+  kyaNotSelf?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

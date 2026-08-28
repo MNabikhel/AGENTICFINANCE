@@ -840,6 +840,15 @@ export const RULES: readonly Rule[] = [
         : v("ladder.legal", "deny", "illegal ladder climb");
     },
   },
+  {
+    id: "kya.not_self",
+    evaluate: (ctx) => {
+      if (ctx.kyaNotSelf === undefined) return v("kya.not_self", "allow", "not a kya.attest");
+      return ctx.kyaNotSelf
+        ? v("kya.not_self", "allow", "grantor is not the delegate")
+        : v("kya.not_self", "deny", "cannot attest yourself");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -957,7 +966,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "identity.known": {
     kind: "none",
-    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, or a permission-slip subject.",
+    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, or a revoke target.",
   },
   "hire.state": {
     kind: "none",
@@ -966,6 +975,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "ladder.legal": {
     kind: "none",
     hint: "Rungs cannot be skipped. L5 also needs a working circuit breaker and a freeze that was actually tested — listing the gate names is not the test. any→L0 is always legal for a ladder approver.",
+  },
+  "kya.not_self": {
+    kind: "none",
+    hint: "A handshake is with another agent. You cannot attest yourself. Know Your Agent is a grant, not a mirror.",
   },
   "payment.execution_date": {
     kind: "none",

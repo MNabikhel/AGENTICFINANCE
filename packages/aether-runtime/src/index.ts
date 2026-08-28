@@ -788,12 +788,16 @@ export class Runtime {
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
     }
-    const targetId = this.targetAgentId(cmd, body);
-    if (targetId !== undefined) {
-      ctx.targetKnown = Boolean(this.identity.get(targetId));
+    const namedIds = this.namedAgentIds(cmd, body);
+    if (namedIds.length > 0) {
+      ctx.targetKnown = namedIds.every((id) => Boolean(this.identity.get(id)));
     }
-    if (cmd.type === "ladder.set" && ctx.targetKnown === true && targetId) {
-      const target = this.identity.get(targetId);
+    if (cmd.type === "kya.attest" && typeof body.delegateId === "string") {
+      const delegate = this.identity.get(body.delegateId as AgentId);
+      if (delegate) ctx.kyaNotSelf = actor.id !== delegate.id;
+    }
+    if (cmd.type === "ladder.set" && ctx.targetKnown === true && namedIds[0]) {
+      const target = this.identity.get(namedIds[0]);
       if (target && typeof body.to === "number") {
         ctx.ladderLegal = this.ladderClimbOk(target, body.to as AutonomyLevel, actor, body);
       }
@@ -965,19 +969,28 @@ export class Runtime {
   }
 
   private targetAgentId(cmd: Command, body: Record<string, unknown>): AgentId | undefined {
+    return this.namedAgentIds(cmd, body)[0];
+  }
+
+  private namedAgentIds(cmd: Command, body: Record<string, unknown>): AgentId[] {
+    const ids: AgentId[] = [];
+    const add = (value: unknown) => {
+      if (typeof value === "string") ids.push(value as AgentId);
+    };
     if (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "ladder.set") {
-      return typeof body.agentId === "string" ? (body.agentId as AgentId) : undefined;
+      add(body.agentId);
     }
     if (cmd.type === "kya.attest") {
-      return typeof body.delegateId === "string" ? (body.delegateId as AgentId) : undefined;
+      add(body.delegateId);
+      add(body.principalId);
     }
-    if (cmd.type === "mandate.issue_cart") {
-      return typeof body.merchantId === "string" ? (body.merchantId as AgentId) : undefined;
+    if (cmd.type === "kya.revoke") {
+      add(body.principalId);
+      add(body.delegateId);
     }
-    if (cmd.type === "mandate.issue_intent") {
-      return typeof body.subjectId === "string" ? (body.subjectId as AgentId) : undefined;
-    }
-    return undefined;
+    if (cmd.type === "mandate.issue_cart") add(body.merchantId);
+    if (cmd.type === "mandate.issue_intent") add(body.subjectId);
+    return ids;
   }
 
   private lookupHire(cmd: Command, body: Record<string, unknown>): HireContract | undefined {
@@ -1222,6 +1235,7 @@ export class Runtime {
   private mutKyaAttest(body: Record<string, unknown>, actor: Agent) {
     const delegateId = body.delegateId as AgentId;
     this.identity.require(delegateId);
+    if (typeof body.principalId === "string") this.identity.require(body.principalId as AgentId);
     const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
     const att: DelegationAttestation = {
       id: this.ids.next("dlg") as DelegationId,
@@ -1254,6 +1268,8 @@ export class Runtime {
   }
 
   private mutKyaRevoke(body: Record<string, unknown>, actor: Agent) {
+    if (typeof body.principalId === "string") this.identity.require(body.principalId as AgentId);
+    if (typeof body.delegateId === "string") this.identity.require(body.delegateId as AgentId);
     const principalId = (body.principalId as AgentId | undefined) ?? actor.id;
     const opts: { principalId: AgentId; at: string; id?: DelegationId; delegateId?: AgentId } = {
       principalId,
@@ -1863,6 +1879,8 @@ export class Runtime {
     if (cmd.type === "kya.attest") {
       const id = (cmd.body as Record<string, unknown>).delegateId;
       if (typeof id !== "string" || !this.identity.get(id as AgentId)) return false;
+      const principal = (cmd.body as Record<string, unknown>).principalId;
+      if (typeof principal === "string" && !this.identity.get(principal as AgentId)) return false;
     }
     return true;
   }
