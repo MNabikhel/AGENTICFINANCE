@@ -928,6 +928,13 @@ export class Runtime {
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
       ctx.cartUnbound = hire.cartId === undefined;
     }
+    if (
+      (cmd.type === "hire.fund" || cmd.type === "hire.release" || cmd.type === "envelope.submit") &&
+      hire &&
+      hire.id !== "hid_draft"
+    ) {
+      ctx.cartBound = this.hireMandateBound(hire);
+    }
     ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire);
     return ctx;
   }
@@ -1698,6 +1705,7 @@ export class Runtime {
 
   private mutHireFund(body: Record<string, unknown>, actor: Agent) {
     const hire = this.requireHire(body.hireId as HireId);
+    if (!this.hireMandateBound(hire)) throw new Error("hire has no bound cart");
     const buyer = this.identity.require(hire.buyerId);
     if (this.ledger.balance(buyer.accountId) < hire.price.amount) {
       throw new Error("insufficient funds");
@@ -2066,6 +2074,14 @@ export class Runtime {
       if (p.payload.transaction_id === hash) return p;
     }
     return undefined;
+  }
+
+  /** Live hire holds a cart, and that cart has a payment. A body cartId is not a bind. */
+  private hireMandateBound(hire: HireContract): boolean {
+    if (!hire.cartId) return false;
+    const cart = this.carts.get(hire.cartId);
+    if (!cart) return false;
+    return this.paymentMatchingCart(cart) !== undefined;
   }
 
   private paymentForHire(hire: HireContract): Signed<PaymentMandate> {

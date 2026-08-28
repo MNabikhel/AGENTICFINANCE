@@ -1071,6 +1071,15 @@ export const RULES: readonly Rule[] = [
         : v("market.fx_window", "deny", "FX SKU is a window, not a good");
     },
   },
+  {
+    id: "hire.bound_cart",
+    evaluate: (ctx) => {
+      if (ctx.cartBound === undefined) return v("hire.bound_cart", "allow", "not moving escrow against a hire");
+      return ctx.cartBound
+        ? v("hire.bound_cart", "allow", "hire holds its cart and payment")
+        : v("hire.bound_cart", "deny", "hire has not bound a cart");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1269,6 +1278,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.fx_window": {
     kind: "none",
     hint: "An FX SKU is a conversion window. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. It is not a hireable good.",
+  },
+  "hire.bound_cart": {
+    kind: "none",
+    hint: "That hire has not bound a cart (and that cart’s payment). Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer. A loose cart is not this hire’s check.",
   },
   "payment.execution_date": {
     kind: "none",

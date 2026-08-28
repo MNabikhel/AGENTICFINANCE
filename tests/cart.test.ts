@@ -291,4 +291,61 @@ describe("hire cart match", () => {
     expect(rt.carts.size).toBe(before);
     expect(rt.clock.now()).toBe(clockBefore);
   });
+
+  it("refuses to fund a hire whose cart was never bound as hire.bound_cart, not a throw at release", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const live = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(live.attempt.ok).toBe(true);
+    if (!live.attempt.ok) return;
+    const hireId = (live.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cart = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          line_items: [
+            {
+              sku: "research.brief",
+              description: "one pager",
+              quantity: 1,
+              unitAmount: { amount: 80_000, currency: "USD_SIM" },
+            },
+          ],
+        }),
+      ),
+      "unbound cart",
+    );
+    const cartId = (cart.data as { payload: { id: string } }).payload.id;
+    const payment = must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    const paymentId = (payment.data as { payload: { id: string } }).payload.id;
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("hire.fund", desk.id, { hireId, cartId, paymentMandateId: paymentId }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.bound_cart")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.unique_cart")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.bound_cart");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.hires.get(hireId)?.cartId).toBeUndefined();
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
 });

@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 69 rules", () => {
-    expect(RULE_IDS).toHaveLength(69);
+  it("has 70 rules", () => {
+    expect(RULE_IDS).toHaveLength(70);
   });
 
   it("denies frozen actors", () => {
@@ -1345,5 +1345,43 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("market.known_sku");
+  });
+
+  it("denies funding a hire that has not bound a cart", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        hireKnown: true,
+        cartBound: false,
+        intent: signedIntent([]),
+        cart: signedCart(),
+        payment: signedPayment(),
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.bound_cart")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.unique_cart")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("hire.bound_cart");
+  });
+
+  it("does not name bound_cart when the hire itself is missing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.fund",
+        hireKnown: false,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.bound_cart")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.known");
   });
 });

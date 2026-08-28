@@ -342,6 +342,8 @@ export function autoBeat(input: {
                 ? "A hire must be accepted before escrow can lock. Offered is not funded. An illegal arrow is a refuse, not a 409 after yes."
                 : rule?.ruleId === "ledger.sufficient"
                   ? "The buyer’s cash does not cover this hire. Escrow cannot lock on an overdraft. Allocate first."
+                  : rule?.ruleId === "hire.bound_cart"
+                    ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
                 : (rule?.message ?? "The referee refused to fund this hire."),
         tone: "deny",
         commandType: cmd.type,
@@ -392,6 +394,8 @@ export function autoBeat(input: {
         body:
           rule?.ruleId === "hire.state"
             ? "Escrow releases only after the vendor has delivered. Funded is not released. An illegal arrow is a refuse, not a 409 after yes."
+            : rule?.ruleId === "hire.bound_cart"
+              ? "That hire has not bound a cart. Issue the cart with hireId. A loose cart on the command is not this hire’s check."
             : `Role ${actor.role} is not allowed to move money. Rule: ${rule?.ruleId ?? "actor.role_capability"}. An auditor who can spend is not an auditor.`,
         tone: "deny",
         commandType: cmd.type,
