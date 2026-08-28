@@ -904,6 +904,9 @@ export class Runtime {
         (a) => a.principalId === principalId && a.delegateId === delegateId && !a.revokedAt,
       );
     }
+    if (cmd.type === "kya.attest") {
+      ctx.kyaMintFresh = Date.parse(this.kyaExpiresAt(body)) > Date.parse(this.clock.now());
+    }
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       ctx.kyaParentKnown = this.kya.attestations.has(body.parentId as DelegationId);
     }
@@ -1548,11 +1551,11 @@ export class Runtime {
       maxAutonomy: this.kyaGrantCeiling(body, actor),
       maxDepth: KYA_MAX_DEPTH,
       createdAt: this.clock.now(),
-      expiresAt:
-        typeof body.expiresAt === "string"
-          ? body.expiresAt
-          : new Date(Date.parse(this.clock.now()) + 365 * DAY_MS).toISOString(),
+      expiresAt: this.kyaExpiresAt(body),
     };
+    if (!(Date.parse(att.expiresAt) > Date.parse(att.createdAt))) {
+      throw new Error("kya hop already expired");
+    }
     if (typeof body.parentId === "string") {
       if (!this.kya.attestations.has(body.parentId as DelegationId)) throw new Error("unknown parent hop");
       att.parentId = body.parentId as DelegationId;
@@ -2377,6 +2380,13 @@ export class Runtime {
    */
   private kyaPrincipalId(body: Record<string, unknown>, actor: Agent): AgentId {
     return typeof body.principalId === "string" ? (body.principalId as AgentId) : actor.id;
+  }
+
+  /** Omitted expiresAt is one year from now. Snapshot and mutate share this. */
+  private kyaExpiresAt(body: Record<string, unknown>): string {
+    return typeof body.expiresAt === "string"
+      ? body.expiresAt
+      : new Date(Date.parse(this.clock.now()) + 365 * DAY_MS).toISOString();
   }
 
   /** Omitted maxAutonomy is L5. An agent may not grant a ceiling above its own rung. */

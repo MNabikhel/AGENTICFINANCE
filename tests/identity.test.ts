@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import type { AccountId } from "@aether/types";
+import { DAY_MS, type AccountId } from "@aether/types";
 
 const GHOST = "aid_01J6AETHERGHOSTAGEN0000001";
 const GHOST_PARENT = "dlg_01J6AETHERGHOSTPARENT00001";
@@ -908,6 +908,152 @@ describe("kya principal default", () => {
     expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
     expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(before);
+  });
+});
+
+describe("kya.mint_fresh", () => {
+  const DEAD = "2020-01-01T00:00:00.000Z";
+  const FUTURE = "2027-08-28T00:00:00.000Z";
+
+  function scoutDesk(rt: Runtime) {
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    return { founder, vendor, scout: rt.alias("scout") };
+  }
+
+  it("refuses a handshake born expired as kya.mint_fresh, not a written corpse", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, expiresAt: DEAD }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.mint_fresh");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("cannot mint a dead handshake"))).toBe(true);
+  });
+
+  it("refuses an unparseable expiresAt as kya.mint_fresh", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: desk.id, expiresAt: "not-an-instant" }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.mint_fresh");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still writes omit expiresAt as one year from createdAt", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const r = must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id })), "omit");
+    const att = r.data as { expiresAt: string; createdAt: string };
+    expect(Date.parse(att.expiresAt) - Date.parse(att.createdAt)).toBe(365 * DAY_MS);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still attests a future window", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const r = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, expiresAt: FUTURE })),
+      "future",
+    );
+    expect((r.data as { expiresAt: string }).expiresAt).toBe(FUTURE);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.unique_live first when a second hop is also born dead", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })), "first");
+    const liveBefore = [...rt.kya.attestations.values()].filter((a) => !a.revokedAt).length;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2, expiresAt: DEAD }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+    expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(liveBefore);
+  });
+
+  it("still names identity.known first when the delegate is missing", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: GHOST, expiresAt: DEAD }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.not_self first when attesting yourself with a dead window", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: founder.id, expiresAt: DEAD }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.not_self");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.capability_subset first when L4 omit would also write L5", () => {
+    const rt = boot();
+    const { scout, vendor } = scoutDesk(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", scout.id, { delegateId: vendor.id, expiresAt: DEAD }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.capability_subset");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.party first when the desk fills in the founder’s id", () => {
+    const rt = boot();
+    const { founder, scout, vendor } = scoutDesk(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", scout.id, {
+        delegateId: vendor.id,
+        principalId: founder.id,
+        maxAutonomy: 3,
+        expiresAt: DEAD,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
   });
 });
 

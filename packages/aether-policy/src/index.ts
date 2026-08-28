@@ -1146,6 +1146,15 @@ export const RULES: readonly Rule[] = [
         : v("ladder.birth_rung", "deny", "L5 is not a birthright");
     },
   },
+  {
+    id: "kya.mint_fresh",
+    evaluate: (ctx) => {
+      if (ctx.kyaMintFresh === undefined) return v("kya.mint_fresh", "allow", "not a handshake mint");
+      return ctx.kyaMintFresh
+        ? v("kya.mint_fresh", "allow", "handshake expires after now")
+        : v("kya.mint_fresh", "deny", "handshake would be born expired");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1199,7 +1208,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.attestation_fresh": {
     kind: "attest_kya",
     commandType: "kya.attest",
-    hint: "The handshake expired. Issue a new attestation.",
+    hint: "The handshake expired. Revoke it, then attest again. A dead hop still occupies the pair. A new hop cannot be born expired.",
   },
   "kya.capability_subset": {
     kind: "none",
@@ -1376,6 +1385,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "ladder.birth_rung": {
     kind: "none",
     hint: "L5 is not a birthright. Register at L0–L4, then climb with ladder.set after a freeze that was actually tested. Listing the gate names is not the test.",
+  },
+  "kya.mint_fresh": {
+    kind: "none",
+    hint: "A handshake cannot be born dead. Name an expiresAt strictly after now, or omit it for one year. An unparseable Instant is not a window. Ghost, self, party, a second live hop, and an over-grant keep first deny.",
   },
   "payment.execution_date": {
     kind: "none",

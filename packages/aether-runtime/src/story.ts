@@ -623,6 +623,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.mint_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a dead handshake`,
+          body: "A handshake cannot be born expired. Name an expiresAt after now, or omit it for one year. An expired hop still occupies the pair until you revoke.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,

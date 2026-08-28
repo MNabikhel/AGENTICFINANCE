@@ -35,7 +35,10 @@
         "maxAutonomy": { "type": "integer", "minimum": 0, "maximum": 5 },
         "parentId": { "type": "string" },
         "issuerKind": { "enum": ["aether.self", "tap.http-sig", "skyfire.kya", "erc8004.agent"] },
-        "expiresAt": { "type": "string" }
+        "expiresAt": {
+          "type": "string",
+          "description": "ISO Instant. Must be strictly after now. Omit for one year. A dead or unparseable window is kya.mint_fresh."
+        }
       }
     },
     "kya.revoke": {

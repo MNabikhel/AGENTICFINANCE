@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.66.0",
+  version: "0.67.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -857,6 +857,14 @@ export interface PolicyContext {
    * (`identity.known` / `kya.not_self` handle those). Revoke, then attest again.
    */
   kyaLiveFree?: boolean;
+  /**
+   * False when kya.attest would write expiresAt ≤ now (or an unparseable Instant).
+   * Absent = not a kya.attest. Omit expiresAt is one year from now.
+   * A handshake cannot be born dead. Spend still names `kya.attestation_fresh`
+   * when a live hop later expires. Ghost, self, party, unique_live, and
+   * over-grant keep first deny.
+   */
+  kyaMintFresh?: boolean;
   /**
    * False when issue_cart names a live hire that already has a cartId.
    * Absent = not binding a cart to a hire, or the hire is unknown (`hire.known` handles that).
