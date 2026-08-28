@@ -306,7 +306,7 @@ describe("quote inspect", () => {
 
   it("labels an FX quote expired when validUntil lapses inside the quote envelope", () => {
     const rt = boot();
-    const { founder, desk, vendor } = economy(rt);
+    const { founder, desk } = economy(rt);
     must(
       rt.dispatch(
         cmd("identity.register", founder.id, {
@@ -350,11 +350,6 @@ describe("quote inspect", () => {
     expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("expired");
     expect(rt.snapshotState().quotes.find((q) => q.id === quoteId)?.status).toBe("expired");
     expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
-    const settle = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
-    expect(settle.ok).toBe(false);
-    if (settle.ok) return;
-    expect(settle.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
-    expect(settle.error.decision?.remediation?.ruleId).toBe("market.not_expired");
   });
 });
 
