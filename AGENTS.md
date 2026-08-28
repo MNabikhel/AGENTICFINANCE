@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.21.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.22.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Canonical JSON (sorted keys) is what is hashed.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 48 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 49 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -73,6 +73,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 30. An approvalId that is not in this world is `approval.known`. It is not a late yes. Policy denies; mutate does not throw after an allow.
 31. Accept, deliver, and payment-required belong to the seller. Refund and release belong to the buyer or treasury (`hire.party`). The other side of the table is a policy deny, not a mutate throw.
 32. A parentId that is not in this world is `mandate.known_parent`. It is not a tighter child. Policy denies; mutate does not write a ghost parent.
+33. An agentId that is not in this world is `identity.known`. Freeze, unfreeze, ladder, handshake, cart merchant, and intent subject do not throw after an allow.
 
 ## Autonomy
 

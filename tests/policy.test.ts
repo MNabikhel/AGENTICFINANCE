@@ -56,8 +56,8 @@ function signedIntent(constraints: MandateConstraint[], over: Partial<IntentMand
 }
 
 describe("policy catalog", () => {
-  it("has 48 rules", () => {
-    expect(RULE_IDS).toHaveLength(48);
+  it("has 49 rules", () => {
+    expect(RULE_IDS).toHaveLength(49);
   });
 
   it("denies frozen actors", () => {
@@ -565,6 +565,21 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies freeze of a missing agent as identity.known, not a mutate throw", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "identity.freeze",
+        targetKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
     expect(remediationFor(d)?.kind).toBe("none");
   });
 

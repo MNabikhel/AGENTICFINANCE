@@ -84,6 +84,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} wrote a permission slip for nobody`,
+          body: "That subject is not in this world. A missing agent is not a permission slip.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -344,6 +354,17 @@ export function autoBeat(input: {
   }
   if (cmd.type === "identity.freeze") {
     if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not freeze anyone`,
+          body: "That agent is not in this world. A missing agent is not a kill switch.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -363,6 +384,16 @@ export function autoBeat(input: {
     };
   }
   if (cmd.type === "identity.unfreeze") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not lift a freeze`,
+        body: "That agent is not in this world. A missing agent is not a thawed kill switch.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
     return {
       seq: input.seq,
       at: input.at,
@@ -373,6 +404,16 @@ export function autoBeat(input: {
     };
   }
   if (cmd.type === "kya.attest") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not shake hands`,
+        body: "That agent is not in this world. A missing agent is not a handshake.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
     return {
       seq: input.seq,
       at: input.at,
@@ -393,6 +434,16 @@ export function autoBeat(input: {
     };
   }
   if (cmd.type === "ladder.set") {
+    if (decision.verdict === "deny") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not move that agent`,
+        body: "That agent is not in this world. A missing agent is not a ladder rung.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
     const to = (cmd.body as { to?: number }).to;
     return {
       seq: input.seq,

@@ -788,6 +788,10 @@ export class Runtime {
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
       ctx.proposedConstraints = body.constraints as MandateConstraint[];
     }
+    const targetId = this.targetAgentId(cmd, body);
+    if (targetId !== undefined) {
+      ctx.targetKnown = Boolean(this.identity.get(targetId));
+    }
     const market = this.marketFlags(cmd, body, hire, actor, thresholdWaived);
     if (market.skuListed !== undefined) ctx.skuListed = market.skuListed;
     if (market.marketFresh !== undefined) ctx.marketFresh = market.marketFresh;
@@ -809,6 +813,8 @@ export class Runtime {
     if (cmd.type === "approval.resolve" && typeof body.approvalId === "string") {
       subjects.push({ type: "approval", id: body.approvalId });
     }
+    const targetId = this.targetAgentId(cmd, body);
+    if (targetId) subjects.push({ type: "agent", id: targetId });
     const quote = this.quoteOf(body) ?? (ctx.hire?.quoteId ? this.quotes.get(ctx.hire.quoteId) : undefined);
     if (quote) subjects.push({ type: "quote", id: quote.id });
     const rfq = quote ? this.rfqs.get(quote.rfqId) : typeof body.rfqId === "string" ? this.rfqs.get(String(body.rfqId)) : undefined;
@@ -950,6 +956,22 @@ export class Runtime {
   private quoteOf(body: Record<string, unknown>): Quote | undefined {
     const id = (body.quoteId ?? body.id) as string | undefined;
     return id ? this.quotes.get(id) : undefined;
+  }
+
+  private targetAgentId(cmd: Command, body: Record<string, unknown>): AgentId | undefined {
+    if (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "ladder.set") {
+      return typeof body.agentId === "string" ? (body.agentId as AgentId) : undefined;
+    }
+    if (cmd.type === "kya.attest") {
+      return typeof body.delegateId === "string" ? (body.delegateId as AgentId) : undefined;
+    }
+    if (cmd.type === "mandate.issue_cart") {
+      return typeof body.merchantId === "string" ? (body.merchantId as AgentId) : undefined;
+    }
+    if (cmd.type === "mandate.issue_intent") {
+      return typeof body.subjectId === "string" ? (body.subjectId as AgentId) : undefined;
+    }
+    return undefined;
   }
 
   private lookupHire(cmd: Command, body: Record<string, unknown>): HireContract | undefined {
@@ -1825,6 +1847,10 @@ export class Runtime {
     if (cmd.type === "hire.create" && !intent) return false;
     if (cmd.type === "mandate.issue_intent" || cmd.type === "kya.attest") {
       if (actor.role === "human_operator" || actor.role === "treasury") return false;
+    }
+    if (cmd.type === "kya.attest") {
+      const id = (cmd.body as Record<string, unknown>).delegateId;
+      if (typeof id !== "string" || !this.identity.get(id as AgentId)) return false;
     }
     return true;
   }

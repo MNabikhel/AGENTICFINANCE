@@ -801,6 +801,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.known_parent", "deny", "parent intent not found");
     },
   },
+  {
+    id: "identity.known",
+    evaluate: (ctx) => {
+      if (ctx.targetKnown === undefined) return v("identity.known", "allow", "not an agent-id command");
+      return ctx.targetKnown
+        ? v("identity.known", "allow", "agent exists")
+        : v("identity.known", "deny", "agent not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -915,6 +924,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.known_parent": {
     kind: "none",
     hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child.",
+  },
+  "identity.known": {
+    kind: "none",
+    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, or a permission-slip subject.",
   },
   "payment.execution_date": {
     kind: "none",
