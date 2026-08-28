@@ -128,6 +128,27 @@ describe("approval expiry", () => {
     expect(retry.error.decision.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
     expect(rt.approvals.get(ticket.id)?.status).toBe("expired");
   });
+
+  it("labels an expired ticket expired in inspect, not pending", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const ticket = offered.attempt.value.ticket as ApprovalTicket;
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("pending");
+    rt.approvals.set(ticket.id, { ...ticket, expiresAt: rt.clock.now() });
+    expect(rt.approvals.get(ticket.id)?.status).toBe("pending");
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("expired");
+    expect(rt.snapshotState().approvals.find((a) => a.id === ticket.id)?.status).toBe("expired");
+  });
 });
 
 describe("MCP command schemas", () => {

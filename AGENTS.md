@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.69.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.70.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -52,7 +52,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 9. Receipt.reference === sha256(JCS(payment mandate)).
 10. Durable boot: `world.json` and `audit.jsonl` must agree on length. Mismatch is a refuse, not a guess.
 11. `clearing.settle_window` archives net exposure. It is not a second payment. Money already moved at escrow.
-12. Idempotency: same key (or auto-hash of a money-moving command) + prior **allow/escalate** = replay, no second mutation, no extra clock step, no extra audit. **Denies are not cached.** Unfreeze / new intent / circuit reset must be retryable with the same body. Approval replay (`thresholdWaived`) bypasses the lookup so the books can actually change.
+12. Idempotency: same key (or auto-hash of a money-moving command) + prior **allow/escalate** = replay, no second mutation, no extra clock step, no extra audit. **Denies are not cached.** An escalate whose ticket is past `expiresAt` is not a live hit — sweep it, free the quote, let the original command retry. Unfreeze / new intent / circuit reset must be retryable with the same body. Approval replay (`thresholdWaived`) bypasses the lookup so the books can actually change.
 13. `PolicyDecision.remediation.kind` is a machine enum (`issue_intent`, `wait_approval`, `attest_kya`, `unfreeze_actor`, `unfreeze_principal`, `reset_circuit`, `role_forbidden`, `none`). Do not parse English `hint`.
 14. `hire.refund` is legal only from `funded` (not after deliver/release) — that is `hire.state`. It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
 15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
@@ -111,6 +111,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 68. A handshake cannot be born dead (`kya.mint_fresh`). `kya.attest` with `expiresAt` ≤ now, or an unparseable Instant, is a refuse, not a written corpse that then fails spend as `kya.attestation_fresh` while still occupying the pair. Omit `expiresAt` is one year. Ghost, self, party, a second live hop, and an over-grant keep first deny. An expired hop still occupies the pair until revoke.
 69. A handshake cannot outlive one year (`kya.mint_window`). The omit default is the ceiling, not a suggestion. Year 9999 is not standing identity. A corpse mint stays `kya.mint_fresh`. Ghost, self, party, a second live hop, and an over-grant keep first deny.
 70. The KYA graph view (`GET /v1/kya`, snapshot `kya.edges`) labels an expired hop `expired`, not `live`. Revoked wins over expired. An expired hop still occupies the pair until revoke (`kya.unique_live`). Spend still names `kya.attestation_fresh`.
+71. An expired pause is not a live escalate. `hire.create` is auto-idempotent; a leftover ticket must not replay as `escalated` after `expiresAt` and trap the quote until some other command arrives. Inspect / snapshot label that ticket `expired`, not `pending`. Resolve of a dead pause stays `approval.pending`. The original command may be retried (new ticket) if it is still legal.
 
 ## Autonomy
 

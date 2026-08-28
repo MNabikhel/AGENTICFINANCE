@@ -274,6 +274,9 @@ export class Runtime {
   dispatch(cmd: Command, opts?: { thresholdWaived?: boolean; skipStep?: boolean }): DispatchResult {
     const key = idempotencyKeyOf(cmd);
     if (key && !opts?.thresholdWaived) {
+      // Sweep dead pauses before replay. hire.create is auto-idempotent; a leftover
+      // escalate would otherwise return forever and never run expireApprovals.
+      this.expireApprovals();
       const hit = this.idempotency.get(key);
       if (hit && this.idempotencyHitStillValid(hit)) {
         const cloned = cloneResult(hit);
@@ -366,7 +369,7 @@ export class Runtime {
       rfqs: [...this.rfqs.values()],
       quotes: [...this.quotes.values()],
       receipts: [...this.receipts.values()],
-      approvals: [...this.approvals.values()],
+      approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
       story: this.story,
       analog: this.analogDoc,
       tldr: this.tldr,
@@ -385,6 +388,17 @@ export class Runtime {
    */
   kyaSnapshot() {
     return this.kya.snapshot(this.clock.now());
+  }
+
+  /**
+   * Pause view for other agents. A ticket past expiresAt is `expired`, not `pending`.
+   * The store may still say pending until the next dispatch sweeps it.
+   */
+  ticketView(ticket: ApprovalTicket): ApprovalTicket {
+    if (ticket.status === "pending" && Date.parse(ticket.expiresAt) <= Date.parse(this.clock.now())) {
+      return { ...ticket, status: "expired" };
+    }
+    return ticket;
   }
 
   protocolCard() {
@@ -429,7 +443,7 @@ export class Runtime {
     }
     if (id.startsWith("apd_")) {
       const ticket = this.approvals.get(id as ApprovalId);
-      return ticket ? { type: "approval", id: ticket.id, value: ticket } : undefined;
+      return ticket ? { type: "approval", id: ticket.id, value: this.ticketView(ticket) } : undefined;
     }
     if (id.startsWith("rfq_")) {
       const rfq = this.rfqs.get(id);
@@ -681,7 +695,8 @@ export class Runtime {
     const ticketId = hit.value.ticket?.id;
     if (!ticketId) return true;
     const live = this.approvals.get(ticketId);
-    return !live || live.status === "pending";
+    if (!live || live.status !== "pending") return false;
+    return Date.parse(live.expiresAt) > Date.parse(this.clock.now());
   }
 
   private expireApprovals(): void {

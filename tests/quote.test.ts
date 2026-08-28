@@ -312,6 +312,38 @@ describe("hire quote is one-shot", () => {
     expect(again.value.decision.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
   });
 
+  it("does not replay an expired hire.create escalate as a second day", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+    });
+    const intentId = overCapIntent(rt, founder, desk, vendor, "buy deep research");
+    const paused = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "escalate");
+    const ticketId = paused.ticket!.id;
+    const liveRetry = must(
+      rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })),
+      "live replay",
+    );
+    expect(liveRetry.replayed).toBe(true);
+    expect(liveRetry.ticket!.id).toBe(ticketId);
+    const live = rt.approvals.get(ticketId)!;
+    rt.approvals.set(ticketId, { ...live, expiresAt: rt.clock.now() });
+    const again = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.value.replayed).not.toBe(true);
+    expect(again.value.kind).toBe("escalated");
+    expect(again.value.ticket!.id).not.toBe(ticketId);
+    expect(rt.approvals.get(ticketId)?.status).toBe("expired");
+    expect(rt.reservedQuotes.get(invited.quoteId)).toBe(again.value.ticket!.id);
+    expect(again.value.decision.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+  });
+
   it("lets the waived approval consume the reserved quote", () => {
     const rt = boot();
     const { founder, desk, treasury, vendor } = economy(rt);
