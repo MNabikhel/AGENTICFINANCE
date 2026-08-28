@@ -370,6 +370,9 @@ export const RULES: readonly Rule[] = [
       if (ctx.actor.autonomyLevel >= required) {
         return v("ladder.min_level", "allow", `L${ctx.actor.autonomyLevel} >= L${required}`);
       }
+      if (ctx.thresholdWaived && ESCALATABLE.has(ctx.commandType as CommandType)) {
+        return v("ladder.min_level", "allow", "rung waived by approved ticket");
+      }
       if (ESCALATABLE.has(ctx.commandType as CommandType) && ctx.actor.autonomyLevel >= 0) {
         return v("ladder.min_level", "escalate", `L${ctx.actor.autonomyLevel} < L${required}`, { required });
       }
@@ -1383,7 +1386,7 @@ export function remediationFor(decision: PolicyDecision): Remediation | undefine
       kind: "wait_approval",
       ruleId: rule?.ruleId ?? "approval.threshold",
       commandType: "approval.resolve",
-      hint: "Do not retry the spend. Resolve the approval ticket. Policy re-runs; only the threshold is waived.",
+      hint: "Do not retry the spend. Resolve the approval ticket. Policy re-runs; the threshold and the hire/settle rung are waived. Caps, freeze, KYA, and nonce still bind.",
     };
     return next;
   }

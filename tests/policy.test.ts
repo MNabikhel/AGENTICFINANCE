@@ -1772,4 +1772,58 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("identity.unique_key");
   });
+
+  it("escalates L1 hire.create as ladder.min_level", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 1 }),
+        commandType: "hire.create",
+        intentKnown: true,
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        hireNotFx: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        sellerInvited: true,
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("wait_approval");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.min_level");
+  });
+
+  it("allows L1 hire.create when a ticket waived the hire rung", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 1 }),
+        commandType: "hire.create",
+        thresholdWaived: true,
+        intentKnown: true,
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        hireNotFx: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        sellerInvited: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("allow");
+  });
+
+  it("does not let a waived ticket mint a sub-intent below L4", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 3 }),
+        commandType: "mandate.issue_intent",
+        thresholdWaived: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.min_level");
+  });
 });

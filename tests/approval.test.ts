@@ -198,3 +198,78 @@ describe("approval replay", () => {
     expect(rt.reservedQuotes.get(quoteId)).toBe(ticket.id);
   });
 });
+
+describe("ladder.min_level ticket", () => {
+  it("lets a grown-up yes complete an L1 hire.create, not a stuck escalate", () => {
+    const rt = boot();
+    must(
+      rt.dispatch(
+        cmd("identity.register", "system", {
+          key: "ops-human",
+          displayName: "Founder",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "founder",
+    );
+    const founder = rt.alias("ops-human");
+    for (const a of [
+      { key: "treasury", displayName: "Treasury", role: "treasury", autonomyLevel: 3 },
+      { key: "clerk", displayName: "Clerk", role: "procurement", autonomyLevel: 1 },
+      { key: "vendor", displayName: "Vendor", role: "data_vendor", autonomyLevel: 2 },
+    ] as const) {
+      must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
+    }
+    const clerk = rt.alias("clerk");
+    const vendor = rt.alias("vendor");
+    const treasury = rt.alias("treasury");
+    const intent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: clerk.id,
+          task: "buy research",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 200_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "intent",
+    );
+    const intentId = (intent.data as { payload: { id: MandateId } }).payload.id;
+    const offered = offerHire(rt, {
+      buyer: clerk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "L1 needs a grown-up",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect(offered.attempt.value.kind).toBe("escalated");
+    expect(offered.attempt.value.decision.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe(
+      "escalate",
+    );
+    expect(offered.attempt.value.decision.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe(
+      "allow",
+    );
+    expect(offered.attempt.value.decision.remediation?.ruleId).toBe("ladder.min_level");
+    const ticket = offered.attempt.value.ticket;
+    expect(ticket).toBeTruthy();
+    if (!ticket) return;
+    const hiresBefore = rt.hires.size;
+    const resolved = must(
+      rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "approved" })),
+      "approve L1 hire",
+    );
+    expect((resolved.data as { hire: { state: string } }).hire.state).toBe("offered");
+    expect(rt.hires.size).toBe(hiresBefore + 1);
+    expect(rt.approvals.get(ticket.id)?.status).toBe("approved");
+    expect(rt.consumedQuotes.has(offered.quoteId)).toBe(true);
+  });
+});

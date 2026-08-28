@@ -369,7 +369,7 @@ export function autoBeat(input: {
       seq: input.seq,
       at: input.at,
       headline: `${who} approved the exception`,
-      body: "The original command is replayed byte-for-byte. Policy runs again. Only the threshold is waived — caps, freezes, and the audit chain still bind.",
+      body: "The original command is replayed byte-for-byte. Policy runs again. The threshold and the hire/settle rung are waived — caps, freezes, KYA, and the audit chain still bind.",
       tone: "escalate",
       commandType: cmd.type,
     };

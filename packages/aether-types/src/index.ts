@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.64.0",
+  version: "0.65.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -629,7 +629,7 @@ export interface PolicyContext {
   auditHealthy?: boolean;
   /** False when verifyChain failed for the attached mandate triple. */
   chainOk?: boolean;
-  /** True when replaying a command after a matching ApprovalTicket. */
+  /** True when replaying a command after a matching ApprovalTicket. Waives threshold and the hire/settle rung, not caps. */
   thresholdWaived?: boolean;
   /** Current + this command’s amount vs bilateral exposure limit. */
   projectedExposure?: number;
