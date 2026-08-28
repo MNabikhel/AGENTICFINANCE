@@ -166,12 +166,12 @@ export class AetherMcp {
           })),
           {
             name: "aether_snapshot",
-            description: "Read-only runtime snapshot: agents, mandates, carts, payments, hires, KYA, clearing, audit head. Carts include derived live | expired | bound. Payments include derived live | expired | funded.",
+            description: "Read-only runtime snapshot: agents, mandates, carts, payments, hires, KYA, clearing, audit head. Intents include derived live | expired | funded. Carts include derived live | expired | bound. Payments include derived live | expired | funded.",
             inputSchema: { type: "object", properties: {} },
           },
           {
             name: "aether_get",
-            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A mid_ payment includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. A dlg_ hop includes derived status (live | expired | revoked).",
+            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil. A mid_ intent includes derived status (live | expired | funded). Funded is escrow-moved occupancy against this slip and wins over expired. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A mid_ payment includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. A dlg_ hop includes derived status (live | expired | revoked).",
             inputSchema: {
               type: "object",
               properties: { id: { type: "string" } },

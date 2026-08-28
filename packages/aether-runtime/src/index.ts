@@ -48,6 +48,7 @@ import type {
   HireId,
   Instant,
   IntentMandate,
+  IntentStatus,
   JournalEntry,
   KyaIssuerKind,
   KyaHopStatus,
@@ -436,7 +437,7 @@ export class Runtime {
         ...a,
         balance: this.ledger.balance(a.id),
       })),
-      intents: [...this.intents.values()].map((s) => s.payload),
+      intents: [...this.intents.values()].map((s) => this.intentView(s)),
       spentByIntent: Object.fromEntries(this.spentByIntent),
       carts: [...this.carts.values()].map((c) => this.cartView(c)),
       payments: [...this.payments.values()].map((p) => this.paymentView(p)),
@@ -544,6 +545,20 @@ export class Runtime {
     return { ...payment, status: "live" };
   }
 
+  /**
+   * Intent view for other agents. A slip whose hire has moved escrow is
+   * `funded`, not `live`. Funded wins over expired (refunded and released still
+   * funded — the slip was drawn). A child hire does not occupy the parent.
+   * Recurrence spend is not occupancy. The store stays raw (`exp` only).
+   */
+  intentView(intent: Signed<IntentMandate>): Signed<IntentMandate> & { status: IntentStatus } {
+    if (this.hireDrawnIntent(intent)) return { ...intent, status: "funded" };
+    if (intent.payload.exp <= unixSeconds(this.clock.now())) {
+      return { ...intent, status: "expired" };
+    }
+    return { ...intent, status: "live" };
+  }
+
   protocolCard() {
     return {
       ...PROTOCOL,
@@ -557,7 +572,9 @@ export class Runtime {
 
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
-   * aid_ agent, hid_ hire, mid_ mandate (carts include derived live | expired | bound;
+   * aid_ agent, hid_ hire, mid_ mandate (intents include derived live | expired | funded;
+   * funded is escrow-moved occupancy against this slip and wins over expired;
+   * carts include derived live | expired | bound;
    * bound is unique_payment occupancy and wins over expired; payments include derived
    * live | expired | funded; funded is escrow-moved occupancy and wins over expired),
    * rid_ receipt, apd_ approval, rfq_ / qte_ market (qte_ includes derived live | expired | spent | held;
@@ -576,7 +593,7 @@ export class Runtime {
     }
     if (id.startsWith("mid_")) {
       const intent = this.intents.get(id as MandateId);
-      if (intent) return { type: "intent", id, value: intent };
+      if (intent) return { type: "intent", id, value: this.intentView(intent) };
       const cart = this.carts.get(id as MandateId);
       if (cart) return { type: "cart", id, value: this.cartView(cart) };
       const payment = this.payments.get(id as MandateId);
@@ -2523,6 +2540,22 @@ export class Runtime {
       if (p.payload.transaction_id === hash) return p;
     }
     return undefined;
+  }
+
+  /** Escrow moved against this slip. Refunded and released still count — the slip was drawn. */
+  private hireDrawnIntent(intent: Signed<IntentMandate>): boolean {
+    for (const hire of this.hires.values()) {
+      if (
+        hire.state !== "funded" &&
+        hire.state !== "delivered" &&
+        hire.state !== "released" &&
+        hire.state !== "refunded"
+      ) {
+        continue;
+      }
+      if (hire.intentId === intent.payload.id) return true;
+    }
+    return false;
   }
 
   /** Escrow moved using this payment. Refunded and released still count — the mandate was drawn. */

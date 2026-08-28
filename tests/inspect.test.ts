@@ -606,6 +606,198 @@ describe("payment inspect", () => {
   });
 });
 
+const INTENT_DEAD = "2026-09-05T00:00:00.000Z";
+
+describe("intent inspect", () => {
+  it("labels a live intent live and does not write status into the store", () => {
+    const rt = boot();
+    const { intentId } = economy(rt);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().intents.find((s) => s.payload.id === intentId)?.status).toBe("live");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+  });
+
+  it("labels a funded intent funded, not live", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("funded");
+    expect(rt.snapshotState().intents.find((s) => s.payload.id === intentId)?.status).toBe("funded");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+  });
+
+  it("labels an accepted-but-unfunded intent live until escrow moves", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("live");
+  });
+
+  it("labels a stale unused intent expired, not live", () => {
+    const rt = boot();
+    const { intentId } = economy(rt);
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().intents.find((s) => s.payload.id === intentId)?.status).toBe("expired");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+  });
+
+  it("labels a funded intent funded even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("funded");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+  });
+
+  it("labels a refunded intent funded — the slip was drawn", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    must(rt.dispatch(cmd("hire.refund", desk.id, { hireId })), "refund");
+    expect(rt.hires.get(hireId)?.state).toBe("refunded");
+    expect(rt.spentByIntent.get(intentId)).toBe(0);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("funded");
+  });
+
+  it("still names mandate.not_expired when hiring against a stale unused intent", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("expired");
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(false);
+    if (offered.attempt.ok) return;
+    expect(offered.attempt.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+  });
+
+  it("does not let a funded child occupy the parent slip", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "buy one brief",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 80_000 },
+            { type: "payment.budget", currency: "USD_SIM", max: 80_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: MandateId } }).payload.id;
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId: childId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId: childId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(childId)?.value as { status: string }).status).toBe("funded");
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("expired");
+  });
+});
+
 describe("MCP command schemas", () => {
   it("lists real body fields so agents do not guess additionalProperties", () => {
     const mcp = new AetherMcp();

@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.87.0",
+  version: "0.88.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -271,8 +271,17 @@ export interface IntentMandate {
   /** Parent intent when an L4+ agent hands a smaller slip to another agent. */
   parentId?: MandateId;
   iat: number;
+  /** Unix seconds. Seven days from `iat`. Not milliseconds. */
   exp: number;
 }
+
+/**
+ * Inspect / snapshot view. Funded (escrow moved against this slip, including
+ * later refund/release) wins over expired. A child hire does not occupy the
+ * parent. Recurrence `spentByIntent` is not occupancy. The store stays raw
+ * (`exp` only).
+ */
+export type IntentStatus = "live" | "expired" | "funded";
 
 export interface CartMandate {
   vct: "aether.mandate.cart.1";

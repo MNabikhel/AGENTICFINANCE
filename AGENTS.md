@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.87.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.88.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -27,7 +27,7 @@ Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. 
 MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
-- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `mid_` payment includes derived status (`live | expired | funded`). Funded (escrow moved, including later refund/release) wins over expired. A `dlg_` hop includes derived status (`live | expired | revoked`).
+- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `mid_` intent includes derived status (`live | expired | funded`). Funded (escrow moved against this slip, including later refund/release) wins over expired. A child hire does not occupy the parent. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `mid_` payment includes derived status (`live | expired | funded`). Funded (escrow moved, including later refund/release) wins over expired. A `dlg_` hop includes derived status (`live | expired | revoked`).
 - `aether_protocol` / resource `aether://protocol`
 - `aether://commands` — JSON Schema for every command body
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
@@ -128,6 +128,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 85. Completing a funded hire after a climb above the permission-slip ceiling is legal. `ladder.max_autonomy_constraint` binds new spends (`hire.create`, `hire.fund`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. A handshake grant below the climb still names `kya.capability_subset` on a new hire, but the slip ceiling is first.
 86. Completing a funded hire after a hot settle hour is legal. `velocity.window` binds new spends (`hire.create`, `hire.fund`, `market.fx_settle`). Deliver, release, refund, require, submit, accept, and reads after that hour are not a trapped escrow and are not a grown-up pause. A new hire, fund, or FX settle still asks a grown-up.
 87. Fetching one payment by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `funded`. Funded (escrow moved, including later refund/release) wins over expired. A cart that this payment occupies is not funded — that occupancy lives on the cart (`bound`). The store stays raw. Snapshot uses the same derivation and lists payments. A second payment still names `mandate.unique_payment`. Fund of a stale unpaid payment still names `mandate.chain_integrity`.
+88. Fetching one intent by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `funded`. Funded (escrow moved against this slip, including later refund/release) wins over expired. A child hire does not occupy the parent. Recurrence spend is not occupancy. The store stays raw (`exp` only). Snapshot uses the same derivation (signed view, not payload-only). A new hire against a stale unused slip still names `mandate.not_expired`. Completing a funded hire after the seven-day window is legal.
 
 ## Autonomy
 
