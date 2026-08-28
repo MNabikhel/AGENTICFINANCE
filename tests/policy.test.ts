@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 64 rules", () => {
-    expect(RULE_IDS).toHaveLength(64);
+  it("has 65 rules", () => {
+    expect(RULE_IDS).toHaveLength(65);
   });
 
   it("denies frozen actors", () => {
@@ -1031,6 +1031,7 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("ledger.sufficient");
     expect(remediationFor(d)?.kind).toBe("none");
@@ -1081,6 +1082,7 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
     expect(remediationFor(d)?.kind).toBe("none");
     expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
   });
@@ -1153,5 +1155,55 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("mandate.known_cart");
+  });
+
+  it("denies a listed SKU priced in a currency the catalog does not list", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: false,
+        sellerInvited: true,
+        marketFresh: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("market.sku_currency");
+  });
+
+  it("does not name sku_currency when the SKU itself is missing", () => {
+    const d = evaluate(ctx({ commandType: "market.rfq", skuListed: false }));
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_sku");
+  });
+
+  it("denies funding a USDC hire from USD cash as ledger.same_currency, not a journal throw", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted", price: { amount: 80_000, currency: "USDC_SIM" } }),
+        hireKnown: true,
+        accountsSameCurrency: false,
+        intent: signedIntent([]),
+        cart: signedCart({ total: { amount: 80_000, currency: "USDC_SIM" } }),
+        payment: signedPayment({ payment_amount: { amount: 80_000, currency: "USDC_SIM" } }),
+        amount: { amount: 80_000, currency: "USDC_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.same_currency");
+    expect(remediationFor(d)?.kind).toBe("none");
   });
 });

@@ -932,7 +932,7 @@ export const RULES: readonly Rule[] = [
   {
     id: "ledger.same_currency",
     evaluate: (ctx) => {
-      if (ctx.accountsSameCurrency === undefined) return v("ledger.same_currency", "allow", "not a transfer");
+      if (ctx.accountsSameCurrency === undefined) return v("ledger.same_currency", "allow", "not a mixed-currency journal");
       return ctx.accountsSameCurrency
         ? v("ledger.same_currency", "allow", "one currency")
         : v("ledger.same_currency", "deny", "mixed currency; use market.fx_settle");
@@ -1022,6 +1022,17 @@ export const RULES: readonly Rule[] = [
       return ctx.paymentUnbound
         ? v("mandate.unique_payment", "allow", "cart has no payment yet")
         : v("mandate.unique_payment", "deny", "cart already has a payment");
+    },
+  },
+  {
+    id: "market.sku_currency",
+    evaluate: (ctx) => {
+      if (ctx.skuCurrencyOk === undefined) {
+        return v("market.sku_currency", "allow", "not a priced catalog command");
+      }
+      return ctx.skuCurrencyOk
+        ? v("market.sku_currency", "allow", "price currency is listed for this sku")
+        : v("market.sku_currency", "deny", "price currency is not listed for this sku");
     },
   },
 ];
@@ -1165,7 +1176,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ledger.same_currency": {
     kind: "none",
-    hint: "One journal is one currency. USD_SIM and USDC_SIM do not mix. Convert with market.fx_settle, not a transfer.",
+    hint: "One journal is one currency. USD_SIM and USDC_SIM do not mix. Convert with market.fx_settle, not a transfer. Escrow cannot lock USD cash into a USDC hire.",
   },
   "ledger.sufficient": {
     kind: "none",
@@ -1202,6 +1213,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.unique_payment": {
     kind: "none",
     hint: "That cart already has a payment. A cart takes one payment. Fund or release against the existing mandate. A second payment is not a second check.",
+  },
+  "market.sku_currency": {
+    kind: "none",
+    hint: "That SKU is not priced in that currency. Read market.catalog. Convert with market.fx_settle.",
   },
   "payment.execution_date": {
     kind: "none",

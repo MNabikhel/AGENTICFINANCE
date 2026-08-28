@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.46.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.47.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Canonical JSON (sorted keys) is what is hashed.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 64 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 65 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -57,7 +57,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 14. `hire.refund` is legal only from `funded` (not after deliver/release) — that is `hire.state`. It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
 15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
 16. Approval tickets expire (`approval.pending`). Resolving an expired or already-resolved ticket is a policy deny, not a late yes. The original command may be retried (new ticket) if it is still legal.
-17. Only catalog SKUs may be RFQ’d or hired (`market.catalog`). Stale quotes/RFQs cannot be hired (`market.not_expired`).
+17. Only catalog SKUs may be RFQ’d or hired (`market.catalog`). A listed SKU may only be priced in a currency the catalog names (`market.sku_currency`). Stale quotes/RFQs cannot be hired (`market.not_expired`).
 18. `audit.query` reads notary lines for one subject. It does not mutate. Verify is a separate command.
 19. Non-empty `invitedSellerIds` is a closed RFQ (`market.invited_seller`). Empty or omitted is open; any listed seller role may quote.
 20. Missing required body fields, non-integer cents, a non-sim currency, a listed enum miss (role, decision, issuer kind, clearing currency), an integer outside its schema range (ladder rung, autonomy), a listed field with the wrong JSON type (a number where a string id belongs, a string where an array belongs), a nested cart line / intent constraint missing its fields, an unknown constraint type, a listed constraint missing its value fields (an `amount_range` without `max`), or an FX window missing from/to/rateE6/validUntil are `command.malformed` (HTTP 400). That is syntax, not policy. The clock does not step. The notary does not write. `evaluate()` does not run.
@@ -79,7 +79,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 36. Attesting yourself is `kya.not_self`. A handshake is with another agent. The graph still throws if policy ever lies.
 37. A KYA `parentId` that is not in this world is `kya.known_parent`. It is not a live nested handshake. Policy denies; mutate does not mint a hop under a ghost parent. This flag is not `mandate.known_parent`.
 38. An account name that is not in this world is `ledger.known_account`. Treasury cannot allocate through a missing book. A named balance of a missing book is not a zero. An FX settle without a USDC book is a missing book, not a journal throw. Policy denies; mutate does not throw after an allow.
-39. One journal is one currency (`ledger.same_currency`). USD_SIM and USDC_SIM do not mix in a transfer, and the stated amount must match the books. Convert with `market.fx_settle`.
+39. One journal is one currency (`ledger.same_currency`). USD_SIM and USDC_SIM do not mix in a transfer, and the stated amount must match the books. Escrow cannot lock USD cash into a USDC hire. Convert with `market.fx_settle`.
 40. A transfer cannot overdraw the source book (`ledger.sufficient`). Neither can `hire.fund` or `market.fx_settle` (the vendor’s USD leg). Draining to zero is legal. Negative cash is not. Escrow cannot lock on empty operating cash. MM USDC inventory is `mm.inventory`.
 41. A KYA `attestationId` that is not in this world (or that belongs to another principal) is `kya.known_attestation`. It is not a silent tombstone. Revoke by principal+delegate with no id still kills implicit grants. Policy denies; mutate does not write `KYA_REVOKE` for a ghost or foreign handshake.
 42. Minting or tombstoning a handshake in someone else’s name is `kya.party`. You are the principal, or you are a human/treasury kill switch. An L4 desk cannot write a founder’s handshake by filling in the ids.
@@ -89,6 +89,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 46. A second live handshake for the same principal→delegate pair is `kya.unique_live`. One live hop per pair. Revoke, then attest again. A second live hop is not a tighter grant. The graph still throws if policy ever lies.
 47. A hire takes one cart (`hire.unique_cart`). Binding a second cart to a live hire is a policy deny, not a silent pointer swap. Mutate does not throw `hire already has a cart` after an allow.
 48. A cart takes one payment (`mandate.unique_payment`). Minting a second payment for the same cart is a policy deny, not a second check. Ghost cart stays `mandate.known_cart`. Mutate does not throw `cart already has a payment` after an allow.
+49. A listed SKU priced in a currency the catalog does not name is `market.sku_currency`. Research is USD_SIM. Convert with `market.fx_settle`. Ghost SKU stays `market.known_sku`. Funding a USDC hire from USD cash is `ledger.same_currency`, not a mixed journal after yes.
 
 ## Autonomy
 

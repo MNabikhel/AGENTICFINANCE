@@ -12,6 +12,12 @@ export function isCatalogSku(sku: string): boolean {
   return Object.prototype.hasOwnProperty.call(CATALOG, sku);
 }
 
+/** True when the catalog lists this SKU in this currency. Unknown SKUs are false. */
+export function skuAllowsCurrency(sku: string, currency: CurrencyCode): boolean {
+  const row = CATALOG[sku];
+  return row !== undefined && row.currencies.includes(currency);
+}
+
 export const CATALOG: Record<
   string,
   { description: string; unit: string; currencies: CurrencyCode[] }

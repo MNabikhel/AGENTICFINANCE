@@ -390,6 +390,7 @@ describe("escrow cash", () => {
     expect(r.error.error.status).toBe(422);
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
@@ -398,5 +399,97 @@ describe("escrow cash", () => {
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(10_000);
     expect(rt.ledger.balance(rt.hires.get(hireId)!.escrowAccountId)).toBe(0);
     expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses to fund a USDC hire from USD cash as ledger.same_currency, not a mixed journal", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const intent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy fx window as a hire",
+          constraints: [],
+        }),
+      ),
+      "usdc intent",
+    );
+    const intentId = (intent.data as { payload: { id: MandateId } }).payload.id;
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [vendor.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", vendor.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USDC_SIM" },
+        }),
+      ),
+      "usdc quote",
+    );
+    const created = must(
+      rt.dispatch(
+        cmd("hire.create", desk.id, {
+          quoteId: (quoted.data as { id: string }).id,
+          intentId,
+        }),
+      ),
+      "hire",
+    );
+    const hireId = (created.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    const cart = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          hireId,
+          line_items: [
+            {
+              sku: "fx.usd_sim.usdc_sim",
+              description: "window",
+              quantity: 1,
+              unitAmount: { amount: 80_000, currency: "USDC_SIM" },
+            },
+          ],
+        }),
+      ),
+      "cart",
+    );
+    const payment = must(
+      rt.dispatch(
+        cmd("mandate.issue_payment", desk.id, {
+          cartId: (cart.data as { payload: { id: string } }).payload.id,
+        }),
+      ),
+      "payment",
+    );
+    const journalsBefore = rt.journals.length;
+    const cashBefore = rt.ledger.balanceByName("procurement:cash").amount;
+    const r = rt.dispatch(
+      cmd("hire.fund", desk.id, {
+        hireId,
+        paymentMandateId: (payment.data as { payload: { id: string } }).payload.id,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.same_currency")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.same_currency");
+    expect(rt.hires.get(hireId)?.state).toBe("accepted");
+    expect(rt.journals.length).toBe(journalsBefore);
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cashBefore);
+    expect(rt.ledger.balance(rt.hires.get(hireId)!.escrowAccountId)).toBe(0);
   });
 });

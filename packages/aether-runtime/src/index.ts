@@ -18,7 +18,7 @@ import {
 } from "@aether/kernel";
 import { Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
-import { CATALOG, isCatalogSku, fxPayout } from "@aether/market";
+import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPayout } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
@@ -860,7 +860,15 @@ export class Runtime {
     }
     if (cmd.type === "hire.fund" && hire && hire.id !== "hid_draft") {
       const buyer = this.identity.get(hire.buyerId);
-      if (buyer) ctx.fundsOk = this.ledger.balance(buyer.accountId) >= hire.price.amount;
+      const cash = buyer ? this.ledger.accounts.get(buyer.accountId) : undefined;
+      const escrow = this.ledger.accounts.get(hire.escrowAccountId);
+      if (cash && escrow) {
+        ctx.accountsSameCurrency =
+          cash.currency === escrow.currency && hire.price.currency === cash.currency;
+        if (ctx.accountsSameCurrency && buyer) {
+          ctx.fundsOk = this.ledger.balance(buyer.accountId) >= hire.price.amount;
+        }
+      }
     }
     if (cmd.type === "market.fx_settle") {
       const key = this.aliasOf(actor.id);
@@ -897,6 +905,7 @@ export class Runtime {
     if (market.rfqKnown !== undefined) ctx.rfqKnown = market.rfqKnown;
     if (market.fxQuoteLive !== undefined) ctx.fxQuoteLive = market.fxQuoteLive;
     if (market.quoteUnspent !== undefined) ctx.quoteUnspent = market.quoteUnspent;
+    if (market.skuCurrencyOk !== undefined) ctx.skuCurrencyOk = market.skuCurrencyOk;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
@@ -939,6 +948,7 @@ export class Runtime {
     rfqKnown?: boolean;
     fxQuoteLive?: boolean;
     quoteUnspent?: boolean;
+    skuCurrencyOk?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -957,6 +967,7 @@ export class Runtime {
       rfqKnown?: boolean;
       fxQuoteLive?: boolean;
       quoteUnspent?: boolean;
+      skuCurrencyOk?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -969,6 +980,10 @@ export class Runtime {
         out.marketFresh = Date.parse(rfq.expiresAt) > now;
         const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
         out.sellerInvited = invited.length === 0 || invited.includes(actor.id);
+        if (out.skuListed) {
+          const priced = body.price && typeof body.price === "object" ? (body.price as Money) : undefined;
+          if (priced?.currency) out.skuCurrencyOk = skuAllowsCurrency(rfq.sku, priced.currency);
+        }
       }
       return out;
     }
@@ -982,6 +997,7 @@ export class Runtime {
         const consumed = this.consumedQuotes.has(quote.id);
         const reserved = this.reservedQuotes.has(quote.id);
         out.quoteUnspent = thresholdWaived && reserved && !consumed ? true : !consumed && !reserved;
+        if (out.skuListed) out.skuCurrencyOk = skuAllowsCurrency(rfq.sku, quote.price.currency);
       }
       return out;
     }
@@ -1546,11 +1562,17 @@ export class Runtime {
   }
 
   private mutQuote(body: Record<string, unknown>, actor: Agent) {
+    const rfq = this.rfqs.get(String(body.rfqId));
+    if (!rfq) throw new Error("unknown rfq");
+    const price = body.price as Money;
+    if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, price.currency)) {
+      throw new Error("sku currency");
+    }
     const quote: Quote = {
       id: this.ids.next("qte") as Quote["id"],
-      rfqId: body.rfqId as Quote["rfqId"],
+      rfqId: rfq.id,
       sellerId: actor.id,
-      price: body.price as Money,
+      price,
       expiresAt: new Date(Date.parse(this.clock.now()) + 3_600_000).toISOString(),
     };
     if (body.fx) quote.fx = body.fx as Quote["fx"];
@@ -1572,6 +1594,9 @@ export class Runtime {
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
     if (this.consumedQuotes.has(quote.id)) throw new Error("quote already used");
+    if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, quote.price.currency)) {
+      throw new Error("sku currency");
+    }
     const hireId = this.ids.next("hid") as HireId;
     const escrow = this.ledger.openAccount({
       id: this.ids.next("acct") as AccountId,
@@ -1627,6 +1652,16 @@ export class Runtime {
     const buyer = this.identity.require(hire.buyerId);
     if (this.ledger.balance(buyer.accountId) < hire.price.amount) {
       throw new Error("insufficient funds");
+    }
+    const cash = this.ledger.accounts.get(buyer.accountId);
+    const escrow = this.ledger.accounts.get(hire.escrowAccountId);
+    if (
+      !cash ||
+      !escrow ||
+      cash.currency !== escrow.currency ||
+      hire.price.currency !== cash.currency
+    ) {
+      throw new Error("mixed currency; split FX into two entries");
     }
     const next = transitionHire(hire, "funded");
     this.postJournal(

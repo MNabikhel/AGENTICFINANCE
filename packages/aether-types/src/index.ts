@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.46.0",
+  version: "0.47.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -620,6 +620,13 @@ export interface PolicyContext {
   proposedConstraints?: MandateConstraint[];
   /** False when SKU is not in the market catalog. Absent = command is not catalog-gated. */
   skuListed?: boolean;
+  /**
+   * False when a quote or hire.create prices a listed SKU in a currency the catalog
+   * does not list for that SKU. Absent = not a priced catalog command, or the SKU/RFQ
+   * is unknown (`market.known_sku` / `market.known_rfq` handle those).
+   * Research is USD_SIM. Convert with `market.fx_settle`.
+   */
+  skuCurrencyOk?: boolean;
   /** False when RFQ/quote/FX window is past expiresAt. Absent = not a market-time command. */
   marketFresh?: boolean;
   /**
@@ -734,15 +741,17 @@ export interface PolicyContext {
   accountsKnown?: boolean;
   /**
    * False when ledger.transfer would post two currencies in one journal, or the stated
-   * amount currency disagrees with the books. Absent = not a transfer, or a book is
+   * amount currency disagrees with the books, or hire.fund would lock a cash book into
+   * an escrow of a different currency. Absent = not a transfer or fund, or a book is
    * missing (`ledger.known_account` handles that). FX is market.fx_settle, not a transfer.
    */
   accountsSameCurrency?: boolean;
   /**
    * False when ledger.transfer, hire.fund, or market.fx_settle would overdraw the source book.
    * Absent = not a cash-gated command, or a book is missing / mixed (`ledger.known_account` /
-   * `ledger.same_currency` handle those). A transfer is not an overdraft. Escrow cannot lock on one.
-   * An FX settle cannot spend USD the vendor does not hold (`mm.inventory` is the MM’s USDC).
+   * `ledger.same_currency` handle those). A transfer is not an overdraft. Escrow cannot lock on empty
+   * cash, and cannot mix USD cash into a USDC hire. An FX settle cannot spend USD the vendor does
+   * not hold (`mm.inventory` is the MM’s USDC).
    */
   fundsOk?: boolean;
   /**

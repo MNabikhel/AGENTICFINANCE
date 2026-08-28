@@ -75,6 +75,7 @@ describe("market catalog", () => {
     expect(rfq.ok).toBe(false);
     if (rfq.ok) return;
     expect(rfq.error.decision.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
+    expect(rfq.error.decision.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
     expect(rfq.error.decision.remediation?.kind).toBe("none");
   });
 });
@@ -185,6 +186,7 @@ describe("known RFQ", () => {
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
     expect(r.error.decision?.remediation?.kind).toBe("none");
@@ -318,5 +320,37 @@ describe("command schema", () => {
     expect(r.error.decision).toBeUndefined();
     expect(rt.clock.now()).toBe(clockBefore);
     expect(rt.audit.length).toBe(auditBefore);
+  });
+});
+
+describe("catalog currency", () => {
+  it("refuses a USD-only SKU quoted in USDC as sku_currency, not a later mixed journal", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "research.brief", spec: "one pager", invitedSellerIds: [vendor.id] }),
+      ),
+      "rfq",
+    );
+    const clockBefore = rt.clock.now();
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USDC_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.sku_currency");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.quotes.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
