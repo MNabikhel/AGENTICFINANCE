@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.33.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.34.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -78,7 +78,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 35. An illegal ladder climb is `ladder.legal`. Skipping rungs, omitting a gate, listing `kill_switch_tested` without actually freezing, or the wrong approver are policy denies, not a mutate throw. `any→L0` stays legal.
 36. Attesting yourself is `kya.not_self`. A handshake is with another agent. The graph still throws if policy ever lies.
 37. A KYA `parentId` that is not in this world is `kya.known_parent`. It is not a live nested handshake. Policy denies; mutate does not mint a hop under a ghost parent. This flag is not `mandate.known_parent`.
-38. An account name that is not in this world is `ledger.known_account`. Treasury cannot allocate through a missing book. A named balance of a missing book is not a zero. Policy denies; mutate does not throw after an allow.
+38. An account name that is not in this world is `ledger.known_account`. Treasury cannot allocate through a missing book. A named balance of a missing book is not a zero. An FX settle without a USDC book is a missing book, not a journal throw. Policy denies; mutate does not throw after an allow.
 39. One journal is one currency (`ledger.same_currency`). USD_SIM and USDC_SIM do not mix in a transfer, and the stated amount must match the books. Convert with `market.fx_settle`.
 40. A transfer cannot overdraw the source book (`ledger.sufficient`). Neither can `hire.fund` or `market.fx_settle` (the vendor’s USD leg). Draining to zero is legal. Negative cash is not. Escrow cannot lock on empty operating cash. MM USDC inventory is `mm.inventory`.
 41. A KYA `attestationId` that is not in this world (or that belongs to another principal) is `kya.known_attestation`. It is not a silent tombstone. Revoke by principal+delegate with no id still kills implicit grants. Policy denies; mutate does not write `KYA_REVOKE` for a ghost or foreign handshake.

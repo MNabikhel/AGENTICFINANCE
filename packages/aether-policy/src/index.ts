@@ -1050,7 +1050,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ledger.known_account": {
     kind: "none",
-    hint: "That account name is not in this world. Register the agent (or open the book) first. A missing book is not an allocation.",
+    hint: "That account name is not in this world. Register the agent (or open the book) first. A missing book is not an allocation. An FX settle needs the vendor’s USDC book — USD cash is not a USDC wallet.",
   },
   "ledger.same_currency": {
     kind: "none",

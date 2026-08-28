@@ -36,6 +36,7 @@ function economy(rt: Runtime) {
     { key: "procurement", displayName: "Desk", role: "procurement", autonomyLevel: 3 },
     { key: "vendor", displayName: "Vendor", role: "data_vendor", autonomyLevel: 2 },
     { key: "vendor-b", displayName: "Other Vendor", role: "data_vendor", autonomyLevel: 2 },
+    { key: "compute", displayName: "Compute Vendor", role: "compute_vendor", autonomyLevel: 2 },
     { key: "mm", displayName: "Market Maker", role: "market_maker", autonomyLevel: 2 },
   ] as const) {
     must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
@@ -48,6 +49,7 @@ function economy(rt: Runtime) {
     desk: rt.alias("procurement"),
     vendor: rt.alias("vendor"),
     other: rt.alias("vendor-b"),
+    compute: rt.alias("compute"),
     mm: rt.alias("mm"),
   };
 }
@@ -298,6 +300,33 @@ describe("FX vendor cash", () => {
     expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
     expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(rt.ledger.balanceByName("vendor-b:cash").amount).toBe(usdBefore);
+    expect(rt.ledger.balanceByName("market_maker:cash_usdc").amount).toBe(mmUsdcBefore);
+    expect(rt.consumedQuotes.has(quoteId)).toBe(false);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});
+
+describe("FX vendor USDC book", () => {
+  it("refuses to settle when the vendor has no USDC book as ledger.known_account, not a journal throw", () => {
+    const rt = boot();
+    const { desk, compute, mm } = economy(rt);
+    const quoteId = fxQuote(rt, desk.id, mm.id);
+    const clockBefore = rt.clock.now();
+    const mmUsdcBefore = rt.ledger.balanceByName("market_maker:cash_usdc").amount;
+    expect(rt.ledger.accountsByName.has("compute:cash")).toBe(true);
+    expect(rt.ledger.accountsByName.has("compute:usdc")).toBe(false);
+    const r = rt.dispatch(cmd("market.fx_settle", compute.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.known_account");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
     expect(rt.ledger.balanceByName("market_maker:cash_usdc").amount).toBe(mmUsdcBefore);
     expect(rt.consumedQuotes.has(quoteId)).toBe(false);
     expect(rt.clock.now()).not.toBe(clockBefore);

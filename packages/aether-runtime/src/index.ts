@@ -825,8 +825,13 @@ export class Runtime {
       if (buyer) ctx.fundsOk = this.ledger.balance(buyer.accountId) >= hire.price.amount;
     }
     if (cmd.type === "market.fx_settle") {
+      const key = this.aliasOf(actor.id);
+      const usdcName =
+        actor.role === "market_maker" ? "market_maker:cash_usdc" : key ? `${key}:usdc` : undefined;
+      ctx.accountsKnown = Boolean(usdcName && this.ledger.accountsByName.has(usdcName));
       const quote = this.quoteOf(body);
       if (
+        ctx.accountsKnown &&
         quote?.fx &&
         !this.consumedQuotes.has(quote.id) &&
         !this.reservedQuotes.has(quote.id)
@@ -1717,8 +1722,12 @@ export class Runtime {
       throw new Error("fx quote already settled");
     }
     const payout = fxPayout(quote.price.amount, quote.fx.rateE6);
-    const vendorUsd = this.ledger.account(`${this.keyOf(actor.id)}:cash`);
-    const vendorUsdc = this.ledger.account(`${this.keyOf(actor.id)}:usdc`);
+    const key = this.aliasOf(actor.id);
+    const usdName = actor.role === "market_maker" ? "market_maker:cash_usd" : key ? `${key}:cash` : undefined;
+    const usdcName = actor.role === "market_maker" ? "market_maker:cash_usdc" : key ? `${key}:usdc` : undefined;
+    const vendorUsd = usdName ? this.ledger.accountsByName.get(usdName) : undefined;
+    const vendorUsdc = usdcName ? this.ledger.accountsByName.get(usdcName) : undefined;
+    if (!vendorUsd || !vendorUsdc) throw new Error("unknown account");
     const mmUsd = this.ledger.account("market_maker:cash_usd");
     const mmUsdc = this.ledger.account("market_maker:cash_usdc");
     if (this.ledger.balance(vendorUsd.id) < quote.price.amount) {
@@ -1982,9 +1991,15 @@ export class Runtime {
     return resolveKya(input);
   }
 
-  private keyOf(id: AgentId): string {
+  private aliasOf(id: AgentId): string | undefined {
     for (const [k, v] of this.aliases) if (v === id) return k;
-    throw new Error(`no alias for ${id}`);
+    return undefined;
+  }
+
+  private keyOf(id: AgentId): string {
+    const k = this.aliasOf(id);
+    if (!k) throw new Error(`no alias for ${id}`);
+    return k;
   }
 }
 

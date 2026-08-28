@@ -805,6 +805,27 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("denies an FX settle without a USDC book as ledger.known_account, not a journal throw", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "compute_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: true,
+        mmInventoryOk: true,
+        accountsKnown: false,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.known_account");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
   it("denies a mixed-currency transfer as ledger.same_currency, not a mutate throw", () => {
     const d = evaluate(
       ctx({
