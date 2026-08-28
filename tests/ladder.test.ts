@@ -178,3 +178,28 @@ describe("ladder.legal", () => {
     expect(rt.alias("night-watch").autonomyLevel).toBe(0);
   });
 });
+
+describe("ladder.birth_rung", () => {
+  it("refuses minting L5 at identity.register as ladder.birth_rung, not ladder.legal", () => {
+    const rt = boot();
+    const { founder, nightWatch } = economy(rt);
+    const r = rt.dispatch(
+      cmd("identity.register", founder.id, {
+        key: "god-mode",
+        displayName: "God Mode",
+        role: "procurement",
+        autonomyLevel: 5,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ladder.legal")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ladder.birth_rung");
+    expect(rt.aliases.has("god-mode")).toBe(false);
+    expect(nightWatch.autonomyLevel).toBe(0);
+  });
+});

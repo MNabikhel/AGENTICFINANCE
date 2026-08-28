@@ -1130,6 +1130,15 @@ export const RULES: readonly Rule[] = [
         : v("ledger.operating_book", "deny", "transfer is not against operating cash");
     },
   },
+  {
+    id: "ladder.birth_rung",
+    evaluate: (ctx) => {
+      if (ctx.birthRungOk === undefined) return v("ladder.birth_rung", "allow", "not a register");
+      return ctx.birthRungOk
+        ? v("ladder.birth_rung", "allow", "birth rung is L0–L4")
+        : v("ladder.birth_rung", "deny", "L5 is not a birthright");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1352,6 +1361,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "ledger.operating_book": {
     kind: "none",
     hint: "A transfer moves operating cash. Equity is not a source — opening cash is seedOpening. Escrow moves through hire.fund / refund / release. A transfer cannot mint, burn, or pick the escrow lock.",
+  },
+  "ladder.birth_rung": {
+    kind: "none",
+    hint: "L5 is not a birthright. Register at L0–L4, then climb with ladder.set after a freeze that was actually tested. Listing the gate names is not the test.",
   },
   "payment.execution_date": {
     kind: "none",

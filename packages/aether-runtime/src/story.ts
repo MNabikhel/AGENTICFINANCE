@@ -80,6 +80,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "ladder.birth_rung") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint L5 at birth`,
+          body: "L5 is not a birthright. Register at L0–L4, then climb with ladder.set after a freeze that was actually tested. Listing the gate names is not the test.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
     }
     return undefined;
   }

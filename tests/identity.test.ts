@@ -523,6 +523,96 @@ describe("USDC books belong to the agent", () => {
   });
 });
 
+describe("ladder.birth_rung", () => {
+  it("refuses registering an agent at L5 as ladder.birth_rung, not a freeze skip", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const before = rt.identity.all().length;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("identity.register", founder.id, {
+        key: "night-watch",
+        displayName: "Night Watch",
+        role: "procurement",
+        autonomyLevel: 5,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ladder.legal")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ladder.birth_rung");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.identity.all()).toHaveLength(before);
+    expect(rt.aliases.has("night-watch")).toBe(false);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.story.some((b) => b.headline.includes("cannot mint L5"))).toBe(true);
+  });
+
+  it("still registers at L4", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const r = must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    expect((r.data as { autonomyLevel: number }).autonomyLevel).toBe(4);
+  });
+
+  it("still names identity.unique_key first when L5 would also collide", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.identity.all().length;
+    const r = rt.dispatch(
+      cmd("identity.register", founder.id, {
+        key: "procurement",
+        displayName: "Other Desk",
+        role: "procurement",
+        autonomyLevel: 5,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.unique_key");
+    expect(rt.identity.all()).toHaveLength(before);
+    expect(rt.alias("procurement").id).toBe(desk.id);
+    expect(rt.alias("procurement").autonomyLevel).toBe(3);
+  });
+
+  it("refuses the first human at L5 as ladder.birth_rung, not a bootstrap skip", () => {
+    const rt = boot();
+    const r = rt.dispatch(
+      cmd("identity.register", "system", {
+        key: "ops-human",
+        displayName: "Founder",
+        role: "human_operator",
+        autonomyLevel: 5,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ladder.birth_rung");
+    expect(rt.identity.all()).toHaveLength(0);
+  });
+});
+
 describe("identity.freeze_state", () => {
   it("refuses to unfreeze a live unfrozen agent as identity.freeze_state, not a notary line after yes", () => {
     const rt = boot();

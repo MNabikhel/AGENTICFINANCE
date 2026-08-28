@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 75 rules", () => {
-    expect(RULE_IDS).toHaveLength(75);
+  it("has 76 rules", () => {
+    expect(RULE_IDS).toHaveLength(76);
   });
 
   it("denies frozen actors", () => {
@@ -1633,5 +1633,57 @@ describe("policy catalog", () => {
   it("does not name ledger.operating_book when the speaker is not transferring", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "ledger.operating_book")?.verdict).toBe("allow");
+  });
+
+  it("denies minting L5 at register as ladder.birth_rung, not a freeze skip", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "identity.register",
+        aliasFree: true,
+        birthRungOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ladder.legal")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.birth_rung");
+  });
+
+  it("does not name ladder.birth_rung when the birth rung is L3", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "identity.register",
+        aliasFree: true,
+        birthRungOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("allow");
+  });
+
+  it("does not name ladder.birth_rung when the speaker is not registering", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("allow");
+  });
+
+  it("still names identity.unique_key first when L5 would also be a birth refuse", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "identity.register",
+        aliasFree: false,
+        birthRungOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.unique_key")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.birth_rung")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("identity.unique_key");
   });
 });

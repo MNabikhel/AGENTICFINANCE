@@ -902,6 +902,8 @@ export class Runtime {
         !this.aliases.has(key) &&
         !this.ledger.accountsByName.has(books.cashName) &&
         (books.usdcName === undefined || !this.ledger.accountsByName.has(books.usdcName));
+      const level = typeof body.autonomyLevel === "number" ? body.autonomyLevel : 0;
+      ctx.birthRungOk = level < 5;
     }
     if (cmd.type === "receipt.get") {
       ctx.receiptKnown = this.receipts.has(String(body.receiptId));
@@ -1434,6 +1436,8 @@ export class Runtime {
   private mutRegister(body: Record<string, unknown>, actor: Agent) {
     const role = body.role as AgentRole;
     if (!(role in ROLE_CAPABILITY)) throw new Error("unknown role");
+    const birth = (body.autonomyLevel as AutonomyLevel | undefined) ?? 0;
+    if (birth >= 5) throw new Error("birth rung");
     const key = String(body.key ?? body.displayName);
     const kp = this.identity.mintKey(`kid_${key}`);
     const books = this.registerBookNames(role, key);
@@ -1458,7 +1462,7 @@ export class Runtime {
       id: this.ids.next("aid") as AgentId,
       displayName: String(body.displayName),
       role,
-      autonomyLevel: (body.autonomyLevel as AutonomyLevel) ?? 0,
+      autonomyLevel: birth,
       accountId: cash.id,
       supervisors: actor.role === "human_operator" ? [actor.id] : [],
       createdAt: this.clock.now(),

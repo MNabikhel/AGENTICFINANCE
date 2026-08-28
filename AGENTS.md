@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.59.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.60.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 75 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 76 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -101,6 +101,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 58. `system` is the runtime, not a treasurer (`actor.system_scope`). It may bootstrap the first human and read the catalog, the notary, balances, and receipts. It cannot spend, freeze, or mint further agents. HTTP/MCP omitting actor still becomes system; this rule is the fence.
 59. A transfer that would journal against equity or escrow is `ledger.operating_book`. Opening cash is `seedOpening`. Escrow moves through `hire.fund` / refund / release. Overdraft stays `ledger.sufficient`. Dest overflow of operating cash stays `ledger.safe_balance`. Ghost book stays `ledger.known_account`. A transfer is not a mint, and it cannot pick the escrow lock.
 60. A data vendor’s `key:usdc` and a market maker’s `market_maker:cash_usdc` belong to that agent, not system. Register writes `ownerId` after the id exists. A USDC name collision is `identity.unique_key`, not `account exists` after opening USD cash. Restore of old worlds may still show system as owner; a new register does not.
+61. L5 is not a birthright (`ladder.birth_rung`). `identity.register` may mint L0–L4. L5 is a climb (`ladder.set` 4→5) after a freeze that was actually tested. Listing the gate names is not the test. A reused alias stays `identity.unique_key`. Skipping a rung on an existing agent stays `ladder.legal`. System minting a second agent stays `actor.system_scope`.
 
 ## Autonomy
 

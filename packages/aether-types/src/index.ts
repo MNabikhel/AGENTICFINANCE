@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.59.0",
+  version: "0.60.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -807,6 +807,15 @@ export interface PolicyContext {
    * A transfer is not a mint, and it cannot pick the escrow lock.
    */
   operatingBooksOk?: boolean;
+  /**
+   * False when identity.register would mint L5.
+   * Absent = not a register. L0–L4 at birth are legal.
+   * L5 skips per-tx humans. That rung is a climb (`ladder.set` 4→5) after a freeze
+   * that was actually tested — not a field on the birth certificate.
+   * A reused alias stays `identity.unique_key`. System minting a second agent stays
+   * `actor.system_scope`. Skipping a rung on an existing agent stays `ladder.legal`.
+   */
+  birthRungOk?: boolean;
   /**
    * False when receipt.get names a receipt that is not in this world.
    * Absent = not a receipt.get. A missing receipt is not an empty success.
