@@ -810,6 +810,9 @@ export class Runtime {
       const cashName = role === "market_maker" ? "market_maker:cash_usd" : `${key}:cash`;
       ctx.aliasFree = !this.aliases.has(key) && !this.ledger.accountsByName.has(cashName);
     }
+    if (cmd.type === "receipt.get") {
+      ctx.receiptKnown = this.receipts.has(String(body.receiptId));
+    }
     if (cmd.type === "kya.revoke" && typeof body.attestationId === "string") {
       const named = this.kya.attestations.get(body.attestationId as DelegationId);
       const principalId = (typeof body.principalId === "string" ? body.principalId : actor.id) as AgentId;
@@ -883,6 +886,9 @@ export class Runtime {
     const body = cmd.body as Record<string, unknown>;
     if (cmd.type === "approval.resolve" && typeof body.approvalId === "string") {
       subjects.push({ type: "approval", id: body.approvalId });
+    }
+    if (cmd.type === "receipt.get" && typeof body.receiptId === "string") {
+      subjects.push({ type: "receipt", id: body.receiptId });
     }
     const targetId = this.targetAgentId(cmd, body);
     if (targetId) subjects.push({ type: "agent", id: targetId });
@@ -1212,8 +1218,11 @@ export class Runtime {
         return this.mutAuditQuery(body);
       case "market.catalog":
         return { skus: CATALOG };
-      case "receipt.get":
-        return this.receipts.get(String(body.receiptId));
+      case "receipt.get": {
+        const receipt = this.receipts.get(String(body.receiptId));
+        if (!receipt) throw new Error("unknown receipt");
+        return receipt;
+      }
       default:
         throw new Error(`unhandled ${cmd.type}`);
     }

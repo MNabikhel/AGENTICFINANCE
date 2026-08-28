@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Runtime, cmd } from "@aether/runtime";
-import { offerHire } from "../packages/aether-runtime/src/hire-flow.ts";
+import { offerHire, completeHire } from "../packages/aether-runtime/src/hire-flow.ts";
 import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
-import type { ApprovalTicket, HireContract, MandateId } from "@aether/types";
+import type { ApprovalTicket, HireContract, MandateId, Receipt } from "@aether/types";
 
 function boot() {
   return new Runtime({
@@ -156,5 +156,47 @@ describe("MCP command schemas", () => {
     const cmds = mcp.handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: "aether://commands" } });
     const text = (cmds as { result: { contents: { text: string }[] } }).result.contents[0]?.text ?? "";
     expect(text).toContain("hire.create");
+  });
+});
+
+const GHOST_RECEIPT = "rid_01J6AETHERGHOSTRECEIPT00001";
+
+describe("receipt.known", () => {
+  it("refuses a missing receipt as receipt.known, not an empty success", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("receipt.get", founder.id, { receiptId: GHOST_RECEIPT }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "receipt.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("receipt.known");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.inspect(GHOST_RECEIPT)).toBeUndefined();
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("still fetches a live receipt", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    completeHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+      qty: 1,
+      deliverable: { n: 1 },
+    });
+    const live = [...rt.receipts.values()][0];
+    expect(live).toBeTruthy();
+    if (!live) return;
+    const r = must(rt.dispatch(cmd("receipt.get", founder.id, { receiptId: live.id })), "receipt.get");
+    expect((r.data as Receipt).id).toBe(live.id);
+    expect((r.data as Receipt).reference).toBe(live.reference);
   });
 });

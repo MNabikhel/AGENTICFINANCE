@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.37.0",
+  version: "0.38.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
@@ -732,6 +732,12 @@ export interface PolicyContext {
    * An FX settle cannot spend USD the vendor does not hold (`mm.inventory` is the MM’s USDC).
    */
   fundsOk?: boolean;
+  /**
+   * False when receipt.get names a receipt that is not in this world.
+   * Absent = not a receipt.get. A missing receipt is not an empty success.
+   * `aether_get` / inspect of a miss still returns nothing; the command bus does not pretend yes.
+   */
+  receiptKnown?: boolean;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {

@@ -931,6 +931,15 @@ export const RULES: readonly Rule[] = [
         : v("identity.unique_key", "deny", "alias or cash book already taken");
     },
   },
+  {
+    id: "receipt.known",
+    evaluate: (ctx) => {
+      if (ctx.receiptKnown === undefined) return v("receipt.known", "allow", "not a receipt fetch");
+      return ctx.receiptKnown
+        ? v("receipt.known", "allow", "receipt exists")
+        : v("receipt.known", "deny", "receipt not found");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1089,6 +1098,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "identity.unique_key": {
     kind: "none",
     hint: "That runtime alias (or its cash book) is already taken. Pick a free key. Two agents cannot share one operating book. Same-body retries still replay.",
+  },
+  "receipt.known": {
+    kind: "none",
+    hint: "That receipt is not in this world. A missing receipt is not an empty success. Release escrow first.",
   },
   "payment.execution_date": {
     kind: "none",
