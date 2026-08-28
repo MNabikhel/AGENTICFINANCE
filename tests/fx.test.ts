@@ -278,3 +278,28 @@ describe("FX quote is a one-shot", () => {
     expect(sneak.error.decision?.remediation?.ruleId).toBe("market.fx_quote");
   });
 });
+
+describe("FX vendor cash", () => {
+  it("refuses to settle when the vendor cannot cover the USD leg as ledger.sufficient, not MM inventory", () => {
+    const rt = boot();
+    const { desk, other, mm } = economy(rt);
+    const quoteId = fxQuote(rt, desk.id, mm.id);
+    const clockBefore = rt.clock.now();
+    const usdBefore = rt.ledger.balanceByName("vendor-b:cash").amount;
+    const mmUsdcBefore = rt.ledger.balanceByName("market_maker:cash_usdc").amount;
+    const r = rt.dispatch(cmd("market.fx_settle", other.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("ledger.sufficient");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.ledger.balanceByName("vendor-b:cash").amount).toBe(usdBefore);
+    expect(rt.ledger.balanceByName("market_maker:cash_usdc").amount).toBe(mmUsdcBefore);
+    expect(rt.consumedQuotes.has(quoteId)).toBe(false);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+});

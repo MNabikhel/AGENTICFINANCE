@@ -849,6 +849,26 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("denies an FX settle that would overdraw the vendor as ledger.sufficient, not MM inventory", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: true,
+        mmInventoryOk: true,
+        fundsOk: false,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.sufficient")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.inventory")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.sufficient");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
   it("denies FX settle without a live unused FX quote", () => {
     const d = evaluate(
       ctx({

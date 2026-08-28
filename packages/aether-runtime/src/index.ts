@@ -819,6 +819,16 @@ export class Runtime {
       const buyer = this.identity.get(hire.buyerId);
       if (buyer) ctx.fundsOk = this.ledger.balance(buyer.accountId) >= hire.price.amount;
     }
+    if (cmd.type === "market.fx_settle") {
+      const quote = this.quoteOf(body);
+      if (
+        quote?.fx &&
+        !this.consumedQuotes.has(quote.id) &&
+        !this.reservedQuotes.has(quote.id)
+      ) {
+        ctx.fundsOk = this.ledger.balance(actor.accountId) >= quote.price.amount;
+      }
+    }
     if (cmd.type === "ledger.balances") {
       if (typeof body.name === "string") {
         ctx.accountsKnown = this.ledger.accountsByName.has(body.name);
@@ -1702,6 +1712,9 @@ export class Runtime {
     const vendorUsdc = this.ledger.account(`${this.keyOf(actor.id)}:usdc`);
     const mmUsd = this.ledger.account("market_maker:cash_usd");
     const mmUsdc = this.ledger.account("market_maker:cash_usdc");
+    if (this.ledger.balance(vendorUsd.id) < quote.price.amount) {
+      throw new Error("insufficient funds");
+    }
     this.postJournal("FX USD leg", [
       { accountId: mmUsd.id, debit: quote.price.amount, credit: 0 },
       { accountId: vendorUsd.id, debit: 0, credit: quote.price.amount },

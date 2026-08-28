@@ -1047,7 +1047,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ledger.sufficient": {
     kind: "none",
-    hint: "The source book does not have that many cents. A transfer is not an overdraft. Escrow cannot lock on empty cash. Seed or allocate first.",
+    hint: "The source book does not have that many cents. A transfer is not an overdraft. Escrow cannot lock on empty cash. An FX settle cannot spend USD the vendor does not hold. Seed or allocate first.",
   },
   "payment.execution_date": {
     kind: "none",

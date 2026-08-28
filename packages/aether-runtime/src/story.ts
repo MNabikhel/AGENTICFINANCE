@@ -401,6 +401,8 @@ export function autoBeat(input: {
         body:
           rule?.ruleId === "market.fx_quote"
             ? "An FX quote is a one-shot window. A missing quote, a research quote, or a spent quote is not a second settle."
+            : rule?.ruleId === "ledger.sufficient"
+              ? "The vendor’s USD book does not cover this window. An FX settle is not an overdraft. The market maker’s USDC inventory is a different rule."
             : (rule?.message ?? "The referee refused the FX settle."),
         tone: "deny",
         commandType: cmd.type,
