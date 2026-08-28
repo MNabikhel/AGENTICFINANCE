@@ -1483,10 +1483,17 @@ export class Runtime {
     if (!lineItems[0]?.unitAmount || typeof lineItems[0].quantity !== "number") {
       throw new Error("cart line missing unitAmount");
     }
-    const total = lineItems.reduce(
-      (s, l) => ({ amount: s.amount + l.unitAmount.amount * l.quantity, currency: l.unitAmount.currency }),
-      { amount: 0, currency: lineItems[0]!.unitAmount.currency },
-    );
+    let amount = 0;
+    const currency = lineItems[0].unitAmount.currency;
+    for (const line of lineItems) {
+      if (line.unitAmount.currency !== currency) throw new Error("mixed currency cart");
+      const lineTotal = line.unitAmount.amount * line.quantity;
+      if (!Number.isSafeInteger(lineTotal) || !Number.isSafeInteger(amount + lineTotal)) {
+        throw new Error("unsafe integer");
+      }
+      amount += lineTotal;
+    }
+    const total = { amount, currency };
     const payload: CartMandate = {
       vct: "aether.mandate.cart.1",
       id: this.ids.next("mid") as MandateId,

@@ -92,6 +92,46 @@ describe("command shape enums and integer ranges", () => {
     ).toBeUndefined();
   });
 
+  it("rejects a cart line whose cents overflow a safe integer", () => {
+    expect(
+      commandShapeError("mandate.issue_cart", {
+        intentId: "mid_x",
+        merchantId: "aid_x",
+        line_items: [
+          {
+            sku: "x",
+            description: "x",
+            quantity: 2,
+            unitAmount: { amount: Number.MAX_SAFE_INTEGER, currency: "USD_SIM" },
+          },
+        ],
+      }),
+    ).toBe("invalid integer money: line_items[0].unitAmount.amount");
+  });
+
+  it("rejects cart lines that mix USD_SIM and USDC_SIM", () => {
+    expect(
+      commandShapeError("mandate.issue_cart", {
+        intentId: "mid_x",
+        merchantId: "aid_x",
+        line_items: [
+          { sku: "x", description: "usd", quantity: 1, unitAmount: { amount: 1, currency: "USD_SIM" } },
+          { sku: "x", description: "usdc", quantity: 1, unitAmount: { amount: 1, currency: "USDC_SIM" } },
+        ],
+      }),
+    ).toBe("invalid integer money: line_items[1].unitAmount.currency");
+  });
+
+  it("rejects an FX quote whose rate product overflows a safe integer", () => {
+    expect(
+      commandShapeError("market.quote", {
+        rfqId: "rfq_x",
+        price: { amount: Number.MAX_SAFE_INTEGER, currency: "USD_SIM" },
+        fx: { from: "USD_SIM", to: "USDC_SIM", rateE6: 1_000_000, validUntil: "2026-08-29T00:00:00.000Z" },
+      }),
+    ).toBe("invalid integer money: price.amount");
+  });
+
   it("rejects an amount_range with no max", () => {
     expect(
       commandShapeError("mandate.issue_intent", {

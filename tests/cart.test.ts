@@ -227,4 +227,68 @@ describe("hire cart match", () => {
     expect(rt.carts.size).toBe(before);
     expect(rt.clock.now()).toBe(clockBefore);
   });
+
+  it("refuses a cart line whose cents overflow as command.malformed, not a throw after yes", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const before = rt.carts.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_cart", desk.id, {
+        intentId,
+        merchantId: vendor.id,
+        line_items: [
+          {
+            sku: "research.brief",
+            description: "too many cents",
+            quantity: 2,
+            unitAmount: { amount: Number.MAX_SAFE_INTEGER, currency: "USD_SIM" },
+          },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("line_items[0].unitAmount.amount");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.carts.size).toBe(before);
+    expect(rt.clock.now()).toBe(clockBefore);
+  });
+
+  it("refuses mixed USD and USDC cart lines as command.malformed, not a silent relabel", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const before = rt.carts.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_cart", desk.id, {
+        intentId,
+        merchantId: vendor.id,
+        line_items: [
+          {
+            sku: "research.brief",
+            description: "usd",
+            quantity: 1,
+            unitAmount: { amount: 40_000, currency: "USD_SIM" },
+          },
+          {
+            sku: "research.brief",
+            description: "usdc",
+            quantity: 1,
+            unitAmount: { amount: 40_000, currency: "USDC_SIM" },
+          },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.type).toContain("command.malformed");
+    expect(r.error.error.detail).toContain("line_items[1].unitAmount.currency");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.carts.size).toBe(before);
+    expect(rt.clock.now()).toBe(clockBefore);
+  });
 });

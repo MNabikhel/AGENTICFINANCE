@@ -1,9 +1,10 @@
 /**
  * Shape check against schemas/commands.schema.json.
- * Syntax, not economics: a miss, a float, a listed enum miss, a rung outside 0–5,
- * a listed field with the wrong JSON type, a nested cart line / constraint
- * missing its fields, a listed constraint missing its value fields, or an FX
- * window missing from/to/rateE6/validUntil is HTTP 400, not a policy deny.
+ * Syntax, not economics: a miss, a float, an unsafe integer, a listed enum miss,
+ * a rung outside 0–5, a listed field with the wrong JSON type, a nested cart line /
+ * constraint missing its fields, a listed constraint missing its value fields,
+ * mixed currencies in one cart, a line whose cents overflow, or an FX window
+ * missing from/to/rateE6/validUntil is HTTP 400, not a policy deny.
  * Policy never sees a command that failed this gate.
  */
 
@@ -55,9 +56,18 @@ export function missingCommandFields(type: string, body: unknown): string[] {
 
 function badInt(path: string, value: unknown, out: string[], min = 0): void {
   if (value === undefined || value === null) return;
-  if (typeof value !== "number" || !Number.isInteger(value) || !Number.isFinite(value) || value < min) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min) {
     out.push(path);
   }
+}
+
+function overflowsSafeProduct(a: number, b: number): boolean {
+  if (b === 0) return false;
+  return a > Math.floor(Number.MAX_SAFE_INTEGER / b);
+}
+
+function overflowsSafeSum(a: number, b: number): boolean {
+  return b > Number.MAX_SAFE_INTEGER - a;
 }
 
 function badMoney(path: string, value: unknown, out: string[]): void {
@@ -71,26 +81,68 @@ function badMoney(path: string, value: unknown, out: string[]): void {
   if (typeof m.currency !== "string" || !SIM_CURRENCY.has(m.currency)) out.push(`${path}.currency`);
 }
 
-/** Non-integer cents, negative amounts, or a currency that is not the sim rail. */
+/** Non-integer cents, unsafe integers, mixed cart currencies, or a currency that is not the sim rail. */
 export function malformedMoneyFields(type: string, body: unknown): string[] {
   const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const out: string[] = [];
   if (type === "market.quote") {
     badMoney("price", rec.price, out);
     if (rec.fx && typeof rec.fx === "object") {
-      badInt("fx.rateE6", (rec.fx as Record<string, unknown>).rateE6, out, 0);
+      const fx = rec.fx as Record<string, unknown>;
+      badInt("fx.rateE6", fx.rateE6, out, 0);
+      const rate = fx.rateE6;
+      const amt =
+        rec.price && typeof rec.price === "object" ? (rec.price as Record<string, unknown>).amount : undefined;
+      if (
+        typeof rate === "number" &&
+        Number.isSafeInteger(rate) &&
+        rate > 0 &&
+        typeof amt === "number" &&
+        Number.isSafeInteger(amt) &&
+        overflowsSafeProduct(amt, rate)
+      ) {
+        out.push("price.amount");
+      }
     }
   }
   if (type === "ledger.transfer") badMoney("amount", rec.amount, out);
   if (type === "mandate.issue_cart" && Array.isArray(rec.line_items)) {
+    let currency: string | undefined;
+    let total = 0;
     rec.line_items.forEach((line, i) => {
       if (!line || typeof line !== "object") {
         out.push(`line_items[${i}]`);
         return;
       }
       const l = line as Record<string, unknown>;
-      badMoney(`line_items[${i}].unitAmount`, l.unitAmount, out);
-      badInt(`line_items[${i}].quantity`, l.quantity, out, 1);
+      const prefix = `line_items[${i}]`;
+      badMoney(`${prefix}.unitAmount`, l.unitAmount, out);
+      badInt(`${prefix}.quantity`, l.quantity, out, 1);
+      const unit =
+        l.unitAmount && typeof l.unitAmount === "object" && !Array.isArray(l.unitAmount)
+          ? (l.unitAmount as Record<string, unknown>)
+          : undefined;
+      const unitAmt = unit?.amount;
+      const unitCur = unit?.currency;
+      if (
+        typeof unitAmt === "number" &&
+        Number.isSafeInteger(unitAmt) &&
+        typeof l.quantity === "number" &&
+        Number.isSafeInteger(l.quantity) &&
+        l.quantity >= 1
+      ) {
+        if (overflowsSafeProduct(unitAmt, l.quantity)) {
+          out.push(`${prefix}.unitAmount.amount`);
+        } else {
+          const lineTotal = unitAmt * l.quantity;
+          if (overflowsSafeSum(total, lineTotal)) out.push(`${prefix}.unitAmount.amount`);
+          else total += lineTotal;
+        }
+      }
+      if (typeof unitCur === "string" && SIM_CURRENCY.has(unitCur)) {
+        if (currency === undefined) currency = unitCur;
+        else if (unitCur !== currency) out.push(`${prefix}.unitAmount.currency`);
+      }
     });
   }
   if (type === "mandate.issue_intent" && Array.isArray(rec.constraints)) {
