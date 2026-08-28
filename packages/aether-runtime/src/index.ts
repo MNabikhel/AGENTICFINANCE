@@ -18,7 +18,7 @@ import {
 } from "@aether/kernel";
 import { Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
-import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout } from "@aether/market";
+import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout, isFxSku } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
@@ -922,6 +922,7 @@ export class Runtime {
     if (market.skuCurrencyOk !== undefined) ctx.skuCurrencyOk = market.skuCurrencyOk;
     if (market.fxPairOk !== undefined) ctx.fxPairOk = market.fxPairOk;
     if (market.hireNotFx !== undefined) ctx.hireNotFx = market.hireNotFx;
+    if (market.fxWindowOk !== undefined) ctx.fxWindowOk = market.fxWindowOk;
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
@@ -967,6 +968,7 @@ export class Runtime {
     skuCurrencyOk?: boolean;
     fxPairOk?: boolean;
     hireNotFx?: boolean;
+    fxWindowOk?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -988,6 +990,7 @@ export class Runtime {
       skuCurrencyOk?: boolean;
       fxPairOk?: boolean;
       hireNotFx?: boolean;
+      fxWindowOk?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -1003,6 +1006,9 @@ export class Runtime {
         if (out.skuListed) {
           const priced = body.price && typeof body.price === "object" ? (body.price as Money) : undefined;
           if (priced?.currency) out.skuCurrencyOk = skuAllowsCurrency(rfq.sku, priced.currency);
+          if (isFxSku(rfq.sku)) {
+            out.fxWindowOk = Boolean(body.fx && typeof body.fx === "object" && !Array.isArray(body.fx));
+          }
           if (body.fx && typeof body.fx === "object" && !Array.isArray(body.fx) && priced) {
             const fx = body.fx as { from?: CurrencyCode; to?: CurrencyCode };
             if (fx.from && fx.to) out.fxPairOk = fxPairSettles(rfq.sku, priced, { from: fx.from, to: fx.to });
@@ -1022,7 +1028,7 @@ export class Runtime {
         const reserved = this.reservedQuotes.has(quote.id);
         out.quoteUnspent = thresholdWaived && reserved && !consumed ? true : !consumed && !reserved;
         if (out.skuListed) out.skuCurrencyOk = skuAllowsCurrency(rfq.sku, quote.price.currency);
-        out.hireNotFx = !quote.fx;
+        out.hireNotFx = !quote.fx && !isFxSku(rfq.sku);
       }
       return out;
     }
@@ -1601,6 +1607,9 @@ export class Runtime {
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, price.currency)) {
       throw new Error("sku currency");
     }
+    if (isFxSku(rfq.sku) && (!body.fx || typeof body.fx !== "object" || Array.isArray(body.fx))) {
+      throw new Error("fx window");
+    }
     if (body.fx && typeof body.fx === "object" && !Array.isArray(body.fx)) {
       const fx = body.fx as { from?: CurrencyCode; to?: CurrencyCode };
       if (!fx.from || !fx.to || !fxPairSettles(rfq.sku, price, { from: fx.from, to: fx.to })) {
@@ -1636,7 +1645,7 @@ export class Runtime {
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, quote.price.currency)) {
       throw new Error("sku currency");
     }
-    if (quote.fx) throw new Error("fx hire");
+    if (quote.fx || isFxSku(rfq.sku)) throw new Error("fx hire");
     const hireId = this.ids.next("hid") as HireId;
     const escrow = this.ledger.openAccount({
       id: this.ids.next("acct") as AccountId,

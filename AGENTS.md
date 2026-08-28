@@ -2,7 +2,7 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.51.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.52.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
@@ -43,7 +43,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency.
 2. Intent → Cart → Payment chain must verify on settle (`hire.fund`, `envelope.submit`).
-3. 68 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 69 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget.
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -91,8 +91,9 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register.
 48. A cart takes one payment (`mandate.unique_payment`). Minting a second payment for the same cart is a policy deny, not a second check. Ghost cart stays `mandate.known_cart`. Mutate does not throw `cart already has a payment` after an allow.
 49. A listed SKU priced in a currency the catalog does not name is `market.sku_currency`. Research is USD_SIM. Convert with `market.fx_settle`. Ghost SKU stays `market.known_sku`. Funding a USDC hire from USD cash is `ledger.same_currency`, not a mixed journal after yes.
 50. An FX window that is not this rail’s USD_SIM → USDC_SIM pair, or whose price is not in `from`, is `market.fx_pair`. An FX object on a research SKU is not a dual-use quote. A swapped pair is not a silent journal of the books this rail actually posts. Ghost RFQ stays `market.known_rfq`. Spent window stays `market.fx_quote`.
-51. Hiring an FX window as a good is `hire.not_fx`. Windows settle (`market.fx_settle`). A deny does not consume or reserve the window. Ghost quote stays `market.known_rfq`. Spent window stays `hire.quote_unspent` first. An FX SKU quoted without a window is still a good.
+51. Hiring an FX window as a good is `hire.not_fx`. So is hiring an FX SKU. Windows settle (`market.fx_settle`). A deny does not consume or reserve the window. Ghost quote stays `market.known_rfq`. Spent window stays `hire.quote_unspent` first. Quoting an FX SKU without a window is `market.fx_window`.
 52. Approving a live ticket whose paused command is no longer legal is `approval.replay`. A stale quote, an expired slip, or a missing held command is a refuse, not a yes that throws. Ghost ticket stays `approval.known`. Expired ticket stays `approval.pending`. Reject of a dead pause stays legal.
+53. An FX SKU quoted without an `fx` window is `market.fx_window`. It is a conversion, not a good. Ghost SKU stays `market.known_sku`. A swapped pair on a real window stays `market.fx_pair`.
 
 ## Autonomy
 

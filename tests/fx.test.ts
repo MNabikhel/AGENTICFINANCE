@@ -488,7 +488,34 @@ describe("FX pair is this rail's window", () => {
     expect(r.error.error.status).toBe(422);
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_pair");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("refuses an FX SKU quoted without a window as fx_window, not a hireable good", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [vendor.id] }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_window");
     expect(rt.quotes.size).toBe(before);
   });
 });

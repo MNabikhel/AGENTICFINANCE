@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 68 rules", () => {
-    expect(RULE_IDS).toHaveLength(68);
+  it("has 69 rules", () => {
+    expect(RULE_IDS).toHaveLength(69);
   });
 
   it("denies frozen actors", () => {
@@ -1309,5 +1309,41 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "approval.known")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "approval.replay")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("approval.known");
+  });
+
+  it("denies quoting an FX SKU without a window", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.sku_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_window");
+  });
+
+  it("does not name fx_window when the SKU itself is missing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: false,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_sku");
   });
 });

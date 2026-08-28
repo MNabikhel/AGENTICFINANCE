@@ -1062,6 +1062,15 @@ export const RULES: readonly Rule[] = [
         : v("approval.replay", "deny", "paused command is no longer legal");
     },
   },
+  {
+    id: "market.fx_window",
+    evaluate: (ctx) => {
+      if (ctx.fxWindowOk === undefined) return v("market.fx_window", "allow", "not quoting an FX SKU");
+      return ctx.fxWindowOk
+        ? v("market.fx_window", "allow", "FX SKU carries a window")
+        : v("market.fx_window", "deny", "FX SKU is a window, not a good");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1256,6 +1265,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "approval.replay": {
     kind: "none",
     hint: "That ticket’s paused command is no longer legal (stale quote, expired slip, or the held command is gone). Reject the ticket to release a reserved quote. Do not treat a grown-up yes as a late hire.",
+  },
+  "market.fx_window": {
+    kind: "none",
+    hint: "An FX SKU is a conversion window. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. It is not a hireable good.",
   },
   "payment.execution_date": {
     kind: "none",
