@@ -200,4 +200,28 @@ describe("command schema", () => {
     const created = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }, key)), "create");
     expect((created.data as HireContract).state).toBe("offered");
   });
+
+  it("refuses a quote whose price is not integer cents", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "research.brief", spec: "one pager", invitedSellerIds: [vendor.id] }),
+      ),
+      "rfq",
+    );
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80.5, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(400);
+    expect(r.error.error.detail).toContain("price.amount");
+    expect(r.error.decision).toBeUndefined();
+    expect(rt.clock.now()).toBe(clockBefore);
+  });
 });

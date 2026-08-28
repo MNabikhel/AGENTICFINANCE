@@ -23,7 +23,7 @@ import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
 import { SIM_RAIL, settlementFail } from "@aether/settlement";
-import { missingCommandFields } from "./command-schema.js";
+import { commandShapeError } from "./command-schema.js";
 import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
 import { WORLD_VERSION, type WorldState } from "./world.js";
 import type {
@@ -250,15 +250,10 @@ export class Runtime {
         return cloned;
       }
     }
-    const missing = missingCommandFields(cmd.type, cmd.body);
-    if (missing.length > 0) {
+    const shape = commandShapeError(cmd.type, cmd.body);
+    if (shape) {
       return fail({
-        error: err(
-          "command.malformed",
-          "Malformed command",
-          400,
-          `missing required fields: ${missing.join(", ")}`,
-        ),
+        error: err("command.malformed", "Malformed command", 400, shape),
       });
     }
     if (!opts?.skipStep) this.clock.step();
@@ -1769,4 +1764,4 @@ export { WORLD_VERSION };
 export type { WorldState };
 export { err, fail, ok, settlementFail };
 export type { Clock };
-export { missingCommandFields, commandBodySchema } from "./command-schema.js";
+export { missingCommandFields, commandBodySchema, commandShapeError, malformedMoneyFields } from "./command-schema.js";

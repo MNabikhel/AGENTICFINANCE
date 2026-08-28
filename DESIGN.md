@@ -498,7 +498,7 @@ export interface Quote {
 }
 ```
 
-RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny.
+RFQ `expiresAt` is 24h. Quote `expiresAt` is 1h. `hire.create` against a stale quote is `market.not_expired` deny. SKUs must be keys of `CATALOG` (`market.known_sku`). The catalog is not a storefront. Non-empty `invitedSellerIds` is a closed room (`market.invited_seller`); empty or omitted is an open RFQ. Required command-body fields from `schemas/commands.schema.json` are checked at dispatch before `evaluate()`; a miss is `command.malformed` (400), not a policy deny. So is a non-integer amount, a negative amount, or a currency that is not `USD_SIM` / `USDC_SIM`.
 
 Hire state machine (illegal arrows throw `HIRE_ILLEGAL_TRANSITION`):
 

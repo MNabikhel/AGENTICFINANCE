@@ -90,7 +90,7 @@
       "required": ["rfqId", "price"],
       "properties": {
         "rfqId": { "type": "string" },
-        "price": { "type": "object" },
+        "price": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM." },
         "fx": { "type": "object" }
       }
     },
@@ -175,7 +175,7 @@
       "properties": {
         "fromAccount": { "type": "string" },
         "toAccount": { "type": "string" },
-        "amount": { "type": "object" }
+        "amount": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM." }
       }
     },
     "ledger.balances": {
