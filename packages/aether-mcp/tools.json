@@ -260,6 +260,11 @@
       "name": "aether_demo_nest",
       "commandType": "demo.nest",
       "description": "Run the nest TAP: a nested hop does not outlive its parent. New hire.create is kya.parent_fresh; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_heir",
+      "commandType": "demo.heir",
+      "description": "Run the heir TAP: a dead parent is not a parent. New hire.create is mandate.parent_fresh; funded work still finishes."
     }
   ]
 }

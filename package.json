@@ -29,6 +29,7 @@
     "demo:pair": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo pair",
     "demo:band": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo band",
     "demo:nest": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo nest",
+    "demo:heir": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo heir",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

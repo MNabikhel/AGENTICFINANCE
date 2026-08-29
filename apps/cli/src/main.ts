@@ -21,6 +21,7 @@ import { loadConversion, runConversion } from "@aether/fx-not-hire";
 import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
 import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
+import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
 
 const [, , command, name] = process.argv;
 
@@ -172,6 +173,12 @@ if (command === "demo" && (name === "nest" || name === "parent-fresh" || name ==
   process.exit(0);
 }
 
+if (command === "demo" && (name === "heir" || name === "child-slip" || name === "mandate-parent")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/heir/scenario.json");
+  printReport(runMandateParent(loadMandateParent(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -199,5 +206,6 @@ usage:
   pnpm demo pair
   pnpm demo band
   pnpm demo nest
+  pnpm demo heir
   pnpm mcp`);
 process.exit(command ? 1 : 0);

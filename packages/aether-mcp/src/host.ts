@@ -28,6 +28,7 @@ import { loadConversion, runConversion } from "@aether/fx-not-hire";
 import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
 import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
+import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -94,6 +95,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_pair",
   "aether_demo_band",
   "aether_demo_nest",
+  "aether_demo_heir",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -461,6 +463,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_nest") {
       const report = runParentFresh(loadParentFresh("fixtures/demo/nest/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_heir") {
+      const report = runMandateParent(loadMandateParent("fixtures/demo/heir/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

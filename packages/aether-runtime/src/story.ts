@@ -82,6 +82,9 @@ export const BAND_TLDR =
 export const NEST_TLDR =
   "A founder nested a scout under a desk hop. The scout hired while the parent lived. After the parent hop died, a new hire was kya.parent_fresh — no hire written. That funded work still released. A nested hop does not outlive its parent.";
 
+export const HEIR_TLDR =
+  "A founder handed a tighter child slip to a desk. The desk hired while the parent lived. After the parent slip died, a new hire was mandate.parent_fresh — no hire written. That funded work still released. A dead parent is not a parent.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

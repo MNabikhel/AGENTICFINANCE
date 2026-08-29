@@ -33,6 +33,7 @@ import { loadConversion, runConversion } from "@aether/fx-not-hire";
 import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
 import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
+import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -58,6 +59,7 @@ const conversionFixture = join(process.cwd(), "fixtures/demo/conversion/scenario
 const pairFixture = join(process.cwd(), "fixtures/demo/pair/scenario.json");
 const bandFixture = join(process.cwd(), "fixtures/demo/band/scenario.json");
 const nestFixture = join(process.cwd(), "fixtures/demo/nest/scenario.json");
+const heirFixture = join(process.cwd(), "fixtures/demo/heir/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -454,6 +456,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runParentFresh(loadParentFresh(nestFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "nest" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/heir") {
+        const report = runMandateParent(loadMandateParent(heirFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "heir" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

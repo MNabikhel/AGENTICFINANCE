@@ -24,7 +24,8 @@
     "./fx-not-hire": "./src/fx-not-hire.ts",
     "./unique-live": "./src/unique-live.ts",
     "./spread-bound": "./src/spread-bound.ts",
-    "./parent-fresh": "./src/parent-fresh.ts"
+    "./parent-fresh": "./src/parent-fresh.ts",
+    "./mandate-parent": "./src/mandate-parent.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

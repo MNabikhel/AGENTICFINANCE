@@ -319,6 +319,12 @@ paths:
       responses:
         "200": { description: Nest TAP report. A nested hop does not outlive its parent. }
         "500": { description: Assertions failed }
+  /v1/demo/heir:
+    post:
+      operationId: demoHeir
+      responses:
+        "200": { description: Heir TAP report. A dead parent is not a parent. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
