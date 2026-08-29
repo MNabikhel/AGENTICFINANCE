@@ -207,4 +207,18 @@ describe("HTTP ledger.balances and receipt.get", () => {
     expect(decision.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
     expect(decision.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
   });
+
+  it("GET /.well-known/agent-card.json pins this runtime, not a fake A2A JSON-RPC server", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/.well-known/agent-card.json");
+    expect(r.status).toBe(200);
+    expect(r.body.spec).toBe("aether.protocol.1");
+    expect(r.body.protocolVersion).toBe("0.96.0");
+    expect((r.body.capabilities as { liveMoney: boolean; evaluateLlm: boolean; hosted: boolean }).liveMoney).toBe(
+      false,
+    );
+    expect((r.body.capabilities as { hosted: boolean }).hosted).toBe(false);
+    expect((r.body.pin as { version: string }).version).toBe("0.96.0");
+    expect(String(r.body.url)).toContain("127.0.0.1");
+  });
 });

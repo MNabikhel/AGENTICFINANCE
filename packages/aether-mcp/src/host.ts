@@ -191,12 +191,12 @@ export class AetherMcp {
           })),
           {
             name: "aether_snapshot",
-            description: "Read-only runtime snapshot: agents, mandates, carts, payments, hires, KYA, clearing, audit head. Intents include derived live | expired | funded (a child whose parent died is expired). Carts include derived live | expired | bound. Payments include derived live | expired | funded (a payment whose parent cart died is expired). RFQs include derived live | expired. Quotes include derived live | expired | spent | held (a hire quote in a dead room is expired).",
+            description: "Read-only runtime snapshot: agents, mandates, carts, payments, hires, KYA, clearing, audit head. Intents include derived live | expired | funded (a child whose parent died is expired). Carts include derived live | expired | bound. Payments include derived live | expired | funded (a payment whose parent cart died is expired). Hires include derived live | expired | funded (an offered hire whose slip died is expired). RFQs include derived live | expired. Quotes include derived live | expired | spent | held (a hire quote in a dead room is expired).",
             inputSchema: { type: "object", properties: {} },
           },
           {
             name: "aether_get",
-            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ. An FX quote is a window on the quote, not the room. A rfq_ room includes derived status (live | expired). A mid_ intent includes derived status (live | expired | funded). Funded is escrow-moved occupancy against this slip and wins over expired. Expired includes a dead parent intent even when this child's exp still lives. A child hire does not occupy the parent. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A mid_ payment includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. Expired includes a dead parent cart even when this check's exp still lives. A dlg_ hop includes derived status (live | expired | revoked).",
+            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, inv_, or cash account name). A hid_ hire includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. Expired includes a dead intent and a dead parent intent even when the child's exp still lives. A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ. An FX quote is a window on the quote, not the room. A rfq_ room includes derived status (live | expired). A mid_ intent includes derived status (live | expired | funded). Funded is escrow-moved occupancy against this slip and wins over expired. Expired includes a dead parent intent even when this child's exp still lives. A child hire does not occupy the parent. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A mid_ payment includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. Expired includes a dead parent cart even when this check's exp still lives. A dlg_ hop includes derived status (live | expired | revoked). An inv_ invoice includes derived status (current | lapsed).",
             inputSchema: {
               type: "object",
               properties: { id: { type: "string" } },
@@ -274,12 +274,7 @@ export class AetherMcp {
             {
               uri,
               mimeType: "application/json",
-              text: JSON.stringify({
-                protocolVersion: PROTOCOL.version,
-                name: "Aether Economic Runtime",
-                description: "Policy, mandate, hire, escrow, settlement, KYA, audit. Rail sim:aether-1.",
-                skills: catalog.tools.map((t) => ({ id: t.name, description: t.description })),
-              }),
+              text: JSON.stringify(this.runtime.discoveryCard()),
             },
           ],
         };
@@ -287,7 +282,9 @@ export class AetherMcp {
       if (uri === "aether://commands") {
         return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(commandBodies) }] };
       }
-      const objectUri = uri?.match(/^aether:\/\/(?:object|hire|intent|receipt|approval|agent)\/(.+)$/);
+      const objectUri = uri?.match(
+        /^aether:\/\/(?:object|hire|intent|receipt|approval|agent|quote|rfq|delegation|subscription|invoice|cart|payment)\/(.+)$/,
+      );
       if (objectUri?.[1]) {
         const found = this.runtime.inspect(decodeURIComponent(objectUri[1]));
         if (!found) throw new Error(`unknown object ${objectUri[1]}`);

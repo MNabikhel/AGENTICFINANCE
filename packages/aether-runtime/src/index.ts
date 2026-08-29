@@ -25,6 +25,7 @@ import { DelegationGraph, hopStatus, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
 import { SIM_RAIL, settlementFail } from "@aether/settlement";
 import { commandShapeError } from "./command-schema.js";
+import { HOST_INVOICE_WINDOW_MS } from "./host-door.js";
 import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
 import { WORLD_VERSION, type WorldState } from "./world.js";
 import type {
@@ -47,11 +48,13 @@ import type {
   DelegationId,
   HireContract,
   HireId,
+  HireStatus,
   HostSubscription,
   OperatorInvoice,
   Instant,
   IntentMandate,
   IntentStatus,
+  InvoiceStatus,
   JournalEntry,
   KyaIssuerKind,
   KyaHopStatus,
@@ -464,13 +467,13 @@ export class Runtime {
       spentByIntent: Object.fromEntries(this.spentByIntent),
       carts: [...this.carts.values()].map((c) => this.cartView(c)),
       payments: [...this.payments.values()].map((p) => this.paymentView(p)),
-      hires: [...this.hires.values()],
+      hires: [...this.hires.values()].map((h) => this.hireView(h)),
       rfqs: [...this.rfqs.values()].map((r) => this.rfqView(r)),
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
       subscriptions: [...this.subscriptions.values()],
-      invoices: [...this.invoices.values()],
+      invoices: [...this.invoices.values()].map((i) => this.invoiceView(i)),
       story: this.story,
       analog: this.analogDoc,
       tldr: this.tldr,
@@ -615,6 +618,108 @@ export class Runtime {
     return { ...intent, status: "live" };
   }
 
+  /**
+   * Hire view for other agents. Funded (escrow moved, including later
+   * refund/release/deliver) wins over expired. Expired includes a dead intent
+   * and a dead parent intent even when this child's `exp` still lives. `void`
+   * is not a live offer. The store stays raw (`state` only).
+   */
+  hireView(hire: HireContract): HireContract & { status: HireStatus } {
+    if (
+      hire.state === "funded" ||
+      hire.state === "delivered" ||
+      hire.state === "released" ||
+      hire.state === "refunded"
+    ) {
+      return { ...hire, status: "funded" };
+    }
+    if (hire.state === "void") return { ...hire, status: "expired" };
+    const intent = this.intents.get(hire.intentId);
+    if (!intent || intent.payload.exp <= unixSeconds(this.clock.now())) {
+      return { ...hire, status: "expired" };
+    }
+    if (intent.payload.parentId) {
+      const parent = this.intents.get(intent.payload.parentId);
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+        return { ...hire, status: "expired" };
+      }
+    }
+    return { ...hire, status: "live" };
+  }
+
+  /**
+   * Invoice view for other agents. Current is inside the 31-day door window.
+   * The store stays raw (`at` only). The door asks whether any invoice is current.
+   */
+  invoiceView(row: OperatorInvoice): OperatorInvoice & { status: InvoiceStatus } {
+    const age = Date.parse(this.clock.now()) - Date.parse(row.at);
+    if (!Number.isFinite(age) || age > HOST_INVOICE_WINDOW_MS) {
+      return { ...row, status: "lapsed" };
+    }
+    return { ...row, status: "current" };
+  }
+
+  /**
+   * How another agent finds this runtime. Not an A2A JSON-RPC server.
+   * HTTP well-known and MCP `aether://agent-card` share this object.
+   */
+  discoveryCard(baseUrl?: string) {
+    const pin = this.protocolCard();
+    return {
+      spec: PROTOCOL.spec,
+      protocolVersion: PROTOCOL.version,
+      name: "Aether Economic Runtime",
+      description:
+        "Policy, mandate, hire, escrow, settlement, and audit for software agents. Simulated rail sim:aether-1. Not a storefront.",
+      ...(baseUrl && baseUrl.length > 0 ? { url: baseUrl } : {}),
+      version: PROTOCOL.version,
+      capabilities: {
+        streaming: false,
+        pushNotifications: false,
+        liveMoney: pin.liveMoney,
+        evaluateLlm: pin.evaluateLlm,
+        hosted: pin.hosted,
+      },
+      skills: [
+        {
+          id: "protocol",
+          name: "Host card",
+          description:
+            "GET /v1/protocol and GET /.well-known/aether.json — pin aether.protocol.1. liveMoney false. evaluateLlm false. Public kernel hosted false.",
+        },
+        {
+          id: "commands",
+          name: "Command bus",
+          description: "GET /v1/commands — JSON Schema for every CommandType. Same commands as MCP.",
+        },
+        {
+          id: "inspect",
+          name: "Fetch one object",
+          description:
+            "aether_get / GET /v1/objects/:id. An offered hire whose slip died is expired, not live.",
+        },
+        {
+          id: "sprint-procurement",
+          name: "Sprint Procurement TAP",
+          description: "POST /v1/demo/sprint-procurement — conformance, not a storefront",
+        },
+        {
+          id: "night-watch",
+          name: "Night Watch TAP",
+          description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker",
+        },
+        {
+          id: "sub-hire",
+          name: "Sub-hire TAP",
+          description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake",
+        },
+      ],
+      defaultInputModes: ["application/json"],
+      defaultOutputModes: ["application/json"],
+      pin,
+    };
+  }
+
   protocolCard() {
     return {
       ...PROTOCOL,
@@ -653,10 +758,12 @@ export class Runtime {
 
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
-   * aid_ agent, hid_ hire, mid_ mandate (intents include derived live | expired | funded;
-   * funded is escrow-moved occupancy against this slip and wins over expired;
-   * expired includes a dead parent intent even when this child's `exp` still lives;
-   * a child hire does not occupy the parent;
+   * aid_ agent, hid_ hire (derived live | expired | funded; funded is escrow-moved
+   * occupancy and wins over expired; expired includes a dead intent and a dead parent
+   * intent even when the child's exp still lives), mid_ mandate (intents include
+   * derived live | expired | funded; funded is escrow-moved occupancy against this
+   * slip and wins over expired; expired includes a dead parent intent even when this
+   * child's `exp` still lives; a child hire does not occupy the parent;
    * carts include derived live | expired | bound;
    * bound is unique_payment occupancy and wins over expired; payments include derived
    * live | expired | funded; funded is escrow-moved occupancy and wins over expired;
@@ -665,7 +772,8 @@ export class Runtime {
    * qte_ includes derived live | expired | spent | held;
    * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
    * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
-   * hsb_ host subscription (raw; spend is not gated on the row).
+   * hsb_ host subscription (raw; spend is not gated on the row),
+   * inv_ operator invoice (derived current | lapsed; the store stays raw).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -676,7 +784,7 @@ export class Runtime {
     }
     if (id.startsWith("hid_")) {
       const hire = this.hires.get(id as HireId);
-      return hire ? { type: "hire", id: hire.id, value: hire } : undefined;
+      return hire ? { type: "hire", id: hire.id, value: this.hireView(hire) } : undefined;
     }
     if (id.startsWith("mid_")) {
       const intent = this.intents.get(id as MandateId);
@@ -710,6 +818,10 @@ export class Runtime {
     if (id.startsWith("hsb_")) {
       const sub = this.subscriptions.get(id as SubscriptionId);
       return sub ? { type: "subscription", id: sub.id, value: sub } : undefined;
+    }
+    if (id.startsWith("inv_")) {
+      const invoice = this.invoices.get(id);
+      return invoice ? { type: "invoice", id: invoice.id, value: this.invoiceView(invoice) } : undefined;
     }
     if (id.startsWith("acct_")) {
       const account = [...this.ledger.accounts.values()].find((a) => a.id === id);
@@ -1232,6 +1344,7 @@ export class Runtime {
       if (
         cmd.type === "mandate.issue_intent" ||
         cmd.type === "hire.create" ||
+        cmd.type === "hire.accept" ||
         cmd.type === "hire.fund"
       ) {
         ctx.parentFresh = parentIntent.payload.exp > unixSeconds(this.clock.now());

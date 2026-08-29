@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.95.0",
+  version: "0.96.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
@@ -445,6 +445,15 @@ export const HIRE_COMMAND_TARGET = {
 export const HIRE_COMMAND_REQUIRED_STATE = {
   "envelope.require": "delivered",
 } as const satisfies Record<string, HireState>;
+
+/**
+ * Inspect / snapshot view. Funded (escrow moved, including later refund/release/deliver)
+ * wins over expired. Expired includes a dead intent and a dead parent intent even when
+ * this child's `exp` still lives. `void` is not a live offer. The store stays raw
+ * (`state` only). Fund of an unpaid expired offer still names `mandate.not_expired`
+ * or `mandate.parent_fresh`. Completing a funded hire after that window is legal.
+ */
+export type HireStatus = "live" | "expired" | "funded";
 
 export interface HireContract {
   id: HireId;
@@ -1067,6 +1076,13 @@ export interface OperatorInvoice {
   actorId: AgentId;
   reference?: string;
 }
+
+/**
+ * Inspect / snapshot view. Current is inside the 31-day door window.
+ * Lapsed is not a current invoice. The store stays raw (`at` only).
+ * Spend is not gated on a row; the door asks whether *any* invoice is current.
+ */
+export type InvoiceStatus = "current" | "lapsed";
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
   procurement: 500_000,

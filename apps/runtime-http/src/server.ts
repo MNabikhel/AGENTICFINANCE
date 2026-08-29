@@ -15,7 +15,7 @@ import {
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
-import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
+import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(here, "../public");
@@ -238,22 +238,10 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         return;
       }
       if (req.method === "GET" && (path === "/.well-known/agent-card.json" || path === "/.well-known/agent.json")) {
-        json(res, 200, {
-          protocolVersion: PROTOCOL.version,
-          name: "Aether Economic Runtime",
-          description: "Policy, mandate, hire, escrow, settlement, and audit for software agents. Simulated rail sim:aether-1.",
-          url: "http://127.0.0.1:8787",
-          capabilities: { streaming: false, pushNotifications: false },
-          skills: [
-            { id: "protocol", name: "Host card", description: "GET /v1/protocol and GET /.well-known/aether.json — pin aether.protocol.1. liveMoney false. evaluateLlm false. hosted false." },
-            { id: "commands", name: "Command bus", description: "GET /v1/commands — JSON Schema for every CommandType. Same commands as MCP." },
-            { id: "sprint-procurement", name: "Sprint Procurement TAP", description: "POST /v1/demo/sprint-procurement — conformance, not a storefront" },
-            { id: "night-watch", name: "Night Watch TAP", description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker" },
-            { id: "sub-hire", name: "Sub-hire TAP", description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake" },
-          ],
-          defaultInputModes: ["application/json"],
-          defaultOutputModes: ["application/json"],
-        });
+        const host = req.headers.host;
+        const base =
+          typeof host === "string" && host.length > 0 ? `http://${host}` : "http://127.0.0.1:8787";
+        json(res, 200, runtime.discoveryCard(base));
         return;
       }
       if (req.method === "GET" && path === "/v1/story") {

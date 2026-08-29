@@ -44,12 +44,12 @@
     {
       "name": "aether_hire_create",
       "commandType": "hire.create",
-      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire. A hot settle hour pauses a new hire for a grown-up. Completing funded work after that is legal."
+      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. Inspect of the hire labels live | expired | funded. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire. A hot settle hour pauses a new hire for a grown-up. Completing funded work after that is legal."
     },
     {
       "name": "aether_hire_accept",
       "commandType": "hire.accept",
-      "description": "Seller accepts a hire. Escrow must already exist. Accept is not a spend; a hot settle hour does not pause it."
+      "description": "Seller accepts a hire. Escrow must already exist. Accept is not a spend; a hot settle hour does not pause it. A child hire whose parent slip died is refused."
     },
     {
       "name": "aether_hire_fund",

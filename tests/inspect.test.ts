@@ -1154,6 +1154,131 @@ describe("intent inspect", () => {
   });
 });
 
+describe("hire inspect", () => {
+  it("labels an offered hire live and does not write status into the store", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    expect((rt.inspect(hireId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().hires.find((h) => h.id === hireId)?.status).toBe("live");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+  });
+
+  it("labels an offered hire expired when the slip dies, and accept still names mandate.not_expired", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(hireId)?.value as { status: string; state: string }).status).toBe("expired");
+    expect((rt.inspect(hireId)?.value as { state: string }).state).toBe("offered");
+    expect(rt.snapshotState().hires.find((h) => h.id === hireId)?.status).toBe("expired");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+    const accepted = rt.dispatch(cmd("hire.accept", vendor.id, { hireId }));
+    expect(accepted.ok).toBe(false);
+    if (accepted.ok) return;
+    expect(accepted.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+  });
+
+  it("labels a funded hire funded after the slip dies, and completing is legal", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(hireId)?.value as { status: string; state: string }).status).toBe("funded");
+    expect((rt.inspect(hireId)?.value as { state: string }).state).toBe("funded");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    expect((rt.inspect(hireId)?.value as { status: string; state: string }).status).toBe("funded");
+    expect((rt.inspect(hireId)?.value as { state: string }).state).toBe("delivered");
+  });
+
+  it("labels an offered child hire expired when the parent dies while the child exp still lives", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    rt.clock.set("2026-09-03T00:00:00.000Z");
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down before the parent dies",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+            { type: "payment.budget", currency: "USD_SIM", max: 100_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: string; exp: number } }).payload.id;
+    const childExp = (child.data as { payload: { exp: number } }).payload.exp;
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId: childId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    rt.clock.set(INTENT_DEAD);
+    expect(childExp).toBeGreaterThan(Math.floor(Date.parse(INTENT_DEAD) / 1000));
+    expect((rt.inspect(childId)?.value as { status: string }).status).toBe("expired");
+    expect((rt.inspect(hireId)?.value as { status: string }).status).toBe("expired");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+    const accepted = rt.dispatch(cmd("hire.accept", vendor.id, { hireId }));
+    expect(accepted.ok).toBe(false);
+    if (accepted.ok) return;
+    expect(accepted.error.decision?.remediation?.ruleId).toBe("mandate.parent_fresh");
+  });
+});
+
 describe("MCP command schemas", () => {
   it("lists real body fields so agents do not guess additionalProperties", () => {
     const mcp = new AetherMcp();
@@ -1180,6 +1305,13 @@ describe("MCP command schemas", () => {
     const cmds = mcp.handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: "aether://commands" } });
     const text = (cmds as { result: { contents: { text: string }[] } }).result.contents[0]?.text ?? "";
     expect(text).toContain("hire.create");
+
+    const card = mcp.handle({ jsonrpc: "2.0", id: 3, method: "resources/read", params: { uri: "aether://agent-card" } });
+    const cardText = (card as { result: { contents: { text: string }[] } }).result.contents[0]?.text ?? "";
+    const parsed = JSON.parse(cardText) as { spec: string; protocolVersion: string; capabilities: { liveMoney: boolean } };
+    expect(parsed.spec).toBe("aether.protocol.1");
+    expect(parsed.protocolVersion).toBe("0.96.0");
+    expect(parsed.capabilities.liveMoney).toBe(false);
   });
 });
 

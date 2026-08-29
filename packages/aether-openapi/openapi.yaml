@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.95.0
+  version: 0.96.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -200,13 +200,13 @@ paths:
     get:
       operationId: inspect
       responses:
-        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. Funded wins. }
+        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. A hire includes derived live | expired | funded. An offered hire whose slip died is expired. Funded wins. }
         "404": { description: Unknown id }
   /v1/hires/{id}:
     get:
       operationId: hireGet
       responses:
-        "200": { description: Hire contract }
+        "200": { description: Hire contract. Includes derived live | expired | funded. The store stays raw (state only). }
         "404": { description: Unknown hire }
   /v1/clearing/windows:
     post:

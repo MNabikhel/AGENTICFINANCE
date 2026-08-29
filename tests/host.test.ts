@@ -65,7 +65,7 @@ describe("host card", () => {
     const r = must(rt.dispatch(cmd("host.card", "system", {})), "host.card");
     const card = r.data as ReturnType<Runtime["protocolCard"]>;
     expect(card.spec).toBe("aether.protocol.1");
-    expect(card.version).toBe("0.95.0");
+    expect(card.version).toBe("0.96.0");
     expect(card.liveMoney).toBe(false);
     expect(card.evaluateLlm).toBe(false);
     expect(card.hosted).toBe(false);
@@ -78,6 +78,19 @@ describe("host card", () => {
     expect(card.discovery.wellKnown).toBe("/.well-known/aether.json");
     expect(rt.protocolCard().hosted).toBe(false);
     expect(PROTOCOL.hosted).toBe(false);
+  });
+
+  it("pins a discovery card that is this runtime, not an A2A JSON-RPC server", () => {
+    const rt = boot();
+    const card = rt.discoveryCard("http://127.0.0.1:8787");
+    expect(card.spec).toBe("aether.protocol.1");
+    expect(card.protocolVersion).toBe("0.96.0");
+    expect(card.capabilities.liveMoney).toBe(false);
+    expect(card.capabilities.evaluateLlm).toBe(false);
+    expect(card.capabilities.hosted).toBe(false);
+    expect(card.pin.version).toBe("0.96.0");
+    expect(card.url).toBe("http://127.0.0.1:8787");
+    expect(card.skills.some((s) => s.id === "inspect")).toBe(true);
   });
 
   it("lets a registered desk read the same card", () => {
@@ -119,7 +132,7 @@ describe("host card", () => {
     expect(card.authority.subscribeAvailable).toBe(true);
     expect((card.pricing as { takeRate?: null }).takeRate).toBeNull();
     expect(PROTOCOL.hosted).toBe(false);
-    expect(PROTOCOL.version).toBe("0.95.0");
+    expect(PROTOCOL.version).toBe("0.96.0");
   });
 });
 
