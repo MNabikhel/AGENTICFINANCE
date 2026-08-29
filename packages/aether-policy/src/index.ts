@@ -1497,6 +1497,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "The cart or payment window has closed, or the chain hashes no longer verify. Completing a funded hire after that is legal; a new fund is not. Occupancy stays hire.bound_cart. Issue a live cart.",
   },
+  "mandate.subject_is_actor": {
+    kind: "none",
+    hint: "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row.",
+  },
   "mm.known": {
     kind: "none",
     hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books.",

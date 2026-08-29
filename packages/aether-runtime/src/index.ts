@@ -73,6 +73,7 @@ import {
   WALLET_TLDR,
   NAME_TLDR,
   PANE_TLDR,
+  SUBJECT_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -1016,6 +1017,11 @@ export class Runtime {
           name: "Pane TAP",
           description: "POST /v1/demo/pane — an FX SKU is a window, not a good",
         },
+        {
+          id: "intent-subject",
+          name: "Subject TAP",
+          description: "POST /v1/demo/subject — this slip is not yours to spend",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -1493,34 +1499,14 @@ export class Runtime {
     const mustChain = cmd.type === "envelope.submit" || cmd.type === "hire.fund";
     if (mustChain && intent && cart && payment) {
       const checkExp = cmd.type === "hire.fund";
-      const chain = verifyChain({
-        intent,
-        cart,
-        payment,
-        intentKey: this.keypair(intent.payload.issuerId),
-        cartKey: this.keypair(cart.payload.merchant.id),
-        paymentKey: this.keypair(actor.id),
-        nowIso: this.clock.now(),
-        checkExp,
-      });
-      // Payment may be signed by actor or a human supervisor — try both.
-      chainOk = chain.ok;
-      if (!chain.ok) {
-        const human = counterparties.find((a) => a.role === "human_operator");
-        if (human) {
-          const retry = verifyChain({
-            intent,
-            cart,
-            payment,
-            intentKey: this.keypair(intent.payload.issuerId),
-            cartKey: this.keypair(cart.payload.merchant.id),
-            paymentKey: this.keypair(human.id),
-            nowIso: this.clock.now(),
-            checkExp,
-          });
-          chainOk = retry.ok;
-        }
-      }
+      // Chain integrity is the mandate signatures, not who is speaking.
+      // A stranger fund still verifies a buyer-signed payment; subject_is_actor names the speaker.
+      const paymentSignerIds: AgentId[] = [actor.id];
+      if (hire?.buyerId) paymentSignerIds.push(hire.buyerId);
+      paymentSignerIds.push(intent.payload.subjectId);
+      const human = counterparties.find((a) => a.role === "human_operator");
+      if (human) paymentSignerIds.push(human.id);
+      chainOk = this.paymentChainOk(intent, cart, payment, paymentSignerIds, checkExp);
     }
     const velocityWindow = this.velocity();
     const audit = this.audit.verify();
@@ -3215,6 +3201,39 @@ export class Runtime {
     return false;
   }
 
+  /**
+   * verifyChain against the first payment key that actually signed the check.
+   * Speaker, buyer, intent subject, and a human supervisor are candidates.
+   * Who may spend is mandate.subject_is_actor, not a broken chain.
+   */
+  private paymentChainOk(
+    intent: Signed<IntentMandate>,
+    cart: Signed<CartMandate>,
+    payment: Signed<PaymentMandate>,
+    paymentSignerIds: AgentId[],
+    checkExp: boolean,
+  ): boolean {
+    const seen = new Set<string>();
+    for (const signerId of paymentSignerIds) {
+      if (seen.has(signerId)) continue;
+      seen.add(signerId);
+      const paymentKey = this.identity.keys.get(signerId);
+      if (!paymentKey) continue;
+      const chain = verifyChain({
+        intent,
+        cart,
+        payment,
+        intentKey: this.keypair(intent.payload.issuerId),
+        cartKey: this.keypair(cart.payload.merchant.id),
+        paymentKey,
+        nowIso: this.clock.now(),
+        checkExp,
+      });
+      if (chain.ok) return true;
+    }
+    return false;
+  }
+
   /** Live hire holds a cart, and that cart has a payment. A body cartId is not a bind. */
   private hireMandateBound(hire: HireContract): boolean {
     if (!hire.cartId) return false;
@@ -3416,7 +3435,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

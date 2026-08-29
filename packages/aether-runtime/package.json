@@ -46,7 +46,8 @@
     "./hire-state": "./src/hire-state.ts",
     "./ledger-known": "./src/ledger-known.ts",
     "./kya-party": "./src/kya-party.ts",
-    "./fx-window": "./src/fx-window.ts"
+    "./fx-window": "./src/fx-window.ts",
+    "./intent-subject": "./src/intent-subject.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

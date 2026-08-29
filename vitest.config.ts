@@ -67,6 +67,7 @@ export default defineConfig({
       "@aether/ledger-known": path.resolve(__dirname, "packages/aether-runtime/src/ledger-known.ts"),
       "@aether/kya-party": path.resolve(__dirname, "packages/aether-runtime/src/kya-party.ts"),
       "@aether/fx-window": path.resolve(__dirname, "packages/aether-runtime/src/fx-window.ts"),
+      "@aether/intent-subject": path.resolve(__dirname, "packages/aether-runtime/src/intent-subject.ts"),
     },
   },
 });

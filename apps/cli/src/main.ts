@@ -43,6 +43,7 @@ import { loadHireState, runHireState } from "@aether/hire-state";
 import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
 import { loadKyaParty, runKyaParty } from "@aether/kya-party";
 import { loadFxWindow, runFxWindow } from "@aether/fx-window";
+import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
 
 const [, , command, name] = process.argv;
 
@@ -326,6 +327,12 @@ if (command === "demo" && (name === "pane" || name === "fx-window" || name === "
   process.exit(0);
 }
 
+if (command === "demo" && (name === "subject" || name === "not-yours" || name === "wrong-desk")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/subject/scenario.json");
+  printReport(runIntentSubject(loadIntentSubject(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -375,5 +382,6 @@ usage:
   pnpm demo wallet
   pnpm demo name
   pnpm demo pane
+  pnpm demo subject
   pnpm mcp`);
 process.exit(command ? 1 : 0);

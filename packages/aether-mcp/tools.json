@@ -370,6 +370,11 @@
       "name": "aether_demo_pane",
       "commandType": "demo.pane",
       "description": "Run the pane TAP: an FX SKU is a window, not a good. market.quote of an FX SKU without an fx window is market.fx_window; known SKU, known room, and pair still allow; a real window still quotes and converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_subject",
+      "commandType": "demo.subject",
+      "description": "Run the subject TAP: this slip is not yours to spend. A second desk's hire.fund is mandate.subject_is_actor; known hire, legal arrow, bound cart, cash, and intact chain still allow; no escrow lock; the named subject still funds; funded work still finishes."
     }
   ]
 }

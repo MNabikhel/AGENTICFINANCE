@@ -148,6 +148,9 @@ export const NAME_TLDR =
 export const PANE_TLDR =
   "A founder funded an $800 hire. A market maker quoted an FX SKU with no window. That was market.fx_window — known SKU, known room, pair still allows. A real window still quoted and converted. That funded work still released. An FX SKU is a window, not a good.";
 
+export const SUBJECT_TLDR =
+  "A founder issued a slip to desk A. Desk B’s fund was mandate.subject_is_actor — the chain still verified, cash still there, hire still accepted. Desk A still funded. That work still released. This slip is not yours to spend.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -750,6 +753,8 @@ export function autoBeat(input: {
                     ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
                   : rule?.ruleId === "mandate.chain_integrity"
                     ? "The cart or payment window has closed. Completing funded work after that is legal; a new fund is not. Occupancy is a bind, not this refuse."
+                  : rule?.ruleId === "mandate.subject_is_actor"
+                    ? "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Completing funded work by the named subject is legal; a stranger’s fund is not."
                   : rule?.ruleId === "ledger.safe_balance"
                     ? "The escrow (or the buyer’s remaining cash) cannot hold this many cents. IEEE rounding is not a mint."
                   : rule?.ruleId === "kya.parent_fresh"

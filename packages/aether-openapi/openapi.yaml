@@ -451,6 +451,12 @@ paths:
       responses:
         "200": { description: Pane TAP report. An FX SKU is a window, not a good. }
         "500": { description: Assertions failed }
+  /v1/demo/subject:
+    post:
+      operationId: demoSubject
+      responses:
+        "200": { description: Subject TAP report. This slip is not yours to spend. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

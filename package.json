@@ -51,6 +51,7 @@
     "demo:wallet": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo wallet",
     "demo:name": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo name",
     "demo:pane": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo pane",
+    "demo:subject": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo subject",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"
