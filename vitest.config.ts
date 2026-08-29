@@ -85,6 +85,7 @@ export default defineConfig({
       "@aether/known-sku": path.resolve(__dirname, "packages/aether-runtime/src/known-sku.ts"),
       "@aether/known-rfq": path.resolve(__dirname, "packages/aether-runtime/src/known-rfq.ts"),
       "@aether/known-intent": path.resolve(__dirname, "packages/aether-runtime/src/known-intent.ts"),
+      "@aether/known-cart": path.resolve(__dirname, "packages/aether-runtime/src/known-cart.ts"),
     },
   },
 });

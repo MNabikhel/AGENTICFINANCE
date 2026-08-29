@@ -202,6 +202,9 @@ export const HALL_TLDR =
 export const WRIT_TLDR =
   "A founder funded an $800 hire. A hire against a ghost slip was mandate.known_intent — a missing handshake is not this deny, a dead parent is not this deny. That funded work still released. A missing slip is not a missing handshake.";
 
+export const CRATE_TLDR =
+  "A founder funded an $800 hire. A payment on a ghost cart was mandate.known_cart — occupancy is not this deny, a dead cart at fund is not this deny. That funded work still released. A missing cart is not a broken payment chain.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -326,6 +329,16 @@ export function autoBeat(input: {
   if (cmd.type === "mandate.issue_payment") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "mandate.known_cart") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} named a cart that is not here`,
+          body: "A missing cart is not a broken payment chain. Issue the cart first. Completing funded work after that is legal. Occupancy is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "mandate.unique_payment") {
         return {
           seq: input.seq,

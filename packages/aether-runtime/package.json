@@ -64,7 +64,8 @@
     "./escrow-required": "./src/escrow-required.ts",
     "./known-sku": "./src/known-sku.ts",
     "./known-rfq": "./src/known-rfq.ts",
-    "./known-intent": "./src/known-intent.ts"
+    "./known-intent": "./src/known-intent.ts",
+    "./known-cart": "./src/known-cart.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

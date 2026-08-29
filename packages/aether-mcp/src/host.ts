@@ -68,6 +68,7 @@ import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 import { loadKnownSku, runKnownSku } from "@aether/known-sku";
 import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
+import { loadKnownCart, runKnownCart } from "@aether/known-cart";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -174,6 +175,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_shelf",
   "aether_demo_hall",
   "aether_demo_writ",
+  "aether_demo_crate",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -741,6 +743,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_writ") {
       const report = runKnownIntent(loadKnownIntent("fixtures/demo/writ/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_crate") {
+      const report = runKnownCart(loadKnownCart("fixtures/demo/crate/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

@@ -1391,7 +1391,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_cart": {
     kind: "none",
-    hint: "That cart id is not in this world. Issue the cart first. A missing cart is not a broken payment chain.",
+    hint: "That cart id is not in this world. Issue the cart first. A missing cart is not a broken payment chain. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. Completing funded work is legal.",
   },
   "approval.known": {
     kind: "none",
