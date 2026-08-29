@@ -545,6 +545,11 @@
       "name": "aether_demo_ink",
       "commandType": "demo.ink",
       "description": "Run the ink TAP: a cart label is not the hire's money. hire.fund of a USD hire with a loose USDC cart is payment.currency_match; a mixed journal, a USDC quote, and a loose USD pointer still allow; no escrow moves; a USD cart still binds and funds; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_brim",
+      "commandType": "demo.brim",
+      "description": "Run the brim TAP: IEEE rounding is not a mint. ledger.transfer of one more cent into a book already at the integer ceiling is ledger.safe_balance; empty cash, a missing dest, a mixed journal, and a mint still allow; no journal posted; a penny still posts to a book that can hold it; funded work still finishes."
     }
   ]
 }

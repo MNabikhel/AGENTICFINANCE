@@ -81,7 +81,8 @@
     "./kya-mint-fresh": "./src/kya-mint-fresh.ts",
     "./window-fresh": "./src/window-fresh.ts",
     "./mm-known": "./src/mm-known.ts",
-    "./currency-match": "./src/currency-match.ts"
+    "./currency-match": "./src/currency-match.ts",
+    "./safe-balance": "./src/safe-balance.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -90,6 +90,7 @@ import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
 import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
 import { loadMmKnown, runMmKnown } from "@aether/mm-known";
 import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
+import { loadSafeBalance, runSafeBalance } from "@aether/safe-balance";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -172,6 +173,7 @@ const sparkFixture = join(process.cwd(), "fixtures/demo/spark/scenario.json");
 const wiltFixture = join(process.cwd(), "fixtures/demo/wilt/scenario.json");
 const makerFixture = join(process.cwd(), "fixtures/demo/maker/scenario.json");
 const inkFixture = join(process.cwd(), "fixtures/demo/ink/scenario.json");
+const brimFixture = join(process.cwd(), "fixtures/demo/brim/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -967,6 +969,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runCurrencyMatch(loadCurrencyMatch(inkFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "ink" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/brim") {
+        const report = runSafeBalance(loadSafeBalance(brimFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "brim" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

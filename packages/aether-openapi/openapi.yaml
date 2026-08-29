@@ -661,6 +661,12 @@ paths:
       responses:
         "200": { description: Ink TAP report. A cart label is not the hire's money. }
         "500": { description: Assertions failed }
+  /v1/demo/brim:
+    post:
+      operationId: demoBrim
+      responses:
+        "200": { description: Brim TAP report. IEEE rounding is not a mint. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

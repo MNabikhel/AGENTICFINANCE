@@ -102,6 +102,7 @@ export default defineConfig({
       "@aether/window-fresh": path.resolve(__dirname, "packages/aether-runtime/src/window-fresh.ts"),
       "@aether/mm-known": path.resolve(__dirname, "packages/aether-runtime/src/mm-known.ts"),
       "@aether/currency-match": path.resolve(__dirname, "packages/aether-runtime/src/currency-match.ts"),
+      "@aether/safe-balance": path.resolve(__dirname, "packages/aether-runtime/src/safe-balance.ts"),
     },
   },
 });

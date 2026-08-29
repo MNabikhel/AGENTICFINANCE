@@ -253,6 +253,9 @@ export const MAKER_TLDR =
 export const INK_TLDR =
   "A founder funded an $800 hire. Funding a second hire with a USDC cart was payment.currency_match — a mixed journal is not this deny, a USDC quote is not this deny, a loose USD pointer is not this deny. No escrow moved. A USD cart still bound and funded. That first funded work still released. A cart label is not the hire's money.";
 
+export const BRIM_TLDR =
+  "A founder funded an $800 hire. Treasury posting one more cent into a book already at the integer ceiling was ledger.safe_balance — empty cash is not this deny, a missing dest is not this deny, a mixed journal is not this deny, a mint is not this deny. No journal posted. A penny still posted to a book that can hold it. That funded work still released. IEEE rounding is not a mint.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
