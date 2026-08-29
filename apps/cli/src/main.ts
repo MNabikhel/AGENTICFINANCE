@@ -17,6 +17,7 @@ import { loadVelocity, runVelocity } from "@aether/hot-hour";
 import { loadDoor, runDoor } from "@aether/operator-door";
 import { loadCartMatch, runCartMatch } from "@aether/cart-match";
 import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
+import { loadConversion, runConversion } from "@aether/fx-not-hire";
 
 const [, , command, name] = process.argv;
 
@@ -144,6 +145,12 @@ if (command === "demo" && (name === "room" || name === "invite" || name === "clo
   process.exit(0);
 }
 
+if (command === "demo" && (name === "conversion" || name === "not-fx" || name === "fx-hire")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/conversion/scenario.json");
+  printReport(runConversion(loadConversion(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -167,5 +174,6 @@ usage:
   pnpm demo door
   pnpm demo match
   pnpm demo room
+  pnpm demo conversion
   pnpm mcp`);
 process.exit(command ? 1 : 0);

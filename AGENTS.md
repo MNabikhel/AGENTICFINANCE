@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -165,6 +165,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 113. The public kernel is not a hosted checkout. `pnpm demo door` / `aether_demo_door` / `POST /v1/demo/door` refuses public subscribe as `host.not_hosted`, refuses an unsigned hosted speaker as 401 `speaker.proof` and an unpaid month as 402 `host.unpaid`, then after an invoice records a subscribe row. Spend is not gated on that row. `PROTOCOL.hosted` stays false. No new policy rule.
 114. A cheaper cart is not a discount. `pnpm demo match` / `aether_demo_match` / `POST /v1/demo/match` refuses a $0.01 cart as `hire.cart_matches` without occupying the hire, then a matching cart allows and fund moves the hire price. Occupancy (`hire.unique_cart`) is a different object (`pnpm demo cart`). No new policy rule.
 115. A closed room is not a bulletin board. `pnpm demo room` / `aether_demo_room` / `POST /v1/demo/room` refuses an uninvited quote as `market.invited_seller` without writing a quote, then the invited seller quotes and `hire.create` allows. An empty invite list lets the outsider quote. A ghost guest stays `identity.known`. No new policy rule.
+116. An FX window is not a hire. `pnpm demo conversion` / `aether_demo_conversion` / `POST /v1/demo/conversion` refuses `hire.create` as `hire.not_fx` without consuming or reserving the window, then `market.fx_settle` converts. A spent window is `hire.quote_unspent`. No new policy rule.
 
 ## Autonomy
 
@@ -202,4 +203,5 @@ pnpm demo velocity
 pnpm demo door
 pnpm demo match
 pnpm demo room
+pnpm demo conversion
 ```

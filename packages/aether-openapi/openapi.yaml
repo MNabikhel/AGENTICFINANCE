@@ -295,6 +295,12 @@ paths:
       responses:
         "200": { description: Closed-room TAP report. A named guest list is a closed RFQ, not a bulletin board. }
         "500": { description: Assertions failed }
+  /v1/demo/conversion:
+    post:
+      operationId: demoConversion
+      responses:
+        "200": { description: Conversion TAP report. An FX window is not a hire. Settle it. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

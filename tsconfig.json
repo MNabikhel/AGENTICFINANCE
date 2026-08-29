@@ -34,7 +34,8 @@
       "@aether/hot-hour": ["packages/aether-runtime/src/hot-hour.ts"],
       "@aether/operator-door": ["packages/aether-runtime/src/operator-door.ts"],
       "@aether/cart-match": ["packages/aether-runtime/src/cart-match.ts"],
-      "@aether/closed-room": ["packages/aether-runtime/src/closed-room.ts"]
+      "@aether/closed-room": ["packages/aether-runtime/src/closed-room.ts"],
+      "@aether/fx-not-hire": ["packages/aether-runtime/src/fx-not-hire.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

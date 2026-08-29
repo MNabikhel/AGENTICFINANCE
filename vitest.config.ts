@@ -41,6 +41,7 @@ export default defineConfig({
       "@aether/operator-door": path.resolve(__dirname, "packages/aether-runtime/src/operator-door.ts"),
       "@aether/cart-match": path.resolve(__dirname, "packages/aether-runtime/src/cart-match.ts"),
       "@aether/closed-room": path.resolve(__dirname, "packages/aether-runtime/src/closed-room.ts"),
+      "@aether/fx-not-hire": path.resolve(__dirname, "packages/aether-runtime/src/fx-not-hire.ts"),
     },
   },
 });

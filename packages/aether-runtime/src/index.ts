@@ -47,6 +47,7 @@ import {
   DOOR_TLDR,
   MATCH_TLDR,
   ROOM_TLDR,
+  CONVERSION_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -859,6 +860,11 @@ export class Runtime {
           id: "closed-room",
           name: "Closed room TAP",
           description: "POST /v1/demo/room — a closed room is not a bulletin board",
+        },
+        {
+          id: "fx-not-hire",
+          name: "Conversion TAP",
+          description: "POST /v1/demo/conversion — an FX window is not a hire",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3260,7 +3266,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

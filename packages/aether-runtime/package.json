@@ -20,7 +20,8 @@
     "./hot-hour": "./src/hot-hour.ts",
     "./operator-door": "./src/operator-door.ts",
     "./cart-match": "./src/cart-match.ts",
-    "./closed-room": "./src/closed-room.ts"
+    "./closed-room": "./src/closed-room.ts",
+    "./fx-not-hire": "./src/fx-not-hire.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

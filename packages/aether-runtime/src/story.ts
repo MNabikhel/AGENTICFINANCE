@@ -70,6 +70,9 @@ export const MATCH_TLDR =
 export const ROOM_TLDR =
   "A desk opened a closed RFQ for one vendor. An outsider’s quote was market.invited_seller — no quote was written. The invited vendor quoted and the hire went through. An empty invite list let the outsider quote. A closed room is not a bulletin board.";
 
+export const CONVERSION_TLDR =
+  "A desk tried to hire an FX window. That was hire.not_fx — no hire, window unspent. The vendor then settled it. A spent window is hire.quote_unspent. An FX window is not a good.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -539,6 +542,8 @@ export function autoBeat(input: {
         body = "This agent sits above the handshake ceiling. Completing a funded hire after a climb is legal; a new hire is not.";
       } else if (ruleId === "ladder.max_autonomy_constraint") {
         body = "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not.";
+      } else if (ruleId === "hire.not_fx") {
+        body = "An FX window is a conversion, not a good. Settle it. A deny does not consume or reserve the window.";
       } else if (ruleId === "clearing.bilateral_limit") {
         body = "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (the photo, not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.";
       }

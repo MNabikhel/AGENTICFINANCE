@@ -240,6 +240,11 @@
       "name": "aether_demo_room",
       "commandType": "demo.room",
       "description": "Run the closed-room TAP: a named guest list is a closed RFQ. Uninvited quote is market.invited_seller; empty invite list is open."
+    },
+    {
+      "name": "aether_demo_conversion",
+      "commandType": "demo.conversion",
+      "description": "Run the conversion TAP: an FX window is not a hire. hire.create is hire.not_fx and does not consume the window; settle then converts."
     }
   ]
 }
