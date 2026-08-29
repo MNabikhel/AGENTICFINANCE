@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -161,6 +161,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 109. A refund does not restore a cadence slot. `pnpm demo slot` / `aether_demo_slot` / `POST /v1/demo/slot` funds a one-slot hire, unwinds it (cash and spend return), leaves the occurrence count at 1, then refuses a second `hire.create` as `payment.recurrence`. No new policy rule.
 110. A cadence is a gap, not a burst. `pnpm demo daily` / `aether_demo_daily` / `POST /v1/demo/daily` releases one hire on a `DAILY` slip, refuses a same-day second `hire.create` as `payment.recurrence`, then after 24 hours that command allows. No new policy rule.
 111. Occupancy is a bind, not a field on fund. `pnpm demo cart` / `aether_demo_cart` / `POST /v1/demo/cart` funds with a loose `cartId` as `hire.bound_cart`, refuses a second cart as `hire.unique_cart` and a second payment as `mandate.unique_payment`, then the same fund command allows against the bound cart. No new policy rule.
+112. A hot hour is not a freeze on funded work. `pnpm demo velocity` / `aether_demo_velocity` / `POST /v1/demo/velocity` funds one hire, still releases after the settle hour runs hot, then pauses a new `hire.create` as `velocity.window`. That pause holds the quote; it is not a second hire. No new policy rule.
 
 ## Autonomy
 
@@ -194,4 +195,5 @@ pnpm demo calendar
 pnpm demo slot
 pnpm demo daily
 pnpm demo cart
+pnpm demo velocity
 ```

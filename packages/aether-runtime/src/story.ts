@@ -58,6 +58,9 @@ export const DAILY_TLDR =
 export const CART_TLDR =
   "A desk accepted an $800 hire. Funding with a loose cartId was hire.bound_cart. Binding a cart occupied the hire; a second cart was hire.unique_cart. A second payment on that cart was mandate.unique_payment. The same fund command then went through — occupancy is a bind, not a field on fund.";
 
+export const VELOCITY_TLDR =
+  "A desk funded an $800 hire. The settle hour ran hot. That funded work still released. A new hire.create was velocity.window — paused for a grown-up, not refused. A hot hour is not a freeze on funded work.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

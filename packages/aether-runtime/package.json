@@ -16,7 +16,8 @@
     "./execution-window": "./src/execution-window.ts",
     "./cadence-slot": "./src/cadence-slot.ts",
     "./daily-gap": "./src/daily-gap.ts",
-    "./cart-occupancy": "./src/cart-occupancy.ts"
+    "./cart-occupancy": "./src/cart-occupancy.ts",
+    "./hot-hour": "./src/hot-hour.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
