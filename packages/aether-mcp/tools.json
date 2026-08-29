@@ -205,6 +205,11 @@
       "name": "aether_demo_calendar",
       "commandType": "demo.calendar",
       "description": "Run the calendar TAP: a closed calendar is not a freeze on funded work. Completing funded work after not_after is legal; a new hire is not."
+    },
+    {
+      "name": "aether_demo_slot",
+      "commandType": "demo.slot",
+      "description": "Run the slot TAP: a refund returns cash and spend. It does not restore a cadence slot."
     }
   ]
 }

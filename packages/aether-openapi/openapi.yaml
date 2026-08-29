@@ -253,6 +253,12 @@ paths:
       responses:
         "200": { description: Calendar TAP report. A closed calendar is not a freeze on funded work. }
         "500": { description: Assertions failed }
+  /v1/demo/slot:
+    post:
+      operationId: demoSlot
+      responses:
+        "200": { description: Slot TAP report. A refund does not restore a cadence slot. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

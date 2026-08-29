@@ -13,7 +13,8 @@
     "./envelope-nonce": "./src/envelope-nonce.ts",
     "./deny-cache": "./src/deny-cache.ts",
     "./recurrence-cadence": "./src/recurrence-cadence.ts",
-    "./execution-window": "./src/execution-window.ts"
+    "./execution-window": "./src/execution-window.ts",
+    "./cadence-slot": "./src/cadence-slot.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

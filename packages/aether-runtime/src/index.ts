@@ -40,6 +40,7 @@ import {
   DENY_CACHE_TLDR,
   RECURRENCE_TLDR,
   CALENDAR_TLDR,
+  SLOT_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -817,6 +818,11 @@ export class Runtime {
           id: "execution-window",
           name: "Calendar TAP",
           description: "POST /v1/demo/calendar — a closed calendar is not a freeze on funded work",
+        },
+        {
+          id: "cadence-slot",
+          name: "Slot TAP",
+          description: "POST /v1/demo/slot — a refund does not restore a cadence slot",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3218,7 +3224,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

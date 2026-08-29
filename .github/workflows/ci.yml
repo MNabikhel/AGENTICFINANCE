@@ -25,3 +25,4 @@ jobs:
       - run: pnpm demo:deny
       - run: pnpm demo:recurrence
       - run: pnpm demo:calendar
+      - run: pnpm demo:slot

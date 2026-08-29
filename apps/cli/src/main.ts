@@ -10,6 +10,7 @@ import { loadNonce, runNonce } from "@aether/envelope-nonce";
 import { loadDenyCache, runDenyCache } from "@aether/deny-cache";
 import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
 import { loadCalendar, runCalendar } from "@aether/execution-window";
+import { loadSlot, runSlot } from "@aether/cadence-slot";
 
 const [, , command, name] = process.argv;
 
@@ -95,6 +96,12 @@ if (command === "demo" && (name === "calendar" || name === "window" || name === 
   process.exit(0);
 }
 
+if (command === "demo" && (name === "slot" || name === "cadence-slot")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/slot/scenario.json");
+  printReport(runSlot(loadSlot(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -111,5 +118,6 @@ usage:
   pnpm demo deny
   pnpm demo recurrence
   pnpm demo calendar
+  pnpm demo slot
   pnpm mcp`);
 process.exit(command ? 1 : 0);

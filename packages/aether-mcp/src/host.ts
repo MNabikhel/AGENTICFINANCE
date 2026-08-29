@@ -17,6 +17,7 @@ import { loadNonce, runNonce } from "@aether/envelope-nonce";
 import { loadDenyCache, runDenyCache } from "@aether/deny-cache";
 import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
 import { loadCalendar, runCalendar } from "@aether/execution-window";
+import { loadSlot, runSlot } from "@aether/cadence-slot";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -72,6 +73,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_deny",
   "aether_demo_recurrence",
   "aether_demo_calendar",
+  "aether_demo_slot",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -384,6 +386,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_calendar") {
       const report = runCalendar(loadCalendar("fixtures/demo/calendar/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_slot") {
+      const report = runSlot(loadSlot("fixtures/demo/slot/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

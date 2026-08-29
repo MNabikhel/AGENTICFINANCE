@@ -80,7 +80,7 @@ Money-moving allows are replayed by key so a retry cannot double-spend. Denies a
 
 Not a grind of inspect overlays. Listed command faces match the bus. A deny is never a cached success.
 
-- [x] Command tools stay 1:1 with `CommandType`. OpenAPI lists the TAP demos the discovery card names, including refund, replay, nonce, deny-cache, recurrence, and calendar.
+- [x] Command tools stay 1:1 with `CommandType`. OpenAPI lists the TAP demos the discovery card names, including refund, replay, nonce, deny-cache, recurrence, calendar, and slot.
 - [x] A TAP (`pnpm demo deny`) freezes a desk, refuses `hire.create`, retries that deny as a new decision, then unfreezes and the same command allows. No new policy rule.
 
 ### 10. Honesty if the pin would lie
@@ -109,7 +109,20 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 - [x] A TAP (`pnpm demo calendar`) refuses `hire.create` before `not_before`, funds inside the window, still releases after `not_after`, then refuses a new hire as `payment.execution_date`.
 - [x] No new policy rule unless a current allow traps funded work or lets a new hire through a closed calendar.
 
-### 14. Next: only if the pin would lie
+### 14. Honesty if the pin would lie
+
+If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
+
+- [x] CommandType stays 1:1 with MCP. OpenAPI lists command aliases and the TAP demos the discovery card names. GET `/v1/agents/{id}` and GET `/v1/approvals/{id}` are inspect, not command faces — do not grind them. FOUNDATION claimed a refund does not restore a slot; that was not a TAP until now.
+
+### 15. A refund does not restore a slot
+
+`hire.refund` restores cash and mandate spend. It does not decrement `occurrences`. A one-slot slip stays spent.
+
+- [x] A TAP (`pnpm demo slot`) funds a one-slot hire, unwinds it, shows spend restored and occurrence count still 1, then refuses a second `hire.create` as `payment.recurrence`.
+- [x] No new policy rule unless a current allow is a restored slot.
+
+### 16. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -117,4 +130,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

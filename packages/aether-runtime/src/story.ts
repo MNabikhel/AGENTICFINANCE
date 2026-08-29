@@ -49,6 +49,9 @@ export const RECURRENCE_TLDR =
 export const CALENDAR_TLDR =
   "A founder wrote a same-day calendar. Hiring before it opened was payment.execution_date. Inside the window the desk funded an $800 hire. After the calendar closed, that funded work still released. A new hire was payment.execution_date. A closed calendar is not a freeze on funded work.";
 
+export const SLOT_TLDR =
+  "A founder wrote a one-slot slip. The desk funded an $800 hire, then unwound it. Cash and mandate spend came back. The cadence slot did not. A second hire.create was payment.recurrence. A refund is not a new slot.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
