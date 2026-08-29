@@ -102,6 +102,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "envelope-nonce")?.description).toContain("POST /v1/demo/nonce");
     expect(card.skills.some((s) => s.id === "deny-cache")).toBe(true);
     expect(card.skills.find((s) => s.id === "deny-cache")?.description).toContain("POST /v1/demo/deny");
+    expect(card.skills.some((s) => s.id === "recurrence-cadence")).toBe(true);
+    expect(card.skills.find((s) => s.id === "recurrence-cadence")?.description).toContain("POST /v1/demo/recurrence");
   });
 
   it("lets a registered desk read the same card", () => {

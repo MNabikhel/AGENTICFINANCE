@@ -48,6 +48,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("payment nonce is one-shot");
     expect(spec).toContain("/v1/demo/deny:");
     expect(spec).toContain("never a cached success");
+    expect(spec).toContain("/v1/demo/recurrence:");
+    expect(spec).toContain("one-slot cadence");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

@@ -8,6 +8,7 @@ import { loadRefund, runRefund } from "@aether/refund";
 import { loadReplay, runReplay } from "@aether/replay";
 import { loadNonce, runNonce } from "@aether/envelope-nonce";
 import { loadDenyCache, runDenyCache } from "@aether/deny-cache";
+import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
 
 const [, , command, name] = process.argv;
 
@@ -81,6 +82,12 @@ if (command === "demo" && (name === "deny" || name === "deny-cache")) {
   process.exit(0);
 }
 
+if (command === "demo" && (name === "recurrence" || name === "cadence" || name === "recurrence-cadence")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/recurrence/scenario.json");
+  printReport(runRecurrence(loadRecurrence(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -95,5 +102,6 @@ usage:
   pnpm demo replay
   pnpm demo nonce
   pnpm demo deny
+  pnpm demo recurrence
   pnpm mcp`);
 process.exit(command ? 1 : 0);

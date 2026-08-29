@@ -241,6 +241,12 @@ paths:
       responses:
         "200": { description: Deny-cache TAP report. A deny is never a cached success. }
         "500": { description: Assertions failed }
+  /v1/demo/recurrence:
+    post:
+      operationId: demoRecurrence
+      responses:
+        "200": { description: Recurrence TAP report. A one-slot cadence is not an open checkbook. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

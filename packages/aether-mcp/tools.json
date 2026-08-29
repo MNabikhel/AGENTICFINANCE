@@ -195,6 +195,11 @@
       "name": "aether_demo_deny",
       "commandType": "demo.deny",
       "description": "Run the deny-cache TAP: a deny is never a cached success. Unfreeze, then the same hire.create may proceed."
+    },
+    {
+      "name": "aether_demo_recurrence",
+      "commandType": "demo.recurrence",
+      "description": "Run the recurrence TAP: a one-slot cadence is not an open checkbook. Completing funded work is not a second slot."
     }
   ]
 }

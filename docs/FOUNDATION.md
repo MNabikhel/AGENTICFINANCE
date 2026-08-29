@@ -80,10 +80,23 @@ Money-moving allows are replayed by key so a retry cannot double-spend. Denies a
 
 Not a grind of inspect overlays. Listed command faces match the bus. A deny is never a cached success.
 
-- [x] Command tools stay 1:1 with `CommandType`. OpenAPI lists the TAP demos the discovery card names, including refund, replay, nonce, and deny-cache.
+- [x] Command tools stay 1:1 with `CommandType`. OpenAPI lists the TAP demos the discovery card names, including refund, replay, nonce, deny-cache, and recurrence.
 - [x] A TAP (`pnpm demo deny`) freezes a desk, refuses `hire.create`, retries that deny as a new decision, then unfreezes and the same command allows. No new policy rule.
 
-### 10. Next: only if the pin would lie
+### 10. Honesty if the pin would lie
+
+Not a grind of inspect overlays. Listed command faces match the bus.
+
+- [x] CommandType stays 1:1 with MCP. OpenAPI lists command aliases and the TAP demos the discovery card names. GET `/v1/agents/{id}` and GET `/v1/approvals/{id}` are inspect, not command faces — do not grind them. No lying allow this turn. No protocol bump.
+
+### 11. Recurrence is a demonstrated cadence
+
+`payment.recurrence` already binds when a slip names `payment.agent_recurrence`. Completing funded work is not a second slot. A refund does not restore a slot.
+
+- [x] A TAP (`pnpm demo recurrence`) funds and releases one hire on a one-slot slip, shows the occurrence count stays 1 after complete, then refuses a second `hire.create` as `payment.recurrence`. That deny does not write a second hire or spend the quote.
+- [x] No new policy rule unless a current allow is a second slot.
+
+### 12. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -91,4 +104,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

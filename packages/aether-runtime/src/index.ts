@@ -38,6 +38,7 @@ import {
   REPLAY_TLDR,
   NONCE_TLDR,
   DENY_CACHE_TLDR,
+  RECURRENCE_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -805,6 +806,11 @@ export class Runtime {
           id: "deny-cache",
           name: "Deny-cache TAP",
           description: "POST /v1/demo/deny — a deny is never a cached success",
+        },
+        {
+          id: "recurrence-cadence",
+          name: "Recurrence TAP",
+          description: "POST /v1/demo/recurrence — a one-slot cadence is not an open checkbook",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3206,7 +3212,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

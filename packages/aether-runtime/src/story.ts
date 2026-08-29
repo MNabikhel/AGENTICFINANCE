@@ -43,6 +43,9 @@ export const NONCE_TLDR =
 export const DENY_CACHE_TLDR =
   "A frozen desk tried to hire and was refused. Retrying the same hire.create was a new decision — the deny was not cached. After unfreeze, that same command went through. A deny is not a leftover no.";
 
+export const RECURRENCE_TLDR =
+  "A founder wrote a one-slot slip. The desk hired once and released. Completing that funded work was not a second slot. A second hire.create was payment.recurrence. A cadence is not an open checkbook.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

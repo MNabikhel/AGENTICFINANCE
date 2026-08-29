@@ -11,7 +11,8 @@
     "./refund": "./src/refund.ts",
     "./replay": "./src/replay.ts",
     "./envelope-nonce": "./src/envelope-nonce.ts",
-    "./deny-cache": "./src/deny-cache.ts"
+    "./deny-cache": "./src/deny-cache.ts",
+    "./recurrence-cadence": "./src/recurrence-cadence.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
