@@ -40,6 +40,7 @@ export default defineConfig({
       "@aether/hot-hour": path.resolve(__dirname, "packages/aether-runtime/src/hot-hour.ts"),
       "@aether/operator-door": path.resolve(__dirname, "packages/aether-runtime/src/operator-door.ts"),
       "@aether/cart-match": path.resolve(__dirname, "packages/aether-runtime/src/cart-match.ts"),
+      "@aether/closed-room": path.resolve(__dirname, "packages/aether-runtime/src/closed-room.ts"),
     },
   },
 });

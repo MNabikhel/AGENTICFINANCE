@@ -64,6 +64,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a hosted checkout");
     expect(spec).toContain("/v1/demo/match:");
     expect(spec).toContain("not a discount");
+    expect(spec).toContain("/v1/demo/room:");
+    expect(spec).toContain("not a bulletin board");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

@@ -235,6 +235,11 @@
       "name": "aether_demo_match",
       "commandType": "demo.match",
       "description": "Run the cart-match TAP: a cheaper cart is not a discount. Cheap issue_cart is hire.cart_matches; matching occupies; fund moves the hire price."
+    },
+    {
+      "name": "aether_demo_room",
+      "commandType": "demo.room",
+      "description": "Run the closed-room TAP: a named guest list is a closed RFQ. Uninvited quote is market.invited_seller; empty invite list is open."
     }
   ]
 }

@@ -289,6 +289,12 @@ paths:
       responses:
         "200": { description: Cart-match TAP report. A cheaper cart is not a discount. Escrow moves the hire price. }
         "500": { description: Assertions failed }
+  /v1/demo/room:
+    post:
+      operationId: demoRoom
+      responses:
+        "200": { description: Closed-room TAP report. A named guest list is a closed RFQ, not a bulletin board. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

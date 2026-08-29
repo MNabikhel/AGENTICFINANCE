@@ -67,6 +67,9 @@ export const DOOR_TLDR =
 export const MATCH_TLDR =
   "A desk accepted an $800 hire. A $0.01 cart was hire.cart_matches — a cheaper cart is not a discount. The matching cart occupied the hire. Funding moved $800, not a penny. Match is not occupancy.";
 
+export const ROOM_TLDR =
+  "A desk opened a closed RFQ for one vendor. An outsider’s quote was market.invited_seller — no quote was written. The invited vendor quoted and the hire went through. An empty invite list let the outsider quote. A closed room is not a bulletin board.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

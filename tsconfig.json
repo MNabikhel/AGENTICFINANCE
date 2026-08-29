@@ -33,7 +33,8 @@
       "@aether/cart-occupancy": ["packages/aether-runtime/src/cart-occupancy.ts"],
       "@aether/hot-hour": ["packages/aether-runtime/src/hot-hour.ts"],
       "@aether/operator-door": ["packages/aether-runtime/src/operator-door.ts"],
-      "@aether/cart-match": ["packages/aether-runtime/src/cart-match.ts"]
+      "@aether/cart-match": ["packages/aether-runtime/src/cart-match.ts"],
+      "@aether/closed-room": ["packages/aether-runtime/src/closed-room.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

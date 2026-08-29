@@ -19,7 +19,8 @@
     "./cart-occupancy": "./src/cart-occupancy.ts",
     "./hot-hour": "./src/hot-hour.ts",
     "./operator-door": "./src/operator-door.ts",
-    "./cart-match": "./src/cart-match.ts"
+    "./cart-match": "./src/cart-match.ts",
+    "./closed-room": "./src/closed-room.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

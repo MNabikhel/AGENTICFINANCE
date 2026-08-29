@@ -16,6 +16,7 @@ import { loadCartOccupancy, runCartOccupancy } from "@aether/cart-occupancy";
 import { loadVelocity, runVelocity } from "@aether/hot-hour";
 import { loadDoor, runDoor } from "@aether/operator-door";
 import { loadCartMatch, runCartMatch } from "@aether/cart-match";
+import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
 
 const [, , command, name] = process.argv;
 
@@ -137,6 +138,12 @@ if (command === "demo" && (name === "match" || name === "cart-match" || name ===
   process.exit(0);
 }
 
+if (command === "demo" && (name === "room" || name === "invite" || name === "closed-room" || name === "invited-seller")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/room/scenario.json");
+  printReport(runClosedRoom(loadClosedRoom(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -159,5 +166,6 @@ usage:
   pnpm demo velocity
   pnpm demo door
   pnpm demo match
+  pnpm demo room
   pnpm mcp`);
 process.exit(command ? 1 : 0);
