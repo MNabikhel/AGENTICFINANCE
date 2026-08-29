@@ -1,5 +1,5 @@
 {
-  "description": "MCP tool surface. Each tool is a CommandType. inputSchema mirrors /schemas.",
+  "description": "MCP tool surface. Command tools are 1:1 with CommandType. Demo tools are TAP runners. inputSchema mirrors /schemas.",
   "tools": [
     {
       "name": "aether_identity_register",

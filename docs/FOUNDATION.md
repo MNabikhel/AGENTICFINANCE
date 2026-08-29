@@ -1117,7 +1117,14 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list cite
 - [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through cite. No inspect-overlay grind.
 - [x] OpenAPI `PAYMENT-SIGNATURE` is optional. The command bus is the JSON body. Omit is a policy deny, not a missing header. `envelope.require` is HTTP 402 with `PAYMENT-REQUIRED`. Hosted unpaid stays the door (`host.unpaid`).
 
-### 169. Next: only if the pin would lie
+### 169. Honesty remainder
+
+`verifyChain` is signatures and hashes, not the referee. Intent constraints evaluate in policy. Dispatch cannot mint a self-deal. No lying listed HTTP/MCP face on the cite listing.
+
+- [x] DESIGN `verifyChain` steps are JWS / hash / payee / amount / exp. Constraint evaluation is §3. A ghost `payment.reference` still verifyChains. Cite TAP is the referee.
+- [x] Self-deal is `policy.test.ts` (unit deny). `hire.test.ts` does not mint one. No role has both `hire.create` and `market.quote`. MCP command tools stay 1:1; demo tools are TAP runners.
+
+### 170. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 

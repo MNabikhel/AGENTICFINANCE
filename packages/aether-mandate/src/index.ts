@@ -50,6 +50,10 @@ export function paymentHash(payment: PaymentMandate): string {
   return payloadHash(payment);
 }
 
+/**
+ * Signatures, hashes, payee, amount, and (optionally) expiry.
+ * Intent constraints evaluate in policy, not here.
+ */
 export function verifyChain(input: {
   intent: Signed<IntentMandate>;
   cart: Signed<CartMandate>;

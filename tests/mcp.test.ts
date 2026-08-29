@@ -164,6 +164,12 @@ describe("MCP host", () => {
       .map((t) => t.commandType)
       .sort();
     expect(mapped).toEqual(types);
+    const catalog = JSON.parse(readFileSync(resolve("packages/aether-mcp/tools.json"), "utf8")) as {
+      description: string;
+    };
+    expect(catalog.description).toContain("Command tools are 1:1 with CommandType");
+    expect(catalog.description).toContain("Demo tools are TAP runners");
+    expect(catalog.description).not.toContain("Each tool is a CommandType");
   });
 
   it("runs the sub-hire demo over the tool bus", () => {
