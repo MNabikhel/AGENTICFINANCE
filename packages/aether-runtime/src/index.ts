@@ -34,6 +34,7 @@ import {
   NIGHT_WATCH_TLDR,
   SUBHIRE_TLDR,
   CLEARING_TLDR,
+  REFUND_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -781,6 +782,11 @@ export class Runtime {
           id: "clearing-window",
           name: "Clearing window TAP",
           description: "POST /v1/demo/clearing — bilateral credit, settlement photo, not a second payment",
+        },
+        {
+          id: "refund-unwind",
+          name: "Refund TAP",
+          description: "POST /v1/demo/refund — unwind funded escrow; quote stays spent; circuit stays sticky",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3182,7 +3188,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

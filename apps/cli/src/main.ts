@@ -4,6 +4,7 @@ import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
 import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
+import { loadRefund, runRefund } from "@aether/refund";
 
 const [, , command, name] = process.argv;
 
@@ -53,6 +54,12 @@ if (command === "demo" && (name === "clearing" || name === "clearing-window")) {
   process.exit(0);
 }
 
+if (command === "demo" && (name === "refund" || name === "refund-unwind")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/refund/scenario.json");
+  printReport(runRefund(loadRefund(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -63,5 +70,6 @@ usage:
   pnpm demo night-watch
   pnpm demo sub-hire
   pnpm demo clearing
+  pnpm demo refund
   pnpm mcp`);
 process.exit(command ? 1 : 0);

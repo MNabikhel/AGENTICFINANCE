@@ -217,6 +217,12 @@ paths:
       responses:
         "200": { description: Clearing-window TAP report. Bilateral credit, settlement photo, not a second payment. }
         "500": { description: Assertions failed }
+  /v1/demo/refund:
+    post:
+      operationId: demoRefundUnwind
+      responses:
+        "200": { description: Refund TAP report. Unwind funded escrow; quote stays spent; circuit stays sticky. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

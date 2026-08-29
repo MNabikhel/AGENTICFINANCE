@@ -7,7 +7,8 @@
     "./sprint": "./src/sprint-procurement.ts",
     "./night-watch": "./src/night-watch.ts",
     "./sub-hire": "./src/sub-hire.ts",
-    "./clearing-window": "./src/clearing-window.ts"
+    "./clearing-window": "./src/clearing-window.ts",
+    "./refund": "./src/refund.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

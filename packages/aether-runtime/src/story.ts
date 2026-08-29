@@ -31,6 +31,9 @@ export const SUBHIRE_TLDR =
 export const CLEARING_TLDR =
   "A desk hired a vendor for $800. A second $400 hire was refused — that pair’s open gross would have blown a $1,000 bilateral credit line. Closing a settlement window photographed the $800 and cleared the open book. Money did not move again. After the photo, the $400 hire went through. Credit is a window, not a second payment.";
 
+export const REFUND_TLDR =
+  "A desk funded an $800 research hire. Refund returned escrow, restored the mandate budget, and reverse-recorded the pair in the clearing book. The quote stayed spent. An over-cap hire had already blown the daily fuse; refund did not untrip it. After a treasury reset, refund of delivered work was hire.state. Unwind is not a new quote and not a circuit reset.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

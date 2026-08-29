@@ -1,6 +1,6 @@
 # Foundation backlog (10-day stretch)
 
-Montaz is out until about **2026-09-07**. He asked for a planning phase, then autonomous building of the agent economic kernel — not the same inspect overlay again. This file is the queue. Check a box when tests + the three demos pass and the work is on the PR.
+Montaz is out until about **2026-09-07**. He asked for a planning phase, then autonomous building of the agent economic kernel — not the same inspect overlay again. This file is the queue. Check a box when tests + the TAP demos pass and the work is on the PR.
 
 ## What we are building
 
@@ -57,11 +57,11 @@ Inspect honesty, OpenAPI status codes, MCP description drift. Not a workstream o
 
 ### 6. Refund is a demonstrated unwind
 
-`hire.refund` reverses escrow, restores mandate spend, and reverse-records clearing. The TAP demos never show it. A quote is not restored. The daily circuit stays sticky.
+`hire.refund` reverses escrow, restores mandate spend, and reverse-records clearing. A quote is not restored. The daily circuit stays sticky.
 
-- [ ] A TAP (`pnpm demo refund`) funds a hire, unwinds it, and shows cash back, spend restored, clearing reversed, quote still spent, circuit still sticky if it had tripped.
-- [ ] No new policy rule unless a current allow is a lie (refund after deliver, or a restored quote).
+- [x] A TAP (`pnpm demo refund`) funds a hire, unwinds it, and shows cash back, spend restored, clearing reversed, quote still spent, circuit still sticky if it had tripped.
+- [x] No new policy rule unless a current allow is a lie (refund after deliver, or a restored quote).
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

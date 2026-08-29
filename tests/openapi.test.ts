@@ -40,6 +40,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("/v1/demo/sub-hire:");
     expect(spec).toContain("/v1/demo/clearing:");
     expect(spec).toContain("not a second payment");
+    expect(spec).toContain("/v1/demo/refund:");
+    expect(spec).toContain("quote stays spent");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

@@ -28,6 +28,7 @@ export default defineConfig({
       "@aether/night-watch": path.resolve(__dirname, "packages/aether-runtime/src/night-watch.ts"),
       "@aether/sub-hire": path.resolve(__dirname, "packages/aether-runtime/src/sub-hire.ts"),
       "@aether/clearing-window": path.resolve(__dirname, "packages/aether-runtime/src/clearing-window.ts"),
+      "@aether/refund": path.resolve(__dirname, "packages/aether-runtime/src/refund.ts"),
     },
   },
 });

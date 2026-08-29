@@ -175,6 +175,11 @@
       "name": "aether_demo_clearing",
       "commandType": "demo.clearing",
       "description": "Run the clearing-window TAP: bilateral credit limit, settlement photo, not a second payment."
+    },
+    {
+      "name": "aether_demo_refund",
+      "commandType": "demo.refund",
+      "description": "Run the refund TAP: unwind funded escrow, restore spend, reverse clearing; quote stays spent; circuit stays sticky."
     }
   ]
 }
