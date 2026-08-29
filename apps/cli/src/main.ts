@@ -54,6 +54,7 @@ import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-f
 import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
 import { loadKyaNotSelf, runKyaNotSelf } from "@aether/kya-not-self";
 import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
+import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fresh";
 
 const [, , command, name] = process.argv;
 
@@ -403,6 +404,12 @@ if (command === "demo" && (name === "warrant" || name === "signet" || name === "
   process.exit(0);
 }
 
+if (command === "demo" && (name === "vacant" || name === "hollow" || name === "zeroed")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/vacant/scenario.json");
+  printReport(runOccurrenceFresh(loadOccurrenceFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -463,5 +470,6 @@ usage:
   pnpm demo pause
   pnpm demo mirror
   pnpm demo warrant
+  pnpm demo vacant
   pnpm mcp`);
 process.exit(command ? 1 : 0);

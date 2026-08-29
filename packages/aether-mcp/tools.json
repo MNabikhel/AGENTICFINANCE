@@ -425,6 +425,11 @@
       "name": "aether_demo_warrant",
       "commandType": "demo.warrant",
       "description": "Run the warrant TAP: an agent-issued slip is not host authority. host.subscribe on an agent-issued intent is host.human_authority; a missing seat and the public kernel still allow; a human-issued slip still seats; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_vacant",
+      "commandType": "demo.vacant",
+      "description": "Run the vacant TAP: a cadence with no slots is not a cadence. mandate.issue_intent with max_occurrences 0 is mandate.occurrence_fresh; a spent slot, a closed calendar, and a nested child still allow; a one-slot slip still mints; funded work still finishes."
     }
   ]
 }

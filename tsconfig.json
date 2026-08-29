@@ -71,7 +71,8 @@
       "@aether/attestation-fresh": ["packages/aether-runtime/src/attestation-fresh.ts"],
       "@aether/approval-pending": ["packages/aether-runtime/src/approval-pending.ts"],
       "@aether/kya-not-self": ["packages/aether-runtime/src/kya-not-self.ts"],
-      "@aether/host-authority": ["packages/aether-runtime/src/host-authority.ts"]
+      "@aether/host-authority": ["packages/aether-runtime/src/host-authority.ts"],
+      "@aether/occurrence-fresh": ["packages/aether-runtime/src/occurrence-fresh.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

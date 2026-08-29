@@ -517,6 +517,12 @@ paths:
       responses:
         "200": { description: Warrant TAP report. An agent-issued slip is not host authority. }
         "500": { description: Assertions failed }
+  /v1/demo/vacant:
+    post:
+      operationId: demoVacant
+      responses:
+        "200": { description: Vacant TAP report. A cadence with no slots is not a cadence. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

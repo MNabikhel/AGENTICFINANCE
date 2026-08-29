@@ -140,6 +140,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a mirror");
     expect(spec).toContain("/v1/demo/warrant:");
     expect(spec).toContain("not host authority");
+    expect(spec).toContain("/v1/demo/vacant:");
+    expect(spec).toContain("not a cadence");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

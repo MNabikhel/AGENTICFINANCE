@@ -181,6 +181,9 @@ export const MIRROR_TLDR =
 export const WARRANT_TLDR =
   "A founder funded an $800 hire. Subscribe on an agent-issued slip was host.human_authority — not a missing seat, not the public kernel. A human-issued slip still seated. That funded work still released. An agent-issued slip is not host authority.";
 
+export const VACANT_TLDR =
+  "A founder funded an $800 hire. Minting a cadence with no slots was mandate.occurrence_fresh — not a spent slot, not a closed calendar, not a nested child. A one-slot slip still minted. That funded work still released. A cadence with no slots is not a cadence.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

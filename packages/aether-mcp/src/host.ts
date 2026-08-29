@@ -61,6 +61,7 @@ import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-f
 import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
 import { loadKyaNotSelf, runKyaNotSelf } from "@aether/kya-not-self";
 import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
+import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fresh";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -160,6 +161,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_pause",
   "aether_demo_mirror",
   "aether_demo_warrant",
+  "aether_demo_vacant",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -692,6 +694,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_warrant") {
       const report = runHostAuthority(loadHostAuthority("fixtures/demo/warrant/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_vacant") {
+      const report = runOccurrenceFresh(loadOccurrenceFresh("fixtures/demo/vacant/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }
