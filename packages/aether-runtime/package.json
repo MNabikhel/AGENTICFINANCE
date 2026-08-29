@@ -25,7 +25,8 @@
     "./unique-live": "./src/unique-live.ts",
     "./spread-bound": "./src/spread-bound.ts",
     "./parent-fresh": "./src/parent-fresh.ts",
-    "./mandate-parent": "./src/mandate-parent.ts"
+    "./mandate-parent": "./src/mandate-parent.ts",
+    "./mm-inventory": "./src/mm-inventory.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

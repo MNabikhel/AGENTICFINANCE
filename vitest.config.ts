@@ -46,6 +46,7 @@ export default defineConfig({
       "@aether/spread-bound": path.resolve(__dirname, "packages/aether-runtime/src/spread-bound.ts"),
       "@aether/parent-fresh": path.resolve(__dirname, "packages/aether-runtime/src/parent-fresh.ts"),
       "@aether/mandate-parent": path.resolve(__dirname, "packages/aether-runtime/src/mandate-parent.ts"),
+      "@aether/mm-inventory": path.resolve(__dirname, "packages/aether-runtime/src/mm-inventory.ts"),
     },
   },
 });

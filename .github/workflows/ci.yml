@@ -37,3 +37,4 @@ jobs:
       - run: pnpm demo:band
       - run: pnpm demo:nest
       - run: pnpm demo:heir
+      - run: pnpm demo:stock

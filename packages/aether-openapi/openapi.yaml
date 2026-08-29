@@ -325,6 +325,12 @@ paths:
       responses:
         "200": { description: Heir TAP report. A dead parent is not a parent. }
         "500": { description: Assertions failed }
+  /v1/demo/stock:
+    post:
+      operationId: demoStock
+      responses:
+        "200": { description: Stock TAP report. Empty MM USDC is not a missing maker. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

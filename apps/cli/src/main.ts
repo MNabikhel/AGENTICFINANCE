@@ -22,6 +22,7 @@ import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
 import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
 import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
+import { loadMmInventory, runMmInventory } from "@aether/mm-inventory";
 
 const [, , command, name] = process.argv;
 
@@ -179,6 +180,12 @@ if (command === "demo" && (name === "heir" || name === "child-slip" || name === 
   process.exit(0);
 }
 
+if (command === "demo" && (name === "stock" || name === "inventory" || name === "mm-inventory")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/stock/scenario.json");
+  printReport(runMmInventory(loadMmInventory(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -207,5 +214,6 @@ usage:
   pnpm demo band
   pnpm demo nest
   pnpm demo heir
+  pnpm demo stock
   pnpm mcp`);
 process.exit(command ? 1 : 0);

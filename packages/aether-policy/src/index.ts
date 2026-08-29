@@ -1501,6 +1501,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "The nested fx.rateE6 is the stored rate. It must sit inside the 200bps band (980000–1020000). A top-level rateE6 is not the band.",
   },
+  "mm.inventory": {
+    kind: "none",
+    hint: "The market maker’s USDC book does not cover this payout. Restock inventory, or settle a smaller window. Empty MM USDC is not a missing maker, not a vendor overdraft, and not the 200bps band. A deny does not consume the window.",
+  },
   "actor.known": {
     kind: "none",
     hint: "That actorId is not in this world. Register them first. A missing speaker is not a 500. identity.known is for named targets, not the speaker.",

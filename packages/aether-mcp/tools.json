@@ -265,6 +265,11 @@
       "name": "aether_demo_heir",
       "commandType": "demo.heir",
       "description": "Run the heir TAP: a dead parent is not a parent. New hire.create is mandate.parent_fresh; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_stock",
+      "commandType": "demo.stock",
+      "description": "Run the stock TAP: empty MM USDC is not a missing maker. Thin inventory is mm.inventory; a smaller window still converts."
     }
   ]
 }

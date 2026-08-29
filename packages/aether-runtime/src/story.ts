@@ -85,6 +85,9 @@ export const NEST_TLDR =
 export const HEIR_TLDR =
   "A founder handed a tighter child slip to a desk. The desk hired while the parent lived. After the parent slip died, a new hire was mandate.parent_fresh — no hire written. That funded work still released. A dead parent is not a parent.";
 
+export const STOCK_TLDR =
+  "A market maker quoted a conversion against a thin USDC book. That was mm.inventory — the window stayed unspent. A smaller window on a different RFQ converted. Empty MM USDC is not a missing maker, not a vendor overdraft, and not the 200bps band.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -755,6 +758,8 @@ export function autoBeat(input: {
               ? "The vendor’s USD book does not cover this window. An FX settle is not an overdraft. The market maker’s USDC inventory is a different rule."
               : rule?.ruleId === "mm.known"
                 ? "There is no market maker in this world. Register one before settling FX. A window is not a journal against missing books."
+                : rule?.ruleId === "mm.inventory"
+                  ? "The market maker’s USDC book does not cover this payout. Empty inventory is not a missing maker, not a vendor overdraft, and not the 200bps band. A smaller window still converts."
                 : rule?.ruleId === "ledger.safe_balance"
                   ? "A book on this window cannot hold the resulting cents. IEEE rounding is not a mint. The market maker’s USDC inventory is a different rule."
               : (rule?.message ?? "The referee refused the FX settle."),

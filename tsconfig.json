@@ -39,7 +39,8 @@
       "@aether/unique-live": ["packages/aether-runtime/src/unique-live.ts"],
       "@aether/spread-bound": ["packages/aether-runtime/src/spread-bound.ts"],
       "@aether/parent-fresh": ["packages/aether-runtime/src/parent-fresh.ts"],
-      "@aether/mandate-parent": ["packages/aether-runtime/src/mandate-parent.ts"]
+      "@aether/mandate-parent": ["packages/aether-runtime/src/mandate-parent.ts"],
+      "@aether/mm-inventory": ["packages/aether-runtime/src/mm-inventory.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
