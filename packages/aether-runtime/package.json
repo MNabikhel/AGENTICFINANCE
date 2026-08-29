@@ -40,7 +40,8 @@
     "./payment-skus": "./src/payment-skus.ts",
     "./sku-currency": "./src/sku-currency.ts",
     "./hire-party": "./src/hire-party.ts",
-    "./ledger-sufficient": "./src/ledger-sufficient.ts"
+    "./ledger-sufficient": "./src/ledger-sufficient.ts",
+    "./not-expired": "./src/not-expired.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -130,6 +130,9 @@ export const PARTY_TLDR =
 export const CASH_TLDR =
   "A founder funded an $800 hire that emptied the desk. A $400 second fund was ledger.sufficient — same currency, operating cash, legal hire arrow. That funded work still released. Empty cash is not a negative book.";
 
+export const STALE_TLDR =
+  "A founder funded an $800 hire on a live quote. After that quote’s hour lapsed, hire.create was market.not_expired — known SKU, known room, unspent promise. A fresh quote on that still-live room still hired. That funded work still released. A stale quote is not a hire.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -619,6 +622,8 @@ export function autoBeat(input: {
         body = "That seller was not on the RFQ. A named invite list is a closed room.";
       } else if (ruleId === "market.known_rfq") {
         body = "That quote or RFQ is not in this world. A missing room is not a missing SKU.";
+      } else if (ruleId === "market.not_expired") {
+        body = "That quote or RFQ has expired. A price promise is one hour; a room is one day. Completing funded work after that is legal; a new hire on a dead price is not. A corpse FX window at mint stays market.fx_fresh.";
       } else if (ruleId === "hire.quote_unspent") {
         body = "That quote already produced a hire, an FX settle, or is held by an open approval. A price promise is used once. A deny does not consume it; a void does not restore it.";
       } else if (ruleId === "mandate.known_intent") {

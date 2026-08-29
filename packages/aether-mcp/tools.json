@@ -340,6 +340,11 @@
       "name": "aether_demo_cash",
       "commandType": "demo.cash",
       "description": "Run the cash TAP: empty cash is not a negative book. hire.fund against an empty operating book is ledger.sufficient; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_stale",
+      "commandType": "demo.stale",
+      "description": "Run the stale TAP: a stale quote is not a hire. hire.create against a lapsed quote is market.not_expired; the quote stays unspent; a fresh quote on that still-live room still hires; funded work still finishes."
     }
   ]
 }

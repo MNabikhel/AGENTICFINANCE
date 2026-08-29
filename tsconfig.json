@@ -54,7 +54,8 @@
       "@aether/payment-skus": ["packages/aether-runtime/src/payment-skus.ts"],
       "@aether/sku-currency": ["packages/aether-runtime/src/sku-currency.ts"],
       "@aether/hire-party": ["packages/aether-runtime/src/hire-party.ts"],
-      "@aether/ledger-sufficient": ["packages/aether-runtime/src/ledger-sufficient.ts"]
+      "@aether/ledger-sufficient": ["packages/aether-runtime/src/ledger-sufficient.ts"],
+      "@aether/not-expired": ["packages/aether-runtime/src/not-expired.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

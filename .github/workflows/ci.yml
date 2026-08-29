@@ -52,3 +52,4 @@ jobs:
       - run: pnpm demo:priced
       - run: pnpm demo:party
       - run: pnpm demo:cash
+      - run: pnpm demo:stale

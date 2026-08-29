@@ -106,6 +106,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a party");
     expect(spec).toContain("/v1/demo/cash:");
     expect(spec).toContain("not a negative book");
+    expect(spec).toContain("/v1/demo/stale:");
+    expect(spec).toContain("not a hire");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {
