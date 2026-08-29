@@ -601,6 +601,12 @@ paths:
       responses:
         "200": { description: Guest TAP report. A missing invitee is not a closed room. }
         "500": { description: Assertions failed }
+  /v1/demo/dust:
+    post:
+      operationId: demoDust
+      responses:
+        "200": { description: Dust TAP report. A stale unpaid cart is not a late check. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

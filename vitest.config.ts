@@ -92,6 +92,7 @@ export default defineConfig({
       "@aether/kya-known-parent": path.resolve(__dirname, "packages/aether-runtime/src/kya-known-parent.ts"),
       "@aether/known-attestation": path.resolve(__dirname, "packages/aether-runtime/src/known-attestation.ts"),
       "@aether/known-invitee": path.resolve(__dirname, "packages/aether-runtime/src/known-invitee.ts"),
+      "@aether/cart-fresh": path.resolve(__dirname, "packages/aether-runtime/src/cart-fresh.ts"),
     },
   },
 });

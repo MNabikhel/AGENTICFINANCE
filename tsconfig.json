@@ -85,7 +85,8 @@
       "@aether/known-approval": ["packages/aether-runtime/src/known-approval.ts"],
       "@aether/kya-known-parent": ["packages/aether-runtime/src/kya-known-parent.ts"],
       "@aether/known-attestation": ["packages/aether-runtime/src/known-attestation.ts"],
-      "@aether/known-invitee": ["packages/aether-runtime/src/known-invitee.ts"]
+      "@aether/known-invitee": ["packages/aether-runtime/src/known-invitee.ts"],
+      "@aether/cart-fresh": ["packages/aether-runtime/src/cart-fresh.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

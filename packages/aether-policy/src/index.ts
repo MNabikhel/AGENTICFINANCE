@@ -1596,6 +1596,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "This slip's calendar window is closed for new spends. Completing a funded hire is not a new spend. Issue a new intent if you need another hire.",
   },
+  "mandate.not_expired": {
+    kind: "none",
+    hint: "That cart, payment, or slip window has closed. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart.",
+  },
 };
 
 export function remediationFor(decision: PolicyDecision): Remediation | undefined {

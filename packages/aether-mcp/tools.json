@@ -495,6 +495,11 @@
       "name": "aether_demo_guest",
       "commandType": "demo.guest",
       "description": "Run the guest TAP: a missing invitee is not a closed room. market.rfq that invites a missing seller is identity.known; a closed guest list and a missing SKU still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_dust",
+      "commandType": "demo.dust",
+      "description": "Run the dust TAP: a stale unpaid cart is not a late check. mandate.issue_payment on a stale unpaid cart is mandate.not_expired; occupancy and a dead cart at fund still allow; funded work still finishes."
     }
   ]
 }

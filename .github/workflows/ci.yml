@@ -83,3 +83,4 @@ jobs:
       - run: pnpm demo:graft
       - run: pnpm demo:seal
       - run: pnpm demo:guest
+      - run: pnpm demo:dust

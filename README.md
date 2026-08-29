@@ -83,6 +83,7 @@ pnpm demo docket          # a missing ticket is not a late yes
 pnpm demo graft           # a missing hop parent is not a nested handshake
 pnpm demo seal            # a missing handshake is not a silent tombstone
 pnpm demo guest           # a missing invitee is not a closed room
+pnpm demo dust            # a stale unpaid cart is not a late check
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

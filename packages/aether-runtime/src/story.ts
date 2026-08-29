@@ -223,6 +223,9 @@ export const SEAL_TLDR =
 export const GUEST_TLDR =
   "A founder funded an $800 hire. An RFQ that invited a missing seller was identity.known — a closed guest list is not this deny, a missing SKU is not this deny. No room was written. That funded work still released. A missing invitee is not a closed room.";
 
+export const DUST_TLDR =
+  "A founder funded an $800 hire. A first payment on a stale unpaid cart was mandate.not_expired — occupancy is not this deny, a dead cart at fund is not this deny. No payment was written. That funded work still released. A stale unpaid cart is not a late check.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -363,6 +366,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} could not mint a second payment`,
           body: "A cart takes one payment. A second payment is not a second check.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.not_expired") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not mint a check on a stale cart`,
+          body: "A stale unpaid cart is not a late check. Occupancy is a different object. A dead cart at fund is a different object. Issue a live cart.",
           tone: "deny",
           commandType: cmd.type,
         };
