@@ -63,6 +63,7 @@
     "demo:mirror": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mirror",
     "demo:warrant": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo warrant",
     "demo:vacant": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo vacant",
+    "demo:badge": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo badge",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

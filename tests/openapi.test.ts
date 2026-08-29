@@ -142,6 +142,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not host authority");
     expect(spec).toContain("/v1/demo/vacant:");
     expect(spec).toContain("not a cadence");
+    expect(spec).toContain("/v1/demo/badge:");
+    expect(spec).toContain("not a shopping pass");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

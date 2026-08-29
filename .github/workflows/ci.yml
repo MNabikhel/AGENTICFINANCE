@@ -70,3 +70,4 @@ jobs:
       - run: pnpm demo:mirror
       - run: pnpm demo:warrant
       - run: pnpm demo:vacant
+      - run: pnpm demo:badge

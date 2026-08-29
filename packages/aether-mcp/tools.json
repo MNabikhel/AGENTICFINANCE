@@ -430,6 +430,11 @@
       "name": "aether_demo_vacant",
       "commandType": "demo.vacant",
       "description": "Run the vacant TAP: a cadence with no slots is not a cadence. mandate.issue_intent with max_occurrences 0 is mandate.occurrence_fresh; a spent slot, a closed calendar, and a nested child still allow; a one-slot slip still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_badge",
+      "commandType": "demo.badge",
+      "description": "Run the badge TAP: a badge is not a shopping pass. hire.create by an auditor is actor.role_capability; a freeze, a missing speaker, and a spent quote still allow; the auditor still verifies; funded work still finishes."
     }
   ]
 }

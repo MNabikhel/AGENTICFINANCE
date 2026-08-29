@@ -523,6 +523,12 @@ paths:
       responses:
         "200": { description: Vacant TAP report. A cadence with no slots is not a cadence. }
         "500": { description: Assertions failed }
+  /v1/demo/badge:
+    post:
+      operationId: demoBadge
+      responses:
+        "200": { description: Badge TAP report. A badge is not a shopping pass. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

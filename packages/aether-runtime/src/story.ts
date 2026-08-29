@@ -184,6 +184,9 @@ export const WARRANT_TLDR =
 export const VACANT_TLDR =
   "A founder funded an $800 hire. Minting a cadence with no slots was mandate.occurrence_fresh — not a spent slot, not a closed calendar, not a nested child. A one-slot slip still minted. That funded work still released. A cadence with no slots is not a cadence.";
 
+export const BADGE_TLDR =
+  "A founder funded an $800 hire. An auditor’s hire.create was actor.role_capability — not a freeze, not a missing speaker, not a spent quote. The auditor still verified the notary. That funded work still released. A badge is not a shopping pass.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -687,6 +690,8 @@ export function autoBeat(input: {
         body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move.";
       } else if (ruleId === "kya.chain_intact") {
         body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists.";
+      } else if (ruleId === "actor.role_capability") {
+        body = "This role cannot hire. An auditor who can spend is not an auditor. Completing funded work after that is legal; a new hire by this speaker is not.";
       } else if (ruleId === "actor.not_frozen") {
         body = "This agent is frozen. Freeze is a kill switch: autonomy drops to L0 and spend is denied.";
       } else if (ruleId === "market.invited_seller") {
