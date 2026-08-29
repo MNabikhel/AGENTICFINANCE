@@ -369,6 +369,49 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.principal_not_frozen")?.verdict).toBe("deny");
   });
 
+  it("denies spend when KYA depth exceeds max", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 4,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.delegation_depth")?.verdict).toBe("deny");
+    expect(d.verdict).toBe("deny");
+  });
+
+  it("allows spend when KYA depth is at the max", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 3,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.delegation_depth")?.verdict).toBe("allow");
+  });
+
   it("allows L5 to skip the approval threshold while amount_range still denies", () => {
     const d = evaluate(
       ctx({

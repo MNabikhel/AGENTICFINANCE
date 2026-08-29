@@ -1373,6 +1373,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     commandType: "kya.attest",
     hint: "No live handshake from the principal. Attest, or stop. Revoke is a tombstone. An expired hop stays kya.attestation_fresh. A nested parent stays kya.parent_fresh. A frozen speaker stays actor.not_frozen. A frozen principal stays kya.principal_not_frozen. A ghost revoke stays kya.known_attestation. Completing funded work after expiry is legal; freeze and revoke still bind.",
   },
+  "kya.delegation_depth": {
+    kind: "none",
+    hint: "Hop count > 3 is a refuse. Shorten the chain. A missing path stays kya.chain_intact. A dead parent hop stays kya.parent_fresh. A climb stays kya.capability_subset. Completing funded work is legal. A nested parentId under the same grantor does not add hops.",
+  },
   "kya.principal_not_frozen": {
     kind: "unfreeze_principal",
     commandType: "identity.unfreeze",

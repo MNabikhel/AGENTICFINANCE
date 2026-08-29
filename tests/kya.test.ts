@@ -57,6 +57,26 @@ describe("delegation graph", () => {
     expect(resolved.grantedMaxAutonomy).toBe(3);
   });
 
+  it("reports depth 4 on a four-hop grantor chain with one principal", () => {
+    const g = new DelegationGraph();
+    g.attest(att({ id: "dlg_1" as DelegationId, grantorId: founder, delegateId: watch }));
+    g.attest(att({ id: "dlg_2" as DelegationId, grantorId: watch, delegateId: scout }));
+    g.attest(att({ id: "dlg_3" as DelegationId, grantorId: scout, delegateId: extra }));
+    const deep = "aid_01J6AETHERDEEP00000000001" as AgentId;
+    g.attest(att({ id: "dlg_4" as DelegationId, grantorId: extra, delegateId: deep }));
+    const path = g.path(founder, deep, now);
+    expect(path?.length).toBe(4);
+    const resolved = resolveKya({
+      required: true,
+      actor: actor(deep),
+      principalId: founder,
+      graph: g,
+      nowIso: now,
+    });
+    expect(resolved.pathOk).toBe(true);
+    expect(resolved.depth).toBe(4);
+  });
+
   it("revoke cascades and blocks implicit supervisor grants", () => {
     const g = new DelegationGraph();
     g.attest(att({ id: "dlg_1" as DelegationId, grantorId: founder, delegateId: watch }));

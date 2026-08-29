@@ -85,6 +85,7 @@ import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
 import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
 import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
 import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
+import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
 
 const [, , command, name] = process.argv;
 
@@ -620,6 +621,12 @@ if (command === "demo" && (name === "pen" || name === "quill" || name === "nibs"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "well" || name === "deep" || name === "fathom")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/well/scenario.json");
+  printReport(runDelegationDepth(loadDelegationDepth(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -711,5 +718,6 @@ usage:
   pnpm demo ice
   pnpm demo rail
   pnpm demo pen
+  pnpm demo well
   pnpm mcp`);
 process.exit(command ? 1 : 0);

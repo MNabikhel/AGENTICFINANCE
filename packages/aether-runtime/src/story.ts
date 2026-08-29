@@ -274,6 +274,9 @@ export const RAIL_TLDR =
 export const PEN_TLDR =
   "A junior desk funded an $800 hire with grown-up pauses. Submitting that envelope was human.signature_present — the role still allows, the subject still allows, the rung only pauses. No ticket was minted. Treasury still released. A junior signature is not a grown-up pause.";
 
+export const WELL_TLDR =
+  "A founder funded an $800 hire under a three-hop handshake. A four-hop desk was kya.delegation_depth — a missing path is not this deny, a dead parent hop is not this deny, a climb is not this deny. No hire written. That funded work still released. A fourth hop is not a nested parent.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -849,6 +852,8 @@ export function autoBeat(input: {
         body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move. A frozen speaker is not this deny. Completing funded work after expiry is legal; freeze and revoke still bind. Unfreeze the principal to unlock the lock.";
       } else if (ruleId === "kya.chain_intact") {
         body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists. An expired hop is not this deny. Completing funded work after expiry is legal; freeze and revoke still bind. Attest again to unlock the lock.";
+      } else if (ruleId === "kya.delegation_depth") {
+        body = "This handshake chain is longer than three hops. A fourth hop is not a nested parent. A missing path is not this deny. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "actor.role_capability") {
         body = "This role cannot hire. An auditor who can spend is not an auditor. Completing funded work after that is legal; a new hire by this speaker is not.";
       } else if (ruleId === "actor.not_frozen") {
@@ -888,7 +893,9 @@ export function autoBeat(input: {
         headline:
           ruleId === "mandate.known_intent"
             ? `${who} hired against a slip that does not exist`
-            : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+            : ruleId === "kya.delegation_depth"
+              ? `${who} hired down a chain that is too long`
+              : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
         body,
         tone: "deny",
         commandType: cmd.type,

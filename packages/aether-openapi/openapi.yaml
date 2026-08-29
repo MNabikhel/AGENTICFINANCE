@@ -703,6 +703,12 @@ paths:
       responses:
         "200": { description: Pen TAP report. A junior signature is not a grown-up pause. }
         "500": { description: Assertions failed }
+  /v1/demo/well:
+    post:
+      operationId: demoWell
+      responses:
+        "200": { description: Well TAP report. A fourth hop is not a nested parent. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

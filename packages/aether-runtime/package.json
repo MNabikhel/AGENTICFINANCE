@@ -88,7 +88,8 @@
     "./chain-intact": "./src/chain-intact.ts",
     "./principal-not-frozen": "./src/principal-not-frozen.ts",
     "./allowed-instruments": "./src/allowed-instruments.ts",
-    "./human-signature": "./src/human-signature.ts"
+    "./human-signature": "./src/human-signature.ts",
+    "./delegation-depth": "./src/delegation-depth.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
