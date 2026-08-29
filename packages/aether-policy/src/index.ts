@@ -1338,6 +1338,15 @@ export const RULES: readonly Rule[] = [
         : v("host.unique_subscriber", "deny", "subscriber already bound");
     },
   },
+  {
+    id: "identity.party",
+    evaluate: (ctx) => {
+      if (ctx.identityPartyOk === undefined) return v("identity.party", "allow", "not a rotate");
+      return ctx.identityPartyOk
+        ? v("identity.party", "allow", "actor is the named agent or a kill-switch role")
+        : v("identity.party", "deny", "actor is not the named agent");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1661,6 +1670,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "host.unique_subscriber": {
     kind: "none",
     hint: "This agent already has a subscription on this host. One subscriber, one row. Spend is not gated on the row.",
+  },
+  "identity.party": {
+    kind: "none",
+    hint: "Rotate your own key, or ask a human or treasury. Someone else's key is not yours to turn. A missing agent is identity.known. System is not a treasurer.",
   },
   "clearing.bilateral_limit": {
     kind: "none",

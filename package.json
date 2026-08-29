@@ -95,6 +95,7 @@
     "demo:pen": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo pen",
     "demo:well": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo well",
     "demo:cite": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo cite",
+    "demo:lock": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo lock",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

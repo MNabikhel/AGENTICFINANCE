@@ -105,6 +105,8 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_pen");
     expect(names).toContain("aether_demo_well");
     expect(names).toContain("aether_demo_cite");
+    expect(names).toContain("aether_demo_lock");
+    expect(names).toContain("aether_identity_rotate");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_market_fx_settle");
     expect(names).toContain("aether_ledger_transfer");
@@ -849,6 +851,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("not decoration once a check exists");
+  });
+
+  it("runs the lock demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_lock", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("not yours to turn");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

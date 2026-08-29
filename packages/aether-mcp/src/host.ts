@@ -94,6 +94,7 @@ import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-i
 import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
 import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
+import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -226,6 +227,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_pen",
   "aether_demo_well",
   "aether_demo_cite",
+  "aether_demo_lock",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -923,6 +925,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_cite") {
       const report = runPaymentReference(loadPaymentReference("fixtures/demo/cite/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_lock") {
+      const report = runIdentityParty(loadIdentityParty("fixtures/demo/lock/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

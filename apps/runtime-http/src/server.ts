@@ -99,6 +99,7 @@ import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-i
 import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
 import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
+import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -190,6 +191,7 @@ const railFixture = join(process.cwd(), "fixtures/demo/rail/scenario.json");
 const penFixture = join(process.cwd(), "fixtures/demo/pen/scenario.json");
 const wellFixture = join(process.cwd(), "fixtures/demo/well/scenario.json");
 const citeFixture = join(process.cwd(), "fixtures/demo/cite/scenario.json");
+const lockFixture = join(process.cwd(), "fixtures/demo/lock/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1051,6 +1053,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
+      if (req.method === "POST" && path === "/v1/demo/lock") {
+        const report = runIdentityParty(loadIdentityParty(lockFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "lock" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
       if (req.method === "POST" && path === "/v1/reset") {
         runtime = boot();
         lastDemo = null;
@@ -1187,6 +1196,11 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const unfreeze = path.match(/^\/v1\/agents\/([^/]+)\/unfreeze$/);
       if (req.method === "POST" && unfreeze) {
         handleDispatch(req, res, "identity.unfreeze", { ...body, agentId: unfreeze[1] });
+        return;
+      }
+      const rotate = path.match(/^\/v1\/agents\/([^/]+)\/rotate$/);
+      if (req.method === "POST" && rotate) {
+        handleDispatch(req, res, "identity.rotate", { ...body, agentId: rotate[1] });
         return;
       }
       const account = path.match(/^\/v1\/accounts\/([^/]+)$/);

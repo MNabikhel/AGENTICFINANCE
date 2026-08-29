@@ -55,6 +55,12 @@ paths:
       responses:
         "200": { description: Freeze lifted. Counts as a kill-switch test. }
         "422": { description: Policy deny }
+  /v1/agents/{id}/rotate:
+    post:
+      operationId: identityRotate
+      responses:
+        "200": { description: Current signing key replaced. Retired keys still verify. }
+        "422": { description: Policy deny. Someone else's key is identity.party. }
   /v1/mandates/intent:
     post:
       operationId: mandateIssueIntent
@@ -715,6 +721,12 @@ paths:
       operationId: demoCite
       responses:
         "200": { description: Cite TAP report. A listed reference is not decoration once a check exists. }
+        "500": { description: Assertions failed }
+  /v1/demo/lock:
+    post:
+      operationId: demoLock
+      responses:
+        "200": { description: Lock TAP report. Someone else's key is not yours to turn. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:

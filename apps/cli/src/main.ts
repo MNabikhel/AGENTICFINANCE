@@ -87,6 +87,7 @@ import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-i
 import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
 import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
+import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -635,6 +636,12 @@ if (command === "demo" && (name === "cite" || name === "xref" || name === "hitch
   process.exit(0);
 }
 
+if (command === "demo" && (name === "lock" || name === "ring" || name === "ward")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/lock/scenario.json");
+  printReport(runIdentityParty(loadIdentityParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -744,6 +751,7 @@ usage:
   pnpm demo pen
   pnpm demo well
   pnpm demo cite
+  pnpm demo lock
   aether audit verify
   aether ledger replay
   pnpm mcp`);

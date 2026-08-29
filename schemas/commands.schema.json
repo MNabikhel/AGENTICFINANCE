@@ -26,6 +26,12 @@
       "required": ["agentId"],
       "properties": { "agentId": { "type": "string" } }
     },
+    "identity.rotate": {
+      "type": "object",
+      "properties": {
+        "agentId": { "type": "string", "description": "Omit to rotate the speaker. A missing agent is identity.known. Someone else's key is identity.party unless you are a human or treasury." }
+      }
+    },
     "kya.attest": {
       "type": "object",
       "required": ["delegateId"],

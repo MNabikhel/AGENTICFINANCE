@@ -280,6 +280,9 @@ export const WELL_TLDR =
 export const CITE_TLDR =
   "A founder funded an $800 hire. A second slip that cited a ghost checkout was payment.reference — a listed payee is not this deny, a listed rail is not this deny. No hire written. A citation of that funded check still hired. That funded work still released. A listed reference is not decoration once a check exists.";
 
+export const LOCK_TLDR =
+  "A founder funded an $800 hire. A vendor turning the desk's lock was identity.party — a missing agent is not this deny, a frozen speaker is not this deny. No IDENTITY_ROTATE line was written. The desk still turned its own lock. That funded work still released. Someone else's key is not yours to turn.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1196,6 +1199,37 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "identity.rotate") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not turn a lock`,
+          body: "That agent is not in this world. A missing agent is not a key rotation.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not turn someone else's lock`,
+        body: "Someone else's key is not yours to turn. Rotate your own, or ask a human or treasury.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} turned the lock`,
+      body: "The current key signs new slips. Old signatures still verify against the retired keyring. Rotation is not a new identity.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "identity.unfreeze") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -1429,6 +1463,7 @@ export function analog(): Analog {
       "If yes, money sits in escrow until the work is done, then a receipt is written that points back at the slip.",
       "A notary (the audit log) writes every decision in ink that smudges if you try to rewrite yesterday.",
       "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
+      "An agent can change the lock on its key without becoming someone else. Someone else's key is not yours to turn.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

@@ -90,7 +90,8 @@
     "./allowed-instruments": "./src/allowed-instruments.ts",
     "./human-signature": "./src/human-signature.ts",
     "./delegation-depth": "./src/delegation-depth.ts",
-    "./payment-reference": "./src/payment-reference.ts"
+    "./payment-reference": "./src/payment-reference.ts",
+    "./identity-party": "./src/identity-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

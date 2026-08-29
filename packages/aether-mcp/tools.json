@@ -17,6 +17,11 @@
       "description": "Lift a freeze. Counts as a kill-switch test required before L5."
     },
     {
+      "name": "aether_identity_rotate",
+      "commandType": "identity.rotate",
+      "description": "Rotate an agent's signing key. Omit agentId to rotate the speaker. Someone else's key is identity.party unless you are a human or treasury. A missing agent is identity.known. Retired keys still verify."
+    },
+    {
       "name": "aether_mandate_issue_intent",
       "commandType": "mandate.issue_intent",
       "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused. A child of an expired parent is refused. Inspect of the slip labels live | expired | funded."
@@ -590,6 +595,11 @@
       "name": "aether_demo_cite",
       "commandType": "demo.cite",
       "description": "Run the cite TAP: a listed reference is not decoration once a check exists. hire.create against a slip that cites a ghost checkout after a funded payment exists is payment.reference; a listed payee, a listed rail, and a listed SKU still allow; no hire is written; a citation of that funded check still hires; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_lock",
+      "commandType": "demo.lock",
+      "description": "Run the lock TAP: someone else's key is not yours to turn. identity.rotate of a desk by a vendor is identity.party; a missing agent and a frozen speaker still allow; no IDENTITY_ROTATE line; the desk still turns its own lock; funded work still finishes."
     }
   ]
 }

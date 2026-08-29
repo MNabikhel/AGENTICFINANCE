@@ -905,6 +905,12 @@ export interface PolicyContext {
    */
   kyaPartyOk?: boolean;
   /**
+   * False when identity.rotate names an agent that is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a rotate.
+   * Omitted agentId is the speaker. A vendor cannot turn a desk's lock.
+   */
+  identityPartyOk?: boolean;
+  /**
    * False when identity.register would reuse a runtime alias or its operating book
    * (USD cash, and USDC for data_vendor / market_maker).
    * Absent = not a register. Two agents cannot share one operating book.
@@ -1186,6 +1192,7 @@ export type AuditAction =
   | "RECEIPT_ISSUE"
   | "FREEZE"
   | "UNFREEZE"
+  | "IDENTITY_ROTATE"
   | "KYA_ATTEST"
   | "KYA_REVOKE"
   | "CIRCUIT_RESET"
@@ -1234,6 +1241,7 @@ export type CommandType =
   | "identity.register"
   | "identity.freeze"
   | "identity.unfreeze"
+  | "identity.rotate"
   | "kya.attest"
   | "kya.revoke"
   | "circuit.reset"
@@ -1321,6 +1329,7 @@ export const ROLE_CAPABILITY: Record<
     "identity.register",
     "identity.freeze",
     "identity.unfreeze",
+    "identity.rotate",
     "kya.attest",
     "kya.revoke",
     "circuit.reset",
@@ -1349,6 +1358,7 @@ export const ROLE_CAPABILITY: Record<
     "host.subscribe",
   ],
   procurement: [
+    "identity.rotate",
     "mandate.issue_intent",
     "kya.attest",
     "kya.revoke",
@@ -1370,6 +1380,7 @@ export const ROLE_CAPABILITY: Record<
     "host.subscribe",
   ],
   data_vendor: [
+    "identity.rotate",
     "market.quote",
     "market.fx_settle",
     "hire.accept",
@@ -1383,6 +1394,7 @@ export const ROLE_CAPABILITY: Record<
     "host.card",
   ],
   compute_vendor: [
+    "identity.rotate",
     "market.quote",
     "market.fx_settle",
     "hire.accept",
@@ -1396,6 +1408,7 @@ export const ROLE_CAPABILITY: Record<
     "host.card",
   ],
   market_maker: [
+    "identity.rotate",
     "market.quote",
     "market.fx_settle",
     "envelope.require",
@@ -1406,11 +1419,12 @@ export const ROLE_CAPABILITY: Record<
     "receipt.get",
     "host.card",
   ],
-  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog", "host.card"],
+  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "identity.rotate", "ledger.balances", "receipt.get", "market.catalog", "host.card"],
   human_operator: [
     "identity.register",
     "identity.freeze",
     "identity.unfreeze",
+    "identity.rotate",
     "kya.attest",
     "kya.revoke",
     "circuit.reset",

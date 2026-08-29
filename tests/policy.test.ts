@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 89 rules", () => {
-    expect(RULE_IDS).toHaveLength(89);
+  it("has 90 rules", () => {
+    expect(RULE_IDS).toHaveLength(90);
   });
 
   it("denies frozen actors", () => {
@@ -856,6 +856,54 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("identity.known");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("still names identity.known first when rotating a missing agent", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "identity.rotate",
+        targetKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies rotating someone else's key as identity.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "identity.rotate",
+        targetKnown: true,
+        identityPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.not_frozen")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a desk rotating its own lock as identity.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "identity.rotate",
+        targetKnown: true,
+        identityPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
   });
 
   it("denies an RFQ that invites a missing agent as identity.known", () => {

@@ -104,7 +104,8 @@
       "@aether/allowed-instruments": ["packages/aether-runtime/src/allowed-instruments.ts"],
       "@aether/human-signature": ["packages/aether-runtime/src/human-signature.ts"],
       "@aether/delegation-depth": ["packages/aether-runtime/src/delegation-depth.ts"],
-      "@aether/payment-reference": ["packages/aether-runtime/src/payment-reference.ts"]
+      "@aether/payment-reference": ["packages/aether-runtime/src/payment-reference.ts"],
+      "@aether/identity-party": ["packages/aether-runtime/src/identity-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

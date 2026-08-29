@@ -117,6 +117,7 @@ import {
   PEN_TLDR,
   WELL_TLDR,
   CITE_TLDR,
+  LOCK_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -194,6 +195,7 @@ export type DispatchResult = Result<DispatchOk, DispatchFail>;
 /** Same body, same actor: replay. Denies are not cached so a fix can be retried. */
 const AUTO_IDEMPOTENT = new Set<CommandType>([
   "identity.register",
+  "identity.rotate",
   "hire.create",
   "hire.fund",
   "hire.release",
@@ -430,6 +432,13 @@ export class Runtime {
     const k = this.identity.keys.get(id);
     if (!k) throw new Error(`no key for ${id}`);
     return k;
+  }
+
+  /** Current signing key, then retired keys. Rotation is not a broken chain. */
+  private keyByKid(id: AgentId, kid: string): Ed25519Keypair | undefined {
+    const current = this.identity.keys.get(id);
+    if (current?.kid === kid) return current;
+    return (this.identity.retired.get(id) ?? []).find((k) => k.kid === kid);
   }
 
   alias(key: string): Agent {
@@ -1274,6 +1283,11 @@ export class Runtime {
           name: "Cite TAP",
           description: "POST /v1/demo/cite — a listed reference is not decoration once a check exists",
         },
+        {
+          id: "identity-party",
+          name: "Lock TAP",
+          description: "POST /v1/demo/lock — someone else's key is not yours to turn",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -1428,7 +1442,10 @@ export class Runtime {
   }
 
   captureWorld(): WorldState {
-    const keys = [...this.identity.keys.entries()].map(([, kp]) => exportKeypair(kp));
+    const keys = [
+      ...[...this.identity.keys.values()].map((kp) => exportKeypair(kp)),
+      ...[...this.identity.retired.values()].flat().map((kp) => exportKeypair(kp)),
+    ];
     return {
       v: WORLD_VERSION,
       spec: "aether.protocol.1",
@@ -1548,12 +1565,20 @@ export class Runtime {
     this.identity.agents.clear();
     this.identity.byDid.clear();
     this.identity.keys.clear();
+    this.identity.retired.clear();
     const keyByKid = new Map(world.keys.map((k) => [k.kid, k]));
     for (const agent of world.agents) {
       const kid = agent.keys[0]?.kid;
       const exported = kid ? keyByKid.get(kid) : undefined;
       if (!exported) throw new Error(`missing key for ${agent.id}`);
       this.identity.register(agent, importKeypair(exported));
+      const rest: Ed25519Keypair[] = [];
+      for (const ref of agent.keys.slice(1)) {
+        const raw = keyByKid.get(ref.kid);
+        if (!raw) throw new Error(`missing retired key ${ref.kid}`);
+        rest.push(importKeypair(raw));
+      }
+      if (rest.length > 0) this.identity.retired.set(agent.id, rest);
     }
     this.aliases.clear();
     for (const [k, v] of Object.entries(world.aliases)) this.aliases.set(k, v);
@@ -1926,11 +1951,17 @@ export class Runtime {
       ctx.targetKnown = namedIds.every((id) => Boolean(this.identity.get(id)));
     }
     if (
-      (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze") &&
+      (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate") &&
       ctx.targetKnown === true
     ) {
-      const target = this.identity.get(body.agentId as AgentId);
-      if (target) ctx.freezeStateOk = cmd.type === "identity.freeze" ? !target.frozen : target.frozen;
+      const target = this.identity.get(body.agentId as AgentId) ?? (cmd.type === "identity.rotate" ? actor : undefined);
+      if (target && (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze")) {
+        ctx.freezeStateOk = cmd.type === "identity.freeze" ? !target.frozen : target.frozen;
+      }
+      if (cmd.type === "identity.rotate" && target) {
+        ctx.identityPartyOk =
+          actor.role === "human_operator" || actor.role === "treasury" || actor.id === target.id;
+      }
     }
     if (cmd.type === "kya.attest" && typeof body.delegateId === "string") {
       const delegate = this.identity.get(body.delegateId as AgentId);
@@ -2342,6 +2373,9 @@ export class Runtime {
     if (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "ladder.set") {
       add(body.agentId);
     }
+    if (cmd.type === "identity.rotate") {
+      add(typeof body.agentId === "string" ? body.agentId : cmd.actorId === "system" ? undefined : cmd.actorId);
+    }
     if (cmd.type === "kya.attest") {
       add(body.delegateId);
       add(body.principalId);
@@ -2413,7 +2447,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -2466,6 +2500,8 @@ export class Runtime {
         return this.mutFreeze(body, actor);
       case "identity.unfreeze":
         return this.mutUnfreeze(body, actor);
+      case "identity.rotate":
+        return this.mutRotate(body, actor);
       case "kya.attest":
         return this.mutKyaAttest(body, actor);
       case "kya.revoke":
@@ -2630,6 +2666,20 @@ export class Runtime {
       action: "UNFREEZE",
       subjects: [{ type: "agent", id: agent.id }],
       payload: { id: agent.id, restored: agent.autonomyLevel, killSwitchTested: true },
+    });
+    return agent;
+  }
+
+  private mutRotate(body: Record<string, unknown>, actor: Agent) {
+    const targetId = (typeof body.agentId === "string" ? body.agentId : actor.id) as AgentId;
+    const next = this.identity.mintKey(this.ids.next("kid"));
+    const agent = this.identity.rotate(targetId, next);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "IDENTITY_ROTATE",
+      subjects: [{ type: "agent", id: agent.id }],
+      payload: { id: agent.id, kid: next.kid },
     });
     return agent;
   }
@@ -3480,14 +3530,16 @@ export class Runtime {
     for (const signerId of paymentSignerIds) {
       if (seen.has(signerId)) continue;
       seen.add(signerId);
-      const paymentKey = this.identity.keys.get(signerId);
-      if (!paymentKey) continue;
+      const intentKey = this.keyByKid(intent.payload.issuerId, intent.kid);
+      const cartKey = this.keyByKid(cart.payload.merchant.id, cart.kid);
+      const paymentKey = this.keyByKid(signerId, payment.kid) ?? this.identity.keys.get(signerId);
+      if (!intentKey || !cartKey || !paymentKey) continue;
       const chain = verifyChain({
         intent,
         cart,
         payment,
-        intentKey: this.keypair(intent.payload.issuerId),
-        cartKey: this.keypair(cart.payload.merchant.id),
+        intentKey,
+        cartKey,
         paymentKey,
         nowIso: this.clock.now(),
         checkExp,
@@ -3698,7 +3750,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

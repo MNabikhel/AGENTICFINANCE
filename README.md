@@ -102,6 +102,7 @@ pnpm demo rail            # a listed rail is not decoration
 pnpm demo pen             # a junior signature is not a grown-up pause
 pnpm demo well            # a fourth hop is not a nested parent
 pnpm demo cite            # a listed reference is not decoration once a check exists
+pnpm demo lock            # someone else's key is not yours to turn
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
@@ -293,7 +294,7 @@ Human writes a permission slip (mandate)
 | Path | Role |
 |---|---|
 | `AGENTS.md` | How another agent talks to Aether |
-| `packages/aether-policy` | Referee. 89 ordered rules. No LLM. No I/O. |
+| `packages/aether-policy` | Referee. 90 ordered rules. No LLM. No I/O. |
 | `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
 | `packages/aether-mcp` | Real MCP host. One Runtime. Tools are commands. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |
