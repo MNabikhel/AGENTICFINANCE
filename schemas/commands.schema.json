@@ -147,6 +147,16 @@
         }
       }
     },
+    "market.close": {
+      "type": "object",
+      "required": ["rfqId"],
+      "properties": {
+        "rfqId": {
+          "type": "string",
+          "description": "Shut a live RFQ. Buyer, human, or treasury. A shut room is market.not_expired on quote or hire.create. Completing funded work is legal."
+        }
+      }
+    },
     "market.quote": {
       "type": "object",
       "required": ["rfqId", "price"],

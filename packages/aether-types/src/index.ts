@@ -495,9 +495,10 @@ export interface Rfq {
 
 /**
  * Inspect / snapshot view. A room past `expiresAt` is `expired`, not `live`.
- * The store stays raw (`expiresAt` only). Quoting or hiring still names `market.not_expired`.
+ * Closed (torn by market.close) wins over expired. The store stays raw
+ * (`expiresAt` only). Quoting or hiring a shut room still names `market.not_expired`.
  */
-export type RfqStatus = "live" | "expired";
+export type RfqStatus = "live" | "expired" | "closed";
 
 export interface Quote {
   id: QuoteId;
@@ -920,6 +921,12 @@ export interface PolicyContext {
    */
   marketPartyOk?: boolean;
   /**
+   * False when market.close names an RFQ whose buyer is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a close, or the
+   * room is unknown (`rfqKnown` handles that). A desk cannot shut someone else's room.
+   */
+  rfqPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.
@@ -1206,6 +1213,7 @@ export type AuditAction =
   | "MANDATE_ISSUE"
   | "MANDATE_REVOKE"
   | "RFQ_CREATE"
+  | "RFQ_CLOSE"
   | "QUOTE_SUBMIT"
   | "QUOTE_WITHDRAW"
   | "HIRE_TRANSITION"
@@ -1275,6 +1283,7 @@ export type CommandType =
   | "mandate.issue_cart"
   | "mandate.issue_payment"
   | "market.rfq"
+  | "market.close"
   | "market.quote"
   | "market.withdraw"
   | "market.fx_settle"
@@ -1366,6 +1375,7 @@ export const ROLE_CAPABILITY: Record<
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
+    "market.close",
     "market.fx_settle",
     "market.withdraw",
     "hire.create",
@@ -1397,6 +1407,7 @@ export const ROLE_CAPABILITY: Record<
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
+    "market.close",
     "hire.create",
     "hire.accept",
     "hire.fund",
@@ -1464,6 +1475,7 @@ export const ROLE_CAPABILITY: Record<
     "identity.unfreeze",
     "identity.rotate",
     "market.withdraw",
+    "market.close",
     "kya.attest",
     "kya.revoke",
     "circuit.reset",

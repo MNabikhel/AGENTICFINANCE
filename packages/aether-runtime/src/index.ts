@@ -121,6 +121,7 @@ import {
   VOID_TLDR,
   FOLD_TLDR,
   RIP_TLDR,
+  SHUT_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -329,6 +330,7 @@ export class Runtime {
   readonly lastOccurrence = new Map<MandateId, Instant>();
   readonly consumedQuotes = new Set<string>();
   readonly withdrawnQuotes = new Set<string>();
+  readonly closedRfqs = new Set<string>();
   readonly revokedIntents = new Set<MandateId>();
   readonly reservedQuotes = new Map<string, ApprovalId>();
   readonly settleEvents: { at: string; volume: number }[] = [];
@@ -660,8 +662,9 @@ export class Runtime {
    * Quote view for other agents. Spent (consumed) and held (live reserved ticket)
    * win over withdrawn and expired. Withdrawn (folded by market.withdraw) wins over
    * expired. Expired includes the quote envelope, a lapsed FX validUntil,
-   * and (for a hire quote) a dead parent RFQ. An FX quote is a window on the quote,
-   * not the room. A reservation whose ticket is past expiresAt is not held.
+   * and (for a hire quote) a dead or shut parent RFQ. An FX quote is a window on the quote,
+   * not the room. Closing the room does not kill an already-minted FX window.
+   * A reservation whose ticket is past expiresAt is not held.
    * The store stays raw (expiresAt / validUntil only).
    */
   quoteView(quote: Quote): Quote & { status: QuoteStatus } {
@@ -689,7 +692,7 @@ export class Runtime {
       }
     } else {
       const rfq = this.rfqs.get(quote.rfqId);
-      if (!rfq || Date.parse(rfq.expiresAt) <= now) {
+      if (!rfq || Date.parse(rfq.expiresAt) <= now || this.closedRfqs.has(rfq.id)) {
         return { ...quote, status: "expired" };
       }
     }
@@ -697,10 +700,12 @@ export class Runtime {
   }
 
   /**
-   * RFQ view for other agents. A room past expiresAt is `expired`, not `live`.
-   * The store stays raw (expiresAt only). Quoting or hiring still names `market.not_expired`.
+   * RFQ view for other agents. A shut room is `closed`, not `live`. Closed wins
+   * over expired. A room past expiresAt is `expired`, not `live`. The store stays
+   * raw (expiresAt only). Quoting or hiring a shut room still names `market.not_expired`.
    */
   rfqView(rfq: Rfq): Rfq & { status: RfqStatus } {
+    if (this.closedRfqs.has(rfq.id)) return { ...rfq, status: "closed" };
     if (Date.parse(rfq.expiresAt) <= Date.parse(this.clock.now())) {
       return { ...rfq, status: "expired" };
     }
@@ -1315,6 +1320,11 @@ export class Runtime {
           name: "Rip TAP",
           description: "POST /v1/demo/rip — someone else's unused slip is not yours to tear",
         },
+        {
+          id: "rfq-party",
+          name: "Shut TAP",
+          description: "POST /v1/demo/shut — someone else's room is not yours to close",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -1506,6 +1516,7 @@ export class Runtime {
       lastOccurrence: [...this.lastOccurrence.entries()],
       consumedQuotes: [...this.consumedQuotes],
       withdrawnQuotes: [...this.withdrawnQuotes],
+      closedRfqs: [...this.closedRfqs],
       revokedIntents: [...this.revokedIntents],
       reservedQuotes: [...this.reservedQuotes.entries()],
       settledFxQuotes: [...this.consumedQuotes],
@@ -1642,6 +1653,8 @@ export class Runtime {
     for (const id of world.settledFxQuotes ?? []) this.consumedQuotes.add(id);
     this.withdrawnQuotes.clear();
     for (const id of world.withdrawnQuotes ?? []) this.withdrawnQuotes.add(id);
+    this.closedRfqs.clear();
+    for (const id of world.closedRfqs ?? []) this.closedRfqs.add(id);
     this.revokedIntents.clear();
     for (const id of world.revokedIntents ?? []) this.revokedIntents.add(id);
     this.reservedQuotes.clear();
@@ -2135,6 +2148,14 @@ export class Runtime {
           actor.role === "human_operator" || actor.role === "treasury" || actor.id === quoted.sellerId;
       }
     }
+    if (cmd.type === "market.close") {
+      const room =
+        typeof body.rfqId === "string" ? this.rfqs.get(String(body.rfqId)) : undefined;
+      if (room) {
+        ctx.rfqPartyOk =
+          actor.role === "human_operator" || actor.role === "treasury" || actor.id === room.buyerId;
+      }
+    }
     if (cmd.type === "mandate.revoke" && intent) {
       ctx.mandatePartyOk =
         actor.role === "human_operator" || actor.role === "treasury" || actor.id === intent.payload.issuerId;
@@ -2310,7 +2331,7 @@ export class Runtime {
       }
       if (rfq) {
         out.skuListed = typeof sku === "string" && isCatalogSku(sku);
-        out.marketFresh = Date.parse(rfq.expiresAt) > now;
+        out.marketFresh = !this.closedRfqs.has(rfq.id) && Date.parse(rfq.expiresAt) > now;
         const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
         out.sellerInvited = invited.length === 0 || invited.includes(actor.id);
         if (out.skuListed) {
@@ -2333,6 +2354,7 @@ export class Runtime {
         out.skuListed = typeof sku === "string" && isCatalogSku(sku);
         out.marketFresh =
           !this.withdrawnQuotes.has(quote.id) &&
+          !this.closedRfqs.has(rfq.id) &&
           Date.parse(quote.expiresAt) > now &&
           Date.parse(rfq.expiresAt) > now;
         const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
@@ -2364,9 +2386,17 @@ export class Runtime {
         } else if (rfqOfQuote) {
           out.marketFresh =
             !this.withdrawnQuotes.has(quote.id) &&
+            !this.closedRfqs.has(rfqOfQuote.id) &&
             envelopeLive &&
             Date.parse(rfqOfQuote.expiresAt) > now;
         }
+      }
+      return out;
+    }
+    if (cmd.type === "market.close") {
+      out.rfqKnown = Boolean(rfq);
+      if (rfq) {
+        out.marketFresh = !this.closedRfqs.has(rfq.id) && Date.parse(rfq.expiresAt) > now;
       }
       return out;
     }
@@ -2535,7 +2565,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "market.withdraw" || cmd.type === "mandate.revoke" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "market.withdraw" || cmd.type === "market.close" || cmd.type === "mandate.revoke" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -2608,6 +2638,8 @@ export class Runtime {
         return this.mutPayment(body, actor);
       case "market.rfq":
         return this.mutRfq(body, actor);
+      case "market.close":
+        return this.mutRfqClose(body, actor);
       case "market.quote":
         return this.mutQuote(body, actor);
       case "market.withdraw":
@@ -3043,9 +3075,25 @@ export class Runtime {
     return rfq;
   }
 
+  private mutRfqClose(body: Record<string, unknown>, actor: Agent) {
+    const rfq = this.rfqs.get(String(body.rfqId));
+    if (!rfq) throw new Error("unknown rfq");
+    if (this.closedRfqs.has(rfq.id)) throw new Error("rfq already closed");
+    this.closedRfqs.add(rfq.id);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "RFQ_CLOSE",
+      subjects: [{ type: "rfq", id: rfq.id }],
+      payload: { id: rfq.id, buyerId: rfq.buyerId },
+    });
+    return rfq;
+  }
+
   private mutQuote(body: Record<string, unknown>, actor: Agent) {
     const rfq = this.rfqs.get(String(body.rfqId));
     if (!rfq) throw new Error("unknown rfq");
+    if (this.closedRfqs.has(rfq.id)) throw new Error("rfq closed");
     const price = body.price as Money;
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, price.currency)) {
       throw new Error("sku currency");
@@ -3115,6 +3163,7 @@ export class Runtime {
     this.assertKyaNestedParentsLive(actor, intent);
     if (this.consumedQuotes.has(quote.id)) throw new Error("quote already used");
     if (this.withdrawnQuotes.has(quote.id)) throw new Error("quote withdrawn");
+    if (this.closedRfqs.has(rfq.id)) throw new Error("rfq closed");
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, quote.price.currency)) {
       throw new Error("sku currency");
     }
@@ -3895,7 +3944,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

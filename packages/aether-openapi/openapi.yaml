@@ -96,6 +96,20 @@ paths:
       operationId: marketRfq
       responses:
         "200": { description: RFQ created. Command bus allow, not HTTP 201 Created. }
+  /v1/rfqs/{id}/close:
+    post:
+      operationId: marketClose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live RFQ shut. Store stays raw. Inspect labels closed. }
+        "422": { description: Policy deny. Stranger is market.rfq_party. Ghost RFQ is market.known_rfq. Already shut or expired is market.not_expired. }
   /v1/quotes:
     post:
       operationId: marketQuote
@@ -787,6 +801,12 @@ paths:
       operationId: demoRip
       responses:
         "200": { description: Rip TAP report. Someone else's unused slip is not yours to tear. }
+        "500": { description: Assertions failed }
+  /v1/demo/shut:
+    post:
+      operationId: demoShut
+      responses:
+        "200": { description: Shut TAP report. Someone else's room is not yours to close. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:

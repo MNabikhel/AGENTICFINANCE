@@ -91,6 +91,7 @@ import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
 import { loadHireVoid, runHireVoid } from "@aether/hire-void";
 import { loadMarketParty, runMarketParty } from "@aether/market-party";
 import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
+import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -663,6 +664,12 @@ if (command === "demo" && (name === "rip" || name === "tear" || name === "shred"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "shut" || name === "clap" || name === "gavel")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/shut/scenario.json");
+  printReport(runRfqParty(loadRfqParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -776,6 +783,7 @@ usage:
   pnpm demo void
   pnpm demo fold
   pnpm demo rip
+  pnpm demo shut
   aether audit verify
   aether ledger replay
   pnpm mcp`);

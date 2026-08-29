@@ -115,6 +115,7 @@ export default defineConfig({
       "@aether/hire-void": path.resolve(__dirname, "packages/aether-runtime/src/hire-void.ts"),
       "@aether/market-party": path.resolve(__dirname, "packages/aether-runtime/src/market-party.ts"),
       "@aether/mandate-party": path.resolve(__dirname, "packages/aether-runtime/src/mandate-party.ts"),
+      "@aether/rfq-party": path.resolve(__dirname, "packages/aether-runtime/src/rfq-party.ts"),
     },
   },
 });

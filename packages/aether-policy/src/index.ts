@@ -1368,6 +1368,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.party", "deny", "actor is not the named issuer");
     },
   },
+  {
+    id: "market.rfq_party",
+    evaluate: (ctx) => {
+      if (ctx.rfqPartyOk === undefined) return v("market.rfq_party", "allow", "not a close");
+      return ctx.rfqPartyOk
+        ? v("market.rfq_party", "allow", "actor is the named buyer or a kill-switch role")
+        : v("market.rfq_party", "deny", "actor is not the named buyer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1703,6 +1712,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.party": {
     kind: "none",
     hint: "Rip your own unused slip, or ask a human or treasury. Someone else's permission is not yours to tear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired on a new hire. Completing funded work is legal.",
+  },
+  "market.rfq_party": {
+    kind: "none",
+    hint: "Shut your own room, or ask a human or treasury. Someone else's RFQ is not yours to close. A missing room is market.known_rfq. A shut room is market.not_expired on quote or hire.create.",
   },
   "clearing.bilateral_limit": {
     kind: "none",

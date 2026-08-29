@@ -292,6 +292,9 @@ export const FOLD_TLDR =
 export const RIP_TLDR =
   "A founder funded an $800 hire. A desk ripping the founder's unused slip was mandate.party — a missing slip is not this deny, an expired window is not this deny. No MANDATE_REVOKE line was written. The founder still tore its own unused slip. Hiring that ripped slip was mandate.not_expired. That funded work still released. Someone else's unused slip is not yours to tear.";
 
+export const SHUT_TLDR =
+  "A founder funded an $800 hire. A second desk shutting the research desk's live room was market.rfq_party — a missing room is not this deny, an expired window is not this deny. No RFQ_CLOSE line was written. The buyer still shut its own room. Hiring that shut room's quote was market.not_expired. That funded work still released. Someone else's room is not yours to close.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1129,6 +1132,34 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "market.close") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not shut that room`,
+        body:
+          rule?.ruleId === "market.rfq_party"
+            ? "Someone else's room is not yours to close. The buyer, a human, or treasury may shut a live RFQ."
+            : rule?.ruleId === "market.known_rfq"
+              ? "That room is not in this world. A missing RFQ is not a shut room."
+              : rule?.ruleId === "market.not_expired"
+                ? "That window is already closed. A shut room is not a second close."
+                : "A live room can be shut. That is not an expired window.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} shut a live room`,
+      body: "The RFQ is off the table. Hire.create of a quote on a shut room is market.not_expired. Expired is when the day dies. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "mandate.revoke") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -1562,6 +1593,7 @@ export function analog(): Analog {
       "An unfunded offer can be torn up. That is not a refund. A refund is cash coming back after escrow moved.",
       "A live bid can be folded. That is not a spent quote. Spent is when hire.create consumed it. Someone else's bid is not yours to pull.",
       "A permission slip can be torn up. That is not a void and not firing a handshake. Someone else's unused slip is not yours to tear.",
+      "A live room can be shut. That is not an expired window. Expired is when the day dies. Someone else's room is not yours to close.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

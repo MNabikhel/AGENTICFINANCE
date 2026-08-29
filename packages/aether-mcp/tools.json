@@ -47,6 +47,11 @@
       "description": "Create an RFQ. Non-empty invitedSellerIds is a closed room of live agents; empty/omitted is open. A missing guest is identity.known."
     },
     {
+      "name": "aether_market_close",
+      "commandType": "market.close",
+      "description": "Shut a live RFQ. Buyer, human, or treasury. Ghost room stays market.known_rfq. Stranger stays market.rfq_party. A shut room is market.not_expired on quote or hire.create. Completing funded work is legal. Someone else's room is not yours to close."
+    },
+    {
       "name": "aether_market_quote",
       "commandType": "market.quote",
       "description": "Submit a quote or FX rate. MM rates must stay inside 200bps. An FX validUntil already past or unparseable is refused."
@@ -630,6 +635,11 @@
       "name": "aether_demo_rip",
       "commandType": "demo.rip",
       "description": "Run the rip TAP: someone else's unused slip is not yours to tear. mandate.revoke of a live unused intent by a desk is mandate.party; a missing slip and an expired window still allow; no MANDATE_REVOKE line; the founder still rips its own unused slip; hire.create of that ripped slip is mandate.not_expired; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_shut",
+      "commandType": "demo.shut",
+      "description": "Run the shut TAP: someone else's room is not yours to close. market.close of a live RFQ by a second desk is market.rfq_party; a missing room and an expired window still allow; market.party still allows; no RFQ_CLOSE line; the buyer still shuts its own room; hire.create of that shut room's quote is market.not_expired; funded work still finishes."
     }
   ]
 }

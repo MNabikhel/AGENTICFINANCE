@@ -406,6 +406,62 @@ describe("quote inspect", () => {
     expect(late.error.decision?.remediation?.ruleId).toBe("market.not_expired");
   });
 
+  it("labels a shut RFQ closed, not expired, without writing status into the store", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "shut me",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    const shut = rt.dispatch(cmd("market.close", desk.id, { rfqId }));
+    expect(shut.ok).toBe(true);
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
+    expect(rt.snapshotState().rfqs.find((r) => r.id === rfqId)?.status).toBe("closed");
+    expect("status" in (rt.rfqs.get(rfqId) ?? {})).toBe(false);
+  });
+
+  it("labels a shut RFQ closed even after the day dies", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "shut then wait",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "shut");
+    rt.clock.set("2026-08-29T00:01:00.000Z");
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
+    expect("status" in (rt.rfqs.get(rfqId) ?? {})).toBe(false);
+  });
+
+  it("labels a hire quote expired when the parent RFQ is shut while the quote envelope still lives", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "shut");
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("expired");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+    const hire = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(hire.ok).toBe(false);
+    if (hire.ok) return;
+    expect(hire.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+  });
+
   it("labels a hire quote expired when the parent RFQ dies while the quote envelope still lives", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
@@ -529,6 +585,54 @@ describe("quote inspect", () => {
     const room = rt.rfqs.get(rfqId) as Rfq;
     rt.rfqs.set(rfqId, { ...room, expiresAt: rt.clock.now() });
     expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("expired");
+    expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("live");
+    expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
+  });
+
+  it("does not expire an FX quote when the parent RFQ is shut — the window lives on the quote", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "mm-shut",
+          displayName: "Market Maker",
+          role: "market_maker",
+          autonomyLevel: 2,
+        }),
+      ),
+      "mm-shut",
+    );
+    const mm = rt.alias("mm-shut");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [mm.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-28T12:00:00.000Z",
+          },
+        }),
+      ),
+      "fx quote",
+    );
+    const rfqId = (rfq.data as { id: string }).id;
+    const quoteId = (quoted.data as { id: string }).id;
+    must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "shut fx room");
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
     expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("live");
     expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
   });

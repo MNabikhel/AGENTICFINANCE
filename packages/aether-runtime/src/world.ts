@@ -78,6 +78,8 @@ export interface WorldState {
   reservedQuotes?: Array<[string, string]>;
   /** Quote ids folded by market.withdraw. Optional so old worlds boot. */
   withdrawnQuotes?: string[];
+  /** RFQ ids shut by market.close. Optional so old worlds boot. */
+  closedRfqs?: string[];
   /** Intent ids torn by mandate.revoke. Optional so old worlds boot. */
   revokedIntents?: MandateId[];
   settleEvents: Array<{ at: string; volume: number }>;
