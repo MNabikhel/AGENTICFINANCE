@@ -167,24 +167,22 @@ export function runOccurrenceFresh(scenario: OccurrenceFreshScenario): Occurrenc
     funded: rt.hires.get(hireId)?.state,
   };
 
-  const legal = must(
-    rt.dispatch(
-      cmd("mandate.issue_intent", founder.id, {
-        subjectId: desk.id,
-        task: scenario.legal.task,
-        constraints: [
-          { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
-          payees,
-          { type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 1 },
-        ],
-      }),
-    ),
-    "one-slot slip",
+  const legalAttempt = rt.dispatch(
+    cmd("mandate.issue_intent", founder.id, {
+      subjectId: desk.id,
+      task: scenario.legal.task,
+      constraints: [
+        { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+        payees,
+        { type: "payment.agent_recurrence", frequency: "ON_DEMAND", max_occurrences: 1 },
+      ],
+    }),
   );
+  const legal = must(legalAttempt, "one-slot slip");
   const legalId = (legal.data as { payload: { id: MandateId } }).payload.id;
   const afterLegal = {
-    freshAllows: allowedRule(legal, "mandate.occurrence_fresh"),
-    spendAllows: allowedRule(legal, "payment.recurrence"),
+    freshAllows: allowedRule(legalAttempt, "mandate.occurrence_fresh"),
+    spendAllows: allowedRule(legalAttempt, "payment.recurrence"),
     size: rt.intents.size,
   };
 
