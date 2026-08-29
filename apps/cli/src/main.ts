@@ -84,6 +84,7 @@ import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
 import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
 import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
+import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 
 const [, , command, name] = process.argv;
 
@@ -613,6 +614,12 @@ if (command === "demo" && (name === "rail" || name === "tender" || name === "til
   process.exit(0);
 }
 
+if (command === "demo" && (name === "pen" || name === "quill" || name === "nibs")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/pen/scenario.json");
+  printReport(runHumanSignature(loadHumanSignature(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -703,5 +710,6 @@ usage:
   pnpm demo cut
   pnpm demo ice
   pnpm demo rail
+  pnpm demo pen
   pnpm mcp`);
 process.exit(command ? 1 : 0);

@@ -99,6 +99,7 @@ pnpm demo sour            # a grown-up yes is not a late hire
 pnpm demo cut             # a revoke is not an expiry
 pnpm demo ice             # a frozen principal is not a frozen desk
 pnpm demo rail            # a listed rail is not decoration
+pnpm demo pen             # a junior signature is not a grown-up pause
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

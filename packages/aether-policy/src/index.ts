@@ -1343,6 +1343,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "role_forbidden",
     hint: "This role cannot run that command. Use a different actor. An auditor cannot spend.",
   },
+  "human.signature_present": {
+    kind: "none",
+    hint: "L0/L1 envelope.submit needs a human_operator payment JWS. A grown-up pause does not wink a junior signature. Climb to L2 to self-sign, or have a human sign the payment. Completing funded work is legal via hire.release. A vendor pull stays mandate.subject_is_actor. An auditor stays actor.role_capability.",
+  },
   "payment.amount_range": ISSUE_INTENT,
   "payment.budget": ISSUE_INTENT,
   "payment.parent_budget": ISSUE_INTENT,

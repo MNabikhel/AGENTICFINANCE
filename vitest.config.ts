@@ -108,6 +108,7 @@ export default defineConfig({
       "@aether/chain-intact": path.resolve(__dirname, "packages/aether-runtime/src/chain-intact.ts"),
       "@aether/principal-not-frozen": path.resolve(__dirname, "packages/aether-runtime/src/principal-not-frozen.ts"),
       "@aether/allowed-instruments": path.resolve(__dirname, "packages/aether-runtime/src/allowed-instruments.ts"),
+      "@aether/human-signature": path.resolve(__dirname, "packages/aether-runtime/src/human-signature.ts"),
     },
   },
 });

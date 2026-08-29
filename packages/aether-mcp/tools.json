@@ -575,6 +575,11 @@
       "name": "aether_demo_rail",
       "commandType": "demo.rail",
       "description": "Run the rail TAP: a listed rail is not decoration. hire.create against a slip that lists a ghost instrument is payment.allowed_payment_instruments; a listed payee and a live-rail type still allow; no hire is written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pen",
+      "commandType": "demo.pen",
+      "description": "Run the pen TAP: a junior signature is not a grown-up pause. envelope.submit by an L1 desk is human.signature_present; role, subject, and party still allow; the rung only pauses; no ticket is minted; treasury still releases funded work."
     }
   ]
 }

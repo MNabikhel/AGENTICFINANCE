@@ -1950,6 +1950,65 @@ describe("policy catalog", () => {
     expect(d.verdict).not.toBe("deny");
   });
 
+  it("denies L0/L1 envelope.submit without a human payment JWS as human.signature_present", () => {
+    const human = agent({ role: "human_operator", autonomyLevel: 0, did: "did:aether:human" });
+    const desk = agent({ autonomyLevel: 1, did: "did:aether:proc" });
+    const d = evaluate(
+      ctx({
+        actor: desk,
+        counterparties: [desk, human],
+        commandType: "envelope.submit",
+        payment: signedPayment(),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("human.signature_present");
+  });
+
+  it("allows L2+ to self-sign envelope.submit", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 2 }),
+        commandType: "envelope.submit",
+        payment: signedPayment(),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("allow");
+  });
+
+  it("allows L1 envelope.submit when a human_operator signed the payment", () => {
+    const human = agent({ role: "human_operator", autonomyLevel: 0, did: "did:aether:human" });
+    const desk = agent({ autonomyLevel: 1, did: "did:aether:proc" });
+    const d = evaluate(
+      ctx({
+        actor: desk,
+        counterparties: [desk, human],
+        commandType: "envelope.submit",
+        payment: { ...signedPayment(), issuer: human.did },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("allow");
+    expect(d.verdict).toBe("escalate");
+  });
+
+  it("does not let a waived ticket wink a junior signature", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 1 }),
+        commandType: "envelope.submit",
+        payment: signedPayment(),
+        thresholdWaived: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("human.signature_present");
+  });
+
   it("denies a handshake born expired as kya.mint_fresh", () => {
     const d = evaluate(
       ctx({

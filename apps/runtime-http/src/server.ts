@@ -96,6 +96,7 @@ import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
 import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
 import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
+import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -184,6 +185,7 @@ const sourFixture = join(process.cwd(), "fixtures/demo/sour/scenario.json");
 const cutFixture = join(process.cwd(), "fixtures/demo/cut/scenario.json");
 const iceFixture = join(process.cwd(), "fixtures/demo/ice/scenario.json");
 const railFixture = join(process.cwd(), "fixtures/demo/rail/scenario.json");
+const penFixture = join(process.cwd(), "fixtures/demo/pen/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1021,6 +1023,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runAllowedInstruments(loadAllowedInstruments(railFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "rail" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/pen") {
+        const report = runHumanSignature(loadHumanSignature(penFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "pen" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

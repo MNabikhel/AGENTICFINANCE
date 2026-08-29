@@ -271,6 +271,9 @@ export const ICE_TLDR =
 export const RAIL_TLDR =
   "A founder funded an $800 hire under a slip that listed this kernel's sim ledger. A second slip that listed a ghost rail was payment.allowed_payment_instruments — a listed payee is not this deny, a live-rail type is not this deny. No hire written. That funded work still released. A listed rail is not decoration.";
 
+export const PEN_TLDR =
+  "A junior desk funded an $800 hire with grown-up pauses. Submitting that envelope was human.signature_present — the role still allows, the subject still allows, the rung only pauses. No ticket was minted. Treasury still released. A junior signature is not a grown-up pause.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1084,6 +1087,10 @@ export function autoBeat(input: {
               ? "That hire has not bound a cart. Issue the cart with hireId. A loose cart on the command is not this hire’s check."
             : rule?.ruleId === "ledger.safe_balance"
               ? "The vendor’s book cannot hold these cents. IEEE rounding is not a mint."
+            : rule?.ruleId === "human.signature_present"
+              ? "L0/L1 payment needs a human signature. A grown-up pause does not wink a junior envelope. Completing funded work is legal."
+            : rule?.ruleId === "mandate.subject_is_actor"
+              ? "This permission slip names a different subject. A vendor pull is not the buyer’s check."
             : `Role ${actor.role} is not allowed to move money. Rule: ${rule?.ruleId ?? "actor.role_capability"}. An auditor who can spend is not an auditor.`,
         tone: "deny",
         commandType: cmd.type,

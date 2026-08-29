@@ -91,6 +91,7 @@ import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
 import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
 import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
+import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -220,6 +221,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_cut",
   "aether_demo_ice",
   "aether_demo_rail",
+  "aether_demo_pen",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -902,6 +904,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_rail") {
       const report = runAllowedInstruments(loadAllowedInstruments("fixtures/demo/rail/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pen") {
+      const report = runHumanSignature(loadHumanSignature("fixtures/demo/pen/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

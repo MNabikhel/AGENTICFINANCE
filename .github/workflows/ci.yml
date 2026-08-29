@@ -99,3 +99,4 @@ jobs:
       - run: pnpm demo:cut
       - run: pnpm demo:ice
       - run: pnpm demo:rail
+      - run: pnpm demo:pen
