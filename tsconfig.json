@@ -26,7 +26,8 @@
       "@aether/replay": ["packages/aether-runtime/src/replay.ts"],
       "@aether/envelope-nonce": ["packages/aether-runtime/src/envelope-nonce.ts"],
       "@aether/deny-cache": ["packages/aether-runtime/src/deny-cache.ts"],
-      "@aether/recurrence-cadence": ["packages/aether-runtime/src/recurrence-cadence.ts"]
+      "@aether/recurrence-cadence": ["packages/aether-runtime/src/recurrence-cadence.ts"],
+      "@aether/execution-window": ["packages/aether-runtime/src/execution-window.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

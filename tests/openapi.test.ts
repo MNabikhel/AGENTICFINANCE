@@ -50,6 +50,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("never a cached success");
     expect(spec).toContain("/v1/demo/recurrence:");
     expect(spec).toContain("one-slot cadence");
+    expect(spec).toContain("/v1/demo/calendar:");
+    expect(spec).toContain("closed calendar");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

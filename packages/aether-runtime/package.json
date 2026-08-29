@@ -12,7 +12,8 @@
     "./replay": "./src/replay.ts",
     "./envelope-nonce": "./src/envelope-nonce.ts",
     "./deny-cache": "./src/deny-cache.ts",
-    "./recurrence-cadence": "./src/recurrence-cadence.ts"
+    "./recurrence-cadence": "./src/recurrence-cadence.ts",
+    "./execution-window": "./src/execution-window.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -46,6 +46,9 @@ export const DENY_CACHE_TLDR =
 export const RECURRENCE_TLDR =
   "A founder wrote a one-slot slip. The desk hired once and released. Completing that funded work was not a second slot. A second hire.create was payment.recurrence. A cadence is not an open checkbook.";
 
+export const CALENDAR_TLDR =
+  "A founder wrote a same-day calendar. Hiring before it opened was payment.execution_date. Inside the window the desk funded an $800 hire. After the calendar closed, that funded work still released. A new hire was payment.execution_date. A closed calendar is not a freeze on funded work.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -462,6 +465,8 @@ export function autoBeat(input: {
         body = "That permission slip is not in this world. A missing slip is not a missing handshake.";
       } else if (ruleId === "payment.recurrence") {
         body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
+      } else if (ruleId === "payment.execution_date") {
+        body = "This permission slip’s calendar is closed. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "mandate.parent_fresh") {
         body = "The parent permission slip has expired. A dead parent is not a parent. Completing a funded hire after that is legal; a new hire is not.";
       } else if (ruleId === "kya.parent_fresh") {

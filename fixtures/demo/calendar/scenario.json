@@ -1,0 +1,31 @@
+{
+  "id": "calendar",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000011",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "calendar": {
+    "openAt": "2026-08-28T12:00:00.000Z",
+    "closedAt": "2026-08-29T00:00:00.000Z"
+  },
+  "intent": {
+    "task": "Desk may buy research only today between 06:00 and 18:00. A closed calendar is not a freeze on funded work.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 80000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 200000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 },
+      {
+        "type": "payment.execution_date",
+        "not_before": "2026-08-28T06:00:00.000Z",
+        "not_after": "2026-08-28T18:00:00.000Z"
+      }
+    ]
+  },
+  "quotes": {
+    "once": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

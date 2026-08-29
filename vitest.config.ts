@@ -33,6 +33,7 @@ export default defineConfig({
       "@aether/envelope-nonce": path.resolve(__dirname, "packages/aether-runtime/src/envelope-nonce.ts"),
       "@aether/deny-cache": path.resolve(__dirname, "packages/aether-runtime/src/deny-cache.ts"),
       "@aether/recurrence-cadence": path.resolve(__dirname, "packages/aether-runtime/src/recurrence-cadence.ts"),
+      "@aether/execution-window": path.resolve(__dirname, "packages/aether-runtime/src/execution-window.ts"),
     },
   },
 });

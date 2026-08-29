@@ -247,6 +247,12 @@ paths:
       responses:
         "200": { description: Recurrence TAP report. A one-slot cadence is not an open checkbook. }
         "500": { description: Assertions failed }
+  /v1/demo/calendar:
+    post:
+      operationId: demoCalendar
+      responses:
+        "200": { description: Calendar TAP report. A closed calendar is not a freeze on funded work. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

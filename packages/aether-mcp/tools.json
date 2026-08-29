@@ -200,6 +200,11 @@
       "name": "aether_demo_recurrence",
       "commandType": "demo.recurrence",
       "description": "Run the recurrence TAP: a one-slot cadence is not an open checkbook. Completing funded work is not a second slot."
+    },
+    {
+      "name": "aether_demo_calendar",
+      "commandType": "demo.calendar",
+      "description": "Run the calendar TAP: a closed calendar is not a freeze on funded work. Completing funded work after not_after is legal; a new hire is not."
     }
   ]
 }
