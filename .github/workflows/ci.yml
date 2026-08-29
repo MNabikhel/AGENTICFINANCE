@@ -22,3 +22,4 @@ jobs:
       - run: pnpm demo:refund
       - run: pnpm demo:replay
       - run: pnpm demo:nonce
+      - run: pnpm demo:deny

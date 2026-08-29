@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -155,6 +155,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 103. `hire.refund` is a demonstrated unwind. `pnpm demo refund` / `aether_demo_refund` / `POST /v1/demo/refund` funds a hire, returns escrow, restores `spentByIntent`, reverse-records clearing, leaves the quote spent, and leaves a tripped daily circuit sticky. Refund after deliver is still `hire.state`. No new policy rule.
 104. A retry of a money-moving allow is not a second spend. `pnpm demo replay` / `aether_demo_replay` / `POST /v1/demo/replay` funds a hire, replays the same `hire.fund` (cash unmoved) and the same `hire.create` (same contract). A new key on that quote is `hire.quote_unspent`. Denies are never cached. No new policy rule.
 105. An envelope nonce is one-shot. `pnpm demo nonce` / `aether_demo_nonce` / `POST /v1/demo/nonce` settles a hire, then reuses that nonce on a second hire as `idempotency.nonce` (escrow does not release). A leftover `nonce` on `ledger.transfer` is not that deny. No new policy rule.
+106. A deny is never a cached success. `pnpm demo deny` / `aether_demo_deny` / `POST /v1/demo/deny` freezes a desk, refuses `hire.create` as `actor.not_frozen`, retries that deny as a new decision, then unfreezes and the same command allows. A deny does not consume the quote. No new policy rule.
 
 ## Autonomy
 
@@ -182,4 +183,5 @@ pnpm demo clearing
 pnpm demo refund
 pnpm demo replay
 pnpm demo nonce
+pnpm demo deny
 ```

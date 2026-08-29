@@ -15,6 +15,7 @@
     "demo:refund": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo refund",
     "demo:replay": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo replay",
     "demo:nonce": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo nonce",
+    "demo:deny": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo deny",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

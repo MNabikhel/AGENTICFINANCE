@@ -24,7 +24,8 @@
       "@aether/clearing-window": ["packages/aether-runtime/src/clearing-window.ts"],
       "@aether/refund": ["packages/aether-runtime/src/refund.ts"],
       "@aether/replay": ["packages/aether-runtime/src/replay.ts"],
-      "@aether/envelope-nonce": ["packages/aether-runtime/src/envelope-nonce.ts"]
+      "@aether/envelope-nonce": ["packages/aether-runtime/src/envelope-nonce.ts"],
+      "@aether/deny-cache": ["packages/aether-runtime/src/deny-cache.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

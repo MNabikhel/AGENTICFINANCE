@@ -31,6 +31,7 @@ export default defineConfig({
       "@aether/refund": path.resolve(__dirname, "packages/aether-runtime/src/refund.ts"),
       "@aether/replay": path.resolve(__dirname, "packages/aether-runtime/src/replay.ts"),
       "@aether/envelope-nonce": path.resolve(__dirname, "packages/aether-runtime/src/envelope-nonce.ts"),
+      "@aether/deny-cache": path.resolve(__dirname, "packages/aether-runtime/src/deny-cache.ts"),
     },
   },
 });

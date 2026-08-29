@@ -10,7 +10,8 @@
     "./clearing-window": "./src/clearing-window.ts",
     "./refund": "./src/refund.ts",
     "./replay": "./src/replay.ts",
-    "./envelope-nonce": "./src/envelope-nonce.ts"
+    "./envelope-nonce": "./src/envelope-nonce.ts",
+    "./deny-cache": "./src/deny-cache.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

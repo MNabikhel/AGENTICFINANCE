@@ -235,6 +235,12 @@ paths:
       responses:
         "200": { description: Envelope-nonce TAP report. A payment nonce is one-shot; a leftover nonce on a transfer is not. }
         "500": { description: Assertions failed }
+  /v1/demo/deny:
+    post:
+      operationId: demoDenyCache
+      responses:
+        "200": { description: Deny-cache TAP report. A deny is never a cached success. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

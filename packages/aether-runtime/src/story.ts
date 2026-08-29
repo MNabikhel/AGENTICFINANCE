@@ -40,6 +40,9 @@ export const REPLAY_TLDR =
 export const NONCE_TLDR =
   "A desk released an $800 hire with an envelope nonce. Reusing that nonce on a second hire was idempotency.nonce — the second escrow did not release. A leftover nonce on a cash transfer was not that deny. A payment nonce is one-shot, and it is not a field on a transfer.";
 
+export const DENY_CACHE_TLDR =
+  "A frozen desk tried to hire and was refused. Retrying the same hire.create was a new decision — the deny was not cached. After unfreeze, that same command went through. A deny is not a leftover no.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

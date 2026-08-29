@@ -190,6 +190,11 @@
       "name": "aether_demo_nonce",
       "commandType": "demo.nonce",
       "description": "Run the envelope-nonce TAP: a payment nonce is one-shot; a leftover nonce on a transfer is not."
+    },
+    {
+      "name": "aether_demo_deny",
+      "commandType": "demo.deny",
+      "description": "Run the deny-cache TAP: a deny is never a cached success. Unfreeze, then the same hire.create may proceed."
     }
   ]
 }
