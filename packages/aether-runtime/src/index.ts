@@ -496,13 +496,29 @@ export class Runtime {
 
   /**
    * Pause view for other agents. A ticket past expiresAt is `expired`, not `pending`.
-   * The store may still say pending until the next dispatch sweeps it.
+   * A ticket still inside the clock window whose paused command would not allow
+   * is `stale`, not `pending`. Approve of that pause is `approval.replay`.
+   * Reject still releases the quote. The store may still say pending.
    */
   ticketView(ticket: ApprovalTicket): ApprovalTicket {
-    if (ticket.status === "pending" && Date.parse(ticket.expiresAt) <= Date.parse(this.clock.now())) {
+    if (ticket.status !== "pending") return ticket;
+    if (Date.parse(ticket.expiresAt) <= Date.parse(this.clock.now())) {
       return { ...ticket, status: "expired" };
     }
+    if (!this.ticketReplayable(ticket)) {
+      return { ...ticket, status: "stale" };
+    }
     return ticket;
+  }
+
+  /** Same check as approve: waived replay of the held command is still an allow. */
+  private ticketReplayable(ticket: ApprovalTicket): boolean {
+    const pending = this.pending.get(ticket.id);
+    if (!pending) return false;
+    const pendingActor =
+      pending.actorId === "system" ? this.systemActor() : this.identity.get(pending.actorId as AgentId);
+    if (!pendingActor) return false;
+    return evaluate(this.snapshot(pending, pendingActor, true)).verdict === "allow";
   }
 
   /**
@@ -768,7 +784,9 @@ export class Runtime {
    * bound is unique_payment occupancy and wins over expired; payments include derived
    * live | expired | funded; funded is escrow-moved occupancy and wins over expired;
    * expired includes a dead parent cart even when the payment `exp` still lives),
-   * rid_ receipt, apd_ approval, rfq_ / qte_ market (rfq_ includes derived live | expired;
+   * rid_ receipt, apd_ approval (pending | expired | stale; stale is a pause whose
+   * held command would not allow; the store stays pending; time-expired wins),
+   * rfq_ / qte_ market (rfq_ includes derived live | expired;
    * qte_ includes derived live | expired | spent | held;
    * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
    * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),

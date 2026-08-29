@@ -584,7 +584,12 @@ export interface ApprovalTicket {
   reason: string;
   ruleIds: string[];
   requiredApproverRoles: AgentRole[];
-  status: "pending" | "approved" | "rejected" | "expired";
+  /**
+   * Store is pending | approved | rejected | expired.
+   * Inspect/snapshot may overlay `expired` (clock) or `stale` (paused command
+   * would not allow). Stale is never written to the store.
+   */
+  status: "pending" | "approved" | "rejected" | "expired" | "stale";
   resolvedBy?: AgentId;
   resolvedAt?: Instant;
 }

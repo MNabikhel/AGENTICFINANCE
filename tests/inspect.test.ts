@@ -174,6 +174,34 @@ describe("approval expiry", () => {
     expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("expired");
     expect(rt.snapshotState().approvals.find((a) => a.id === ticket.id)?.status).toBe("expired");
   });
+
+  it("labels a pending ticket stale when the paused command would not allow", () => {
+    const rt = boot();
+    const { desk, vendor, treasury, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect(offered.attempt.value.kind).toBe("escalated");
+    const ticket = offered.attempt.value.ticket as ApprovalTicket;
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("pending");
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("pending");
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("stale");
+    expect(rt.snapshotState().approvals.find((a) => a.id === ticket.id)?.status).toBe("stale");
+    const yes = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "approved" }));
+    expect(yes.ok).toBe(false);
+    if (yes.ok) return;
+    expect(yes.error.decision?.remediation?.ruleId).toBe("approval.replay");
+    const no = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "rejected" }));
+    expect(no.ok).toBe(true);
+  });
 });
 
 describe("delegation inspect", () => {
