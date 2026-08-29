@@ -56,7 +56,7 @@ It looks like **procurement agents buying data and compute from vendor agents**,
 
 Sprint Procurement in this repo is that picture, shrunk to a TAP test. Night Watch is the same loop with the human off the click path: a KYA handshake, standing permission, a sticky daily fuse, freeze that cascades through the graph, and revoke. Clearing window is the credit line: open gross, a photo, not a second payment.
 
-Next revisions are sequenced in [`docs/FOUNDATION.md`](FOUNDATION.md): adapter-shaped KYA issuers. Rail adapters stay off `evaluate()`. `liveMoney` stays false.
+Next revisions are sequenced in [`docs/FOUNDATION.md`](FOUNDATION.md): honesty only if the pin would lie. Rail adapters stay off `evaluate()`. `liveMoney` stays false.
 
 ## 5. Sources (starting points)
 

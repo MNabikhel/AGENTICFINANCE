@@ -44,9 +44,9 @@ An HTTP agent could not deliver work, release escrow, settle an FX window, or tr
 
 `issuerKind` already lists `aether.self`, `tap.http-sig`, `skyfire.kya`, `erc8004.agent`. The graph does not yet pin what those issuers *are*.
 
-- [ ] An attestation can name an issuer object the kernel stores (shape-only: no live TAP/Skyfire/chain call).
-- [ ] Inspect of `dlg_` still derives `live | expired | revoked`. Unique_live still occupies.
-- [ ] Credentials never enter `evaluate()`. `liveMoney` stays false.
+- [x] An attestation can name an issuer object the kernel stores (shape-only: no live TAP/Skyfire/chain call).
+- [x] Inspect of `dlg_` still derives `live | expired | revoked`. Unique_live still occupies.
+- [x] Credentials never enter `evaluate()`. `liveMoney` stays false.
 
 ### 5. Only if the pin would lie
 

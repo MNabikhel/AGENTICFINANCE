@@ -6,9 +6,54 @@ import {
   type DelegationAttestation,
   type DelegationId,
   type Instant,
+  type IssuerId,
   type KyaHopStatus,
+  type KyaIssuer,
+  type KyaIssuerKind,
   type KyaResolution,
 } from "@aether/types";
+
+const GENESIS_AT = "2026-08-28T00:00:00.000Z";
+
+/** One shape-only issuer per kind. Stable ids. Not a Command. Credentials never live here. */
+export const GENESIS_ISSUERS: readonly KyaIssuer[] = [
+  {
+    id: "iss_01J6AETHERISSUERSELF00001" as IssuerId,
+    vct: "aether.kya.issuer.1",
+    kind: "aether.self",
+    label: "Aether self-attested hop",
+    adapter: "shape",
+    live: false,
+    createdAt: GENESIS_AT,
+  },
+  {
+    id: "iss_01J6AETHERISSUERTAP000001" as IssuerId,
+    vct: "aether.kya.issuer.1",
+    kind: "tap.http-sig",
+    label: "TAP HTTP Message Signatures (shape)",
+    adapter: "shape",
+    live: false,
+    createdAt: GENESIS_AT,
+  },
+  {
+    id: "iss_01J6AETHERISSUERSKY000001" as IssuerId,
+    vct: "aether.kya.issuer.1",
+    kind: "skyfire.kya",
+    label: "Skyfire KYA (shape)",
+    adapter: "shape",
+    live: false,
+    createdAt: GENESIS_AT,
+  },
+  {
+    id: "iss_01J6AETHERISSUERERC000001" as IssuerId,
+    vct: "aether.kya.issuer.1",
+    kind: "erc8004.agent",
+    label: "ERC-8004 agent (shape)",
+    adapter: "shape",
+    live: false,
+    createdAt: GENESIS_AT,
+  },
+];
 
 function pairKey(principal: AgentId, delegate: AgentId): string {
   return `${principal}>${delegate}`;
@@ -24,17 +69,48 @@ export function hopStatus(a: { revokedAt?: Instant; expiresAt: Instant }, nowIso
  * Principal → agent → sub-agent graph. Revoke cascades. Netting of identity:
  * a live path, an implicit supervisor grant, or a tombstone that blocks both.
  *
- * Issuer kinds (tap.http-sig, skyfire.kya, erc8004.agent) are labels for future
- * adapters. The kernel consults this graph, not those credential formats.
+ * Issuer kinds (tap.http-sig, skyfire.kya, erc8004.agent) pin genesis issuer
+ * objects (`iss_`). Those objects are shape-only. The kernel consults this
+ * graph, not those credential formats. Credentials never enter evaluate().
  */
 export class DelegationGraph {
   readonly attestations = new Map<DelegationId, DelegationAttestation>();
   readonly blocked = new Set<string>();
+  readonly issuers = new Map<IssuerId, KyaIssuer>();
 
-  restore(snap: { attestations: DelegationAttestation[]; blocked: string[] }): void {
+  constructor() {
+    this.seedGenesisIssuers();
+  }
+
+  private seedGenesisIssuers(): void {
+    for (const issuer of GENESIS_ISSUERS) this.issuers.set(issuer.id, issuer);
+  }
+
+  issuerOfKind(kind: KyaIssuerKind): KyaIssuer {
+    for (const issuer of this.issuers.values()) {
+      if (issuer.kind === kind) return issuer;
+    }
+    this.seedGenesisIssuers();
+    for (const issuer of this.issuers.values()) {
+      if (issuer.kind === kind) return issuer;
+    }
+    return GENESIS_ISSUERS[0]!;
+  }
+
+  restore(snap: { attestations: DelegationAttestation[]; blocked: string[]; issuers?: KyaIssuer[] }): void {
     this.attestations.clear();
     this.blocked.clear();
-    for (const a of snap.attestations) this.attestations.set(a.id, a);
+    this.issuers.clear();
+    this.seedGenesisIssuers();
+    for (const issuer of snap.issuers ?? []) this.issuers.set(issuer.id, issuer);
+    for (const a of snap.attestations) {
+      if (a.issuerId) {
+        this.attestations.set(a.id, a);
+        continue;
+      }
+      const issuer = this.issuerOfKind(a.issuerKind);
+      this.attestations.set(a.id, { ...a, issuerId: issuer.id });
+    }
     for (const b of snap.blocked) this.blocked.add(b);
   }
 
@@ -160,13 +236,18 @@ export class DelegationGraph {
     return {
       attestations: [...this.attestations.values()],
       blocked: [...this.blocked],
-      edges: [...this.attestations.values()].map((a) => ({
-        from: a.grantorId,
-        to: a.delegateId,
-        principalId: a.principalId,
-        status: hopStatus(a, nowIso),
-        maxAutonomy: a.maxAutonomy,
-      })),
+      issuers: [...this.issuers.values()],
+      edges: [...this.attestations.values()].map((a) => {
+        const edge = {
+          from: a.grantorId,
+          to: a.delegateId,
+          principalId: a.principalId,
+          issuerKind: a.issuerKind,
+          status: hopStatus(a, nowIso),
+          maxAutonomy: a.maxAutonomy,
+        };
+        return a.issuerId ? { ...edge, issuerId: a.issuerId } : edge;
+      }),
     };
   }
 }

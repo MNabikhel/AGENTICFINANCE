@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -141,6 +141,28 @@ describe("durable world", () => {
         bilateralLimit: 100000,
       });
       expect(c.clearing.snapshot().bilateralLimit).toBe(100000);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("synthesizes genesis KYA issuers when an old world omits them", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aether-kya-iss-"));
+    try {
+      const a = durable(dir);
+      expect(a.kya.issuers.size).toBe(4);
+      a.persistWorld();
+      const raw = JSON.parse(readFileSync(join(dir, "world.json"), "utf8")) as {
+        v: number;
+        kya: { issuers?: unknown[] };
+      };
+      expect(raw.v).toBe(1);
+      delete raw.kya.issuers;
+      writeFileSync(join(dir, "world.json"), JSON.stringify(raw));
+      const b = durable(dir);
+      expect(b.kya.issuers.size).toBe(4);
+      expect(b.kya.issuerOfKind("aether.self").live).toBe(false);
+      expect(b.kya.issuerOfKind("erc8004.agent").adapter).toBe("shape");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

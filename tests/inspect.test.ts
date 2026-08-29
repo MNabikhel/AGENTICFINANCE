@@ -248,6 +248,37 @@ describe("delegation inspect", () => {
     expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("revoked");
     expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("revoked");
   });
+
+  it("pins a genesis issuer object on a hop; inspect of iss_ is shape-only", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const self = rt.kya.issuerOfKind("aether.self");
+    expect(rt.inspect(self.id)?.type).toBe("issuer");
+    const issuer = rt.inspect(self.id)?.value as {
+      kind: string;
+      adapter: string;
+      live: boolean;
+      credential?: unknown;
+    };
+    expect(issuer.kind).toBe("aether.self");
+    expect(issuer.adapter).toBe("shape");
+    expect(issuer.live).toBe(false);
+    expect(issuer.credential).toBeUndefined();
+    expect(rt.kyaSnapshot().issuers).toHaveLength(4);
+
+    const issued = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3, issuerKind: "tap.http-sig" })),
+      "attest",
+    );
+    const hop = issued.data as DelegationAttestation;
+    expect(hop.issuerKind).toBe("tap.http-sig");
+    expect(hop.issuerId).toBe(rt.kya.issuerOfKind("tap.http-sig").id);
+    const viewed = rt.inspect(hop.id)?.value as { status: string; issuerId: string };
+    expect(viewed.status).toBe("live");
+    expect(viewed.issuerId).toBe(hop.issuerId);
+    expect("status" in (rt.kya.attestations.get(hop.id) ?? {})).toBe(false);
+    expect(rt.protocolCard().liveMoney).toBe(false);
+  });
 });
 
 describe("quote inspect", () => {

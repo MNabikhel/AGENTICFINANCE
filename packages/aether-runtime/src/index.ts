@@ -69,6 +69,7 @@ import type {
   JournalEntry,
   KyaIssuerKind,
   KyaHopStatus,
+  IssuerId,
   LadderExtraGate,
   LineItem,
   MandateConstraint,
@@ -841,7 +842,8 @@ export class Runtime {
    * rfq_ / qte_ market (rfq_ includes derived live | expired;
    * qte_ includes derived live | expired | spent | held;
    * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
-   * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
+   * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked; pins an iss_ issuer object),
+   * iss_ KYA issuer (shape-only catalog; adapter shape; live false; credentials never stored),
    * hsb_ host subscription (derived live | expired; expired includes a dead intent
    * and a dead parent intent; unique_subscriber still occupies; spend is not gated
    * on the row; the store stays raw),
@@ -886,6 +888,10 @@ export class Runtime {
     if (id.startsWith("dlg_")) {
       const att = this.kya.attestations.get(id as DelegationId);
       return att ? { type: "delegation", id: att.id, value: this.hopView(att) } : undefined;
+    }
+    if (id.startsWith("iss_")) {
+      const issuer = this.kya.issuers.get(id as IssuerId);
+      return issuer ? { type: "issuer", id: issuer.id, value: issuer } : undefined;
     }
     if (id.startsWith("hsb_")) {
       const sub = this.subscriptions.get(id as SubscriptionId);
@@ -968,7 +974,7 @@ export class Runtime {
       settleEvents: [...this.settleEvents],
       decisions: [...this.decisions],
       story: [...this.story],
-      kya: { attestations: [...this.kya.attestations.values()], blocked: [...this.kya.blocked] },
+      kya: { attestations: [...this.kya.attestations.values()], blocked: [...this.kya.blocked], issuers: [...this.kya.issuers.values()] },
       clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.snapshot().windows },
       killSwitchTested: [...this.killSwitchTested],
       idempotency: [...this.idempotency.entries()],
@@ -2153,10 +2159,13 @@ export class Runtime {
     if (actor.role !== "human_operator" && actor.role !== "treasury" && principalId !== actor.id) {
       throw new Error("kya party");
     }
+    const kind = (body.issuerKind as KyaIssuerKind | undefined) ?? "aether.self";
+    const issuer = this.kya.issuerOfKind(kind);
     const att: DelegationAttestation = {
       id: this.ids.next("dlg") as DelegationId,
       vct: "aether.kya.delegation.1",
-      issuerKind: (body.issuerKind as KyaIssuerKind | undefined) ?? "aether.self",
+      issuerKind: kind,
+      issuerId: issuer.id,
       principalId,
       grantorId: actor.id,
       delegateId,
@@ -2186,7 +2195,7 @@ export class Runtime {
         { type: "delegation", id: att.id },
         { type: "delegate", id: delegateId },
       ],
-      payload: { id: att.id, principalId, delegateId, maxAutonomy: att.maxAutonomy, issuerKind: att.issuerKind },
+      payload: { id: att.id, principalId, delegateId, maxAutonomy: att.maxAutonomy, issuerKind: att.issuerKind, issuerId: att.issuerId },
     });
     return att;
   }

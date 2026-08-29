@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DelegationGraph, resolveKya } from "@aether/kya";
+import { DelegationGraph, GENESIS_ISSUERS, resolveKya } from "@aether/kya";
 import type { Agent, AgentId, DelegationAttestation, DelegationId } from "@aether/types";
 
 const founder = "aid_01J6AETHERFOUND00000000001" as AgentId;
@@ -180,5 +180,25 @@ describe("delegation graph", () => {
     expect(g.snapshot(now).edges[0]?.status).toBe("live");
     g.revoke({ principalId: founder, delegateId: watch, at: later });
     expect(g.snapshot("2099-01-01T00:00:00.000Z").edges[0]?.status).toBe("revoked");
+  });
+
+  it("stores one shape-only issuer object per kind, with no credentials", () => {
+    const g = new DelegationGraph();
+    expect(g.snapshot(now).issuers).toHaveLength(4);
+    expect(g.snapshot(now).issuers.map((i) => i.kind).sort()).toEqual(
+      ["aether.self", "erc8004.agent", "skyfire.kya", "tap.http-sig"].sort(),
+    );
+    for (const issuer of GENESIS_ISSUERS) {
+      const found = g.issuers.get(issuer.id);
+      expect(found).toEqual(issuer);
+      expect(found?.adapter).toBe("shape");
+      expect(found?.live).toBe(false);
+      expect(found).not.toHaveProperty("credential");
+      expect(found).not.toHaveProperty("token");
+      expect(found).not.toHaveProperty("secret");
+    }
+    g.restore({ attestations: [], blocked: [] });
+    expect(g.issuers.size).toBe(4);
+    expect(g.issuerOfKind("skyfire.kya").id).toBe("iss_01J6AETHERISSUERSKY000001");
   });
 });

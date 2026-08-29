@@ -111,6 +111,7 @@ export type JournalId = `jnl_${Ulid}`;
 export type RfqId = `rfq_${Ulid}`;
 export type QuoteId = `qte_${Ulid}`;
 export type DelegationId = `dlg_${Ulid}`;
+export type IssuerId = `iss_${Ulid}`;
 export type SubscriptionId = `hsb_${Ulid}`;
 export type Did = `did:aether:${string}`;
 
@@ -622,12 +623,28 @@ export interface SettlementWindow {
 
 export type KyaIssuerKind = "aether.self" | "tap.http-sig" | "skyfire.kya" | "erc8004.agent";
 
+/**
+ * Shape-only issuer the kernel stores. Not a live TAP/Skyfire/chain call.
+ * Credentials never enter `evaluate()`. `live` stays false on this pin.
+ */
+export interface KyaIssuer {
+  id: IssuerId;
+  vct: "aether.kya.issuer.1";
+  kind: KyaIssuerKind;
+  label: string;
+  adapter: "shape";
+  live: false;
+  createdAt: Instant;
+}
+
 export const KYA_MAX_DEPTH = 3;
 
 export interface DelegationAttestation {
   id: DelegationId;
   vct: "aether.kya.delegation.1";
   issuerKind: KyaIssuerKind;
+  /** Genesis issuer object this hop pins. Optional so 0.96 worlds without the catalog still boot. */
+  issuerId?: IssuerId;
   /** Money owner at the root of this chain. */
   principalId: AgentId;
   /** Who signed this hop. */

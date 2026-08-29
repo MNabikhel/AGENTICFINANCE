@@ -32,6 +32,7 @@ import type {
   SettlementWindow,
   Signed,
   CartMandate,
+  KyaIssuer,
 } from "@aether/types";
 import type { Analog, StoryBeat } from "./story.js";
 import type { ExposureLeg } from "@aether/clearing";
@@ -78,7 +79,7 @@ export interface WorldState {
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];
-  kya: { attestations: DelegationAttestation[]; blocked: string[] };
+  kya: { attestations: DelegationAttestation[]; blocked: string[]; issuers?: KyaIssuer[] };
   clearing: { legs: ExposureLeg[]; windows: SettlementWindow[] };
   killSwitchTested: AgentId[];
   idempotency?: Array<[string, unknown]>;
