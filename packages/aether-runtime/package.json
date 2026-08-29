@@ -39,7 +39,8 @@
     "./circuit-daily": "./src/circuit-daily.ts",
     "./payment-skus": "./src/payment-skus.ts",
     "./sku-currency": "./src/sku-currency.ts",
-    "./hire-party": "./src/hire-party.ts"
+    "./hire-party": "./src/hire-party.ts",
+    "./ledger-sufficient": "./src/ledger-sufficient.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

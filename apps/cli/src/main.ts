@@ -36,6 +36,7 @@ import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 import { loadPaymentSkus, runPaymentSkus } from "@aether/payment-skus";
 import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
 import { loadHireParty, runHireParty } from "@aether/hire-party";
+import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-sufficient";
 
 const [, , command, name] = process.argv;
 
@@ -277,6 +278,12 @@ if (command === "demo" && (name === "party" || name === "table" || name === "hir
   process.exit(0);
 }
 
+if (command === "demo" && (name === "cash" || name === "overdraft" || name === "sufficient")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/cash/scenario.json");
+  printReport(runLedgerSufficient(loadLedgerSufficient(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -319,5 +326,6 @@ usage:
   pnpm demo sku
   pnpm demo priced
   pnpm demo party
+  pnpm demo cash
   pnpm mcp`);
 process.exit(command ? 1 : 0);

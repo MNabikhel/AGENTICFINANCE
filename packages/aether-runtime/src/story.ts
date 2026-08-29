@@ -127,6 +127,9 @@ export const PRICED_TLDR =
 export const PARTY_TLDR =
   "A founder funded an $800 hire. A different vendor’s deliver was hire.party — the hire stayed funded. The seller who quoted still delivered and that work still released. The other side of the table is not a party.";
 
+export const CASH_TLDR =
+  "A founder funded an $800 hire that emptied the desk. A $400 second fund was ledger.sufficient — same currency, operating cash, legal hire arrow. That funded work still released. Empty cash is not a negative book.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

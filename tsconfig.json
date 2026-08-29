@@ -53,7 +53,8 @@
       "@aether/circuit-daily": ["packages/aether-runtime/src/circuit-daily.ts"],
       "@aether/payment-skus": ["packages/aether-runtime/src/payment-skus.ts"],
       "@aether/sku-currency": ["packages/aether-runtime/src/sku-currency.ts"],
-      "@aether/hire-party": ["packages/aether-runtime/src/hire-party.ts"]
+      "@aether/hire-party": ["packages/aether-runtime/src/hire-party.ts"],
+      "@aether/ledger-sufficient": ["packages/aether-runtime/src/ledger-sufficient.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

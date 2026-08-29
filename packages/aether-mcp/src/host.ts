@@ -43,6 +43,7 @@ import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 import { loadPaymentSkus, runPaymentSkus } from "@aether/payment-skus";
 import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
 import { loadHireParty, runHireParty } from "@aether/hire-party";
+import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-sufficient";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -124,6 +125,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_sku",
   "aether_demo_priced",
   "aether_demo_party",
+  "aether_demo_cash",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -566,6 +568,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_party") {
       const report = runHireParty(loadHireParty("fixtures/demo/party/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cash") {
+      const report = runLedgerSufficient(loadLedgerSufficient("fixtures/demo/cash/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

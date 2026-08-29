@@ -409,6 +409,12 @@ paths:
       responses:
         "200": { description: Party TAP report. The other side of the table is not a party. }
         "500": { description: Assertions failed }
+  /v1/demo/cash:
+    post:
+      operationId: demoCash
+      responses:
+        "200": { description: Cash TAP report. Empty cash is not a negative book. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
