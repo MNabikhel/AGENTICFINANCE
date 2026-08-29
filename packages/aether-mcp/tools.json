@@ -415,6 +415,11 @@
       "name": "aether_demo_pause",
       "commandType": "demo.pause",
       "description": "Run the pause TAP: a dead pause is not a late yes. approval.resolve after the ticket dies is approval.pending; the ticket still exists; a stale command is not this deny; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_mirror",
+      "commandType": "demo.mirror",
+      "description": "Run the mirror TAP: a handshake is not a mirror. kya.attest of yourself is kya.not_self; someone else's name, a second hop, and a corpse mint still allow; a real pair still mints; funded work still finishes."
     }
   ]
 }

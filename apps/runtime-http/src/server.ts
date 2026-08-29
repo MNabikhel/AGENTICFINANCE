@@ -64,6 +64,7 @@ import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
 import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-fresh";
 import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
+import { loadKyaNotSelf, runKyaNotSelf } from "@aether/kya-not-self";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -120,6 +121,7 @@ const cradleFixture = join(process.cwd(), "fixtures/demo/cradle/scenario.json");
 const ceilingFixture = join(process.cwd(), "fixtures/demo/ceiling/scenario.json");
 const lapseFixture = join(process.cwd(), "fixtures/demo/lapse/scenario.json");
 const pauseFixture = join(process.cwd(), "fixtures/demo/pause/scenario.json");
+const mirrorFixture = join(process.cwd(), "fixtures/demo/mirror/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -733,6 +735,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runApprovalPending(loadApprovalPending(pauseFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "pause" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/mirror") {
+        const report = runKyaNotSelf(loadKyaNotSelf(mirrorFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "mirror" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

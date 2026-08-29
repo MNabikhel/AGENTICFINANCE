@@ -67,3 +67,4 @@ jobs:
       - run: pnpm demo:ceiling
       - run: pnpm demo:lapse
       - run: pnpm demo:pause
+      - run: pnpm demo:mirror

@@ -55,7 +55,8 @@
     "./birth-rung": "./src/birth-rung.ts",
     "./max-autonomy": "./src/max-autonomy.ts",
     "./attestation-fresh": "./src/attestation-fresh.ts",
-    "./approval-pending": "./src/approval-pending.ts"
+    "./approval-pending": "./src/approval-pending.ts",
+    "./kya-not-self": "./src/kya-not-self.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

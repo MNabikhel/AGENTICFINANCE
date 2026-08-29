@@ -60,6 +60,7 @@
     "demo:ceiling": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo ceiling",
     "demo:lapse": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo lapse",
     "demo:pause": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo pause",
+    "demo:mirror": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mirror",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

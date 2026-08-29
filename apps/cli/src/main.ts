@@ -52,6 +52,7 @@ import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
 import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-fresh";
 import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
+import { loadKyaNotSelf, runKyaNotSelf } from "@aether/kya-not-self";
 
 const [, , command, name] = process.argv;
 
@@ -389,6 +390,12 @@ if (command === "demo" && (name === "pause" || name === "ticket" || name === "pe
   process.exit(0);
 }
 
+if (command === "demo" && (name === "mirror" || name === "selfie" || name === "echo")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/mirror/scenario.json");
+  printReport(runKyaNotSelf(loadKyaNotSelf(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -447,5 +454,6 @@ usage:
   pnpm demo ceiling
   pnpm demo lapse
   pnpm demo pause
+  pnpm demo mirror
   pnpm mcp`);
 process.exit(command ? 1 : 0);

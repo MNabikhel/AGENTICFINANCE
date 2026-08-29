@@ -505,6 +505,12 @@ paths:
       responses:
         "200": { description: Pause TAP report. A dead pause is not a late yes. }
         "500": { description: Assertions failed }
+  /v1/demo/mirror:
+    post:
+      operationId: demoMirror
+      responses:
+        "200": { description: Mirror TAP report. A handshake is not a mirror. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
