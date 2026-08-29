@@ -1,0 +1,21 @@
+{
+  "id": "receipt-known",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000076",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneakReceiptId": "rid_01J6AETHERGHOSTRECEIPT000076",
+  "intent": {
+    "task": "A missing receipt is not an empty success. Completing funded work is legal. A missing speaker is a different object. A missing named target is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

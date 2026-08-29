@@ -631,6 +631,12 @@ paths:
       responses:
         "200": { description: Mute TAP report. A missing speaker is not a 500. }
         "500": { description: Assertions failed }
+  /v1/demo/nil:
+    post:
+      operationId: demoNil
+      responses:
+        "200": { description: Nil TAP report. A missing receipt is not an empty success. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

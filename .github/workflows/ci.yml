@@ -88,3 +88,4 @@ jobs:
       - run: pnpm demo:twin
       - run: pnpm demo:fence
       - run: pnpm demo:mute
+      - run: pnpm demo:nil

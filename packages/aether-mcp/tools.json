@@ -520,6 +520,11 @@
       "name": "aether_demo_mute",
       "commandType": "demo.mute",
       "description": "Run the mute TAP: a missing speaker is not a 500. ledger.balances from a missing actorId is actor.known; a missing named target, a frozen speaker, and system spending still allow; no books are written; the live desk still reads; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_nil",
+      "commandType": "demo.nil",
+      "description": "Run the nil TAP: a missing receipt is not an empty success. receipt.get of a missing receiptId is receipt.known; a missing speaker and a missing named target still allow; no receipt is written; the live receipt still fetches; funded work still finishes."
     }
   ]
 }

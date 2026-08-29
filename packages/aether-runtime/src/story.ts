@@ -238,6 +238,9 @@ export const FENCE_TLDR =
 export const MUTE_TLDR =
   "A founder funded an $800 hire. A missing speaker reading the books was actor.known — a missing named target is not this deny, a frozen speaker is not this deny, system spending is not this deny. No books were written. The live desk still read. That funded work still released. A missing speaker is not a 500.";
 
+export const NIL_TLDR =
+  "A founder funded an $800 hire. Fetching a missing receipt was receipt.known — a missing speaker is not this deny, a missing named target is not this deny. No receipt was written. The live receipt still fetched. That funded work still released. A missing receipt is not an empty success.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -281,6 +284,16 @@ export function autoBeat(input: {
         at: input.at,
         headline: "a missing speaker is not a 500",
         body: "That actorId is not a registered agent. HTTP/MCP unknown alias is this string, not silent system. Named targets stay identity.known. Completing funded work after that is legal.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (rule?.ruleId === "receipt.known") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: "a missing receipt is not an empty success",
+        body: "That receiptId is not in this world. Policy denies; mutate does not return nothing after an allow. Completing funded work after that is legal.",
         tone: "deny",
         commandType: cmd.type,
       };

@@ -73,6 +73,7 @@ import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
 import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
 import { loadSystemScope, runSystemScope } from "@aether/system-scope";
 import { loadActorKnown, runActorKnown } from "@aether/actor-known";
+import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
 
 const [, , command, name] = process.argv;
 
@@ -536,6 +537,12 @@ if (command === "demo" && (name === "mute" || name === "hush" || name === "blank
   process.exit(0);
 }
 
+if (command === "demo" && (name === "nil" || name === "gone" || name === "lost")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/nil/scenario.json");
+  printReport(runReceiptKnown(loadReceiptKnown(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -615,5 +622,6 @@ usage:
   pnpm demo twin
   pnpm demo fence
   pnpm demo mute
+  pnpm demo nil
   pnpm mcp`);
 process.exit(command ? 1 : 0);

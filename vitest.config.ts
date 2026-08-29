@@ -97,6 +97,7 @@ export default defineConfig({
       "@aether/unique-key": path.resolve(__dirname, "packages/aether-runtime/src/unique-key.ts"),
       "@aether/system-scope": path.resolve(__dirname, "packages/aether-runtime/src/system-scope.ts"),
       "@aether/actor-known": path.resolve(__dirname, "packages/aether-runtime/src/actor-known.ts"),
+      "@aether/receipt-known": path.resolve(__dirname, "packages/aether-runtime/src/receipt-known.ts"),
     },
   },
 });
