@@ -337,6 +337,12 @@ paths:
       responses:
         "200": { description: Purse TAP report. A budget is not an item cap. }
         "500": { description: Assertions failed }
+  /v1/demo/seat:
+    post:
+      operationId: demoSeat
+      responses:
+        "200": { description: Seat TAP report. One subscriber is one row. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

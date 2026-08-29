@@ -39,3 +39,4 @@ jobs:
       - run: pnpm demo:heir
       - run: pnpm demo:stock
       - run: pnpm demo:purse
+      - run: pnpm demo:seat

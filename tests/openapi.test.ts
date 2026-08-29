@@ -80,6 +80,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a missing maker");
     expect(spec).toContain("/v1/demo/purse:");
     expect(spec).toContain("not an item cap");
+    expect(spec).toContain("/v1/demo/seat:");
+    expect(spec).toContain("one row");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

@@ -24,6 +24,7 @@ import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
 import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
 import { loadMmInventory, runMmInventory } from "@aether/mm-inventory";
 import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
+import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 
 const [, , command, name] = process.argv;
 
@@ -193,6 +194,12 @@ if (command === "demo" && (name === "purse" || name === "budget" || name === "pa
   process.exit(0);
 }
 
+if (command === "demo" && (name === "seat" || name === "row" || name === "unique-subscriber")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/seat/scenario.json");
+  printReport(runHostUnique(loadHostUnique(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -223,5 +230,6 @@ usage:
   pnpm demo heir
   pnpm demo stock
   pnpm demo purse
+  pnpm demo seat
   pnpm mcp`);
 process.exit(command ? 1 : 0);

@@ -275,6 +275,11 @@
       "name": "aether_demo_purse",
       "commandType": "demo.purse",
       "description": "Run the purse TAP: a budget is not an item cap. Second hire.create is payment.budget; the item cap still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_seat",
+      "commandType": "demo.seat",
+      "description": "Run the seat TAP: one subscriber is one row. Second host.subscribe is host.unique_subscriber; a different agent takes its own seat; spend is not gated on the row."
     }
   ]
 }

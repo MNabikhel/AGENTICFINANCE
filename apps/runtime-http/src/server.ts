@@ -36,6 +36,7 @@ import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
 import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
 import { loadMmInventory, runMmInventory } from "@aether/mm-inventory";
 import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
+import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -64,6 +65,7 @@ const nestFixture = join(process.cwd(), "fixtures/demo/nest/scenario.json");
 const heirFixture = join(process.cwd(), "fixtures/demo/heir/scenario.json");
 const stockFixture = join(process.cwd(), "fixtures/demo/stock/scenario.json");
 const purseFixture = join(process.cwd(), "fixtures/demo/purse/scenario.json");
+const seatFixture = join(process.cwd(), "fixtures/demo/seat/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -481,6 +483,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runPaymentBudget(loadPaymentBudget(purseFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "purse" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/seat") {
+        const report = runHostUnique(loadHostUnique(seatFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "seat" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

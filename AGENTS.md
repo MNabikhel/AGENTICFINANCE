@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -172,6 +172,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 120. A dead parent is not a parent. `pnpm demo heir` / `aether_demo_heir` / `POST /v1/demo/heir` funds a child hire while the parent slip lives, refuses a new `hire.create` as `mandate.parent_fresh` after that parent dies (no hire written; the child's own `exp` still lives), then that funded work still releases. Nest TAP is the hop; this TAP is the slip. No new policy rule.
 121. Empty MM USDC is not a missing maker. `pnpm demo stock` / `aether_demo_stock` / `POST /v1/demo/stock` refuses a large FX settle as `mm.inventory` without consuming the window (vendor USD still covers; the band still allows), then a smaller window on a different RFQ converts. Conversion (`hire.not_fx`) and spread (`mm.spread_bound`) are different objects. No new policy rule.
 122. A budget is not an item cap. `pnpm demo purse` / `aether_demo_purse` / `POST /v1/demo/purse` funds an $800 hire against a $1,000 envelope with a $5,000 per-item cap, refuses a $400 second `hire.create` as `payment.budget` (the item cap still allows; no hire written), then that funded work still releases. Sprint hits `payment.amount_range`. No new policy rule.
+123. One subscriber is one row. `pnpm demo seat` / `aether_demo_seat` / `POST /v1/demo/seat` records a hosted subscribe row, funds an $800 hire (spend is not gated on the row), refuses a second `host.subscribe` as `host.unique_subscriber` even on a fresh slip (no second row), then a different agent takes its own seat and that funded work still releases. Door TAP is the 401/402 door. `PROTOCOL.hosted` stays false. No new policy rule.
 
 ## Autonomy
 
@@ -216,4 +217,5 @@ pnpm demo nest
 pnpm demo heir
 pnpm demo stock
 pnpm demo purse
+pnpm demo seat
 ```

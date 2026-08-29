@@ -27,7 +27,8 @@
     "./parent-fresh": "./src/parent-fresh.ts",
     "./mandate-parent": "./src/mandate-parent.ts",
     "./mm-inventory": "./src/mm-inventory.ts",
-    "./payment-budget": "./src/payment-budget.ts"
+    "./payment-budget": "./src/payment-budget.ts",
+    "./host-unique": "./src/host-unique.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

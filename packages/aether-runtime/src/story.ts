@@ -91,6 +91,9 @@ export const STOCK_TLDR =
 export const PURSE_TLDR =
   "A founder wrote a $1,000 envelope with a $5,000 per-item cap. The desk funded an $800 hire. A $400 second hire was payment.budget — the item cap still allowed. That funded work still released. A budget is not an item cap.";
 
+export const SEAT_TLDR =
+  "A hosted operator recorded one subscribe row. The desk funded an $800 hire — spend is not gated on the row. A second subscribe was host.unique_subscriber — no second row. A different agent took its own seat. That funded work still released. One subscriber, one row.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
