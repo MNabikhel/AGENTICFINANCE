@@ -1,0 +1,22 @@
+{
+  "id": "kya-party",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000044",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "scoutGrant": { "maxAutonomy": 4 },
+  "sneakGrant": { "maxAutonomy": 3 },
+  "intent": {
+    "task": "Someone else's name is not a handshake. Completing funded work is legal. A second live hop is a different object. A climb above the grant is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

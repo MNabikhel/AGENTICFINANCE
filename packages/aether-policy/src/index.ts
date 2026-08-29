@@ -1443,7 +1443,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.party": {
     kind: "none",
-    hint: "You can only mint or tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
+    hint: "You can only mint or tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 scout cannot write a founder’s handshake by filling in the ids. Someone else’s name is not a handshake.",
   },
   "identity.unique_key": {
     kind: "none",

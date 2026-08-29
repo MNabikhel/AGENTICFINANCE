@@ -142,6 +142,9 @@ export const ARROW_TLDR =
 export const WALLET_TLDR =
   "A founder funded an $800 hire. A compute vendor’s settle was ledger.known_account — USD cash, live window, maker still there. A research vendor with a USDC book still converted. That funded work still released. A vendor’s USD cash is not a USDC wallet.";
 
+export const NAME_TLDR =
+  "A founder funded an $800 hire. An L4 scout minting a handshake in the founder’s name was kya.party — not a second hop, not a climb above the grant. The founder still minted that pair. That funded work still released. Someone else’s name is not a handshake.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1002,7 +1005,7 @@ export function autoBeat(input: {
           seq: input.seq,
           at: input.at,
           headline: `${who} cannot shake hands in someone else’s name`,
-          body: "You can only mint a handshake for which you are the principal. A human or treasury may attest any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
+          body: "You can only mint a handshake for which you are the principal. A human or treasury may attest any pair. An L4 scout cannot write a founder’s handshake by filling in the ids. Someone else’s name is not a handshake.",
           tone: "deny",
           commandType: cmd.type,
         };

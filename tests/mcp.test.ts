@@ -59,6 +59,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_chain");
     expect(names).toContain("aether_demo_arrow");
     expect(names).toContain("aether_demo_wallet");
+    expect(names).toContain("aether_demo_name");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_market_fx_settle");
     expect(names).toContain("aether_ledger_transfer");
@@ -429,6 +430,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("not a USDC wallet");
+  });
+
+  it("runs the name demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_name", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("not a handshake");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

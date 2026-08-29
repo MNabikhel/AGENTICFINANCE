@@ -360,6 +360,11 @@
       "name": "aether_demo_wallet",
       "commandType": "demo.wallet",
       "description": "Run the wallet TAP: a vendor's USD cash is not a USDC wallet. market.fx_settle without a USDC book is ledger.known_account; the window stays unspent; a vendor with a USDC book still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_name",
+      "commandType": "demo.name",
+      "description": "Run the name TAP: someone else's name is not a handshake. An L4 scout kya.attest in the founder's name is kya.party; unique-live and capability-subset still allow; no hop is written; the founder still mints that pair; funded work still finishes."
     }
   ]
 }

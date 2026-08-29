@@ -41,6 +41,7 @@ import { loadNotExpired, runNotExpired } from "@aether/not-expired";
 import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
 import { loadHireState, runHireState } from "@aether/hire-state";
 import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
+import { loadKyaParty, runKyaParty } from "@aether/kya-party";
 
 const [, , command, name] = process.argv;
 
@@ -312,6 +313,12 @@ if (command === "demo" && (name === "wallet" || name === "usdc-book" || name ===
   process.exit(0);
 }
 
+if (command === "demo" && (name === "name" || name === "kya-party" || name === "in-name")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/name/scenario.json");
+  printReport(runKyaParty(loadKyaParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -359,5 +366,6 @@ usage:
   pnpm demo chain
   pnpm demo arrow
   pnpm demo wallet
+  pnpm demo name
   pnpm mcp`);
 process.exit(command ? 1 : 0);

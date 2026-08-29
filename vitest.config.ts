@@ -65,6 +65,7 @@ export default defineConfig({
       "@aether/chain-integrity": path.resolve(__dirname, "packages/aether-runtime/src/chain-integrity.ts"),
       "@aether/hire-state": path.resolve(__dirname, "packages/aether-runtime/src/hire-state.ts"),
       "@aether/ledger-known": path.resolve(__dirname, "packages/aether-runtime/src/ledger-known.ts"),
+      "@aether/kya-party": path.resolve(__dirname, "packages/aether-runtime/src/kya-party.ts"),
     },
   },
 });

@@ -439,6 +439,12 @@ paths:
       responses:
         "200": { description: Wallet TAP report. A vendor's USD cash is not a USDC wallet. }
         "500": { description: Assertions failed }
+  /v1/demo/name:
+    post:
+      operationId: demoName
+      responses:
+        "200": { description: Name TAP report. Someone else's name is not a handshake. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

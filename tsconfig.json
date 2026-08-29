@@ -58,7 +58,8 @@
       "@aether/not-expired": ["packages/aether-runtime/src/not-expired.ts"],
       "@aether/chain-integrity": ["packages/aether-runtime/src/chain-integrity.ts"],
       "@aether/hire-state": ["packages/aether-runtime/src/hire-state.ts"],
-      "@aether/ledger-known": ["packages/aether-runtime/src/ledger-known.ts"]
+      "@aether/ledger-known": ["packages/aether-runtime/src/ledger-known.ts"],
+      "@aether/kya-party": ["packages/aether-runtime/src/kya-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

@@ -44,7 +44,8 @@
     "./not-expired": "./src/not-expired.ts",
     "./chain-integrity": "./src/chain-integrity.ts",
     "./hire-state": "./src/hire-state.ts",
-    "./ledger-known": "./src/ledger-known.ts"
+    "./ledger-known": "./src/ledger-known.ts",
+    "./kya-party": "./src/kya-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
