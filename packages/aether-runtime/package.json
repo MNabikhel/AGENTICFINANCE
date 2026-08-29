@@ -72,7 +72,8 @@
     "./kya-known-parent": "./src/kya-known-parent.ts",
     "./known-attestation": "./src/known-attestation.ts",
     "./known-invitee": "./src/known-invitee.ts",
-    "./cart-fresh": "./src/cart-fresh.ts"
+    "./cart-fresh": "./src/cart-fresh.ts",
+    "./freeze-state": "./src/freeze-state.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

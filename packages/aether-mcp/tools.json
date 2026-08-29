@@ -500,6 +500,11 @@
       "name": "aether_demo_dust",
       "commandType": "demo.dust",
       "description": "Run the dust TAP: a stale unpaid cart is not a late check. mandate.issue_payment on a stale unpaid cart is mandate.not_expired; occupancy and a dead cart at fund still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_thaw",
+      "commandType": "demo.thaw",
+      "description": "Run the thaw TAP: a no-op thaw is not a kill-switch test. identity.unfreeze of a live unfrozen auditor is identity.freeze_state; a missing agent and a frozen speaker still allow; no UNFREEZE line is written; funded work still finishes."
     }
   ]
 }

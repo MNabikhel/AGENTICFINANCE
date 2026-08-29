@@ -226,6 +226,9 @@ export const GUEST_TLDR =
 export const DUST_TLDR =
   "A founder funded an $800 hire. A first payment on a stale unpaid cart was mandate.not_expired — occupancy is not this deny, a dead cart at fund is not this deny. No payment was written. That funded work still released. A stale unpaid cart is not a late check.";
 
+export const THAW_TLDR =
+  "A founder funded an $800 hire. Unfreeze of a live unfrozen auditor was identity.freeze_state — a missing agent is not this deny, a frozen speaker is not this deny. No UNFREEZE line was written. That funded work still released. The auditor still verified. A no-op thaw is not a kill-switch test.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

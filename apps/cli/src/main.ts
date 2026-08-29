@@ -69,6 +69,7 @@ import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent"
 import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
 import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
+import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
 
 const [, , command, name] = process.argv;
 
@@ -508,6 +509,12 @@ if (command === "demo" && (name === "dust" || name === "ash" || name === "cinder
   process.exit(0);
 }
 
+if (command === "demo" && (name === "thaw" || name === "frost" || name === "rime")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/thaw/scenario.json");
+  printReport(runFreezeState(loadFreezeState(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -583,5 +590,6 @@ usage:
   pnpm demo seal
   pnpm demo guest
   pnpm demo dust
+  pnpm demo thaw
   pnpm mcp`);
 process.exit(command ? 1 : 0);

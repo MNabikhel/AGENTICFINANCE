@@ -87,6 +87,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_seal");
     expect(names).toContain("aether_demo_guest");
     expect(names).toContain("aether_demo_dust");
+    expect(names).toContain("aether_demo_thaw");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_market_fx_settle");
     expect(names).toContain("aether_ledger_transfer");
@@ -681,6 +682,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("not a late check");
+  });
+
+  it("runs the thaw demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_thaw", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("not a kill-switch test");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

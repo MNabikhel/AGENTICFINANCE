@@ -76,6 +76,7 @@ import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent"
 import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
 import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
+import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -190,6 +191,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_seal",
   "aether_demo_guest",
   "aether_demo_dust",
+  "aether_demo_thaw",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -797,6 +799,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_dust") {
       const report = runCartFresh(loadCartFresh("fixtures/demo/dust/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_thaw") {
+      const report = runFreezeState(loadFreezeState("fixtures/demo/thaw/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

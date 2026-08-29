@@ -77,6 +77,7 @@
     "demo:seal": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo seal",
     "demo:guest": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo guest",
     "demo:dust": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo dust",
+    "demo:thaw": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo thaw",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

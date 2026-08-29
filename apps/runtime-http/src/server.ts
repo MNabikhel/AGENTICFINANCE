@@ -81,6 +81,7 @@ import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent"
 import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
 import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
+import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -154,6 +155,7 @@ const graftFixture = join(process.cwd(), "fixtures/demo/graft/scenario.json");
 const sealFixture = join(process.cwd(), "fixtures/demo/seal/scenario.json");
 const guestFixture = join(process.cwd(), "fixtures/demo/guest/scenario.json");
 const dustFixture = join(process.cwd(), "fixtures/demo/dust/scenario.json");
+const thawFixture = join(process.cwd(), "fixtures/demo/thaw/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -886,6 +888,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runCartFresh(loadCartFresh(dustFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "dust" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/thaw") {
+        const report = runFreezeState(loadFreezeState(thawFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "thaw" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

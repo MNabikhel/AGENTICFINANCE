@@ -607,6 +607,12 @@ paths:
       responses:
         "200": { description: Dust TAP report. A stale unpaid cart is not a late check. }
         "500": { description: Assertions failed }
+  /v1/demo/thaw:
+    post:
+      operationId: demoThaw
+      responses:
+        "200": { description: Thaw TAP report. A no-op thaw is not a kill-switch test. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
