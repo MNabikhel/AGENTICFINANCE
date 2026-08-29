@@ -1371,7 +1371,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.known_rfq": {
     kind: "none",
-    hint: "That RFQ or quote id is unknown. Issue a real RFQ, then quote it. A missing room is not a missing SKU.",
+    hint: "That RFQ or quote id is unknown. Issue a real RFQ, then quote it. A missing room is not a missing SKU. A closed guest list stays market.invited_seller. Completing funded work is legal.",
   },
   "market.fx_quote": {
     kind: "none",

@@ -66,6 +66,7 @@ import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
 import { loadAmountRange, runAmountRange } from "@aether/amount-range";
 import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 import { loadKnownSku, runKnownSku } from "@aether/known-sku";
+import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -170,6 +171,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_lid",
   "aether_demo_bare",
   "aether_demo_shelf",
+  "aether_demo_hall",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -727,6 +729,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_shelf") {
       const report = runKnownSku(loadKnownSku("fixtures/demo/shelf/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_hall") {
+      const report = runKnownRfq(loadKnownRfq("fixtures/demo/hall/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

@@ -196,6 +196,9 @@ export const BARE_TLDR =
 export const SHELF_TLDR =
   "A founder funded an $800 hire of a catalog good. An RFQ for a ghost SKU was market.known_sku — the slip list still allows, a listed SKU is not this deny. That funded work still released. A ghost SKU is not a catalog good.";
 
+export const HALL_TLDR =
+  "A founder funded an $800 hire. A quote on a ghost RFQ was market.known_rfq — a missing SKU is not this deny, a closed guest list is not this deny. That funded work still released. A missing room is not a missing SKU.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -633,7 +636,7 @@ export function autoBeat(input: {
           seq: input.seq,
           at: input.at,
           headline: `${who} quoted a room that does not exist`,
-          body: "A missing RFQ is not a missing SKU. Issue the request first, then quote it.",
+          body: "A missing RFQ is not a missing SKU. Issue the request first, then quote it. Completing funded work after that is legal. A closed guest list is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };

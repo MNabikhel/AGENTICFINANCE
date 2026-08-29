@@ -450,6 +450,11 @@
       "name": "aether_demo_shelf",
       "commandType": "demo.shelf",
       "description": "Run the shelf TAP: a ghost SKU is not a catalog good. market.rfq of a SKU not in the catalog is market.known_sku; the slip list still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_hall",
+      "commandType": "demo.hall",
+      "description": "Run the hall TAP: a missing room is not a missing SKU. market.quote on a ghost RFQ is market.known_rfq; a missing SKU and a closed guest list still allow; funded work still finishes."
     }
   ]
 }

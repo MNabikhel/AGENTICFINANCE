@@ -74,3 +74,4 @@ jobs:
       - run: pnpm demo:lid
       - run: pnpm demo:bare
       - run: pnpm demo:shelf
+      - run: pnpm demo:hall

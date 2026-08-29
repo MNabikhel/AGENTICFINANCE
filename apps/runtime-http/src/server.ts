@@ -71,6 +71,7 @@ import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
 import { loadAmountRange, runAmountRange } from "@aether/amount-range";
 import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 import { loadKnownSku, runKnownSku } from "@aether/known-sku";
+import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -134,6 +135,7 @@ const badgeFixture = join(process.cwd(), "fixtures/demo/badge/scenario.json");
 const lidFixture = join(process.cwd(), "fixtures/demo/lid/scenario.json");
 const bareFixture = join(process.cwd(), "fixtures/demo/bare/scenario.json");
 const shelfFixture = join(process.cwd(), "fixtures/demo/shelf/scenario.json");
+const hallFixture = join(process.cwd(), "fixtures/demo/hall/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -796,6 +798,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runKnownSku(loadKnownSku(shelfFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "shelf" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/hall") {
+        const report = runKnownRfq(loadKnownRfq(hallFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "hall" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

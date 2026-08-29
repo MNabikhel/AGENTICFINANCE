@@ -547,6 +547,12 @@ paths:
       responses:
         "200": { description: Shelf TAP report. A ghost SKU is not a catalog good. }
         "500": { description: Assertions failed }
+  /v1/demo/hall:
+    post:
+      operationId: demoHall
+      responses:
+        "200": { description: Hall TAP report. A missing room is not a missing SKU. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

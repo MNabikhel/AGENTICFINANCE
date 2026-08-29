@@ -83,6 +83,7 @@ export default defineConfig({
       "@aether/amount-range": path.resolve(__dirname, "packages/aether-runtime/src/amount-range.ts"),
       "@aether/escrow-required": path.resolve(__dirname, "packages/aether-runtime/src/escrow-required.ts"),
       "@aether/known-sku": path.resolve(__dirname, "packages/aether-runtime/src/known-sku.ts"),
+      "@aether/known-rfq": path.resolve(__dirname, "packages/aether-runtime/src/known-rfq.ts"),
     },
   },
 });

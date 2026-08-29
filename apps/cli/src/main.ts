@@ -59,6 +59,7 @@ import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
 import { loadAmountRange, runAmountRange } from "@aether/amount-range";
 import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 import { loadKnownSku, runKnownSku } from "@aether/known-sku";
+import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 
 const [, , command, name] = process.argv;
 
@@ -438,6 +439,12 @@ if (command === "demo" && (name === "shelf" || name === "aisle" || name === "rac
   process.exit(0);
 }
 
+if (command === "demo" && (name === "hall" || name === "foyer" || name === "lobby")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/hall/scenario.json");
+  printReport(runKnownRfq(loadKnownRfq(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -503,5 +510,6 @@ usage:
   pnpm demo lid
   pnpm demo bare
   pnpm demo shelf
+  pnpm demo hall
   pnpm mcp`);
 process.exit(command ? 1 : 0);
