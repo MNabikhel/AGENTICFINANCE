@@ -691,6 +691,12 @@ paths:
       responses:
         "200": { description: Ice TAP report. A frozen principal is not a frozen desk. }
         "500": { description: Assertions failed }
+  /v1/demo/rail:
+    post:
+      operationId: demoRail
+      responses:
+        "200": { description: Rail TAP report. A listed rail is not decoration. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

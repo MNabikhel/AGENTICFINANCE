@@ -101,6 +101,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_sour");
     expect(names).toContain("aether_demo_cut");
     expect(names).toContain("aether_demo_ice");
+    expect(names).toContain("aether_demo_rail");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_market_fx_settle");
     expect(names).toContain("aether_ledger_transfer");
@@ -807,6 +808,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("not a frozen desk");
+  });
+
+  it("runs the rail demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_rail", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("not decoration");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

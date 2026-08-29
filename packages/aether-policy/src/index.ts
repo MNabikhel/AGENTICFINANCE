@@ -13,6 +13,7 @@ import {
   MM_RATE_BAND_E6,
   RECURRENCE_GAP_MS,
   ROLE_CAPABILITY,
+  SIM_INSTRUMENT,
   VELOCITY_CAPS,
   type AutonomyLevel,
   type CommandType,
@@ -316,6 +317,27 @@ export const RULES: readonly Rule[] = [
       return c.allowed.some((m) => m.id === ctx.payeeId)
         ? v("payment.allowed_payees", "allow", "payee listed")
         : v("payment.allowed_payees", "deny", "payee not in allow-list");
+    },
+  },
+  {
+    id: "payment.allowed_payment_instruments",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.allowed_payment_instruments");
+      if (!c) return v("payment.allowed_payment_instruments", "allow", "no instrument constraint");
+      const instrument = ctx.payment?.payload.payment_instrument
+        ? ctx.payment.payload.payment_instrument
+        : SPEND_START_COMMANDS.has(ctx.commandType as CommandType)
+          ? SIM_INSTRUMENT
+          : undefined;
+      if (!instrument) {
+        return v("payment.allowed_payment_instruments", "allow", "no payment instrument");
+      }
+      if (!Array.isArray(c.allowed)) {
+        return v("payment.allowed_payment_instruments", "deny", "instrument list missing");
+      }
+      return c.allowed.some((m) => m.id === instrument.id)
+        ? v("payment.allowed_payment_instruments", "allow", "instrument listed")
+        : v("payment.allowed_payment_instruments", "deny", "instrument not in allow-list");
     },
   },
   {
@@ -712,6 +734,17 @@ export const RULES: readonly Rule[] = [
           childPayees.allowed.some((m) => !parentPayees.allowed.some((p) => p.id === m.id)))
       ) {
         return v("mandate.child_tighter", "deny", "child payees not a subset of parent");
+      }
+      const parentRails = listed(parent, "payment.allowed_payment_instruments");
+      const childRails = listed(child, "payment.allowed_payment_instruments");
+      if (
+        parentRails &&
+        (!Array.isArray(parentRails.allowed) ||
+          !childRails ||
+          !Array.isArray(childRails.allowed) ||
+          childRails.allowed.some((m) => !parentRails.allowed.some((p) => p.id === m.id)))
+      ) {
+        return v("mandate.child_tighter", "deny", "child instruments not a subset of parent");
       }
       const parentMax = listed(parent, "aether.max_autonomy");
       const childMax = listed(child, "aether.max_autonomy");
@@ -1315,6 +1348,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "payment.parent_budget": ISSUE_INTENT,
   "mandate.child_tighter": ISSUE_INTENT,
   "payment.allowed_payees": ISSUE_INTENT,
+  "payment.allowed_payment_instruments": ISSUE_INTENT,
   "payment.allowed_skus": ISSUE_INTENT,
   "ladder.max_autonomy_constraint": {
     kind: "issue_intent",

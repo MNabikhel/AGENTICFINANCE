@@ -198,6 +198,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not an expiry");
     expect(spec).toContain("/v1/demo/ice:");
     expect(spec).toContain("not a frozen desk");
+    expect(spec).toContain("/v1/demo/rail:");
+    expect(spec).toContain("not decoration");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

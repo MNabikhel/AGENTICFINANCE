@@ -268,6 +268,9 @@ export const CUT_TLDR =
 export const ICE_TLDR =
   "A founder funded an $800 hire under a live handshake. After the money's owner was frozen, a new hire was kya.principal_not_frozen — a frozen speaker is not this deny, a revoked hop is not this deny, a no-op thaw is not this deny. No hire written. An unfreeze still unlocked the lock. That funded work still released. A frozen principal is not a frozen desk.";
 
+export const RAIL_TLDR =
+  "A founder funded an $800 hire under a slip that listed this kernel's sim ledger. A second slip that listed a ghost rail was payment.allowed_payment_instruments — a listed payee is not this deny, a live-rail type is not this deny. No hire written. That funded work still released. A listed rail is not decoration.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -833,6 +836,8 @@ export function autoBeat(input: {
         body = "The parent permission slip’s envelope is spent. The child’s own leftover is not a new parent envelope. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.allowed_payees") {
         body = "That seller is not on this permission slip’s payee list. A registered vendor is not a listed payee. A closed room is a guest list on the RFQ; this is the slip. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.allowed_payment_instruments") {
+        body = "That payment rail is not on this permission slip’s instrument list. The sim ledger this kernel stamps is not a ghost id. Live rails stay instrument.sim_only. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.allowed_skus") {
         body = "That good is not on this permission slip’s SKU list. A catalog SKU is not a listed SKU. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {

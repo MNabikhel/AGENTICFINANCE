@@ -90,6 +90,7 @@ import { loadFxPair, runFxPair } from "@aether/fx-pair";
 import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
 import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
+import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -218,6 +219,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_sour",
   "aether_demo_cut",
   "aether_demo_ice",
+  "aether_demo_rail",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -895,6 +897,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_ice") {
       const report = runPrincipalNotFrozen(loadPrincipalNotFrozen("fixtures/demo/ice/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_rail") {
+      const report = runAllowedInstruments(loadAllowedInstruments("fixtures/demo/rail/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

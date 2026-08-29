@@ -107,6 +107,7 @@ export default defineConfig({
       "@aether/approval-replay": path.resolve(__dirname, "packages/aether-runtime/src/approval-replay.ts"),
       "@aether/chain-intact": path.resolve(__dirname, "packages/aether-runtime/src/chain-intact.ts"),
       "@aether/principal-not-frozen": path.resolve(__dirname, "packages/aether-runtime/src/principal-not-frozen.ts"),
+      "@aether/allowed-instruments": path.resolve(__dirname, "packages/aether-runtime/src/allowed-instruments.ts"),
     },
   },
 });

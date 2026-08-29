@@ -98,6 +98,7 @@ pnpm demo swap            # a swapped pair is not a silent journal of the books 
 pnpm demo sour            # a grown-up yes is not a late hire
 pnpm demo cut             # a revoke is not an expiry
 pnpm demo ice             # a frozen principal is not a frozen desk
+pnpm demo rail            # a listed rail is not decoration
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
@@ -289,7 +290,7 @@ Human writes a permission slip (mandate)
 | Path | Role |
 |---|---|
 | `AGENTS.md` | How another agent talks to Aether |
-| `packages/aether-policy` | Referee. 87 ordered rules. No LLM. No I/O. |
+| `packages/aether-policy` | Referee. 88 ordered rules. No LLM. No I/O. |
 | `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
 | `packages/aether-mcp` | Real MCP host. One Runtime. Tools are commands. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |

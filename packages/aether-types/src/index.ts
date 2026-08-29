@@ -187,6 +187,14 @@ export interface PaymentInstrument {
   description: string;
 }
 
+/** The only instrument `mutPayment` stamps. A listed constraint that omits this id cannot spend. */
+export const SIM_LEDGER_INSTRUMENT_ID = "sim-ledger";
+export const SIM_INSTRUMENT: PaymentInstrument = {
+  id: SIM_LEDGER_INSTRUMENT_ID,
+  type: "sim_ledger",
+  description: "Aether simulated double-entry ledger",
+};
+
 export interface LineItem {
   sku: string;
   description: string;

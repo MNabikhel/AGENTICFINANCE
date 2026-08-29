@@ -570,6 +570,11 @@
       "name": "aether_demo_ice",
       "commandType": "demo.ice",
       "description": "Run the ice TAP: a frozen principal is not a frozen desk. hire.create after the founder is frozen is kya.principal_not_frozen; a frozen speaker, a revoked hop, and a no-op thaw still allow; no hire is written; an unfreeze still unlocks the lock; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_rail",
+      "commandType": "demo.rail",
+      "description": "Run the rail TAP: a listed rail is not decoration. hire.create against a slip that lists a ghost instrument is payment.allowed_payment_instruments; a listed payee and a live-rail type still allow; no hire is written; funded work still finishes."
     }
   ]
 }

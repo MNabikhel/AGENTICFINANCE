@@ -83,6 +83,7 @@ import { loadFxPair, runFxPair } from "@aether/fx-pair";
 import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
 import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
+import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
 
 const [, , command, name] = process.argv;
 
@@ -606,6 +607,12 @@ if (command === "demo" && (name === "ice" || name === "glaze" || name === "chill
   process.exit(0);
 }
 
+if (command === "demo" && (name === "rail" || name === "tender" || name === "till")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/rail/scenario.json");
+  printReport(runAllowedInstruments(loadAllowedInstruments(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -695,5 +702,6 @@ usage:
   pnpm demo sour
   pnpm demo cut
   pnpm demo ice
+  pnpm demo rail
   pnpm mcp`);
 process.exit(command ? 1 : 0);

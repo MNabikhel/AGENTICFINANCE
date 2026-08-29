@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 87 rules", () => {
-    expect(RULE_IDS).toHaveLength(87);
+  it("has 88 rules", () => {
+    expect(RULE_IDS).toHaveLength(88);
   });
 
   it("denies frozen actors", () => {
@@ -193,6 +193,61 @@ describe("policy catalog", () => {
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "payment.allowed_payees")?.verdict).toBe("deny");
+  });
+
+  it("denies hire.create when the slip lists a ghost rail", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        payeeId: MERCHANT.id,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([
+          {
+            type: "payment.allowed_payment_instruments",
+            allowed: [{ id: "ghost-rail", type: "sim_ledger", description: "x" }],
+          },
+        ]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.allowed_payment_instruments")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "instrument.sim_only")?.verdict).toBe("allow");
+  });
+
+  it("allows hire.create when the slip lists the sim ledger", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        payeeId: MERCHANT.id,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([
+          {
+            type: "payment.allowed_payment_instruments",
+            allowed: [{ id: "sim-ledger", type: "sim_ledger", description: "sim" }],
+          },
+        ]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.allowed_payment_instruments")?.verdict).toBe("allow");
+  });
+
+  it("denies a child instrument list that is not a subset of the parent", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      {
+        type: "payment.allowed_payment_instruments",
+        allowed: [{ id: "sim-ledger", type: "sim_ledger", description: "sim" }],
+      },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200000 }],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
   });
 
   it("escalates procurement above $5,000", () => {
