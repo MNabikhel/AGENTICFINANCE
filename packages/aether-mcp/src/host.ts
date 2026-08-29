@@ -19,6 +19,7 @@ import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
 import { loadCalendar, runCalendar } from "@aether/execution-window";
 import { loadSlot, runSlot } from "@aether/cadence-slot";
 import { loadDaily, runDaily } from "@aether/daily-gap";
+import { loadCartOccupancy, runCartOccupancy } from "@aether/cart-occupancy";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -76,6 +77,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_calendar",
   "aether_demo_slot",
   "aether_demo_daily",
+  "aether_demo_cart",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -398,6 +400,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_daily") {
       const report = runDaily(loadDaily("fixtures/demo/daily/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cart") {
+      const report = runCartOccupancy(loadCartOccupancy("fixtures/demo/cart/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

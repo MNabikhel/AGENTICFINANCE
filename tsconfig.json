@@ -29,7 +29,8 @@
       "@aether/recurrence-cadence": ["packages/aether-runtime/src/recurrence-cadence.ts"],
       "@aether/execution-window": ["packages/aether-runtime/src/execution-window.ts"],
       "@aether/cadence-slot": ["packages/aether-runtime/src/cadence-slot.ts"],
-      "@aether/daily-gap": ["packages/aether-runtime/src/daily-gap.ts"]
+      "@aether/daily-gap": ["packages/aether-runtime/src/daily-gap.ts"],
+      "@aether/cart-occupancy": ["packages/aether-runtime/src/cart-occupancy.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

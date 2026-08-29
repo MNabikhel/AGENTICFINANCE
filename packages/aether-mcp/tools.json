@@ -215,6 +215,11 @@
       "name": "aether_demo_daily",
       "commandType": "demo.daily",
       "description": "Run the daily TAP: a cadence is a gap, not a burst. Same-day hire.create is payment.recurrence; after 24 hours it may proceed."
+    },
+    {
+      "name": "aether_demo_cart",
+      "commandType": "demo.cart",
+      "description": "Run the cart occupancy TAP: a hire takes one cart; a cart takes one payment; passing cartId on fund is not a pointer."
     }
   ]
 }

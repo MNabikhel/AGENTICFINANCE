@@ -265,6 +265,12 @@ paths:
       responses:
         "200": { description: Daily TAP report. A cadence is a gap, not a burst. }
         "500": { description: Assertions failed }
+  /v1/demo/cart:
+    post:
+      operationId: demoCart
+      responses:
+        "200": { description: Cart occupancy TAP report. Occupancy is a bind, not a field on fund. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

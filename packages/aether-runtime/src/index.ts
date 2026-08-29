@@ -42,6 +42,7 @@ import {
   CALENDAR_TLDR,
   SLOT_TLDR,
   DAILY_TLDR,
+  CART_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -829,6 +830,11 @@ export class Runtime {
           id: "daily-gap",
           name: "Daily TAP",
           description: "POST /v1/demo/daily — a cadence is a gap, not a burst",
+        },
+        {
+          id: "cart-occupancy",
+          name: "Cart occupancy TAP",
+          description: "POST /v1/demo/cart — occupancy is a bind, not a field on fund",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3230,7 +3236,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

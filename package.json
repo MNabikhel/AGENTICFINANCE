@@ -20,6 +20,7 @@
     "demo:calendar": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo calendar",
     "demo:slot": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo slot",
     "demo:daily": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo daily",
+    "demo:cart": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo cart",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

@@ -12,6 +12,7 @@ import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
 import { loadCalendar, runCalendar } from "@aether/execution-window";
 import { loadSlot, runSlot } from "@aether/cadence-slot";
 import { loadDaily, runDaily } from "@aether/daily-gap";
+import { loadCartOccupancy, runCartOccupancy } from "@aether/cart-occupancy";
 
 const [, , command, name] = process.argv;
 
@@ -109,6 +110,12 @@ if (command === "demo" && (name === "daily" || name === "daily-gap")) {
   process.exit(0);
 }
 
+if (command === "demo" && (name === "cart" || name === "occupancy" || name === "unique-cart" || name === "cart-occupancy")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/cart/scenario.json");
+  printReport(runCartOccupancy(loadCartOccupancy(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -127,5 +134,6 @@ usage:
   pnpm demo calendar
   pnpm demo slot
   pnpm demo daily
+  pnpm demo cart
   pnpm mcp`);
 process.exit(command ? 1 : 0);

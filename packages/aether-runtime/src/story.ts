@@ -55,6 +55,9 @@ export const SLOT_TLDR =
 export const DAILY_TLDR =
   "A founder wrote a daily cadence. The desk hired once and released. A same-day second hire.create was payment.recurrence. After 24 hours that command went through. A cadence is a gap, not a burst.";
 
+export const CART_TLDR =
+  "A desk accepted an $800 hire. Funding with a loose cartId was hire.bound_cart. Binding a cart occupied the hire; a second cart was hire.unique_cart. A second payment on that cart was mandate.unique_payment. The same fund command then went through — occupancy is a bind, not a field on fund.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -150,7 +153,38 @@ export function autoBeat(input: {
     }
     return undefined;
   }
-  if (cmd.type === "mandate.issue_cart" || cmd.type === "mandate.issue_payment") return undefined;
+  if (cmd.type === "mandate.issue_cart") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "hire.unique_cart") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not bind a second cart`,
+          body: "A hire takes one cart. A second cart is not a pointer swap.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+    }
+    return undefined;
+  }
+  if (cmd.type === "mandate.issue_payment") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "mandate.unique_payment") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not mint a second payment`,
+          body: "A cart takes one payment. A second payment is not a second check.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+    }
+    return undefined;
+  }
   if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");

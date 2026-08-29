@@ -15,7 +15,8 @@
     "./recurrence-cadence": "./src/recurrence-cadence.ts",
     "./execution-window": "./src/execution-window.ts",
     "./cadence-slot": "./src/cadence-slot.ts",
-    "./daily-gap": "./src/daily-gap.ts"
+    "./daily-gap": "./src/daily-gap.ts",
+    "./cart-occupancy": "./src/cart-occupancy.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
