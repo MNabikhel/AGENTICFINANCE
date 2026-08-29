@@ -31,6 +31,7 @@ import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
 import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
 import { loadWindowReach, runWindowReach } from "@aether/window-reach";
+import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
 
 const [, , command, name] = process.argv;
 
@@ -242,6 +243,12 @@ if (command === "demo" && (name === "reach" || name === "horizon" || name === "w
   process.exit(0);
 }
 
+if (command === "demo" && (name === "year" || name === "century" || name === "kya-window")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/year/scenario.json");
+  printReport(runKyaWindow(loadKyaWindow(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -279,5 +286,6 @@ usage:
   pnpm demo climb
   pnpm demo born
   pnpm demo reach
+  pnpm demo year
   pnpm mcp`);
 process.exit(command ? 1 : 0);

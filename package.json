@@ -39,6 +39,7 @@
     "demo:climb": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo climb",
     "demo:born": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo born",
     "demo:reach": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo reach",
+    "demo:year": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo year",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

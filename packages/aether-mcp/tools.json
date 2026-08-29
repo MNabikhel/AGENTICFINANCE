@@ -310,6 +310,11 @@
       "name": "aether_demo_reach",
       "commandType": "demo.reach",
       "description": "Run the reach TAP: a window that opens after the slip dies is not a window. issue_intent is mandate.window_reach; a reachable future still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_year",
+      "commandType": "demo.year",
+      "description": "Run the year TAP: a handshake cannot outlive one year. kya.attest with expiresAt after now+1y is kya.mint_window; a one-year hop still mints; funded work still finishes."
     }
   ]
 }

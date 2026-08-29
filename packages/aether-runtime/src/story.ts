@@ -112,6 +112,9 @@ export const BORN_TLDR =
 export const REACH_TLDR =
   "A founder funded an $800 hire on a live slip. A calendar that only opened after that slip would die was mandate.window_reach — no second slip written. A future window that still opens while the slip lives still minted. That funded work still released. A window that opens after the slip dies is not a window.";
 
+export const YEAR_TLDR =
+  "A founder funded an $800 hire under a one-year handshake. A hop that outlived one year was kya.mint_window — no handshake written. A one-year hop still minted. That funded work still released. Year 9999 is not standing identity.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

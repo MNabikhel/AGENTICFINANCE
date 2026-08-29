@@ -55,6 +55,7 @@ export default defineConfig({
       "@aether/capability-subset": path.resolve(__dirname, "packages/aether-runtime/src/capability-subset.ts"),
       "@aether/fx-fresh": path.resolve(__dirname, "packages/aether-runtime/src/fx-fresh.ts"),
       "@aether/window-reach": path.resolve(__dirname, "packages/aether-runtime/src/window-reach.ts"),
+      "@aether/kya-window": path.resolve(__dirname, "packages/aether-runtime/src/kya-window.ts"),
     },
   },
 });

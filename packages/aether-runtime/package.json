@@ -34,7 +34,8 @@
     "./payment-payees": "./src/payment-payees.ts",
     "./capability-subset": "./src/capability-subset.ts",
     "./fx-fresh": "./src/fx-fresh.ts",
-    "./window-reach": "./src/window-reach.ts"
+    "./window-reach": "./src/window-reach.ts",
+    "./kya-window": "./src/kya-window.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

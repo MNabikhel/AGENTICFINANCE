@@ -46,3 +46,4 @@ jobs:
       - run: pnpm demo:climb
       - run: pnpm demo:born
       - run: pnpm demo:reach
+      - run: pnpm demo:year
