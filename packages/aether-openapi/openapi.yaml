@@ -277,6 +277,12 @@ paths:
       responses:
         "200": { description: Velocity TAP report. A hot hour is not a freeze on funded work. }
         "500": { description: Assertions failed }
+  /v1/demo/door:
+    post:
+      operationId: demoDoor
+      responses:
+        "200": { description: Operator-door TAP report. The public kernel is not a hosted checkout. PROTOCOL.hosted stays false. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

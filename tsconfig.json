@@ -31,7 +31,8 @@
       "@aether/cadence-slot": ["packages/aether-runtime/src/cadence-slot.ts"],
       "@aether/daily-gap": ["packages/aether-runtime/src/daily-gap.ts"],
       "@aether/cart-occupancy": ["packages/aether-runtime/src/cart-occupancy.ts"],
-      "@aether/hot-hour": ["packages/aether-runtime/src/hot-hour.ts"]
+      "@aether/hot-hour": ["packages/aether-runtime/src/hot-hour.ts"],
+      "@aether/operator-door": ["packages/aether-runtime/src/operator-door.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

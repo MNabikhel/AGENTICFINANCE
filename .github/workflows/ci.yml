@@ -29,3 +29,4 @@ jobs:
       - run: pnpm demo:daily
       - run: pnpm demo:cart
       - run: pnpm demo:velocity
+      - run: pnpm demo:door

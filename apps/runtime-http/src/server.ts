@@ -26,6 +26,7 @@ import { loadSlot, runSlot } from "@aether/cadence-slot";
 import { loadDaily, runDaily } from "@aether/daily-gap";
 import { loadCartOccupancy, runCartOccupancy } from "@aether/cart-occupancy";
 import { loadVelocity, runVelocity } from "@aether/hot-hour";
+import { loadDoor, runDoor } from "@aether/operator-door";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -44,6 +45,7 @@ const slotFixture = join(process.cwd(), "fixtures/demo/slot/scenario.json");
 const dailyFixture = join(process.cwd(), "fixtures/demo/daily/scenario.json");
 const cartFixture = join(process.cwd(), "fixtures/demo/cart/scenario.json");
 const velocityFixture = join(process.cwd(), "fixtures/demo/velocity/scenario.json");
+const doorFixture = join(process.cwd(), "fixtures/demo/door/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -391,6 +393,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runVelocity(loadVelocity(velocityFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "velocity" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/door") {
+        const report = runDoor(loadDoor(doorFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "door" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

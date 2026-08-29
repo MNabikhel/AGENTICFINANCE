@@ -38,6 +38,7 @@ export default defineConfig({
       "@aether/daily-gap": path.resolve(__dirname, "packages/aether-runtime/src/daily-gap.ts"),
       "@aether/cart-occupancy": path.resolve(__dirname, "packages/aether-runtime/src/cart-occupancy.ts"),
       "@aether/hot-hour": path.resolve(__dirname, "packages/aether-runtime/src/hot-hour.ts"),
+      "@aether/operator-door": path.resolve(__dirname, "packages/aether-runtime/src/operator-door.ts"),
     },
   },
 });

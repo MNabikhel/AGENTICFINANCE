@@ -61,6 +61,9 @@ export const CART_TLDR =
 export const VELOCITY_TLDR =
   "A desk funded an $800 hire. The settle hour ran hot. That funded work still released. A new hire.create was velocity.window — paused for a grown-up, not refused. A hot hour is not a freeze on funded work.";
 
+export const DOOR_TLDR =
+  "The public kernel refused subscribe as host.not_hosted. A hosted operator refused an unsigned speaker (401) and an unpaid month (402). After an invoice the same command went through. Subscribe recorded a row; spend was not gated on it. PROTOCOL.hosted stays false.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

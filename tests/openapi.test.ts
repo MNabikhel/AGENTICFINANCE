@@ -60,6 +60,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a field on fund");
     expect(spec).toContain("/v1/demo/velocity:");
     expect(spec).toContain("not a freeze on funded work");
+    expect(spec).toContain("/v1/demo/door:");
+    expect(spec).toContain("not a hosted checkout");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

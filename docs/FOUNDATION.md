@@ -165,8 +165,21 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
+- [x] CommandType stays 1:1 with MCP. OpenAPI lists command aliases and the TAP demos the discovery card names. GET `/v1/agents/{id}` and GET `/v1/approvals/{id}` are inspect, not command faces — do not grind them. The hosted operator door was unit-tested, not a TAP.
+
+### 23. The public kernel is not a hosted checkout
+
+The door sits around `evaluate()`, not inside it. `PROTOCOL.hosted` stays false. A hosted instance (`Runtime({ hosted: true })`) may require speaker proof and a current invoice. Subscribe is enrollment, not a spend gate.
+
+- [x] A TAP (`pnpm demo door`) refuses public subscribe as `host.not_hosted`, refuses an unsigned hosted speaker as 401 `speaker.proof` and an unpaid month as 402 `host.unpaid`, then after an invoice records a subscribe row. Spend is not gated on that row.
+- [x] No new policy rule unless a current allow is a public checkout, or spend is gated on a hosted row.
+
+### 24. Next: only if the pin would lie
+
+If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
+
 - [ ] Next turn: if a listed face is missing from the bus, or a current allow is a lie, patch it. If not, take a missing demonstrated economic object rather than a website.
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

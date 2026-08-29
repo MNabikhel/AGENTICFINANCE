@@ -14,6 +14,7 @@ import { loadSlot, runSlot } from "@aether/cadence-slot";
 import { loadDaily, runDaily } from "@aether/daily-gap";
 import { loadCartOccupancy, runCartOccupancy } from "@aether/cart-occupancy";
 import { loadVelocity, runVelocity } from "@aether/hot-hour";
+import { loadDoor, runDoor } from "@aether/operator-door";
 
 const [, , command, name] = process.argv;
 
@@ -123,6 +124,12 @@ if (command === "demo" && (name === "velocity" || name === "hour" || name === "h
   process.exit(0);
 }
 
+if (command === "demo" && (name === "door" || name === "hosted-door" || name === "operator-door")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/door/scenario.json");
+  printReport(runDoor(loadDoor(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -143,5 +150,6 @@ usage:
   pnpm demo daily
   pnpm demo cart
   pnpm demo velocity
+  pnpm demo door
   pnpm mcp`);
 process.exit(command ? 1 : 0);
