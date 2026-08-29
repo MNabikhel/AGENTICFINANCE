@@ -58,6 +58,10 @@ describe("command shape enums and integer ranges", () => {
     expect(commandShapeError("market.withdraw", { quoteId: 1 })).toBe("invalid type: quoteId");
   });
 
+  it("rejects a numeric intentId as a type miss, not a rip after yes", () => {
+    expect(commandShapeError("mandate.revoke", { intentId: 1 })).toBe("invalid type: intentId");
+  });
+
   it("rejects a string where an invite list belongs", () => {
     expect(commandShapeError("market.rfq", { sku: "research.brief", spec: "x", invitedSellerIds: "aid_x" })).toBe(
       "invalid type: invitedSellerIds",

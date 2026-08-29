@@ -120,6 +120,7 @@ import {
   LOCK_TLDR,
   VOID_TLDR,
   FOLD_TLDR,
+  RIP_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -328,6 +329,7 @@ export class Runtime {
   readonly lastOccurrence = new Map<MandateId, Instant>();
   readonly consumedQuotes = new Set<string>();
   readonly withdrawnQuotes = new Set<string>();
+  readonly revokedIntents = new Set<MandateId>();
   readonly reservedQuotes = new Map<string, ApprovalId>();
   readonly settleEvents: { at: string; volume: number }[] = [];
   dailySpend = 0;
@@ -741,20 +743,21 @@ export class Runtime {
 
   /**
    * Intent view for other agents. A slip whose hire has moved escrow is
-   * `funded`, not `live`. Funded wins over expired (refunded and released still
-   * funded — the slip was drawn). Expired includes the slip `exp` and a dead
-   * parent intent, even when this child's own window still lives. A child hire
-   * does not occupy the parent. Recurrence spend is not occupancy. The store
-   * stays raw (`exp` only).
+   * `funded`, not `live`. Funded wins over revoked and expired (refunded and
+   * released still funded — the slip was drawn). Revoked (torn by mandate.revoke)
+   * wins over expired. Expired includes the slip `exp` and a dead parent intent,
+   * even when this child's own window still lives. A child hire does not occupy
+   * the parent. Recurrence spend is not occupancy. The store stays raw (`exp` only).
    */
   intentView(intent: Signed<IntentMandate>): Signed<IntentMandate> & { status: IntentStatus } {
     if (this.hireDrawnIntent(intent)) return { ...intent, status: "funded" };
+    if (this.revokedIntents.has(intent.payload.id)) return { ...intent, status: "revoked" };
     if (intent.payload.exp <= unixSeconds(this.clock.now())) {
       return { ...intent, status: "expired" };
     }
     if (intent.payload.parentId) {
       const parent = this.intents.get(intent.payload.parentId);
-      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now()) || this.revokedIntents.has(parent.payload.id)) {
         return { ...intent, status: "expired" };
       }
     }
@@ -791,13 +794,16 @@ export class Runtime {
     return { ...row, status: "expired" };
   }
 
-  /** Intent still in its own window, and parent (if any) still in its window. */
+  /** Intent still in its own window, not torn, and parent (if any) still in its window. */
   private intentSlipLive(intent: Signed<IntentMandate> | undefined): boolean {
     if (!intent) return false;
+    if (this.revokedIntents.has(intent.payload.id)) return false;
     if (intent.payload.exp <= unixSeconds(this.clock.now())) return false;
     if (intent.payload.parentId) {
       const parent = this.intents.get(intent.payload.parentId);
-      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) return false;
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now()) || this.revokedIntents.has(parent.payload.id)) {
+        return false;
+      }
     }
     return true;
   }
@@ -1304,6 +1310,11 @@ export class Runtime {
           name: "Fold TAP",
           description: "POST /v1/demo/fold — someone else's bid is not yours to pull",
         },
+        {
+          id: "mandate-party",
+          name: "Rip TAP",
+          description: "POST /v1/demo/rip — someone else's unused slip is not yours to tear",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -1352,8 +1363,8 @@ export class Runtime {
    * aid_ agent, hid_ hire (derived live | expired | funded; funded is escrow-moved
    * occupancy and wins over expired; expired includes a dead intent and a dead parent
    * intent even when the child's exp still lives), mid_ mandate (intents include
-   * derived live | expired | funded; funded is escrow-moved occupancy against this
-   * slip and wins over expired; expired includes a dead parent intent even when this
+   * derived live | expired | funded | revoked; funded is escrow-moved occupancy against this
+   * slip and wins over revoked and expired; revoked wins over expired; expired includes a dead parent intent even when this
    * child's `exp` still lives; a child hire does not occupy the parent;
    * carts include derived live | expired | bound;
    * bound is unique_payment occupancy and wins over expired; payments include derived
@@ -1495,6 +1506,7 @@ export class Runtime {
       lastOccurrence: [...this.lastOccurrence.entries()],
       consumedQuotes: [...this.consumedQuotes],
       withdrawnQuotes: [...this.withdrawnQuotes],
+      revokedIntents: [...this.revokedIntents],
       reservedQuotes: [...this.reservedQuotes.entries()],
       settledFxQuotes: [...this.consumedQuotes],
       settleEvents: [...this.settleEvents],
@@ -1630,6 +1642,8 @@ export class Runtime {
     for (const id of world.settledFxQuotes ?? []) this.consumedQuotes.add(id);
     this.withdrawnQuotes.clear();
     for (const id of world.withdrawnQuotes ?? []) this.withdrawnQuotes.add(id);
+    this.revokedIntents.clear();
+    for (const id of world.revokedIntents ?? []) this.revokedIntents.add(id);
     this.reservedQuotes.clear();
     for (const [quoteId, ticketId] of world.reservedQuotes ?? []) {
       this.reservedQuotes.set(quoteId, ticketId as ApprovalId);
@@ -1873,7 +1887,7 @@ export class Runtime {
     ) {
       ctx.hireKnown = Boolean(hire && hire.id !== "hid_draft");
     }
-    if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart") {
+    if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart" || cmd.type === "mandate.revoke") {
       ctx.intentKnown = Boolean(intent);
     }
     if (cmd.type === "host.subscribe") {
@@ -1955,7 +1969,9 @@ export class Runtime {
         cmd.type === "hire.accept" ||
         cmd.type === "hire.fund"
       ) {
-        ctx.parentFresh = parentIntent.payload.exp > unixSeconds(this.clock.now());
+        ctx.parentFresh =
+          parentIntent.payload.exp > unixSeconds(this.clock.now()) &&
+          !this.revokedIntents.has(parentIntent.payload.id);
       }
     }
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
@@ -2118,6 +2134,20 @@ export class Runtime {
         ctx.marketPartyOk =
           actor.role === "human_operator" || actor.role === "treasury" || actor.id === quoted.sellerId;
       }
+    }
+    if (cmd.type === "mandate.revoke" && intent) {
+      ctx.mandatePartyOk =
+        actor.role === "human_operator" || actor.role === "treasury" || actor.id === intent.payload.issuerId;
+    }
+    if (
+      intent &&
+      (cmd.type === "hire.create" ||
+        cmd.type === "hire.fund" ||
+        cmd.type === "mandate.issue_cart" ||
+        cmd.type === "mandate.revoke" ||
+        cmd.type === "host.subscribe")
+    ) {
+      ctx.intentWindowLive = !this.revokedIntents.has(intent.payload.id);
     }
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
@@ -2505,7 +2535,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "market.withdraw" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "market.withdraw" || cmd.type === "mandate.revoke" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -2570,6 +2600,8 @@ export class Runtime {
         return this.mutLadder(body, actor);
       case "mandate.issue_intent":
         return this.mutIntent(body, actor);
+      case "mandate.revoke":
+        return this.mutIntentRevoke(body, actor);
       case "mandate.issue_cart":
         return this.mutCart(body, actor);
       case "mandate.issue_payment":
@@ -2880,6 +2912,7 @@ export class Runtime {
       const parent = this.intents.get(body.parentId as MandateId);
       if (!parent) throw new Error("unknown parent intent");
       if (parent.payload.exp <= unixSeconds(this.clock.now())) throw new Error("parent intent expired");
+      if (this.revokedIntents.has(parent.payload.id)) throw new Error("parent intent revoked");
       this.assertKyaNestedParentsLive(actor, parent);
       payload.parentId = body.parentId as MandateId;
     }
@@ -2895,12 +2928,28 @@ export class Runtime {
     return signed;
   }
 
+  private mutIntentRevoke(body: Record<string, unknown>, actor: Agent) {
+    const intent = this.intents.get(body.intentId as MandateId);
+    if (!intent) throw new Error("unknown intent");
+    if (this.revokedIntents.has(intent.payload.id)) throw new Error("intent already revoked");
+    this.revokedIntents.add(intent.payload.id);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "MANDATE_REVOKE",
+      subjects: [{ type: "intent", id: intent.payload.id }],
+      payload: { id: intent.payload.id, issuerId: intent.payload.issuerId },
+    });
+    return intent;
+  }
+
   private mutCart(body: Record<string, unknown>, actor: Agent) {
     const boundHire =
       typeof body.hireId === "string" ? this.hires.get(body.hireId as HireId) : undefined;
     if (boundHire?.cartId) throw new Error("hire already has a cart");
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
+    if (this.revokedIntents.has(intent.payload.id)) throw new Error("intent revoked");
     const merchantAgent = this.identity.require(body.merchantId as AgentId);
     const lineItems = body.line_items as CartMandate["line_items"];
     if (!lineItems[0]?.unitAmount || typeof lineItems[0].quantity !== "number") {
@@ -3056,9 +3105,10 @@ export class Runtime {
     if (!quote || !rfq) throw new Error("unknown quote");
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
+    if (this.revokedIntents.has(intent.payload.id)) throw new Error("intent revoked");
     if (intent.payload.parentId) {
       const parent = this.intents.get(intent.payload.parentId);
-      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now()) || this.revokedIntents.has(parent.payload.id)) {
         throw new Error("parent intent expired");
       }
     }
@@ -3845,7 +3895,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

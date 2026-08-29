@@ -212,6 +212,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a refund");
     expect(spec).toContain("/v1/demo/fold:");
     expect(spec).toContain("not yours to pull");
+    expect(spec).toContain("/v1/demo/rip:");
+    expect(spec).toContain("not yours to tear");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {
@@ -230,6 +232,7 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("/v1/agents/{id}/unfreeze:");
     expect(spec).toContain("/v1/agents/{id}/rotate:");
     expect(spec).toContain("/v1/quotes/{id}/withdraw:");
+    expect(spec).toContain("/v1/mandates/{id}/revoke:");
     expect(spec).toContain("/.well-known/agent-card.json:");
     expect(spec).toContain("/v1/clearing/windows:");
     expect(spec).toContain("An iss_ issuer is a genesis catalog row");

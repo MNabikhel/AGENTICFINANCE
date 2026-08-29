@@ -300,9 +300,10 @@ export interface IntentMandate {
  * later refund/release) wins over expired. Expired includes the slip `exp` and a
  * dead parent intent, even when this child's own window still lives. A child
  * hire does not occupy the parent. Recurrence `spentByIntent` is not occupancy.
- * The store stays raw (`exp` only).
+ * The store stays raw (`exp` only). Revoked (torn by mandate.revoke) wins over
+ * expired. Funded wins over revoked and expired.
  */
-export type IntentStatus = "live" | "expired" | "funded";
+export type IntentStatus = "live" | "expired" | "funded" | "revoked";
 
 export interface CartMandate {
   vct: "aether.mandate.cart.1";
@@ -816,8 +817,8 @@ export interface PolicyContext {
    */
   hireKnown?: boolean;
   /**
-   * False when hire.create, issue_cart, or hosted `host.subscribe` points at an
-   * intent that is not in this world. Absent = command does not require a live intent.
+   * False when hire.create, issue_cart, mandate.revoke, or hosted `host.subscribe`
+   * points at an intent that is not in this world. Absent = command does not require a live intent.
    * Public-kernel subscribe does not set this — that deny is `host.not_hosted`.
    */
   intentKnown?: boolean;
@@ -918,6 +919,20 @@ export interface PolicyContext {
    * quote is unknown (`rfqKnown` handles that). A vendor cannot fold someone else's bid.
    */
   marketPartyOk?: boolean;
+  /**
+   * False when mandate.revoke names an intent whose issuer is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a revoke, or the
+   * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.
+   */
+  mandatePartyOk?: boolean;
+  /**
+   * False when hire.create / hire.fund / issue_cart / host.subscribe / mandate.revoke
+   * would use an intent that mandate.revoke already tore up.
+   * Absent = not those commands, or the intent is unknown (`intentKnown` handles that).
+   * Completing funded work after that is legal (`mandate.not_expired` allows complete-after-fund).
+   * A ripped unused slip is `mandate.not_expired` on a new hire, not occupancy.
+   */
+  intentWindowLive?: boolean;
   /**
    * False when identity.register would reuse a runtime alias or its operating book
    * (USD cash, and USDC for data_vendor / market_maker).
@@ -1189,6 +1204,7 @@ export type AuditAction =
   | "IDENTITY_REGISTER"
   | "LADDER_SET"
   | "MANDATE_ISSUE"
+  | "MANDATE_REVOKE"
   | "RFQ_CREATE"
   | "QUOTE_SUBMIT"
   | "QUOTE_WITHDRAW"
@@ -1255,6 +1271,7 @@ export type CommandType =
   | "kya.revoke"
   | "circuit.reset"
   | "mandate.issue_intent"
+  | "mandate.revoke"
   | "mandate.issue_cart"
   | "mandate.issue_payment"
   | "market.rfq"
@@ -1345,6 +1362,7 @@ export const ROLE_CAPABILITY: Record<
     "kya.revoke",
     "circuit.reset",
     "mandate.issue_intent",
+    "mandate.revoke",
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
@@ -1373,6 +1391,7 @@ export const ROLE_CAPABILITY: Record<
   procurement: [
     "identity.rotate",
     "mandate.issue_intent",
+    "mandate.revoke",
     "kya.attest",
     "kya.revoke",
     "mandate.issue_cart",
@@ -1449,6 +1468,7 @@ export const ROLE_CAPABILITY: Record<
     "kya.revoke",
     "circuit.reset",
     "mandate.issue_intent",
+    "mandate.revoke",
     "approval.resolve",
     "ladder.set",
     "audit.verify",

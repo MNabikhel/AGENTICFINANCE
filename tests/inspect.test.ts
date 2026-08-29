@@ -923,6 +923,45 @@ describe("intent inspect", () => {
     expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
   });
 
+  it("labels a ripped unused intent revoked, not expired or funded", () => {
+    const rt = boot();
+    const { founder, intentId } = economy(rt);
+    const ripped = rt.dispatch(cmd("mandate.revoke", founder.id, { intentId }));
+    expect(ripped.ok).toBe(true);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.snapshotState().intents.find((s) => s.payload.id === intentId)?.status).toBe("revoked");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+  });
+
+  it("labels a funded intent funded even after the slip is ripped", () => {
+    const rt = boot();
+    const { desk, vendor, founder, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const ripped = rt.dispatch(cmd("mandate.revoke", founder.id, { intentId }));
+    expect(ripped.ok).toBe(true);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("funded");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+  });
+
   it("labels a funded intent funded, not live", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);

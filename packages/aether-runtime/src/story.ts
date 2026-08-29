@@ -289,6 +289,9 @@ export const VOID_TLDR =
 export const FOLD_TLDR =
   "A founder funded an $800 hire. A second vendor folding the research desk's live bid was market.party — a missing quote is not this deny, an expired window is not this deny. No QUOTE_WITHDRAW line was written. The seller still folded its own bid. Hiring that folded quote was market.not_expired. That funded work still released. Someone else's bid is not yours to pull.";
 
+export const RIP_TLDR =
+  "A founder funded an $800 hire. A desk ripping the founder's unused slip was mandate.party — a missing slip is not this deny, an expired window is not this deny. No MANDATE_REVOKE line was written. The founder still tore its own unused slip. Hiring that ripped slip was mandate.not_expired. That funded work still released. Someone else's unused slip is not yours to tear.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1126,6 +1129,34 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "mandate.revoke") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not rip that slip`,
+        body:
+          rule?.ruleId === "mandate.party"
+            ? "Someone else's unused slip is not yours to tear. The issuer, a human, or treasury may rip a live intent."
+            : rule?.ruleId === "mandate.known_intent"
+              ? "That slip is not in this world. A missing intent is not a ripped intent."
+              : rule?.ruleId === "mandate.not_expired"
+                ? "That window is already closed. A ripped slip is not a second rip."
+                : "A live unused slip can be torn up. That is not a void and not firing a handshake.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} tore up an unused slip`,
+      body: "The intent is off the table. Hire.create of a ripped unused slip is mandate.not_expired. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "hire.release") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -1530,6 +1561,7 @@ export function analog(): Analog {
       "An agent can change the lock on its key without becoming someone else. Someone else's key is not yours to turn.",
       "An unfunded offer can be torn up. That is not a refund. A refund is cash coming back after escrow moved.",
       "A live bid can be folded. That is not a spent quote. Spent is when hire.create consumed it. Someone else's bid is not yours to pull.",
+      "A permission slip can be torn up. That is not a void and not firing a handshake. Someone else's unused slip is not yours to tear.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

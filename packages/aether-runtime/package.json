@@ -93,7 +93,8 @@
     "./payment-reference": "./src/payment-reference.ts",
     "./identity-party": "./src/identity-party.ts",
     "./hire-void": "./src/hire-void.ts",
-    "./market-party": "./src/market-party.ts"
+    "./market-party": "./src/market-party.ts",
+    "./mandate-party": "./src/mandate-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

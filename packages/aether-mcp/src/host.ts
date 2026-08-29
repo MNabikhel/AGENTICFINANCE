@@ -97,6 +97,7 @@ import { loadPaymentReference, runPaymentReference } from "@aether/payment-refer
 import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
 import { loadHireVoid, runHireVoid } from "@aether/hire-void";
 import { loadMarketParty, runMarketParty } from "@aether/market-party";
+import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -232,6 +233,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_lock",
   "aether_demo_void",
   "aether_demo_fold",
+  "aether_demo_rip",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -944,6 +946,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_fold") {
       const report = runMarketParty(loadMarketParty("fixtures/demo/fold/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_rip") {
+      const report = runMandateParty(loadMandateParty("fixtures/demo/rip/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

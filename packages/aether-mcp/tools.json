@@ -24,7 +24,12 @@
     {
       "name": "aether_mandate_issue_intent",
       "commandType": "mandate.issue_intent",
-      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused. A child of an expired parent is refused. Inspect of the slip labels live | expired | funded."
+      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused. A child of an expired parent is refused. Inspect of the slip labels live | expired | funded | revoked."
+    },
+    {
+      "name": "aether_mandate_revoke",
+      "commandType": "mandate.revoke",
+      "description": "Tear up a live unused intent. Issuer, human, or treasury. Ghost slip stays mandate.known_intent. Stranger stays mandate.party. A ripped unused slip is mandate.not_expired on hire.create. Completing funded work is legal. Someone else's unused slip is not yours to tear."
     },
     {
       "name": "aether_mandate_issue_cart",
@@ -620,6 +625,11 @@
       "name": "aether_demo_fold",
       "commandType": "demo.fold",
       "description": "Run the fold TAP: someone else's bid is not yours to pull. market.withdraw of a live quote by a second vendor is market.party; a missing quote and an expired window still allow; no QUOTE_WITHDRAW line; the seller still folds its own bid; hire.create of that folded quote is market.not_expired; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_rip",
+      "commandType": "demo.rip",
+      "description": "Run the rip TAP: someone else's unused slip is not yours to tear. mandate.revoke of a live unused intent by a desk is mandate.party; a missing slip and an expired window still allow; no MANDATE_REVOKE line; the founder still rips its own unused slip; hire.create of that ripped slip is mandate.not_expired; funded work still finishes."
     }
   ]
 }

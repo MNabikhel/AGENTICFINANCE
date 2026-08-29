@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 91 rules", () => {
-    expect(RULE_IDS).toHaveLength(91);
+  it("has 92 rules", () => {
+    expect(RULE_IDS).toHaveLength(92);
   });
 
   it("denies frozen actors", () => {
@@ -957,6 +957,71 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_intent first when ripping a missing slip", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke",
+        intentKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_intent");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies ripping someone else's unused slip as mandate.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke",
+        intentKnown: true,
+        intentWindowLive: true,
+        mandatePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows an issuer ripping its own unused slip as mandate.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.revoke",
+        intentKnown: true,
+        intentWindowLive: true,
+        mandatePartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("denies hiring a ripped unused slip as mandate.not_expired", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intentKnown: true,
+        intentWindowLive: false,
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500000 }]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.not_expired");
   });
 
   it("denies an RFQ that invites a missing agent as identity.known", () => {

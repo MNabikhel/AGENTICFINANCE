@@ -294,7 +294,7 @@ Human writes a permission slip (mandate)
 | Path | Role |
 |---|---|
 | `AGENTS.md` | How another agent talks to Aether |
-| `packages/aether-policy` | Referee. 91 ordered rules. No LLM. No I/O. |
+| `packages/aether-policy` | Referee. 92 ordered rules. No LLM. No I/O. |
 | `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
 | `packages/aether-mcp` | Real MCP host. One Runtime. Tools are commands. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |

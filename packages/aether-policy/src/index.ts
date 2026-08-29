@@ -217,6 +217,9 @@ export const RULES: readonly Rule[] = [
       if (COMPLETE_AFTER_FUND.has(ctx.commandType as CommandType)) {
         return v("mandate.not_expired", "allow", "window checked at fund");
       }
+      if (ctx.intentWindowLive === false) {
+        return v("mandate.not_expired", "deny", "intent revoked");
+      }
       const nowSec = Math.floor(Date.parse(ctx.clock) / 1000);
       if (ctx.intent && ctx.intent.payload.exp <= nowSec) {
         return v("mandate.not_expired", "deny", "intent expired");
@@ -1356,6 +1359,15 @@ export const RULES: readonly Rule[] = [
         : v("market.party", "deny", "actor is not the named seller");
     },
   },
+  {
+    id: "mandate.party",
+    evaluate: (ctx) => {
+      if (ctx.mandatePartyOk === undefined) return v("mandate.party", "allow", "not a revoke");
+      return ctx.mandatePartyOk
+        ? v("mandate.party", "allow", "actor is the named issuer or a kill-switch role")
+        : v("mandate.party", "deny", "actor is not the named issuer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1688,6 +1700,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "Fold your own bid, or ask a human or treasury. Someone else's quote is not yours to pull. A missing quote is market.known_rfq. A spent quote is hire.quote_unspent. A folded quote is market.not_expired.",
   },
+  "mandate.party": {
+    kind: "none",
+    hint: "Rip your own unused slip, or ask a human or treasury. Someone else's permission is not yours to tear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired on a new hire. Completing funded work is legal.",
+  },
   "clearing.bilateral_limit": {
     kind: "none",
     commandType: "clearing.settle_window",
@@ -1699,7 +1715,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.not_expired": {
     kind: "none",
-    hint: "That cart, payment, or slip window has closed. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart.",
+    hint: "That cart, payment, or slip window has closed. A ripped unused slip is this deny on a new hire. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart.",
   },
 };
 

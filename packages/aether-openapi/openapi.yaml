@@ -67,6 +67,20 @@ paths:
       responses:
         "200": { description: Signed intent. Command bus allow, not HTTP 201 Created. }
         "422": { description: Policy deny }
+  /v1/mandates/{id}/revoke:
+    post:
+      operationId: mandateRevoke
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live unused intent torn up. Store stays raw. Inspect labels revoked. }
+        "422": { description: Policy deny. Stranger is mandate.party. Ghost intent is mandate.known_intent. Already ripped is mandate.not_expired. }
   /v1/mandates/cart:
     post:
       operationId: mandateIssueCart
@@ -767,6 +781,12 @@ paths:
       operationId: demoFold
       responses:
         "200": { description: Fold TAP report. Someone else's bid is not yours to pull. }
+        "500": { description: Assertions failed }
+  /v1/demo/rip:
+    post:
+      operationId: demoRip
+      responses:
+        "200": { description: Rip TAP report. Someone else's unused slip is not yours to tear. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:

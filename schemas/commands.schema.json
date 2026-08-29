@@ -95,6 +95,16 @@
         }
       }
     },
+    "mandate.revoke": {
+      "type": "object",
+      "required": ["intentId"],
+      "properties": {
+        "intentId": {
+          "type": "string",
+          "description": "Tear up a live unused intent. Issuer, human, or treasury. A ripped slip is mandate.not_expired on a new hire. Completing funded work is legal."
+        }
+      }
+    },
     "mandate.issue_cart": {
       "type": "object",
       "required": ["intentId", "merchantId", "line_items"],

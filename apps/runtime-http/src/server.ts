@@ -102,6 +102,7 @@ import { loadPaymentReference, runPaymentReference } from "@aether/payment-refer
 import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
 import { loadHireVoid, runHireVoid } from "@aether/hire-void";
 import { loadMarketParty, runMarketParty } from "@aether/market-party";
+import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -196,6 +197,7 @@ const citeFixture = join(process.cwd(), "fixtures/demo/cite/scenario.json");
 const lockFixture = join(process.cwd(), "fixtures/demo/lock/scenario.json");
 const voidFixture = join(process.cwd(), "fixtures/demo/void/scenario.json");
 const foldFixture = join(process.cwd(), "fixtures/demo/fold/scenario.json");
+const ripFixture = join(process.cwd(), "fixtures/demo/rip/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1078,6 +1080,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
+      if (req.method === "POST" && path === "/v1/demo/rip") {
+        const report = runMandateParty(loadMandateParty(ripFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "rip" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
       if (req.method === "POST" && path === "/v1/reset") {
         runtime = boot();
         lastDemo = null;
@@ -1204,6 +1213,11 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const quoteWithdraw = path.match(/^\/v1\/quotes\/([^/]+)\/withdraw$/);
       if (req.method === "POST" && quoteWithdraw) {
         handleDispatch(req, res, "market.withdraw", { ...body, quoteId: quoteWithdraw[1] });
+        return;
+      }
+      const mandateRevoke = path.match(/^\/v1\/mandates\/([^/]+)\/revoke$/);
+      if (req.method === "POST" && mandateRevoke) {
+        handleDispatch(req, res, "mandate.revoke", { ...body, intentId: mandateRevoke[1] });
         return;
       }
       const approval = path.match(/^\/v1\/approvals\/([^/]+)\/resolve$/);

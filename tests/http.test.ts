@@ -286,6 +286,18 @@ describe("HTTP command bus", () => {
     expect(decision.remediation?.ruleId).toBe("market.known_rfq");
   });
 
+  it("POST /v1/mandates/{id}/revoke is mandate.revoke on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/mandates/mid_01J6AETHERGHOSTINTENT00001/revoke", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("mandate.known_intent");
+  });
+
   it("POST /v1/fx/settle and POST /v1/ledger/transfers are the command bus", async () => {
     await json("/v1/reset", { method: "POST" });
     const fx = await json("/v1/fx/settle", {
@@ -1108,6 +1120,15 @@ describe("HTTP command bus", () => {
     expect(r.status).toBe(200);
     expect(r.body.ok).toBe(true);
     expect(r.body.demo).toBe("fold");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/rip is the rip TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/rip", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("rip");
     expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
   });
 
