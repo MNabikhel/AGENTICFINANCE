@@ -481,6 +481,12 @@ paths:
       responses:
         "200": { description: Grade TAP report. A junior desk is not a nested-slip mint. }
         "500": { description: Assertions failed }
+  /v1/demo/cradle:
+    post:
+      operationId: demoCradle
+      responses:
+        "200": { description: Cradle TAP report. L5 is not a birthright. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

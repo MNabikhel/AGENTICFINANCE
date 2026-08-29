@@ -60,6 +60,7 @@ import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
 import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 import { loadMinLevel, runMinLevel } from "@aether/min-level";
+import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -112,6 +113,7 @@ const paperFixture = join(process.cwd(), "fixtures/demo/paper/scenario.json");
 const mixFixture = join(process.cwd(), "fixtures/demo/mix/scenario.json");
 const rungFixture = join(process.cwd(), "fixtures/demo/rung/scenario.json");
 const gradeFixture = join(process.cwd(), "fixtures/demo/grade/scenario.json");
+const cradleFixture = join(process.cwd(), "fixtures/demo/cradle/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -697,6 +699,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runMinLevel(loadMinLevel(gradeFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "grade" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/cradle") {
+        const report = runBirthRung(loadBirthRung(cradleFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "cradle" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

@@ -55,6 +55,7 @@ import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
 import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 import { loadMinLevel, runMinLevel } from "@aether/min-level";
+import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -148,6 +149,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_mix",
   "aether_demo_rung",
   "aether_demo_grade",
+  "aether_demo_cradle",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -650,6 +652,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_grade") {
       const report = runMinLevel(loadMinLevel("fixtures/demo/grade/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cradle") {
+      const report = runBirthRung(loadBirthRung("fixtures/demo/cradle/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

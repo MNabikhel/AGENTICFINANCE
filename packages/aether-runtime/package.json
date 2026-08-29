@@ -51,7 +51,8 @@
     "./fx-quote": "./src/fx-quote.ts",
     "./same-currency": "./src/same-currency.ts",
     "./ladder-legal": "./src/ladder-legal.ts",
-    "./min-level": "./src/min-level.ts"
+    "./min-level": "./src/min-level.ts",
+    "./birth-rung": "./src/birth-rung.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -163,6 +163,9 @@ export const RUNG_TLDR =
 export const GRADE_TLDR =
   "A founder funded an $800 hire. An L3 scout minting a nested slip was ladder.min_level — the parent still exists, the child is still tighter, the handshake ceiling still allows. An L4 desk still minted that child. That funded work still released. A junior desk is not a nested-slip mint.";
 
+export const CRADLE_TLDR =
+  "A founder funded an $800 hire. Minting a sentinel at L5 was ladder.birth_rung — the alias is still free, the founder may still register, a skip is not this deny. An L4 register still went through. That funded work still released. L5 is not a birthright.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

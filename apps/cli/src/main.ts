@@ -48,6 +48,7 @@ import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
 import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 import { loadMinLevel, runMinLevel } from "@aether/min-level";
+import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 
 const [, , command, name] = process.argv;
 
@@ -361,6 +362,12 @@ if (command === "demo" && (name === "grade" || name === "min-level" || name === 
   process.exit(0);
 }
 
+if (command === "demo" && (name === "cradle" || name === "birth-rung" || name === "birthright")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/cradle/scenario.json");
+  printReport(runBirthRung(loadBirthRung(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -415,5 +422,6 @@ usage:
   pnpm demo mix
   pnpm demo rung
   pnpm demo grade
+  pnpm demo cradle
   pnpm mcp`);
 process.exit(command ? 1 : 0);

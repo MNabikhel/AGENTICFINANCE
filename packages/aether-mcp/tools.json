@@ -395,6 +395,11 @@
       "name": "aether_demo_grade",
       "commandType": "demo.grade",
       "description": "Run the grade TAP: a junior desk is not a nested-slip mint. mandate.issue_intent by an L3 scout is ladder.min_level; the parent still exists; the child is still tighter; an L4 desk still mints that child; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_cradle",
+      "commandType": "demo.cradle",
+      "description": "Run the cradle TAP: L5 is not a birthright. identity.register at L5 is ladder.birth_rung; the alias is still free; an L4 register still goes through; funded work still finishes."
     }
   ]
 }
