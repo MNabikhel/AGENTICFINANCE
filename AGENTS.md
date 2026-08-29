@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -159,6 +159,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 107. A one-slot cadence is not an open checkbook. `pnpm demo recurrence` / `aether_demo_recurrence` / `POST /v1/demo/recurrence` funds and releases one hire, shows completing that funded work is not a second slot, then refuses a second `hire.create` as `payment.recurrence`. That deny does not write a second hire or spend the quote. No new policy rule.
 108. A closed calendar is not a freeze on funded work. `pnpm demo calendar` / `aether_demo_calendar` / `POST /v1/demo/calendar` refuses `hire.create` before `not_before` as `payment.execution_date`, funds inside the window, still releases after `not_after`, then refuses a new hire as `payment.execution_date`. No new policy rule.
 109. A refund does not restore a cadence slot. `pnpm demo slot` / `aether_demo_slot` / `POST /v1/demo/slot` funds a one-slot hire, unwinds it (cash and spend return), leaves the occurrence count at 1, then refuses a second `hire.create` as `payment.recurrence`. No new policy rule.
+110. A cadence is a gap, not a burst. `pnpm demo daily` / `aether_demo_daily` / `POST /v1/demo/daily` releases one hire on a `DAILY` slip, refuses a same-day second `hire.create` as `payment.recurrence`, then after 24 hours that command allows. No new policy rule.
 
 ## Autonomy
 
@@ -190,4 +191,5 @@ pnpm demo deny
 pnpm demo recurrence
 pnpm demo calendar
 pnpm demo slot
+pnpm demo daily
 ```

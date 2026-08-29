@@ -52,6 +52,9 @@ export const CALENDAR_TLDR =
 export const SLOT_TLDR =
   "A founder wrote a one-slot slip. The desk funded an $800 hire, then unwound it. Cash and mandate spend came back. The cadence slot did not. A second hire.create was payment.recurrence. A refund is not a new slot.";
 
+export const DAILY_TLDR =
+  "A founder wrote a daily cadence. The desk hired once and released. A same-day second hire.create was payment.recurrence. After 24 hours that command went through. A cadence is a gap, not a burst.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

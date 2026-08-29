@@ -210,6 +210,11 @@
       "name": "aether_demo_slot",
       "commandType": "demo.slot",
       "description": "Run the slot TAP: a refund returns cash and spend. It does not restore a cadence slot."
+    },
+    {
+      "name": "aether_demo_daily",
+      "commandType": "demo.daily",
+      "description": "Run the daily TAP: a cadence is a gap, not a burst. Same-day hire.create is payment.recurrence; after 24 hours it may proceed."
     }
   ]
 }

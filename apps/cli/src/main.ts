@@ -11,6 +11,7 @@ import { loadDenyCache, runDenyCache } from "@aether/deny-cache";
 import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
 import { loadCalendar, runCalendar } from "@aether/execution-window";
 import { loadSlot, runSlot } from "@aether/cadence-slot";
+import { loadDaily, runDaily } from "@aether/daily-gap";
 
 const [, , command, name] = process.argv;
 
@@ -102,6 +103,12 @@ if (command === "demo" && (name === "slot" || name === "cadence-slot")) {
   process.exit(0);
 }
 
+if (command === "demo" && (name === "daily" || name === "daily-gap")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/daily/scenario.json");
+  printReport(runDaily(loadDaily(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -119,5 +126,6 @@ usage:
   pnpm demo recurrence
   pnpm demo calendar
   pnpm demo slot
+  pnpm demo daily
   pnpm mcp`);
 process.exit(command ? 1 : 0);

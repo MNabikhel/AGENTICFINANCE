@@ -80,7 +80,7 @@ Money-moving allows are replayed by key so a retry cannot double-spend. Denies a
 
 Not a grind of inspect overlays. Listed command faces match the bus. A deny is never a cached success.
 
-- [x] Command tools stay 1:1 with `CommandType`. OpenAPI lists the TAP demos the discovery card names, including refund, replay, nonce, deny-cache, recurrence, calendar, and slot.
+- [x] Command tools stay 1:1 with `CommandType`. OpenAPI lists the TAP demos the discovery card names, including refund, replay, nonce, deny-cache, recurrence, calendar, slot, and daily.
 - [x] A TAP (`pnpm demo deny`) freezes a desk, refuses `hire.create`, retries that deny as a new decision, then unfreezes and the same command allows. No new policy rule.
 
 ### 10. Honesty if the pin would lie
@@ -122,7 +122,20 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 - [x] A TAP (`pnpm demo slot`) funds a one-slot hire, unwinds it, shows spend restored and occurrence count still 1, then refuses a second `hire.create` as `payment.recurrence`.
 - [x] No new policy rule unless a current allow is a restored slot.
 
-### 16. Next: only if the pin would lie
+### 16. Honesty if the pin would lie
+
+If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
+
+- [x] CommandType stays 1:1 with MCP. OpenAPI lists command aliases and the TAP demos the discovery card names. GET `/v1/agents/{id}` and GET `/v1/approvals/{id}` are inspect, not command faces — do not grind them. No lying allow this turn.
+
+### 17. A cadence is a gap, not a burst
+
+`payment.recurrence` already binds a `DAILY` frequency gap. Completing funded work is not a new occurrence. The cap (`max_occurrences`) is a different object (`pnpm demo recurrence`).
+
+- [x] A TAP (`pnpm demo daily`) releases one hire on a `DAILY` slip, refuses a same-day second `hire.create` as `payment.recurrence`, then after 24 hours that command allows.
+- [x] No new policy rule unless a current allow is a same-day burst.
+
+### 18. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -130,4 +143,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

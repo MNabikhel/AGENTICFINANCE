@@ -259,6 +259,12 @@ paths:
       responses:
         "200": { description: Slot TAP report. A refund does not restore a cadence slot. }
         "500": { description: Assertions failed }
+  /v1/demo/daily:
+    post:
+      operationId: demoDaily
+      responses:
+        "200": { description: Daily TAP report. A cadence is a gap, not a burst. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

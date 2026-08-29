@@ -35,6 +35,7 @@ export default defineConfig({
       "@aether/recurrence-cadence": path.resolve(__dirname, "packages/aether-runtime/src/recurrence-cadence.ts"),
       "@aether/execution-window": path.resolve(__dirname, "packages/aether-runtime/src/execution-window.ts"),
       "@aether/cadence-slot": path.resolve(__dirname, "packages/aether-runtime/src/cadence-slot.ts"),
+      "@aether/daily-gap": path.resolve(__dirname, "packages/aether-runtime/src/daily-gap.ts"),
     },
   },
 });

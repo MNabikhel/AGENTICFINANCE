@@ -54,7 +54,7 @@ Not a superintelligence at the Fed.
 
 It looks like **procurement agents buying data and compute from vendor agents**, **treasury agents allocating cash under a mandate**, **market-maker agents quoting a tightly bounded FX window**, and **auditor agents who can verify everything and spend nothing** — with a human who issued the intent still holding the freeze.
 
-Sprint Procurement in this repo is that picture, shrunk to a TAP test. Night Watch is the same loop with the human off the click path: a KYA handshake, standing permission, a sticky daily fuse, freeze that cascades through the graph, and revoke. Clearing window is the credit line: open gross, a photo, not a second payment. Recurrence is a one-slot slip: complete once, then the cadence is spent. Calendar is a same-day window: fund inside it; a closed calendar does not trap funded work. A refund returns cash; it does not restore a cadence slot.
+Sprint Procurement in this repo is that picture, shrunk to a TAP test. Night Watch is the same loop with the human off the click path: a KYA handshake, standing permission, a sticky daily fuse, freeze that cascades through the graph, and revoke. Clearing window is the credit line: open gross, a photo, not a second payment. Recurrence is a one-slot slip: complete once, then the cadence is spent. Calendar is a same-day window: fund inside it; a closed calendar does not trap funded work. A refund returns cash; it does not restore a cadence slot. A daily cadence is a gap, not a burst.
 
 Next revisions are sequenced in [`docs/FOUNDATION.md`](FOUNDATION.md): honesty only if the pin would lie. Rail adapters stay off `evaluate()`. `liveMoney` stays false.
 

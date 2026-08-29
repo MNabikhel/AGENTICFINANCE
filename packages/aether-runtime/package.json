@@ -14,7 +14,8 @@
     "./deny-cache": "./src/deny-cache.ts",
     "./recurrence-cadence": "./src/recurrence-cadence.ts",
     "./execution-window": "./src/execution-window.ts",
-    "./cadence-slot": "./src/cadence-slot.ts"
+    "./cadence-slot": "./src/cadence-slot.ts",
+    "./daily-gap": "./src/daily-gap.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

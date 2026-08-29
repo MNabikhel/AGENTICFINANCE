@@ -54,6 +54,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("closed calendar");
     expect(spec).toContain("/v1/demo/slot:");
     expect(spec).toContain("does not restore a cadence slot");
+    expect(spec).toContain("/v1/demo/daily:");
+    expect(spec).toContain("gap, not a burst");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

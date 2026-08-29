@@ -28,7 +28,8 @@
       "@aether/deny-cache": ["packages/aether-runtime/src/deny-cache.ts"],
       "@aether/recurrence-cadence": ["packages/aether-runtime/src/recurrence-cadence.ts"],
       "@aether/execution-window": ["packages/aether-runtime/src/execution-window.ts"],
-      "@aether/cadence-slot": ["packages/aether-runtime/src/cadence-slot.ts"]
+      "@aether/cadence-slot": ["packages/aether-runtime/src/cadence-slot.ts"],
+      "@aether/daily-gap": ["packages/aether-runtime/src/daily-gap.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

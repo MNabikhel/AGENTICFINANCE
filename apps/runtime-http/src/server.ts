@@ -23,6 +23,7 @@ import { loadDenyCache, runDenyCache } from "@aether/deny-cache";
 import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
 import { loadCalendar, runCalendar } from "@aether/execution-window";
 import { loadSlot, runSlot } from "@aether/cadence-slot";
+import { loadDaily, runDaily } from "@aether/daily-gap";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -38,6 +39,7 @@ const denyCacheFixture = join(process.cwd(), "fixtures/demo/deny-cache/scenario.
 const recurrenceFixture = join(process.cwd(), "fixtures/demo/recurrence/scenario.json");
 const calendarFixture = join(process.cwd(), "fixtures/demo/calendar/scenario.json");
 const slotFixture = join(process.cwd(), "fixtures/demo/slot/scenario.json");
+const dailyFixture = join(process.cwd(), "fixtures/demo/daily/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -364,6 +366,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runSlot(loadSlot(slotFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "slot" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/daily") {
+        const report = runDaily(loadDaily(dailyFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "daily" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

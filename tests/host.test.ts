@@ -108,6 +108,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "execution-window")?.description).toContain("POST /v1/demo/calendar");
     expect(card.skills.some((s) => s.id === "cadence-slot")).toBe(true);
     expect(card.skills.find((s) => s.id === "cadence-slot")?.description).toContain("POST /v1/demo/slot");
+    expect(card.skills.some((s) => s.id === "daily-gap")).toBe(true);
+    expect(card.skills.find((s) => s.id === "daily-gap")?.description).toContain("POST /v1/demo/daily");
   });
 
   it("lets a registered desk read the same card", () => {
