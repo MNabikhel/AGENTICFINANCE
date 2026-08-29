@@ -649,6 +649,12 @@ paths:
       responses:
         "200": { description: Wilt TAP report. A permission slip cannot be born with a closed calendar. }
         "500": { description: Assertions failed }
+  /v1/demo/maker:
+    post:
+      operationId: demoMaker
+      responses:
+        "200": { description: Maker TAP report. A window is not a journal against nobody. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

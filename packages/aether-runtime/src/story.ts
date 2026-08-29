@@ -247,6 +247,9 @@ export const SPARK_TLDR =
 export const WILT_TLDR =
   "A founder funded an $800 hire. A slip born with a closed calendar was mandate.window_fresh — a window that opens after the slip dies is not this deny, a hire-time calendar is not this deny. No slip was written. A live slip still minted. That funded work still released. A permission slip cannot be born with a closed calendar.";
 
+export const MAKER_TLDR =
+  "A founder funded an $800 hire. Settling a live FX window with no market maker was mm.known — empty inventory is not this deny, a missing dest book is not this deny. No journal was written. The same window still converted after a maker sat down. That funded work still released. A window is not a journal against nobody.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

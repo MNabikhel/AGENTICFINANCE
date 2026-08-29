@@ -76,6 +76,7 @@ import { loadActorKnown, runActorKnown } from "@aether/actor-known";
 import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
 import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
 import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
+import { loadMmKnown, runMmKnown } from "@aether/mm-known";
 
 const [, , command, name] = process.argv;
 
@@ -557,6 +558,12 @@ if (command === "demo" && (name === "wilt" || name === "fade" || name === "dusk"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "maker" || name === "pit" || name === "booth")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/maker/scenario.json");
+  printReport(runMmKnown(loadMmKnown(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -639,5 +646,6 @@ usage:
   pnpm demo nil
   pnpm demo spark
   pnpm demo wilt
+  pnpm demo maker
   pnpm mcp`);
 process.exit(command ? 1 : 0);

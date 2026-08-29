@@ -535,6 +535,11 @@
       "name": "aether_demo_wilt",
       "commandType": "demo.wilt",
       "description": "Run the wilt TAP: a permission slip cannot be born with a closed calendar. mandate.issue_intent with not_after already past is mandate.window_fresh; a window that opens after the slip dies and a hire-time calendar still allow; no slip is written; a live slip still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_maker",
+      "commandType": "demo.maker",
+      "description": "Run the maker TAP: a window is not a journal against nobody. market.fx_settle of a live FX quote with no market maker is mm.known; empty inventory and a missing dest book still allow; the window stays unspent; a maker still sits and the same window still converts; funded work still finishes."
     }
   ]
 }

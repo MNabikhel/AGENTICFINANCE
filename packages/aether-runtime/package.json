@@ -79,7 +79,8 @@
     "./actor-known": "./src/actor-known.ts",
     "./receipt-known": "./src/receipt-known.ts",
     "./kya-mint-fresh": "./src/kya-mint-fresh.ts",
-    "./window-fresh": "./src/window-fresh.ts"
+    "./window-fresh": "./src/window-fresh.ts",
+    "./mm-known": "./src/mm-known.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

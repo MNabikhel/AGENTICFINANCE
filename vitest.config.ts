@@ -100,6 +100,7 @@ export default defineConfig({
       "@aether/receipt-known": path.resolve(__dirname, "packages/aether-runtime/src/receipt-known.ts"),
       "@aether/kya-mint-fresh": path.resolve(__dirname, "packages/aether-runtime/src/kya-mint-fresh.ts"),
       "@aether/window-fresh": path.resolve(__dirname, "packages/aether-runtime/src/window-fresh.ts"),
+      "@aether/mm-known": path.resolve(__dirname, "packages/aether-runtime/src/mm-known.ts"),
     },
   },
 });

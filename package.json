@@ -84,6 +84,7 @@
     "demo:nil": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo nil",
     "demo:spark": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo spark",
     "demo:wilt": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo wilt",
+    "demo:maker": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo maker",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"
