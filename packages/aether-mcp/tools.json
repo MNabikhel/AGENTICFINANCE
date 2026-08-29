@@ -455,6 +455,11 @@
       "name": "aether_demo_hall",
       "commandType": "demo.hall",
       "description": "Run the hall TAP: a missing room is not a missing SKU. market.quote on a ghost RFQ is market.known_rfq; a missing SKU and a closed guest list still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_writ",
+      "commandType": "demo.writ",
+      "description": "Run the writ TAP: a missing slip is not a missing handshake. hire.create on a ghost intent is mandate.known_intent; a missing handshake and a dead parent still allow; funded work still finishes."
     }
   ]
 }

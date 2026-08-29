@@ -199,6 +199,9 @@ export const SHELF_TLDR =
 export const HALL_TLDR =
   "A founder funded an $800 hire. A quote on a ghost RFQ was market.known_rfq — a missing SKU is not this deny, a closed guest list is not this deny. That funded work still released. A missing room is not a missing SKU.";
 
+export const WRIT_TLDR =
+  "A founder funded an $800 hire. A hire against a ghost slip was mandate.known_intent — a missing handshake is not this deny, a dead parent is not this deny. That funded work still released. A missing slip is not a missing handshake.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -758,7 +761,10 @@ export function autoBeat(input: {
       return {
         seq: input.seq,
         at: input.at,
-        headline: `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+        headline:
+          ruleId === "mandate.known_intent"
+            ? `${who} hired against a slip that does not exist`
+            : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
         body,
         tone: "deny",
         commandType: cmd.type,

@@ -60,6 +60,7 @@ import { loadAmountRange, runAmountRange } from "@aether/amount-range";
 import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 import { loadKnownSku, runKnownSku } from "@aether/known-sku";
 import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
+import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
 
 const [, , command, name] = process.argv;
 
@@ -445,6 +446,12 @@ if (command === "demo" && (name === "hall" || name === "foyer" || name === "lobb
   process.exit(0);
 }
 
+if (command === "demo" && (name === "writ" || name === "folio" || name === "deed")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/writ/scenario.json");
+  printReport(runKnownIntent(loadKnownIntent(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -511,5 +518,6 @@ usage:
   pnpm demo bare
   pnpm demo shelf
   pnpm demo hall
+  pnpm demo writ
   pnpm mcp`);
 process.exit(command ? 1 : 0);

@@ -1387,7 +1387,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_intent": {
     kind: "none",
-    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake.",
+    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake. A missing handshake stays kya.chain_intact. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
   },
   "mandate.known_cart": {
     kind: "none",
