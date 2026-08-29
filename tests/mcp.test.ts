@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
-import { AetherMcp } from "../packages/aether-mcp/src/host.ts";
+import { AetherMcp, MCP_TOOL_CATALOG } from "../packages/aether-mcp/src/host.ts";
 
 describe("sub-hire demo", () => {
   it("passes TAP assertions for nested slips", () => {
@@ -22,6 +23,8 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_sub_hire");
     expect(names).toContain("aether_demo_clearing");
     expect(names).toContain("aether_hire_refund");
+    expect(names).toContain("aether_market_fx_settle");
+    expect(names).toContain("aether_ledger_transfer");
     expect(names).toContain("aether_protocol");
     const hireTool = ((listed as { result: { tools: { name: string; inputSchema?: { required?: string[] } }[] } }).result.tools).find(
       (t) => t.name === "aether_hire_create",
@@ -66,6 +69,18 @@ describe("MCP host", () => {
     expect(malformed.verdict).toBe("malformed");
     expect(malformed.error.status).toBe(400);
     expect(malformed.error.type).toContain("command.malformed");
+  });
+
+  it("lists one command tool per CommandType", () => {
+    const schema = JSON.parse(readFileSync(resolve("schemas/commands.schema.json"), "utf8")) as {
+      commands: Record<string, unknown>;
+    };
+    const types = Object.keys(schema.commands).sort();
+    const mapped = MCP_TOOL_CATALOG.tools
+      .filter((t) => t.commandType && !t.commandType.startsWith("demo."))
+      .map((t) => t.commandType)
+      .sort();
+    expect(mapped).toEqual(types);
   });
 
   it("runs the sub-hire demo over the tool bus", () => {

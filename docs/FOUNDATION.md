@@ -52,6 +52,16 @@ An HTTP agent could not deliver work, release escrow, settle an FX window, or tr
 
 Inspect honesty, OpenAPI status codes, MCP description drift. Not a workstream of its own.
 
+- [x] MCP command tools are 1:1 with `CommandType` (`market.fx_settle`, `ledger.transfer` were missing from `tools/list` while HTTP already dispatched them).
+- [x] OpenAPI lists HTTP aliases the bus actually serves (`/v1/kya/attest`, `/v1/circuit/reset`, freeze/unfreeze, `/.well-known/agent-card.json`, `GET /v1/kya`).
+
+### 6. Refund is a demonstrated unwind
+
+`hire.refund` reverses escrow, restores mandate spend, and reverse-records clearing. The TAP demos never show it. A quote is not restored. The daily circuit stays sticky.
+
+- [ ] A TAP (`pnpm demo refund`) funds a hire, unwinds it, and shows cash back, spend restored, clearing reversed, quote still spent, circuit still sticky if it had tripped.
+- [ ] No new policy rule unless a current allow is a lie (refund after deliver, or a restored quote).
+
 ## Hard constraints (every turn)
 
 Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

@@ -312,5 +312,29 @@ describe("HTTP command bus", () => {
     expect(r.body.demo).toBe("clearing");
     expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
   });
+
+  it("GET /v1/kya and GET /v1/objects/iss_* are the genesis issuer catalog", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const kya = await json("/v1/kya");
+    expect(kya.status).toBe(200);
+    const issuers = kya.body.issuers as { id: string; live: boolean; adapter: string }[];
+    expect(issuers).toHaveLength(4);
+    expect(issuers.every((i) => i.live === false && i.adapter === "shape")).toBe(true);
+    const row = await json(`/v1/objects/${issuers[0]!.id}`);
+    expect(row.status).toBe(200);
+    expect(row.body.type).toBe("issuer");
+    expect((row.body.value as { live: boolean }).live).toBe(false);
+  });
+
+  it("POST /v1/clearing/windows is clearing.settle_window on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/clearing/windows", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system", currency: "USD_SIM" }),
+    });
+    expect(r.status).toBe(422);
+    expect((r.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("actor.system_scope");
+  });
 });
 

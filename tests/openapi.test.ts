@@ -41,4 +41,16 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("/v1/demo/clearing:");
     expect(spec).toContain("not a second payment");
   });
+
+  it("lists HTTP aliases the bus actually serves", () => {
+    expect(spec).toContain("/v1/kya/attest:");
+    expect(spec).toContain("/v1/kya/revoke:");
+    expect(spec).toContain("/v1/kya:");
+    expect(spec).toContain("/v1/circuit/reset:");
+    expect(spec).toContain("/v1/agents/{id}/freeze:");
+    expect(spec).toContain("/v1/agents/{id}/unfreeze:");
+    expect(spec).toContain("/.well-known/agent-card.json:");
+    expect(spec).toContain("/v1/clearing/windows:");
+    expect(spec).toContain("An iss_ issuer is a genesis catalog row");
+  });
 });

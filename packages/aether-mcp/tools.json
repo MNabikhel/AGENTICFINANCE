@@ -42,6 +42,11 @@
       "description": "Submit a quote or FX rate. MM rates must stay inside 200bps. An FX validUntil already past or unparseable is refused."
     },
     {
+      "name": "aether_market_fx_settle",
+      "commandType": "market.fx_settle",
+      "description": "Settle a one-shot FX window. Same command as POST /v1/fx/settle. Not a hire. Completing after a hot settle hour is legal; a new settle is not."
+    },
+    {
       "name": "aether_hire_create",
       "commandType": "hire.create",
       "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. Inspect of the hire labels live | expired | funded. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire. A hot settle hour pauses a new hire for a grown-up. Completing funded work after that is legal."
@@ -89,7 +94,7 @@
     {
       "name": "aether_kya_attest",
       "commandType": "kya.attest",
-      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped. expiresAt must be after now and at most one year; omit for one year. A nested hop under an expired or revoked parent is refused."
+      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped. Pins a genesis iss_ issuer object for issuerKind (aether.self, tap.http-sig, skyfire.kya, erc8004.agent). Shape-only; credentials never enter evaluate(). expiresAt must be after now and at most one year; omit for one year. A nested hop under an expired or revoked parent is refused."
     },
     {
       "name": "aether_kya_revoke",
@@ -110,6 +115,11 @@
       "name": "aether_clearing_settle_window",
       "commandType": "clearing.settle_window",
       "description": "Close a settlement window: archive net exposure for a currency. Money already moved at escrow."
+    },
+    {
+      "name": "aether_ledger_transfer",
+      "commandType": "ledger.transfer",
+      "description": "Treasury book transfer. Same command as POST /v1/ledger/transfers. Operating cash only. Not a mint, not an overdraft, not escrow."
     },
     {
       "name": "aether_ledger_balances",

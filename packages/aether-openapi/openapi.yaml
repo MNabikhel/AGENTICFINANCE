@@ -20,6 +20,41 @@ paths:
               $ref: "#/components/schemas/RegisterAgent"
       responses:
         "200": { description: Agent created. Command bus allow, not HTTP 201 Created. }
+  /v1/kya/attest:
+    post:
+      operationId: kyaAttest
+      responses:
+        "200": { description: Handshake issued. Pins a genesis iss_ issuer object. Shape-only. Credentials never enter evaluate(). }
+        "422": { description: Policy deny }
+  /v1/kya/revoke:
+    post:
+      operationId: kyaRevoke
+      responses:
+        "200": { description: Handshake revoked. Cascades. }
+        "422": { description: Policy deny }
+  /v1/kya:
+    get:
+      operationId: kyaSnapshot
+      responses:
+        "200": { description: Graph view. Genesis issuers are shape-only. Edges include derived live | expired | revoked. }
+  /v1/circuit/reset:
+    post:
+      operationId: circuitReset
+      responses:
+        "200": { description: Daily fuse reset. Mandate budgets unchanged. }
+        "422": { description: Policy deny }
+  /v1/agents/{id}/freeze:
+    post:
+      operationId: identityFreeze
+      responses:
+        "200": { description: Agent frozen to L0 }
+        "422": { description: Policy deny }
+  /v1/agents/{id}/unfreeze:
+    post:
+      operationId: identityUnfreeze
+      responses:
+        "200": { description: Freeze lifted. Counts as a kill-switch test. }
+        "422": { description: Policy deny }
   /v1/mandates/intent:
     post:
       operationId: mandateIssueIntent
@@ -192,6 +227,11 @@ paths:
       operationId: wellKnownHostCard
       responses:
         "200": { description: Same pin as GET /v1/protocol. Machine discovery. }
+  /.well-known/agent-card.json:
+    get:
+      operationId: discoveryCard
+      responses:
+        "200": { description: This runtime's discovery card. Not an A2A JSON-RPC server. }
   /v1/host/card:
     post:
       operationId: hostCard
@@ -258,7 +298,7 @@ paths:
     get:
       operationId: inspect
       responses:
-        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. A hire includes derived live | expired | funded. An offered hire whose slip died is expired. Funded wins. A host subscription includes derived live | expired. A row whose slip died is expired, not live enrollment. }
+        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. A hire includes derived live | expired | funded. An offered hire whose slip died is expired. Funded wins. A host subscription includes derived live | expired. A row whose slip died is expired, not live enrollment. An iss_ issuer is a genesis catalog row (adapter shape, live false). A dlg_ hop pins that issuer and includes derived live | expired | revoked. }
         "404": { description: Unknown id }
   /v1/hires/{id}:
     get:
