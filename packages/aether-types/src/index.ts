@@ -236,6 +236,7 @@ export type MandateConstraint =
   | {
       type: "payment.budget";
       currency: CurrencyCode;
+      /** Remaining computed at eval. max ≤ 0, or max below an amount_range floor, is mandate.budget_fresh. */
       max: number;
     }
   | {
@@ -1113,9 +1114,19 @@ export interface PolicyContext {
    * Omit min is an open floor and still mints. min === max still mints (exact).
    * Hire/fund still names `payment.amount_range`. A vacant cap stays
    * `mandate.occurrence_fresh`. A week that cannot admit a second hire stays
-   * `mandate.cadence_reach`. Lid TAP is hire-time max.
+   * `mandate.cadence_reach`. Lid TAP is hire-time max. A closed coffer is
+   * `mandate.budget_fresh`.
    */
   rangeMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write a payment.budget whose max
+   * cannot admit an amount the lid would allow (`max` ≤ 0, or `max` below an
+   * amount_range floor). Absent = not issue_intent, or no budget constraint.
+   * A budget that covers the floor still mints. An open floor still mints.
+   * Hire/fund still names `payment.budget`. Purse TAP is hire-time envelope.
+   * A floor above the lid stays `mandate.range_fresh`.
+   */
+  budgetMintOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.

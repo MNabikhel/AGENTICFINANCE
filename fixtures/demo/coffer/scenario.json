@@ -1,0 +1,30 @@
+{
+  "id": "budget-fresh",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000099",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneak": {
+    "task": "a closed coffer is not a budget"
+  },
+  "legal": {
+    "task": "buy research with a coffer that covers the floor"
+  },
+  "open": {
+    "task": "buy research with an open-floor coffer"
+  },
+  "intent": {
+    "task": "A closed coffer is not a budget. Completing funded work is legal. A vacant slot is a different object. A floor above the lid is a different object. Hire-time envelope is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 1000000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

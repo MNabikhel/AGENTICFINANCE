@@ -860,6 +860,12 @@ paths:
       responses:
         "200": { description: Gulf TAP report. A floor above the lid is not a range. }
         "500": { description: Assertions failed }
+  /v1/demo/coffer:
+    post:
+      operationId: demoCoffer
+      responses:
+        "200": { description: Coffer TAP report. A closed coffer is not a budget. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

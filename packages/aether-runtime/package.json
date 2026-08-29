@@ -99,7 +99,8 @@
     "./cart-party": "./src/cart-party.ts",
     "./payment-party": "./src/payment-party.ts",
     "./cadence-reach": "./src/cadence-reach.ts",
-    "./range-fresh": "./src/range-fresh.ts"
+    "./range-fresh": "./src/range-fresh.ts",
+    "./budget-fresh": "./src/budget-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

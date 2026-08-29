@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 98 rules", () => {
-    expect(RULE_IDS).toHaveLength(98);
+  it("has 99 rules", () => {
+    expect(RULE_IDS).toHaveLength(99);
   });
 
   it("denies frozen actors", () => {
@@ -2978,6 +2978,105 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.range_fresh")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
+  });
+
+  it("denies a closed coffer as mandate.budget_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        budgetMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.range_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "payment.budget")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.budget_fresh");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.budget_fresh when the coffer can still admit an amount", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        budgetMintOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.budget_fresh when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.range_fresh first when an inverted range is also a closed coffer", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        rangeMintOk: false,
+        budgetMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.range_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.range_fresh");
+  });
+
+  it("still names mandate.occurrence_fresh first when a vacant cap is also a closed coffer", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: false,
+        budgetMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.occurrence_fresh");
+  });
+
+  it("denies budget exhausted at hire, not as mandate.budget_fresh", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 40000, currency: "USD_SIM" },
+        spentAgainstIntent: 80000,
+        intent: signedIntent([{ type: "payment.budget", currency: "USD_SIM", max: 100000 }]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.budget")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("payment.budget");
+  });
+
+  it("denies a nested child whose coffer is closed as mandate.budget_fresh, not child_tighter", () => {
+    const parent = signedIntent([{ type: "payment.budget", currency: "USD_SIM", max: 1000000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.budget", currency: "USD_SIM", max: 0 }],
+        budgetMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.budget_fresh");
   });
 
   it("still names identity.known first when a ghost subject is also born with no slots", () => {

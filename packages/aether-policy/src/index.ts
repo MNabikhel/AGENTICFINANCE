@@ -1438,6 +1438,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.range_fresh", "deny", "amount_range min exceeds max");
     },
   },
+  {
+    id: "mandate.budget_fresh",
+    evaluate: (ctx) => {
+      if (ctx.budgetMintOk === undefined) return v("mandate.budget_fresh", "allow", "not a budget mint");
+      return ctx.budgetMintOk
+        ? v("mandate.budget_fresh", "allow", "budget can still admit an amount the lid would allow")
+        : v("mandate.budget_fresh", "deny", "budget cannot admit an amount the lid would allow");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1746,7 +1755,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.range_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band (min === max). Hire still names payment.amount_range. A vacant cap stays mandate.occurrence_fresh. A week that cannot admit a second hire stays mandate.cadence_reach. Lid TAP is hire-time max.",
+    hint: "A slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band (min === max). Hire still names payment.amount_range. A vacant cap stays mandate.occurrence_fresh. A week that cannot admit a second hire stays mandate.cadence_reach. Lid TAP is hire-time max. A closed coffer is mandate.budget_fresh.",
+  },
+  "mandate.budget_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with a payment.budget that cannot admit an amount the lid would allow. Name max > 0, and if a floor is named, max ≥ min. Hire still names payment.budget. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Purse TAP is hire-time envelope.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",
