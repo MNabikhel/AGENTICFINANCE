@@ -1413,9 +1413,13 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, a revoke target, or an RFQ guest.",
   },
+  "hire.escrow_required": {
+    kind: "none",
+    hint: "Escrow must be funded before the vendor delivers. Offered or accepted is not funded. Completing funded work is legal. Unfunded work is not a delivery. Release before deliver stays hire.state.",
+  },
   "hire.state": {
     kind: "none",
-    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. Release is only after deliver. Payment-required is only after deliver. An illegal arrow is a refuse. Delivered work cannot be unwound. Unfinished work is not a payout.",
+    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. Release is only after deliver. Payment-required is only after deliver. An illegal arrow is a refuse. Delivered work cannot be unwound. Unfinished work is not a payout. Unfunded work is not a delivery.",
   },
   "ladder.legal": {
     kind: "none",

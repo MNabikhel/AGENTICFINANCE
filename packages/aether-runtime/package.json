@@ -60,7 +60,8 @@
     "./host-authority": "./src/host-authority.ts",
     "./occurrence-fresh": "./src/occurrence-fresh.ts",
     "./role-capability": "./src/role-capability.ts",
-    "./amount-range": "./src/amount-range.ts"
+    "./amount-range": "./src/amount-range.ts",
+    "./escrow-required": "./src/escrow-required.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -74,7 +74,8 @@
       "@aether/host-authority": ["packages/aether-runtime/src/host-authority.ts"],
       "@aether/occurrence-fresh": ["packages/aether-runtime/src/occurrence-fresh.ts"],
       "@aether/role-capability": ["packages/aether-runtime/src/role-capability.ts"],
-      "@aether/amount-range": ["packages/aether-runtime/src/amount-range.ts"]
+      "@aether/amount-range": ["packages/aether-runtime/src/amount-range.ts"],
+      "@aether/escrow-required": ["packages/aether-runtime/src/escrow-required.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

@@ -81,6 +81,7 @@ export default defineConfig({
       "@aether/occurrence-fresh": path.resolve(__dirname, "packages/aether-runtime/src/occurrence-fresh.ts"),
       "@aether/role-capability": path.resolve(__dirname, "packages/aether-runtime/src/role-capability.ts"),
       "@aether/amount-range": path.resolve(__dirname, "packages/aether-runtime/src/amount-range.ts"),
+      "@aether/escrow-required": path.resolve(__dirname, "packages/aether-runtime/src/escrow-required.ts"),
     },
   },
 });

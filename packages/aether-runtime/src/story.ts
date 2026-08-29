@@ -190,6 +190,9 @@ export const BADGE_TLDR =
 export const LID_TLDR =
   "A founder wrote a $1,000 item cap with a $5,000 envelope. The desk funded an $800 hire. A $1,500 second hire was payment.amount_range — the envelope and the fuse still allowed. That funded work still released. An item cap is not an envelope.";
 
+export const BARE_TLDR =
+  "A founder funded an $800 hire. Deliver on an accepted hire was hire.escrow_required — the seller is still the party, the hire is still known. That funded work still released. Unfunded work is not a delivery.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -330,6 +333,16 @@ export function autoBeat(input: {
   if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "hire.escrow_required") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot deliver unfunded work`,
+          body: "Escrow must be funded before the vendor delivers. Offered or accepted is not funded. Completing funded work after that is legal; unfunded work is not a delivery.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "hire.state") {
         return {
           seq: input.seq,

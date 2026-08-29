@@ -57,6 +57,7 @@ import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
 import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fresh";
 import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
 import { loadAmountRange, runAmountRange } from "@aether/amount-range";
+import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 
 const [, , command, name] = process.argv;
 
@@ -424,6 +425,12 @@ if (command === "demo" && (name === "lid" || name === "sticker" || name === "tag
   process.exit(0);
 }
 
+if (command === "demo" && (name === "bare" || name === "owed" || name === "tab")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/bare/scenario.json");
+  printReport(runEscrowRequired(loadEscrowRequired(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -487,5 +494,6 @@ usage:
   pnpm demo vacant
   pnpm demo badge
   pnpm demo lid
+  pnpm demo bare
   pnpm mcp`);
 process.exit(command ? 1 : 0);

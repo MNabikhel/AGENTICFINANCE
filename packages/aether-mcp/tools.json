@@ -440,6 +440,11 @@
       "name": "aether_demo_lid",
       "commandType": "demo.lid",
       "description": "Run the lid TAP: an item cap is not an envelope. hire.create over the per-item cap is payment.amount_range; the envelope and the fuse still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_bare",
+      "commandType": "demo.bare",
+      "description": "Run the bare TAP: unfunded work is not a delivery. hire.deliver on an accepted hire is hire.escrow_required; the seller is still the party; funded work still finishes."
     }
   ]
 }

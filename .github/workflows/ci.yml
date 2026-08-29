@@ -72,3 +72,4 @@ jobs:
       - run: pnpm demo:vacant
       - run: pnpm demo:badge
       - run: pnpm demo:lid
+      - run: pnpm demo:bare

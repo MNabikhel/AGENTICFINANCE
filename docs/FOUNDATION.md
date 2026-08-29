@@ -494,7 +494,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 73. Unfinished work is not a payout
 
-`hire.state` already binds `hire.release` when the hire is funded (illegal `funded → released`). Completing funded work after deliver is legal. Refund TAP is unwind after deliver. Party TAP is who sits on the hire.
+`hire.state` already binds `hire.release` when the hire is funded (illegal `funded → released`). Completing funded work after deliver is legal. Bare TAP is deliver before fund (`hire.escrow_required`). Refund TAP is unwind after deliver. Party TAP is who sits on the hire.
 
 - [x] A TAP (`pnpm demo arrow`) funds an $800 hire, refuses `hire.release` before deliver as `hire.state` without paying the vendor (the hire is still known; the buyer is still the party; escrow discipline and the bound cart still allow; hire stays funded), then after deliver that funded work still releases.
 - [x] No new policy rule unless a current allow is a payout before deliver, or a current deny traps funded work.
@@ -720,7 +720,20 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list badg
 - [x] A TAP (`pnpm demo lid`) funds an $800 hire against a $1,000 item cap with a $5,000 envelope, refuses a $1,500 `hire.create` as `payment.amount_range` without writing a hire (the envelope still allows; the fuse still allows; the quote stays unspent), then that funded work still releases.
 - [x] No new policy rule unless a current allow is a hire over the item cap, or a current deny traps funded work.
 
-### 108. Next: only if the pin would lie
+### 108. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list lid. No lying allow.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through lid. No inspect-overlay grind.
+
+### 109. Unfunded work is not a delivery
+
+`hire.escrow_required` already binds `hire.deliver` when the hire is not funded. Completing funded work is legal. Arrow TAP is release before deliver (`hire.state`). Party TAP is who sits on the hire. `hire.escrow_required` is before `hire.state` in RULES.
+
+- [x] A TAP (`pnpm demo bare`) funds an $800 hire, refuses `hire.deliver` on an accepted hire as `hire.escrow_required` without writing a deliverable (the hire is still known; the seller is still the party; hire stays accepted), then that funded work still releases.
+- [x] No new policy rule unless a current allow is a delivery on unfunded work, or a current deny traps funded work.
+
+### 110. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -728,4 +741,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

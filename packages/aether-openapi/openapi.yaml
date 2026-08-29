@@ -535,6 +535,12 @@ paths:
       responses:
         "200": { description: Lid TAP report. An item cap is not an envelope. }
         "500": { description: Assertions failed }
+  /v1/demo/bare:
+    post:
+      operationId: demoBare
+      responses:
+        "200": { description: Bare TAP report. Unfunded work is not a delivery. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

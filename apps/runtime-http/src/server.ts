@@ -69,6 +69,7 @@ import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
 import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fresh";
 import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
 import { loadAmountRange, runAmountRange } from "@aether/amount-range";
+import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -130,6 +131,7 @@ const warrantFixture = join(process.cwd(), "fixtures/demo/warrant/scenario.json"
 const vacantFixture = join(process.cwd(), "fixtures/demo/vacant/scenario.json");
 const badgeFixture = join(process.cwd(), "fixtures/demo/badge/scenario.json");
 const lidFixture = join(process.cwd(), "fixtures/demo/lid/scenario.json");
+const bareFixture = join(process.cwd(), "fixtures/demo/bare/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -778,6 +780,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runAmountRange(loadAmountRange(lidFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "lid" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/bare") {
+        const report = runEscrowRequired(loadEscrowRequired(bareFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "bare" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

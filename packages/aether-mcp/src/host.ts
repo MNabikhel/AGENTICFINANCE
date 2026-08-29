@@ -64,6 +64,7 @@ import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
 import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fresh";
 import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
 import { loadAmountRange, runAmountRange } from "@aether/amount-range";
+import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -166,6 +167,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_vacant",
   "aether_demo_badge",
   "aether_demo_lid",
+  "aether_demo_bare",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -713,6 +715,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_lid") {
       const report = runAmountRange(loadAmountRange("fixtures/demo/lid/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_bare") {
+      const report = runEscrowRequired(loadEscrowRequired("fixtures/demo/bare/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }
