@@ -655,6 +655,12 @@ paths:
       responses:
         "200": { description: Maker TAP report. A window is not a journal against nobody. }
         "500": { description: Assertions failed }
+  /v1/demo/ink:
+    post:
+      operationId: demoInk
+      responses:
+        "200": { description: Ink TAP report. A cart label is not the hire's money. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

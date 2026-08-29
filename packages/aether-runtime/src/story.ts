@@ -250,6 +250,9 @@ export const WILT_TLDR =
 export const MAKER_TLDR =
   "A founder funded an $800 hire. Settling a live FX window with no market maker was mm.known — empty inventory is not this deny, a missing dest book is not this deny. No journal was written. The same window still converted after a maker sat down. That funded work still released. A window is not a journal against nobody.";
 
+export const INK_TLDR =
+  "A founder funded an $800 hire. Funding a second hire with a USDC cart was payment.currency_match — a mixed journal is not this deny, a USDC quote is not this deny, a loose USD pointer is not this deny. No escrow moved. A USD cart still bound and funded. That first funded work still released. A cart label is not the hire's money.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -925,6 +928,8 @@ export function autoBeat(input: {
                   ? "The buyer’s cash does not cover this hire. Escrow cannot lock on an overdraft. Allocate first."
                   : rule?.ruleId === "hire.bound_cart"
                     ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
+                  : rule?.ruleId === "payment.currency_match"
+                    ? "The cart or payment is not this hire’s currency. A USDC sticker is not a USD hire. Convert with market.fx_settle. A mixed journal stays ledger.same_currency. A USDC quote stays market.sku_currency. A loose USD pointer stays hire.bound_cart. A cheaper cart stays hire.cart_matches."
                   : rule?.ruleId === "mandate.chain_integrity"
                     ? "The cart or payment window has closed. Completing funded work after that is legal; a new fund is not. Occupancy is a bind, not this refuse."
                   : rule?.ruleId === "mandate.subject_is_actor"

@@ -92,3 +92,4 @@ jobs:
       - run: pnpm demo:spark
       - run: pnpm demo:wilt
       - run: pnpm demo:maker
+      - run: pnpm demo:ink

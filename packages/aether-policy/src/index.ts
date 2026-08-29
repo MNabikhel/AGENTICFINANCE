@@ -1441,6 +1441,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "One journal is one currency. USD_SIM and USDC_SIM do not mix. Convert with market.fx_settle, not a transfer. Escrow cannot lock USD cash into a USDC hire.",
   },
+  "payment.currency_match": {
+    kind: "none",
+    hint: "The cart or payment is not this hire’s currency. A USDC sticker is not a USD hire. Convert with market.fx_settle. A mixed journal stays ledger.same_currency. A USDC quote stays market.sku_currency. A loose USD pointer stays hire.bound_cart. A cheaper cart stays hire.cart_matches.",
+  },
   "ledger.sufficient": {
     kind: "none",
     hint: "The source book does not have that many cents. A transfer is not an overdraft. Escrow cannot lock on empty cash. An FX settle cannot spend USD the vendor does not hold. Seed or allocate first.",

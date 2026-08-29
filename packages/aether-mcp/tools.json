@@ -540,6 +540,11 @@
       "name": "aether_demo_maker",
       "commandType": "demo.maker",
       "description": "Run the maker TAP: a window is not a journal against nobody. market.fx_settle of a live FX quote with no market maker is mm.known; empty inventory and a missing dest book still allow; the window stays unspent; a maker still sits and the same window still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ink",
+      "commandType": "demo.ink",
+      "description": "Run the ink TAP: a cart label is not the hire's money. hire.fund of a USD hire with a loose USDC cart is payment.currency_match; a mixed journal, a USDC quote, and a loose USD pointer still allow; no escrow moves; a USD cart still binds and funds; funded work still finishes."
     }
   ]
 }

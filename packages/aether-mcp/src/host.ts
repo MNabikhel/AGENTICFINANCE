@@ -84,6 +84,7 @@ import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
 import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
 import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
 import { loadMmKnown, runMmKnown } from "@aether/mm-known";
+import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -206,6 +207,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_spark",
   "aether_demo_wilt",
   "aether_demo_maker",
+  "aether_demo_ink",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -853,6 +855,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_maker") {
       const report = runMmKnown(loadMmKnown("fixtures/demo/maker/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_ink") {
+      const report = runCurrencyMatch(loadCurrencyMatch("fixtures/demo/ink/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

@@ -77,6 +77,7 @@ import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
 import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
 import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
 import { loadMmKnown, runMmKnown } from "@aether/mm-known";
+import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
 
 const [, , command, name] = process.argv;
 
@@ -564,6 +565,12 @@ if (command === "demo" && (name === "maker" || name === "pit" || name === "booth
   process.exit(0);
 }
 
+if (command === "demo" && (name === "ink" || name === "dye" || name === "chalk")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/ink/scenario.json");
+  printReport(runCurrencyMatch(loadCurrencyMatch(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -647,5 +654,6 @@ usage:
   pnpm demo spark
   pnpm demo wilt
   pnpm demo maker
+  pnpm demo ink
   pnpm mcp`);
 process.exit(command ? 1 : 0);

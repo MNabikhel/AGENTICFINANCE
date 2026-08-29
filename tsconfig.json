@@ -94,7 +94,8 @@
       "@aether/receipt-known": ["packages/aether-runtime/src/receipt-known.ts"],
       "@aether/kya-mint-fresh": ["packages/aether-runtime/src/kya-mint-fresh.ts"],
       "@aether/window-fresh": ["packages/aether-runtime/src/window-fresh.ts"],
-      "@aether/mm-known": ["packages/aether-runtime/src/mm-known.ts"]
+      "@aether/mm-known": ["packages/aether-runtime/src/mm-known.ts"],
+      "@aether/currency-match": ["packages/aether-runtime/src/currency-match.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
