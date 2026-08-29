@@ -673,6 +673,12 @@ paths:
       responses:
         "200": { description: Swap TAP report. A swapped pair is not a silent journal of the books this rail actually posts. }
         "500": { description: Assertions failed }
+  /v1/demo/sour:
+    post:
+      operationId: demoSour
+      responses:
+        "200": { description: Sour TAP report. A grown-up yes is not a late hire. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

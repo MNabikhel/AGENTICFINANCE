@@ -555,6 +555,11 @@
       "name": "aether_demo_swap",
       "commandType": "demo.swap",
       "description": "Run the swap TAP: a swapped pair is not a silent journal of the books this rail actually posts. market.quote of an FX SKU with swapped from/to is market.fx_pair; a missing window, a corpse mint, hiring the window, and a research quote still allow; no quote is written; a real window still quotes and converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_sour",
+      "commandType": "demo.sour",
+      "description": "Run the sour TAP: a grown-up yes is not a late hire. approval.resolve approved of a live ticket whose paused quote has died is approval.replay; a missing ticket and a dead ticket still allow; the quote stays held; a grown-up no still frees it; funded work still finishes."
     }
   ]
 }

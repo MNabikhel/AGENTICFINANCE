@@ -97,7 +97,8 @@
       "@aether/mm-known": ["packages/aether-runtime/src/mm-known.ts"],
       "@aether/currency-match": ["packages/aether-runtime/src/currency-match.ts"],
       "@aether/safe-balance": ["packages/aether-runtime/src/safe-balance.ts"],
-      "@aether/fx-pair": ["packages/aether-runtime/src/fx-pair.ts"]
+      "@aether/fx-pair": ["packages/aether-runtime/src/fx-pair.ts"],
+      "@aether/approval-replay": ["packages/aether-runtime/src/approval-replay.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

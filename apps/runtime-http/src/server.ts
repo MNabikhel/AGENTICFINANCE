@@ -92,6 +92,7 @@ import { loadMmKnown, runMmKnown } from "@aether/mm-known";
 import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
 import { loadSafeBalance, runSafeBalance } from "@aether/safe-balance";
 import { loadFxPair, runFxPair } from "@aether/fx-pair";
+import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -176,6 +177,7 @@ const makerFixture = join(process.cwd(), "fixtures/demo/maker/scenario.json");
 const inkFixture = join(process.cwd(), "fixtures/demo/ink/scenario.json");
 const brimFixture = join(process.cwd(), "fixtures/demo/brim/scenario.json");
 const swapFixture = join(process.cwd(), "fixtures/demo/swap/scenario.json");
+const sourFixture = join(process.cwd(), "fixtures/demo/sour/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -985,6 +987,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runFxPair(loadFxPair(swapFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "swap" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/sour") {
+        const report = runApprovalReplay(loadApprovalReplay(sourFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "sour" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

@@ -80,6 +80,7 @@ import { loadMmKnown, runMmKnown } from "@aether/mm-known";
 import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
 import { loadSafeBalance, runSafeBalance } from "@aether/safe-balance";
 import { loadFxPair, runFxPair } from "@aether/fx-pair";
+import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 
 const [, , command, name] = process.argv;
 
@@ -585,6 +586,12 @@ if (command === "demo" && (name === "swap" || name === "flip" || name === "twist
   process.exit(0);
 }
 
+if (command === "demo" && (name === "sour" || name === "curd" || name === "whey")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/sour/scenario.json");
+  printReport(runApprovalReplay(loadApprovalReplay(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -671,5 +678,6 @@ usage:
   pnpm demo ink
   pnpm demo brim
   pnpm demo swap
+  pnpm demo sour
   pnpm mcp`);
 process.exit(command ? 1 : 0);

@@ -259,6 +259,9 @@ export const BRIM_TLDR =
 export const SWAP_TLDR =
   "A founder funded an $800 hire. A market maker quoted an FX SKU with a swapped pair. That was market.fx_pair — a missing window is not this deny, a corpse mint is not this deny, hiring the window is not this deny, a research quote is not this deny. No quote written. A real window still quoted and converted. That funded work still released. A swapped pair is not a silent journal of the books this rail actually posts.";
 
+export const SOUR_TLDR =
+  "A founder funded an $800 hire under the auto-approve line. A $6,400 hire paused for a grown-up. After that quote died, a yes was approval.replay — a missing ticket is not this deny, a dead ticket is not this deny. The quote stayed held. A grown-up no still freed it. That funded work still released. A grown-up yes is not a late hire.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -912,8 +915,20 @@ export function autoBeat(input: {
             ? "That approval is not in this world. A missing ticket is not a late yes."
             : rule?.ruleId === "approval.pending"
               ? "That ticket is expired or already resolved. Resolving it is a refuse, not a late yes."
+              : rule?.ruleId === "approval.replay"
+                ? "That ticket is still live, but the paused command is no longer legal. A grown-up yes is not a late hire. Reject the ticket to free the quote. A dead ticket stays approval.pending. A missing ticket stays approval.known."
               : (rule?.message ?? "The referee refused this ticket."),
         tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if ((cmd.body as { decision?: string }).decision === "rejected") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} rejected the pause`,
+        body: "The reserved quote is free again. A grown-up no is not a late hire. Completing funded work is legal.",
+        tone: "neutral",
         commandType: cmd.type,
       };
     }

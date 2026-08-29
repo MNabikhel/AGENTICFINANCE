@@ -104,6 +104,7 @@ export default defineConfig({
       "@aether/currency-match": path.resolve(__dirname, "packages/aether-runtime/src/currency-match.ts"),
       "@aether/safe-balance": path.resolve(__dirname, "packages/aether-runtime/src/safe-balance.ts"),
       "@aether/fx-pair": path.resolve(__dirname, "packages/aether-runtime/src/fx-pair.ts"),
+      "@aether/approval-replay": path.resolve(__dirname, "packages/aether-runtime/src/approval-replay.ts"),
     },
   },
 });

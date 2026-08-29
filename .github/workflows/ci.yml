@@ -95,3 +95,4 @@ jobs:
       - run: pnpm demo:ink
       - run: pnpm demo:brim
       - run: pnpm demo:swap
+      - run: pnpm demo:sour
