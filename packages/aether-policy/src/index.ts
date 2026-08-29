@@ -1493,6 +1493,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "That hire has not bound a cart (and that cart’s payment). Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer. A loose cart is not this hire’s check.",
   },
+  "mandate.chain_integrity": {
+    kind: "none",
+    hint: "The cart or payment window has closed, or the chain hashes no longer verify. Completing a funded hire after that is legal; a new fund is not. Occupancy stays hire.bound_cart. Issue a live cart.",
+  },
   "mm.known": {
     kind: "none",
     hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books.",

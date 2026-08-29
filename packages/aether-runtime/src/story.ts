@@ -133,6 +133,9 @@ export const CASH_TLDR =
 export const STALE_TLDR =
   "A founder funded an $800 hire on a live quote. After that quote’s hour lapsed, hire.create was market.not_expired — known SKU, known room, unspent promise. A fresh quote on that still-live room still hired. That funded work still released. A stale quote is not a hire.";
 
+export const CHAIN_TLDR =
+  "A founder funded an $800 hire on a live cart. After that cart’s day, a second fund was mandate.chain_integrity — occupancy still bound, cash still there, hire still accepted. That funded work still released. A dead cart is not a check.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -723,6 +726,8 @@ export function autoBeat(input: {
                   ? "The buyer’s cash does not cover this hire. Escrow cannot lock on an overdraft. Allocate first."
                   : rule?.ruleId === "hire.bound_cart"
                     ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
+                  : rule?.ruleId === "mandate.chain_integrity"
+                    ? "The cart or payment window has closed. Completing funded work after that is legal; a new fund is not. Occupancy is a bind, not this refuse."
                   : rule?.ruleId === "ledger.safe_balance"
                     ? "The escrow (or the buyer’s remaining cash) cannot hold this many cents. IEEE rounding is not a mint."
                   : rule?.ruleId === "kya.parent_fresh"

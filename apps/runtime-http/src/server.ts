@@ -50,6 +50,7 @@ import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
 import { loadHireParty, runHireParty } from "@aether/hire-party";
 import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-sufficient";
 import { loadNotExpired, runNotExpired } from "@aether/not-expired";
+import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -92,6 +93,7 @@ const pricedFixture = join(process.cwd(), "fixtures/demo/priced/scenario.json");
 const partyFixture = join(process.cwd(), "fixtures/demo/party/scenario.json");
 const cashFixture = join(process.cwd(), "fixtures/demo/cash/scenario.json");
 const staleFixture = join(process.cwd(), "fixtures/demo/stale/scenario.json");
+const chainFixture = join(process.cwd(), "fixtures/demo/chain/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -607,6 +609,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runNotExpired(loadNotExpired(staleFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "stale" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/chain") {
+        const report = runChainIntegrity(loadChainIntegrity(chainFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "chain" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

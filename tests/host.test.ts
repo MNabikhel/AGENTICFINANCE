@@ -162,6 +162,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "ledger-sufficient")?.description).toContain("POST /v1/demo/cash");
     expect(card.skills.some((s) => s.id === "not-expired")).toBe(true);
     expect(card.skills.find((s) => s.id === "not-expired")?.description).toContain("POST /v1/demo/stale");
+    expect(card.skills.some((s) => s.id === "chain-integrity")).toBe(true);
+    expect(card.skills.find((s) => s.id === "chain-integrity")?.description).toContain("POST /v1/demo/chain");
   });
 
   it("lets a registered desk read the same card", () => {

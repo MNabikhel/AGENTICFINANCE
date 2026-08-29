@@ -38,6 +38,7 @@ import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
 import { loadHireParty, runHireParty } from "@aether/hire-party";
 import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-sufficient";
 import { loadNotExpired, runNotExpired } from "@aether/not-expired";
+import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
 
 const [, , command, name] = process.argv;
 
@@ -291,6 +292,12 @@ if (command === "demo" && (name === "stale" || name === "ttl" || name === "not-e
   process.exit(0);
 }
 
+if (command === "demo" && (name === "chain" || name === "integrity" || name === "verify-chain")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/chain/scenario.json");
+  printReport(runChainIntegrity(loadChainIntegrity(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -335,5 +342,6 @@ usage:
   pnpm demo party
   pnpm demo cash
   pnpm demo stale
+  pnpm demo chain
   pnpm mcp`);
 process.exit(command ? 1 : 0);
