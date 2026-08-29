@@ -156,6 +156,11 @@ export function runCartOccupancy(scenario: CartOccupancyScenario): CartOccupancy
 
   const fundBody = { hireId, cartId: looseCartId, paymentMandateId: loosePayId };
   const pointer = rt.dispatch(cmd("hire.fund", desk.id, fundBody));
+  const afterPointer = {
+    denied: deniedRule(pointer, "hire.bound_cart"),
+    cartId: rt.hires.get(hireId)?.cartId,
+    cash: rt.ledger.balance(desk.accountId),
+  };
 
   const boundCart = must(
     rt.dispatch(
@@ -195,9 +200,7 @@ export function runCartOccupancy(scenario: CartOccupancyScenario): CartOccupancy
 
   const results: TapResult[] = [
     expect(
-      deniedRule(pointer, "hire.bound_cart") &&
-        rt.hires.get(hireId)?.cartId === undefined &&
-        rt.ledger.balance(desk.accountId) === deskOpen,
+      afterPointer.denied && afterPointer.cartId === undefined && afterPointer.cash === deskOpen,
       1,
       "fund with a loose cartId is hire.bound_cart",
       hireId,
