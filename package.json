@@ -75,6 +75,7 @@
     "demo:docket": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo docket",
     "demo:graft": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo graft",
     "demo:seal": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo seal",
+    "demo:guest": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo guest",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

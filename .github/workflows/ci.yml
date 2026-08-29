@@ -82,3 +82,4 @@ jobs:
       - run: pnpm demo:docket
       - run: pnpm demo:graft
       - run: pnpm demo:seal
+      - run: pnpm demo:guest

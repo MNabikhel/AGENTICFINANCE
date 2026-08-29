@@ -595,6 +595,12 @@ paths:
       responses:
         "200": { description: Seal TAP report. A missing handshake is not a silent tombstone. }
         "500": { description: Assertions failed }
+  /v1/demo/guest:
+    post:
+      operationId: demoGuest
+      responses:
+        "200": { description: Guest TAP report. A missing invitee is not a closed room. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

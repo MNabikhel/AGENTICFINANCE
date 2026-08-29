@@ -490,6 +490,11 @@
       "name": "aether_demo_seal",
       "commandType": "demo.seal",
       "description": "Run the seal TAP: a missing handshake is not a silent tombstone. kya.revoke of a ghost handshake is kya.known_attestation; a missing hop parent and someone else’s name still allow; the live handshake still lives; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_guest",
+      "commandType": "demo.guest",
+      "description": "Run the guest TAP: a missing invitee is not a closed room. market.rfq that invites a missing seller is identity.known; a closed guest list and a missing SKU still allow; funded work still finishes."
     }
   ]
 }

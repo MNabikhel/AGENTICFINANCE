@@ -79,6 +79,7 @@ import { loadKnownParent, runKnownParent } from "@aether/known-parent";
 import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
 import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent";
 import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
+import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -150,6 +151,7 @@ const rootFixture = join(process.cwd(), "fixtures/demo/root/scenario.json");
 const docketFixture = join(process.cwd(), "fixtures/demo/docket/scenario.json");
 const graftFixture = join(process.cwd(), "fixtures/demo/graft/scenario.json");
 const sealFixture = join(process.cwd(), "fixtures/demo/seal/scenario.json");
+const guestFixture = join(process.cwd(), "fixtures/demo/guest/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -868,6 +870,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runKnownAttestation(loadKnownAttestation(sealFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "seal" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/guest") {
+        const report = runKnownInvitee(loadKnownInvitee(guestFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "guest" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

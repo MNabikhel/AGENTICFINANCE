@@ -67,6 +67,7 @@ import { loadKnownParent, runKnownParent } from "@aether/known-parent";
 import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
 import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent";
 import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
+import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 
 const [, , command, name] = process.argv;
 
@@ -494,6 +495,12 @@ if (command === "demo" && (name === "seal" || name === "wax" || name === "stamp"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "guest" || name === "invitee" || name === "visitor")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/guest/scenario.json");
+  printReport(runKnownInvitee(loadKnownInvitee(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -567,5 +574,6 @@ usage:
   pnpm demo docket
   pnpm demo graft
   pnpm demo seal
+  pnpm demo guest
   pnpm mcp`);
 process.exit(command ? 1 : 0);

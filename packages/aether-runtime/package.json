@@ -70,7 +70,8 @@
     "./known-parent": "./src/known-parent.ts",
     "./known-approval": "./src/known-approval.ts",
     "./kya-known-parent": "./src/kya-known-parent.ts",
-    "./known-attestation": "./src/known-attestation.ts"
+    "./known-attestation": "./src/known-attestation.ts",
+    "./known-invitee": "./src/known-invitee.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

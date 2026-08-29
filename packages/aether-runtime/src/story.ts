@@ -220,6 +220,9 @@ export const GRAFT_TLDR =
 export const SEAL_TLDR =
   "A founder funded an $800 hire and shook hands with the desk. Revoke of a ghost handshake was kya.known_attestation — a missing hop parent is not this deny, someone else’s name is not this deny. The live handshake still lived. That funded work still released. A missing handshake is not a silent tombstone.";
 
+export const GUEST_TLDR =
+  "A founder funded an $800 hire. An RFQ that invited a missing seller was identity.known — a closed guest list is not this deny, a missing SKU is not this deny. No room was written. That funded work still released. A missing invitee is not a closed room.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
