@@ -50,3 +50,4 @@ jobs:
       - run: pnpm demo:fuse
       - run: pnpm demo:sku
       - run: pnpm demo:priced
+      - run: pnpm demo:party

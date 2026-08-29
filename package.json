@@ -43,6 +43,7 @@
     "demo:fuse": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo fuse",
     "demo:sku": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo sku",
     "demo:priced": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo priced",
+    "demo:party": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo party",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

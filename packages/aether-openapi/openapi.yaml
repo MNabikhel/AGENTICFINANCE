@@ -403,6 +403,12 @@ paths:
       responses:
         "200": { description: Priced TAP report. A listed SKU is only priced in a currency the catalog names. }
         "500": { description: Assertions failed }
+  /v1/demo/party:
+    post:
+      operationId: demoParty
+      responses:
+        "200": { description: Party TAP report. The other side of the table is not a party. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

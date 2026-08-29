@@ -38,7 +38,8 @@
     "./kya-window": "./src/kya-window.ts",
     "./circuit-daily": "./src/circuit-daily.ts",
     "./payment-skus": "./src/payment-skus.ts",
-    "./sku-currency": "./src/sku-currency.ts"
+    "./sku-currency": "./src/sku-currency.ts",
+    "./hire-party": "./src/hire-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

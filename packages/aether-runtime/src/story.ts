@@ -124,6 +124,9 @@ export const SKU_TLDR =
 export const PRICED_TLDR =
   "A vendor quoted research.brief in USDC. That was market.sku_currency — no quote written. A USD quote went through and the $800 hire released. Convert with market.fx_settle. A listed SKU is only priced in a currency the catalog names.";
 
+export const PARTY_TLDR =
+  "A founder funded an $800 hire. A different vendor’s deliver was hire.party — the hire stayed funded. The seller who quoted still delivered and that work still released. The other side of the table is not a party.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -280,6 +283,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} named a hire that is not here`,
           body: "That hire is not in this world. A missing contract is not a broken mandate chain.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "hire.party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} is not the seller on that hire`,
+          body: "Accept, deliver, and payment-required belong to the vendor who quoted. Completing funded work after that is legal; a stranger’s deliver is not.",
           tone: "deny",
           commandType: cmd.type,
         };
