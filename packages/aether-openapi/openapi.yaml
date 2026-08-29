@@ -493,6 +493,12 @@ paths:
       responses:
         "200": { description: Ceiling TAP report. A climb is not a wider slip. }
         "500": { description: Assertions failed }
+  /v1/demo/lapse:
+    post:
+      operationId: demoLapse
+      responses:
+        "200": { description: Lapse TAP report. An expired hop is not a freeze on funded work. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

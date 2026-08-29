@@ -405,6 +405,11 @@
       "name": "aether_demo_ceiling",
       "commandType": "demo.ceiling",
       "description": "Run the ceiling TAP: a climb is not a wider slip. hire.create after a climb above aether.max_autonomy is ladder.max_autonomy_constraint; the handshake ceiling still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_lapse",
+      "commandType": "demo.lapse",
+      "description": "Run the lapse TAP: an expired hop is not a freeze on funded work. hire.create after the handshake dies is kya.attestation_fresh; the pair still occupies; funded work still finishes."
     }
   ]
 }

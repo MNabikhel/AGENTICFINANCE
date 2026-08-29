@@ -58,6 +58,7 @@
     "demo:grade": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo grade",
     "demo:cradle": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo cradle",
     "demo:ceiling": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo ceiling",
+    "demo:lapse": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo lapse",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

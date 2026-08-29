@@ -169,6 +169,9 @@ export const CRADLE_TLDR =
 export const CEILING_TLDR =
   "A founder funded an $800 hire under an L3 slip. After a climb to L4, a new hire was ladder.max_autonomy_constraint — the handshake ceiling still allows. That funded work still released. A climb is not a wider slip.";
 
+export const LAPSE_TLDR =
+  "A founder funded an $800 hire under a noon handshake. After that hop died, a new hire was kya.attestation_fresh — the chain still verifies, a nested parent is not this deny. That funded work still released. An expired hop is not a freeze on funded work.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

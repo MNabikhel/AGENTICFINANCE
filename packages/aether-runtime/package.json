@@ -53,7 +53,8 @@
     "./ladder-legal": "./src/ladder-legal.ts",
     "./min-level": "./src/min-level.ts",
     "./birth-rung": "./src/birth-rung.ts",
-    "./max-autonomy": "./src/max-autonomy.ts"
+    "./max-autonomy": "./src/max-autonomy.ts",
+    "./attestation-fresh": "./src/attestation-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

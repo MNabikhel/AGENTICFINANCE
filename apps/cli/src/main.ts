@@ -50,6 +50,7 @@ import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 import { loadMinLevel, runMinLevel } from "@aether/min-level";
 import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
+import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-fresh";
 
 const [, , command, name] = process.argv;
 
@@ -375,6 +376,12 @@ if (command === "demo" && (name === "ceiling" || name === "slip-ceiling" || name
   process.exit(0);
 }
 
+if (command === "demo" && (name === "lapse" || name === "hop-lapse" || name === "attestation-fresh")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/lapse/scenario.json");
+  printReport(runAttestationFresh(loadAttestationFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -431,5 +438,6 @@ usage:
   pnpm demo grade
   pnpm demo cradle
   pnpm demo ceiling
+  pnpm demo lapse
   pnpm mcp`);
 process.exit(command ? 1 : 0);
