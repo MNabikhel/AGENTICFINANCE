@@ -79,6 +79,9 @@ export const PAIR_TLDR =
 export const BAND_TLDR =
   "A market maker quoted a conversion at half price. That was mm.spread_bound — no window written. An in-band quote went through and settled. A decoy top-level rate is not the nested band. The 200bps band is not decoration.";
 
+export const NEST_TLDR =
+  "A founder nested a scout under a desk hop. The scout hired while the parent lived. After the parent hop died, a new hire was kya.parent_fresh — no hire written. That funded work still released. A nested hop does not outlive its parent.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

@@ -27,6 +27,7 @@ import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
 import { loadConversion, runConversion } from "@aether/fx-not-hire";
 import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
+import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -92,6 +93,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_conversion",
   "aether_demo_pair",
   "aether_demo_band",
+  "aether_demo_nest",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -454,6 +456,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_band") {
       const report = runSpreadBound(loadSpreadBound("fixtures/demo/band/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_nest") {
+      const report = runParentFresh(loadParentFresh("fixtures/demo/nest/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

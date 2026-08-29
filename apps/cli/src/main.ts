@@ -20,6 +20,7 @@ import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
 import { loadConversion, runConversion } from "@aether/fx-not-hire";
 import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
+import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
 
 const [, , command, name] = process.argv;
 
@@ -165,6 +166,12 @@ if (command === "demo" && (name === "band" || name === "spread" || name === "spr
   process.exit(0);
 }
 
+if (command === "demo" && (name === "nest" || name === "parent-fresh" || name === "lineage")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/nest/scenario.json");
+  printReport(runParentFresh(loadParentFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -191,5 +198,6 @@ usage:
   pnpm demo conversion
   pnpm demo pair
   pnpm demo band
+  pnpm demo nest
   pnpm mcp`);
 process.exit(command ? 1 : 0);

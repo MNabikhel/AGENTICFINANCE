@@ -23,7 +23,8 @@
     "./closed-room": "./src/closed-room.ts",
     "./fx-not-hire": "./src/fx-not-hire.ts",
     "./unique-live": "./src/unique-live.ts",
-    "./spread-bound": "./src/spread-bound.ts"
+    "./spread-bound": "./src/spread-bound.ts",
+    "./parent-fresh": "./src/parent-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

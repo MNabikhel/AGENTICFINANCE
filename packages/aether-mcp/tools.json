@@ -255,6 +255,11 @@
       "name": "aether_demo_band",
       "commandType": "demo.band",
       "description": "Run the spread TAP: a 200bps band is not decoration. Off-band nested rate is mm.spread_bound; a decoy top-level rate is not the band."
+    },
+    {
+      "name": "aether_demo_nest",
+      "commandType": "demo.nest",
+      "description": "Run the nest TAP: a nested hop does not outlive its parent. New hire.create is kya.parent_fresh; funded work still finishes."
     }
   ]
 }
