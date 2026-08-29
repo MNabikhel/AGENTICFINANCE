@@ -89,6 +89,7 @@ export default defineConfig({
       "@aether/known-hire": path.resolve(__dirname, "packages/aether-runtime/src/known-hire.ts"),
       "@aether/known-parent": path.resolve(__dirname, "packages/aether-runtime/src/known-parent.ts"),
       "@aether/known-approval": path.resolve(__dirname, "packages/aether-runtime/src/known-approval.ts"),
+      "@aether/kya-known-parent": path.resolve(__dirname, "packages/aether-runtime/src/kya-known-parent.ts"),
     },
   },
 });

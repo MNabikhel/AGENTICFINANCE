@@ -77,6 +77,7 @@ import { loadKnownCart, runKnownCart } from "@aether/known-cart";
 import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 import { loadKnownParent, runKnownParent } from "@aether/known-parent";
 import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
+import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -146,6 +147,7 @@ const crateFixture = join(process.cwd(), "fixtures/demo/crate/scenario.json");
 const pactFixture = join(process.cwd(), "fixtures/demo/pact/scenario.json");
 const rootFixture = join(process.cwd(), "fixtures/demo/root/scenario.json");
 const docketFixture = join(process.cwd(), "fixtures/demo/docket/scenario.json");
+const graftFixture = join(process.cwd(), "fixtures/demo/graft/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -850,6 +852,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runKnownApproval(loadKnownApproval(docketFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "docket" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/graft") {
+        const report = runKyaKnownParent(loadKyaKnownParent(graftFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "graft" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

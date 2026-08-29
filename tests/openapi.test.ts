@@ -162,6 +162,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a tighter child");
     expect(spec).toContain("/v1/demo/docket:");
     expect(spec).toContain("not a late yes");
+    expect(spec).toContain("/v1/demo/graft:");
+    expect(spec).toContain("not a nested handshake");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

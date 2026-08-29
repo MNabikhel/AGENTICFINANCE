@@ -80,3 +80,4 @@ jobs:
       - run: pnpm demo:pact
       - run: pnpm demo:root
       - run: pnpm demo:docket
+      - run: pnpm demo:graft

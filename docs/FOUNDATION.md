@@ -824,7 +824,20 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list root
 - [x] A TAP (`pnpm demo docket`) funds an $800 hire, refuses `approval.resolve` on a ghost ticket as `approval.known` without writing a ticket (a dead pause still allows; a stale command is not this deny), then that funded work still releases.
 - [x] No new policy rule unless a current allow is a yes on a ghost ticket, or a current deny traps funded work.
 
-### 124. Next: only if the pin would lie
+### 124. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list docket. No lying allow.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through docket. No inspect-overlay grind.
+
+### 125. A missing hop parent is not a nested handshake
+
+`kya.known_parent` already binds `kya.attest` when `parentId` is not in this world. Completing funded work is legal. Nest TAP is a dead hop (`kya.parent_fresh`). Root TAP is a missing slip parent (`mandate.known_parent`). Pair TAP is a second live hop (`kya.unique_live`). Mirror TAP is a handshake with yourself (`kya.not_self`). Docket TAP is a ghost ticket (`approval.known`).
+
+- [x] A TAP (`pnpm demo graft`) funds an $800 hire, refuses `kya.attest` under a ghost parent hop as `kya.known_parent` without writing a hop (a dead hop still allows; a missing slip parent is not this deny), then that funded work still releases.
+- [x] No new policy rule unless a current allow is a nested hop under a ghost parent, or a current deny traps funded work.
+
+### 126. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -832,4 +845,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket` + `pnpm demo graft`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

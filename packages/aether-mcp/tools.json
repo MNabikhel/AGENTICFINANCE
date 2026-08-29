@@ -480,6 +480,11 @@
       "name": "aether_demo_docket",
       "commandType": "demo.docket",
       "description": "Run the docket TAP: a missing ticket is not a late yes. approval.resolve on a ghost ticket is approval.known; a dead pause and a stale command still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_graft",
+      "commandType": "demo.graft",
+      "description": "Run the graft TAP: a missing hop parent is not a nested handshake. kya.attest under a ghost parent hop is kya.known_parent; a dead hop and a missing slip parent still allow; funded work still finishes."
     }
   ]
 }

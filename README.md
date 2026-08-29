@@ -80,6 +80,7 @@ pnpm demo crate           # a missing cart is not a broken payment chain
 pnpm demo pact            # a missing contract is not a broken mandate chain
 pnpm demo root            # a missing parent is not a tighter child
 pnpm demo docket          # a missing ticket is not a late yes
+pnpm demo graft           # a missing hop parent is not a nested handshake
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

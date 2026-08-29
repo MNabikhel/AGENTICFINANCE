@@ -65,6 +65,7 @@ import { loadKnownCart, runKnownCart } from "@aether/known-cart";
 import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 import { loadKnownParent, runKnownParent } from "@aether/known-parent";
 import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
+import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent";
 
 const [, , command, name] = process.argv;
 
@@ -480,6 +481,12 @@ if (command === "demo" && (name === "docket" || name === "chit" || name === "stu
   process.exit(0);
 }
 
+if (command === "demo" && (name === "graft" || name === "twig" || name === "scion")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/graft/scenario.json");
+  printReport(runKyaKnownParent(loadKyaKnownParent(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -551,5 +558,6 @@ usage:
   pnpm demo pact
   pnpm demo root
   pnpm demo docket
+  pnpm demo graft
   pnpm mcp`);
 process.exit(command ? 1 : 0);
