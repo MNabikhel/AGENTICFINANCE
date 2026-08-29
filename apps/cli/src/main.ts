@@ -270,7 +270,7 @@ if (command === "demo" && (name === "cover" || name === "roof" || name === "pare
   process.exit(0);
 }
 
-if (command === "demo" && (name === "mint" || name === "lock" || name === "operating-book")) {
+if (command === "demo" && (name === "mint" || name === "operating-book")) {
   const fixture = resolve(process.cwd(), "fixtures/demo/mint/scenario.json");
   printReport(runOperatingBook(loadOperatingBook(fixture)));
   process.exit(0);
