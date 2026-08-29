@@ -457,6 +457,12 @@ paths:
       responses:
         "200": { description: Subject TAP report. This slip is not yours to spend. }
         "500": { description: Assertions failed }
+  /v1/demo/paper:
+    post:
+      operationId: demoPaper
+      responses:
+        "200": { description: Paper TAP report. A research quote is not a conversion window. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

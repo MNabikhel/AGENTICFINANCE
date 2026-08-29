@@ -59,6 +59,7 @@ pnpm demo wallet          # a vendor's USD cash is not a USDC wallet
 pnpm demo name            # someone else's name is not a handshake
 pnpm demo pane            # an FX SKU is a window, not a good
 pnpm demo subject         # this slip is not yours to spend
+pnpm demo paper           # a research quote is not a conversion window
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

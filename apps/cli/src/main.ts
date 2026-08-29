@@ -44,6 +44,7 @@ import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
 import { loadKyaParty, runKyaParty } from "@aether/kya-party";
 import { loadFxWindow, runFxWindow } from "@aether/fx-window";
 import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
+import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 
 const [, , command, name] = process.argv;
 
@@ -333,6 +334,12 @@ if (command === "demo" && (name === "subject" || name === "not-yours" || name ==
   process.exit(0);
 }
 
+if (command === "demo" && (name === "paper" || name === "fx-quote" || name === "research-settle")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/paper/scenario.json");
+  printReport(runFxQuote(loadFxQuote(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -383,5 +390,6 @@ usage:
   pnpm demo name
   pnpm demo pane
   pnpm demo subject
+  pnpm demo paper
   pnpm mcp`);
 process.exit(command ? 1 : 0);

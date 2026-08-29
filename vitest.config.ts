@@ -68,6 +68,7 @@ export default defineConfig({
       "@aether/kya-party": path.resolve(__dirname, "packages/aether-runtime/src/kya-party.ts"),
       "@aether/fx-window": path.resolve(__dirname, "packages/aether-runtime/src/fx-window.ts"),
       "@aether/intent-subject": path.resolve(__dirname, "packages/aether-runtime/src/intent-subject.ts"),
+      "@aether/fx-quote": path.resolve(__dirname, "packages/aether-runtime/src/fx-quote.ts"),
     },
   },
 });

@@ -174,6 +174,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "fx-window")?.description).toContain("POST /v1/demo/pane");
     expect(card.skills.some((s) => s.id === "intent-subject")).toBe(true);
     expect(card.skills.find((s) => s.id === "intent-subject")?.description).toContain("POST /v1/demo/subject");
+    expect(card.skills.some((s) => s.id === "fx-quote")).toBe(true);
+    expect(card.skills.find((s) => s.id === "fx-quote")?.description).toContain("POST /v1/demo/paper");
   });
 
   it("lets a registered desk read the same card", () => {

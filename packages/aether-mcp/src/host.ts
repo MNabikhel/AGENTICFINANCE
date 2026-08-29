@@ -51,6 +51,7 @@ import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
 import { loadKyaParty, runKyaParty } from "@aether/kya-party";
 import { loadFxWindow, runFxWindow } from "@aether/fx-window";
 import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
+import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -140,6 +141,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_name",
   "aether_demo_pane",
   "aether_demo_subject",
+  "aether_demo_paper",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -622,6 +624,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_subject") {
       const report = runIntentSubject(loadIntentSubject("fixtures/demo/subject/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_paper") {
+      const report = runFxQuote(loadFxQuote("fixtures/demo/paper/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

@@ -61,7 +61,8 @@
       "@aether/ledger-known": ["packages/aether-runtime/src/ledger-known.ts"],
       "@aether/kya-party": ["packages/aether-runtime/src/kya-party.ts"],
       "@aether/fx-window": ["packages/aether-runtime/src/fx-window.ts"],
-      "@aether/intent-subject": ["packages/aether-runtime/src/intent-subject.ts"]
+      "@aether/intent-subject": ["packages/aether-runtime/src/intent-subject.ts"],
+      "@aether/fx-quote": ["packages/aether-runtime/src/fx-quote.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

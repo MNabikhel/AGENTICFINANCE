@@ -375,6 +375,11 @@
       "name": "aether_demo_subject",
       "commandType": "demo.subject",
       "description": "Run the subject TAP: this slip is not yours to spend. A second desk's hire.fund is mandate.subject_is_actor; known hire, legal arrow, bound cart, cash, and intact chain still allow; no escrow lock; the named subject still funds; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_paper",
+      "commandType": "demo.paper",
+      "description": "Run the paper TAP: a research quote is not a conversion window. market.fx_settle of a research quote is market.fx_quote; pair, maker, and dest book still allow; the quote stays unspent; a real window still converts; funded work still finishes."
     }
   ]
 }

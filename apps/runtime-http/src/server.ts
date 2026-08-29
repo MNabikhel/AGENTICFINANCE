@@ -56,6 +56,7 @@ import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
 import { loadKyaParty, runKyaParty } from "@aether/kya-party";
 import { loadFxWindow, runFxWindow } from "@aether/fx-window";
 import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
+import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -104,6 +105,7 @@ const walletFixture = join(process.cwd(), "fixtures/demo/wallet/scenario.json");
 const nameFixture = join(process.cwd(), "fixtures/demo/name/scenario.json");
 const paneFixture = join(process.cwd(), "fixtures/demo/pane/scenario.json");
 const subjectFixture = join(process.cwd(), "fixtures/demo/subject/scenario.json");
+const paperFixture = join(process.cwd(), "fixtures/demo/paper/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -661,6 +663,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runIntentSubject(loadIntentSubject(subjectFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "subject" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/paper") {
+        const report = runFxQuote(loadFxQuote(paperFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "paper" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

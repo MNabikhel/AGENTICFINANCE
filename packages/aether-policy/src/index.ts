@@ -1371,7 +1371,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.fx_quote": {
     kind: "none",
-    hint: "An FX quote is a one-shot window. A missing quote, a research quote, a spent quote, or a quote held by an open hire ticket is not a second settle.",
+    hint: "An FX quote is a one-shot window. A research quote is not a conversion. A missing quote, a spent quote, or a quote held by an open hire ticket is not a second settle. Hiring the window stays hire.not_fx. A missing window on quote stays market.fx_window.",
   },
   "hire.quote_unspent": {
     kind: "none",
