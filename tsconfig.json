@@ -57,7 +57,8 @@
       "@aether/ledger-sufficient": ["packages/aether-runtime/src/ledger-sufficient.ts"],
       "@aether/not-expired": ["packages/aether-runtime/src/not-expired.ts"],
       "@aether/chain-integrity": ["packages/aether-runtime/src/chain-integrity.ts"],
-      "@aether/hire-state": ["packages/aether-runtime/src/hire-state.ts"]
+      "@aether/hire-state": ["packages/aether-runtime/src/hire-state.ts"],
+      "@aether/ledger-known": ["packages/aether-runtime/src/ledger-known.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

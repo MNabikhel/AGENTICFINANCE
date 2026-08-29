@@ -43,7 +43,8 @@
     "./ledger-sufficient": "./src/ledger-sufficient.ts",
     "./not-expired": "./src/not-expired.ts",
     "./chain-integrity": "./src/chain-integrity.ts",
-    "./hire-state": "./src/hire-state.ts"
+    "./hire-state": "./src/hire-state.ts",
+    "./ledger-known": "./src/ledger-known.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

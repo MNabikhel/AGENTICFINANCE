@@ -52,6 +52,7 @@ import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-suffic
 import { loadNotExpired, runNotExpired } from "@aether/not-expired";
 import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
 import { loadHireState, runHireState } from "@aether/hire-state";
+import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -96,6 +97,7 @@ const cashFixture = join(process.cwd(), "fixtures/demo/cash/scenario.json");
 const staleFixture = join(process.cwd(), "fixtures/demo/stale/scenario.json");
 const chainFixture = join(process.cwd(), "fixtures/demo/chain/scenario.json");
 const arrowFixture = join(process.cwd(), "fixtures/demo/arrow/scenario.json");
+const walletFixture = join(process.cwd(), "fixtures/demo/wallet/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -625,6 +627,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runHireState(loadHireState(arrowFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "arrow" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/wallet") {
+        const report = runLedgerKnown(loadLedgerKnown(walletFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "wallet" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

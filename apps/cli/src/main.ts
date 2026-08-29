@@ -40,6 +40,7 @@ import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-suffic
 import { loadNotExpired, runNotExpired } from "@aether/not-expired";
 import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
 import { loadHireState, runHireState } from "@aether/hire-state";
+import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
 
 const [, , command, name] = process.argv;
 
@@ -305,6 +306,12 @@ if (command === "demo" && (name === "arrow" || name === "hire-state" || name ===
   process.exit(0);
 }
 
+if (command === "demo" && (name === "wallet" || name === "usdc-book" || name === "known-account")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/wallet/scenario.json");
+  printReport(runLedgerKnown(loadLedgerKnown(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -351,5 +358,6 @@ usage:
   pnpm demo stale
   pnpm demo chain
   pnpm demo arrow
+  pnpm demo wallet
   pnpm mcp`);
 process.exit(command ? 1 : 0);

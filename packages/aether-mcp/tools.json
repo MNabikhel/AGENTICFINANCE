@@ -355,6 +355,11 @@
       "name": "aether_demo_arrow",
       "commandType": "demo.arrow",
       "description": "Run the arrow TAP: unfinished work is not a payout. hire.release before deliver is hire.state; the hire stays funded; funded work still finishes after deliver."
+    },
+    {
+      "name": "aether_demo_wallet",
+      "commandType": "demo.wallet",
+      "description": "Run the wallet TAP: a vendor's USD cash is not a USDC wallet. market.fx_settle without a USDC book is ledger.known_account; the window stays unspent; a vendor with a USDC book still converts; funded work still finishes."
     }
   ]
 }

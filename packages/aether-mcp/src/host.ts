@@ -47,6 +47,7 @@ import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-suffic
 import { loadNotExpired, runNotExpired } from "@aether/not-expired";
 import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
 import { loadHireState, runHireState } from "@aether/hire-state";
+import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -132,6 +133,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_stale",
   "aether_demo_chain",
   "aether_demo_arrow",
+  "aether_demo_wallet",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -594,6 +596,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_arrow") {
       const report = runHireState(loadHireState("fixtures/demo/arrow/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_wallet") {
+      const report = runLedgerKnown(loadLedgerKnown("fixtures/demo/wallet/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

@@ -139,6 +139,9 @@ export const CHAIN_TLDR =
 export const ARROW_TLDR =
   "A founder funded an $800 hire. Release before deliver was hire.state — the hire stayed funded, escrow did not pay the vendor. After deliver that work still released. Unfinished work is not a payout.";
 
+export const WALLET_TLDR =
+  "A founder funded an $800 hire. A compute vendor’s settle was ledger.known_account — USD cash, live window, maker still there. A research vendor with a USDC book still converted. That funded work still released. A vendor’s USD cash is not a USDC wallet.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
