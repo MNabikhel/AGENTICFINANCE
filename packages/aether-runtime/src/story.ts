@@ -166,6 +166,9 @@ export const GRADE_TLDR =
 export const CRADLE_TLDR =
   "A founder funded an $800 hire. Minting a sentinel at L5 was ladder.birth_rung — the alias is still free, the founder may still register, a skip is not this deny. An L4 register still went through. That funded work still released. L5 is not a birthright.";
 
+export const CEILING_TLDR =
+  "A founder funded an $800 hire under an L3 slip. After a climb to L4, a new hire was ladder.max_autonomy_constraint — the handshake ceiling still allows. That funded work still released. A climb is not a wider slip.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

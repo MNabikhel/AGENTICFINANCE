@@ -49,6 +49,7 @@ import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
 import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 import { loadMinLevel, runMinLevel } from "@aether/min-level";
 import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
+import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
 
 const [, , command, name] = process.argv;
 
@@ -368,6 +369,12 @@ if (command === "demo" && (name === "cradle" || name === "birth-rung" || name ==
   process.exit(0);
 }
 
+if (command === "demo" && (name === "ceiling" || name === "slip-ceiling" || name === "max-autonomy")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/ceiling/scenario.json");
+  printReport(runMaxAutonomy(loadMaxAutonomy(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -423,5 +430,6 @@ usage:
   pnpm demo rung
   pnpm demo grade
   pnpm demo cradle
+  pnpm demo ceiling
   pnpm mcp`);
 process.exit(command ? 1 : 0);

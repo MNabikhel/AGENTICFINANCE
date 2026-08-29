@@ -52,7 +52,8 @@
     "./same-currency": "./src/same-currency.ts",
     "./ladder-legal": "./src/ladder-legal.ts",
     "./min-level": "./src/min-level.ts",
-    "./birth-rung": "./src/birth-rung.ts"
+    "./birth-rung": "./src/birth-rung.ts",
+    "./max-autonomy": "./src/max-autonomy.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

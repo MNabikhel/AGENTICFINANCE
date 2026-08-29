@@ -61,6 +61,7 @@ import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
 import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 import { loadMinLevel, runMinLevel } from "@aether/min-level";
 import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
+import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -114,6 +115,7 @@ const mixFixture = join(process.cwd(), "fixtures/demo/mix/scenario.json");
 const rungFixture = join(process.cwd(), "fixtures/demo/rung/scenario.json");
 const gradeFixture = join(process.cwd(), "fixtures/demo/grade/scenario.json");
 const cradleFixture = join(process.cwd(), "fixtures/demo/cradle/scenario.json");
+const ceilingFixture = join(process.cwd(), "fixtures/demo/ceiling/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -706,6 +708,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runBirthRung(loadBirthRung(cradleFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "cradle" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/ceiling") {
+        const report = runMaxAutonomy(loadMaxAutonomy(ceilingFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "ceiling" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

@@ -64,3 +64,4 @@ jobs:
       - run: pnpm demo:rung
       - run: pnpm demo:grade
       - run: pnpm demo:cradle
+      - run: pnpm demo:ceiling

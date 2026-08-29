@@ -400,6 +400,11 @@
       "name": "aether_demo_cradle",
       "commandType": "demo.cradle",
       "description": "Run the cradle TAP: L5 is not a birthright. identity.register at L5 is ladder.birth_rung; the alias is still free; an L4 register still goes through; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ceiling",
+      "commandType": "demo.ceiling",
+      "description": "Run the ceiling TAP: a climb is not a wider slip. hire.create after a climb above aether.max_autonomy is ladder.max_autonomy_constraint; the handshake ceiling still allows; funded work still finishes."
     }
   ]
 }

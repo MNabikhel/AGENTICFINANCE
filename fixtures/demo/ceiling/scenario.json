@@ -1,0 +1,24 @@
+{
+  "id": "max-autonomy",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000052",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "ceiling": { "max": 3 },
+  "climbTo": 4,
+  "intent": {
+    "task": "A climb is not a wider slip. Completing funded work is legal. A handshake ceiling is a different object. A skipped rung is a different object. A junior nested mint is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "sneak": { "amount": 40000, "currency": "USD_SIM" }
+  }
+}

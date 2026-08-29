@@ -487,6 +487,12 @@ paths:
       responses:
         "200": { description: Cradle TAP report. L5 is not a birthright. }
         "500": { description: Assertions failed }
+  /v1/demo/ceiling:
+    post:
+      operationId: demoCeiling
+      responses:
+        "200": { description: Ceiling TAP report. A climb is not a wider slip. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

@@ -130,6 +130,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a nested-slip mint");
     expect(spec).toContain("/v1/demo/cradle:");
     expect(spec).toContain("not a birthright");
+    expect(spec).toContain("/v1/demo/ceiling:");
+    expect(spec).toContain("not a wider slip");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

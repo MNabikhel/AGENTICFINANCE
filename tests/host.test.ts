@@ -184,6 +184,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "min-level")?.description).toContain("POST /v1/demo/grade");
     expect(card.skills.some((s) => s.id === "birth-rung")).toBe(true);
     expect(card.skills.find((s) => s.id === "birth-rung")?.description).toContain("POST /v1/demo/cradle");
+    expect(card.skills.some((s) => s.id === "max-autonomy")).toBe(true);
+    expect(card.skills.find((s) => s.id === "max-autonomy")?.description).toContain("POST /v1/demo/ceiling");
   });
 
   it("lets a registered desk read the same card", () => {

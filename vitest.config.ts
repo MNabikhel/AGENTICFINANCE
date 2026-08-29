@@ -73,6 +73,7 @@ export default defineConfig({
       "@aether/ladder-legal": path.resolve(__dirname, "packages/aether-runtime/src/ladder-legal.ts"),
       "@aether/min-level": path.resolve(__dirname, "packages/aether-runtime/src/min-level.ts"),
       "@aether/birth-rung": path.resolve(__dirname, "packages/aether-runtime/src/birth-rung.ts"),
+      "@aether/max-autonomy": path.resolve(__dirname, "packages/aether-runtime/src/max-autonomy.ts"),
     },
   },
 });
