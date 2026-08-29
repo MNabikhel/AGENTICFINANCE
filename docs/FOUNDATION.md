@@ -69,6 +69,13 @@ Money-moving allows are replayed by key so a retry cannot double-spend. Denies a
 - [x] A TAP (`pnpm demo replay`) funds a hire, retries the same `hire.fund`, and shows cash moved once. The same `hire.create` replays the same hire. A new key on that quote is `hire.quote_unspent`.
 - [x] No new policy rule unless a current allow is a double-spend.
 
+### 8. Envelope nonce is a demonstrated one-shot
+
+`idempotency.nonce` binds `envelope.submit`. A leftover `nonce` on a transfer is not a settled payment. The TAP demos submit once; they never show reuse.
+
+- [ ] A TAP (`pnpm demo nonce`) completes a funded hire’s envelope, retries the same nonce, and shows `idempotency.nonce`. A leftover nonce on `ledger.transfer` is not that deny.
+- [ ] No new policy rule unless a current allow is a second release.
+
 ## Hard constraints (every turn)
 
 Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
