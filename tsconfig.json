@@ -68,7 +68,8 @@
       "@aether/min-level": ["packages/aether-runtime/src/min-level.ts"],
       "@aether/birth-rung": ["packages/aether-runtime/src/birth-rung.ts"],
       "@aether/max-autonomy": ["packages/aether-runtime/src/max-autonomy.ts"],
-      "@aether/attestation-fresh": ["packages/aether-runtime/src/attestation-fresh.ts"]
+      "@aether/attestation-fresh": ["packages/aether-runtime/src/attestation-fresh.ts"],
+      "@aether/approval-pending": ["packages/aether-runtime/src/approval-pending.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

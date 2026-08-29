@@ -172,6 +172,9 @@ export const CEILING_TLDR =
 export const LAPSE_TLDR =
   "A founder funded an $800 hire under a noon handshake. After that hop died, a new hire was kya.attestation_fresh — the chain still verifies, a nested parent is not this deny. That funded work still released. An expired hop is not a freeze on funded work.";
 
+export const PAUSE_TLDR =
+  "A founder funded an $800 hire under the auto-approve line. A $6,400 hire paused for a grown-up. After that ticket died, a late yes was approval.pending — the ticket still exists, a stale command is not this deny. That funded work still released. A dead pause is not a late yes.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

@@ -75,6 +75,7 @@ export default defineConfig({
       "@aether/birth-rung": path.resolve(__dirname, "packages/aether-runtime/src/birth-rung.ts"),
       "@aether/max-autonomy": path.resolve(__dirname, "packages/aether-runtime/src/max-autonomy.ts"),
       "@aether/attestation-fresh": path.resolve(__dirname, "packages/aether-runtime/src/attestation-fresh.ts"),
+      "@aether/approval-pending": path.resolve(__dirname, "packages/aether-runtime/src/approval-pending.ts"),
     },
   },
 });

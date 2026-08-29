@@ -58,6 +58,7 @@ import { loadMinLevel, runMinLevel } from "@aether/min-level";
 import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
 import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-fresh";
+import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -154,6 +155,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_cradle",
   "aether_demo_ceiling",
   "aether_demo_lapse",
+  "aether_demo_pause",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -671,6 +673,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_lapse") {
       const report = runAttestationFresh(loadAttestationFresh("fixtures/demo/lapse/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pause") {
+      const report = runApprovalPending(loadApprovalPending("fixtures/demo/pause/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

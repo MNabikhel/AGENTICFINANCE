@@ -51,6 +51,7 @@ import { loadMinLevel, runMinLevel } from "@aether/min-level";
 import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
 import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
 import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-fresh";
+import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
 
 const [, , command, name] = process.argv;
 
@@ -382,6 +383,12 @@ if (command === "demo" && (name === "lapse" || name === "hop-lapse" || name === 
   process.exit(0);
 }
 
+if (command === "demo" && (name === "pause" || name === "ticket" || name === "pending")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/pause/scenario.json");
+  printReport(runApprovalPending(loadApprovalPending(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -439,5 +446,6 @@ usage:
   pnpm demo cradle
   pnpm demo ceiling
   pnpm demo lapse
+  pnpm demo pause
   pnpm mcp`);
 process.exit(command ? 1 : 0);

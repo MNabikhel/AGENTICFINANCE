@@ -499,6 +499,12 @@ paths:
       responses:
         "200": { description: Lapse TAP report. An expired hop is not a freeze on funded work. }
         "500": { description: Assertions failed }
+  /v1/demo/pause:
+    post:
+      operationId: demoPause
+      responses:
+        "200": { description: Pause TAP report. A dead pause is not a late yes. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

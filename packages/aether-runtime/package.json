@@ -54,7 +54,8 @@
     "./min-level": "./src/min-level.ts",
     "./birth-rung": "./src/birth-rung.ts",
     "./max-autonomy": "./src/max-autonomy.ts",
-    "./attestation-fresh": "./src/attestation-fresh.ts"
+    "./attestation-fresh": "./src/attestation-fresh.ts",
+    "./approval-pending": "./src/approval-pending.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -410,6 +410,11 @@
       "name": "aether_demo_lapse",
       "commandType": "demo.lapse",
       "description": "Run the lapse TAP: an expired hop is not a freeze on funded work. hire.create after the handshake dies is kya.attestation_fresh; the pair still occupies; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pause",
+      "commandType": "demo.pause",
+      "description": "Run the pause TAP: a dead pause is not a late yes. approval.resolve after the ticket dies is approval.pending; the ticket still exists; a stale command is not this deny; funded work still finishes."
     }
   ]
 }
