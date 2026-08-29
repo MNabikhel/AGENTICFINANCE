@@ -1411,7 +1411,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "hire.state": {
     kind: "none",
-    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. Payment-required is only after deliver. An illegal arrow is a refuse. Delivered work cannot be unwound.",
+    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. Release is only after deliver. Payment-required is only after deliver. An illegal arrow is a refuse. Delivered work cannot be unwound. Unfinished work is not a payout.",
   },
   "ladder.legal": {
     kind: "none",

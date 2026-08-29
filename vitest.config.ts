@@ -63,6 +63,7 @@ export default defineConfig({
       "@aether/ledger-sufficient": path.resolve(__dirname, "packages/aether-runtime/src/ledger-sufficient.ts"),
       "@aether/not-expired": path.resolve(__dirname, "packages/aether-runtime/src/not-expired.ts"),
       "@aether/chain-integrity": path.resolve(__dirname, "packages/aether-runtime/src/chain-integrity.ts"),
+      "@aether/hire-state": path.resolve(__dirname, "packages/aether-runtime/src/hire-state.ts"),
     },
   },
 });

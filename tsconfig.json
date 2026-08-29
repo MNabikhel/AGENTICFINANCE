@@ -56,7 +56,8 @@
       "@aether/hire-party": ["packages/aether-runtime/src/hire-party.ts"],
       "@aether/ledger-sufficient": ["packages/aether-runtime/src/ledger-sufficient.ts"],
       "@aether/not-expired": ["packages/aether-runtime/src/not-expired.ts"],
-      "@aether/chain-integrity": ["packages/aether-runtime/src/chain-integrity.ts"]
+      "@aether/chain-integrity": ["packages/aether-runtime/src/chain-integrity.ts"],
+      "@aether/hire-state": ["packages/aether-runtime/src/hire-state.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

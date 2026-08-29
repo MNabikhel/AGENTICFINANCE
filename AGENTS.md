@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover` | `aether_demo_mint` | `aether_demo_payee` | `aether_demo_climb` | `aether_demo_born` | `aether_demo_reach` | `aether_demo_year` | `aether_demo_fuse` | `aether_demo_sku` | `aether_demo_priced` | `aether_demo_party` | `aether_demo_cash` | `aether_demo_stale` | `aether_demo_chain`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover` | `aether_demo_mint` | `aether_demo_payee` | `aether_demo_climb` | `aether_demo_born` | `aether_demo_reach` | `aether_demo_year` | `aether_demo_fuse` | `aether_demo_sku` | `aether_demo_priced` | `aether_demo_party` | `aether_demo_cash` | `aether_demo_stale` | `aether_demo_chain` | `aether_demo_arrow`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -187,6 +187,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 135. Empty cash is not a negative book. `pnpm demo cash` / `aether_demo_cash` / `POST /v1/demo/cash` funds an $800 hire that empties the desk, refuses a $400 second `hire.fund` as `ledger.sufficient` (same currency, operating cash, and the hire arrow still allow; no escrow lock), then that funded work still releases. Mint TAP is a transfer from equity. Stock TAP is empty MM USDC. No new policy rule.
 136. A stale quote is not a hire. `pnpm demo stale` / `aether_demo_stale` / `POST /v1/demo/stale` funds an $800 hire on a live quote, refuses `hire.create` of a lapsed quote as `market.not_expired` (known SKU, known room, unspent promise, and born-dead still allow; no hire written; quote unspent), then a fresh quote on that still-live room still hires and that funded work still releases. Calendar TAP is `payment.execution_date`. Born TAP is `market.fx_fresh`. Replay TAP is `hire.quote_unspent`. No new policy rule.
 137. A dead cart is not a check. `pnpm demo chain` / `aether_demo_chain` / `POST /v1/demo/chain` funds an $800 hire on a live cart, refuses a second `hire.fund` after that cart’s day as `mandate.chain_integrity` (occupancy, cash, and the hire arrow still allow; hire stays accepted; no escrow lock), then that funded work still releases. Cart TAP is occupancy. Calendar TAP is the slip calendar. Stale TAP is quote TTL. No new policy rule.
+138. Unfinished work is not a payout. `pnpm demo arrow` / `aether_demo_arrow` / `POST /v1/demo/arrow` funds an $800 hire, refuses `hire.release` before deliver as `hire.state` (the hire is still known; the buyer is still the party; escrow discipline and the bound cart still allow; hire stays funded; no vendor payout), then after deliver that funded work still releases. Refund TAP is unwind after deliver. Party TAP is who sits on the hire. No new policy rule.
 
 ## Autonomy
 
@@ -246,4 +247,5 @@ pnpm demo party
 pnpm demo cash
 pnpm demo stale
 pnpm demo chain
+pnpm demo arrow
 ```

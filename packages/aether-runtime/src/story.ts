@@ -136,6 +136,9 @@ export const STALE_TLDR =
 export const CHAIN_TLDR =
   "A founder funded an $800 hire on a live cart. After that cart’s day, a second fund was mandate.chain_integrity — occupancy still bound, cash still there, hire still accepted. That funded work still released. A dead cart is not a check.";
 
+export const ARROW_TLDR =
+  "A founder funded an $800 hire. Release before deliver was hire.state — the hire stayed funded, escrow did not pay the vendor. After deliver that work still released. Unfinished work is not a payout.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -790,6 +793,34 @@ export function autoBeat(input: {
       at: input.at,
       headline: `Escrow returned${amt ? ` (${amt})` : ""} to the buyer`,
       body: "The hire was unwound before delivery. Mandate spend goes back. The daily fuse stays sticky if it already blew — refund is not a circuit reset.",
+      tone: "settle",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "hire.release") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not release escrow${amt ? ` (${amt})` : ""}`,
+        body:
+          rule?.ruleId === "hire.state"
+            ? "Escrow releases only after the vendor has delivered. Funded is not released. An illegal arrow is a refuse, not a 409 after yes."
+            : rule?.ruleId === "hire.party"
+              ? "Release belongs to the buyer or treasury. Completing funded work after that is legal; a stranger’s payout is not."
+              : rule?.ruleId === "hire.known"
+                ? "That hire is not in this world. A missing contract is not a broken mandate chain."
+                : "Release is the buyer or treasury, and only after deliver. Unfinished work is not a payout.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `Escrow released${amt ? ` (${amt})` : ""}. A receipt was written.`,
+      body: "The vendor is paid. The receipt’s reference is the hash of the payment mandate, so anyone can prove which permission this settlement fulfilled.",
       tone: "settle",
       commandType: cmd.type,
     };

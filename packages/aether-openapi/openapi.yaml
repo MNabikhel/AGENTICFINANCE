@@ -427,6 +427,12 @@ paths:
       responses:
         "200": { description: Chain TAP report. A dead cart is not a check. }
         "500": { description: Assertions failed }
+  /v1/demo/arrow:
+    post:
+      operationId: demoArrow
+      responses:
+        "200": { description: Arrow TAP report. Unfinished work is not a payout. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

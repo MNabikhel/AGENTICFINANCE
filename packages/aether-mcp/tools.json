@@ -350,6 +350,11 @@
       "name": "aether_demo_chain",
       "commandType": "demo.chain",
       "description": "Run the chain TAP: a dead cart is not a check. hire.fund after the cart window is mandate.chain_integrity; occupancy and cash still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_arrow",
+      "commandType": "demo.arrow",
+      "description": "Run the arrow TAP: unfinished work is not a payout. hire.release before deliver is hire.state; the hire stays funded; funded work still finishes after deliver."
     }
   ]
 }

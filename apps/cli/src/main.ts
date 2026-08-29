@@ -39,6 +39,7 @@ import { loadHireParty, runHireParty } from "@aether/hire-party";
 import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-sufficient";
 import { loadNotExpired, runNotExpired } from "@aether/not-expired";
 import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
+import { loadHireState, runHireState } from "@aether/hire-state";
 
 const [, , command, name] = process.argv;
 
@@ -298,6 +299,12 @@ if (command === "demo" && (name === "chain" || name === "integrity" || name === 
   process.exit(0);
 }
 
+if (command === "demo" && (name === "arrow" || name === "hire-state" || name === "early-release")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/arrow/scenario.json");
+  printReport(runHireState(loadHireState(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -343,5 +350,6 @@ usage:
   pnpm demo cash
   pnpm demo stale
   pnpm demo chain
+  pnpm demo arrow
   pnpm mcp`);
 process.exit(command ? 1 : 0);
