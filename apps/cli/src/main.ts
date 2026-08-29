@@ -18,6 +18,7 @@ import { loadDoor, runDoor } from "@aether/operator-door";
 import { loadCartMatch, runCartMatch } from "@aether/cart-match";
 import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
 import { loadConversion, runConversion } from "@aether/fx-not-hire";
+import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 
 const [, , command, name] = process.argv;
 
@@ -151,6 +152,12 @@ if (command === "demo" && (name === "conversion" || name === "not-fx" || name ==
   process.exit(0);
 }
 
+if (command === "demo" && (name === "pair" || name === "hop" || name === "unique-live")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/pair/scenario.json");
+  printReport(runUniqueLive(loadUniqueLive(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -175,5 +182,6 @@ usage:
   pnpm demo match
   pnpm demo room
   pnpm demo conversion
+  pnpm demo pair
   pnpm mcp`);
 process.exit(command ? 1 : 0);

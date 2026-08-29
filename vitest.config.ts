@@ -42,6 +42,7 @@ export default defineConfig({
       "@aether/cart-match": path.resolve(__dirname, "packages/aether-runtime/src/cart-match.ts"),
       "@aether/closed-room": path.resolve(__dirname, "packages/aether-runtime/src/closed-room.ts"),
       "@aether/fx-not-hire": path.resolve(__dirname, "packages/aether-runtime/src/fx-not-hire.ts"),
+      "@aether/unique-live": path.resolve(__dirname, "packages/aether-runtime/src/unique-live.ts"),
     },
   },
 });

@@ -301,6 +301,12 @@ paths:
       responses:
         "200": { description: Conversion TAP report. An FX window is not a hire. Settle it. }
         "500": { description: Assertions failed }
+  /v1/demo/pair:
+    post:
+      operationId: demoPair
+      responses:
+        "200": { description: Unique-live TAP report. A second live hop is not a tighter grant. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

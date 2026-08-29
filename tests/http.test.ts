@@ -439,6 +439,15 @@ describe("HTTP command bus", () => {
     expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
   });
 
+  it("POST /v1/demo/pair is the unique-live TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/pair", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("pair");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
   it("GET /v1/kya and GET /v1/objects/iss_* are the genesis issuer catalog", async () => {
     await json("/v1/reset", { method: "POST" });
     const kya = await json("/v1/kya");

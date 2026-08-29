@@ -25,6 +25,7 @@ import { loadDoor, runDoor } from "@aether/operator-door";
 import { loadCartMatch, runCartMatch } from "@aether/cart-match";
 import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
 import { loadConversion, runConversion } from "@aether/fx-not-hire";
+import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -88,6 +89,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_match",
   "aether_demo_room",
   "aether_demo_conversion",
+  "aether_demo_pair",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -440,6 +442,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_conversion") {
       const report = runConversion(loadConversion("fixtures/demo/conversion/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pair") {
+      const report = runUniqueLive(loadUniqueLive("fixtures/demo/pair/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

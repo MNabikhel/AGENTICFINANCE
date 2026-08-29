@@ -33,3 +33,4 @@ jobs:
       - run: pnpm demo:match
       - run: pnpm demo:room
       - run: pnpm demo:conversion
+      - run: pnpm demo:pair

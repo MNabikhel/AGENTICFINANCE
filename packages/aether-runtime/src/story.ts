@@ -73,6 +73,9 @@ export const ROOM_TLDR =
 export const CONVERSION_TLDR =
   "A desk tried to hire an FX window. That was hire.not_fx — no hire, window unspent. The vendor then settled it. A spent window is hire.quote_unspent. An FX window is not a good.";
 
+export const PAIR_TLDR =
+  "A founder shook hands with a desk. A tighter second hop was kya.unique_live — one live handshake per pair. A hop to a different agent went through. Revoke, then attest again. A second live hop is not a tighter grant.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

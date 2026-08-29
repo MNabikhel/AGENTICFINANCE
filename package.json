@@ -26,6 +26,7 @@
     "demo:match": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo match",
     "demo:room": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo room",
     "demo:conversion": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo conversion",
+    "demo:pair": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo pair",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

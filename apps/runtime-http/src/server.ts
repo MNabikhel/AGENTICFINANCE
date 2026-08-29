@@ -30,6 +30,7 @@ import { loadDoor, runDoor } from "@aether/operator-door";
 import { loadCartMatch, runCartMatch } from "@aether/cart-match";
 import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
 import { loadConversion, runConversion } from "@aether/fx-not-hire";
+import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -52,6 +53,7 @@ const doorFixture = join(process.cwd(), "fixtures/demo/door/scenario.json");
 const matchFixture = join(process.cwd(), "fixtures/demo/match/scenario.json");
 const roomFixture = join(process.cwd(), "fixtures/demo/room/scenario.json");
 const conversionFixture = join(process.cwd(), "fixtures/demo/conversion/scenario.json");
+const pairFixture = join(process.cwd(), "fixtures/demo/pair/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -427,6 +429,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runConversion(loadConversion(conversionFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "conversion" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/pair") {
+        const report = runUniqueLive(loadUniqueLive(pairFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "pair" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

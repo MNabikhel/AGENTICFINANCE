@@ -245,6 +245,11 @@
       "name": "aether_demo_conversion",
       "commandType": "demo.conversion",
       "description": "Run the conversion TAP: an FX window is not a hire. hire.create is hire.not_fx and does not consume the window; settle then converts."
+    },
+    {
+      "name": "aether_demo_pair",
+      "commandType": "demo.pair",
+      "description": "Run the unique-live TAP: a second live hop is not a tighter grant. kya.unique_live occupies the pair until revoke."
     }
   ]
 }

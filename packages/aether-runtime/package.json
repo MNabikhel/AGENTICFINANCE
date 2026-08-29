@@ -21,7 +21,8 @@
     "./operator-door": "./src/operator-door.ts",
     "./cart-match": "./src/cart-match.ts",
     "./closed-room": "./src/closed-room.ts",
-    "./fx-not-hire": "./src/fx-not-hire.ts"
+    "./fx-not-hire": "./src/fx-not-hire.ts",
+    "./unique-live": "./src/unique-live.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
