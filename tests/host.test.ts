@@ -117,6 +117,7 @@ describe("host card", () => {
     >;
     expect(card.hosted).toBe(true);
     expect(card.authority.subscribeAvailable).toBe(true);
+    expect((card.pricing as { takeRate?: null }).takeRate).toBeNull();
     expect(PROTOCOL.hosted).toBe(false);
     expect(PROTOCOL.version).toBe("0.95.0");
   });

@@ -6,6 +6,7 @@ import { transitionHire } from "@aether/escrow";
 import { IdentityRegistry, ladderClimbLegal, makeAgent } from "@aether/identity";
 import {
   exportKeypair,
+  err,
   fail,
   IdFactory,
   importKeypair,
@@ -47,6 +48,7 @@ import type {
   HireContract,
   HireId,
   HostSubscription,
+  OperatorInvoice,
   Instant,
   IntentMandate,
   IntentStatus,
@@ -230,11 +232,13 @@ export class Runtime {
   readonly killSwitchTested = new Set<AgentId>();
   readonly idempotency = new Map<string, DispatchResult>();
   readonly subscriptions = new Map<SubscriptionId, HostSubscription>();
+  readonly invoices = new Map<string, OperatorInvoice>();
   circuitTripped = false;
   tldr = IDLE_TLDR;
   analogDoc: Analog = analog();
   readonly genesisNonce: string;
   readonly hosted: boolean;
+  readonly hostedMonthly: number | null;
   readonly dataDir?: string;
   private readonly worldPath?: string;
 
@@ -247,6 +251,11 @@ export class Runtime {
     dataDir?: string;
     /** Hosted operator. Default is `PROTOCOL.hosted` (false) or the restored world's flag. */
     hosted?: boolean;
+    /**
+     * Monthly operator price in integer USD_SIM cents. Only listed when `hosted` is true.
+     * Public kernel card stays `hostedMonthly: null`. Env: `AETHER_HOSTED_MONTHLY`.
+     */
+    hostedMonthly?: number;
   }) {
     const worldPath = opts.dataDir ? join(opts.dataDir, "world.json") : undefined;
     const existing =
@@ -255,6 +264,13 @@ export class Runtime {
     this.ids = new IdFactory(this.clock);
     this.genesisNonce = existing?.genesisNonce ?? opts.genesisNonce;
     this.hosted = opts.hosted ?? existing?.hosted ?? PROTOCOL.hosted;
+    this.hostedMonthly =
+      this.hosted &&
+      typeof opts.hostedMonthly === "number" &&
+      Number.isSafeInteger(opts.hostedMonthly) &&
+      opts.hostedMonthly > 0
+        ? opts.hostedMonthly
+        : null;
     this.dataDir = opts.dataDir;
     this.worldPath = worldPath;
     if (opts.dataDir) mkdirSync(opts.dataDir, { recursive: true });
@@ -455,6 +471,7 @@ export class Runtime {
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
       subscriptions: [...this.subscriptions.values()],
+      invoices: [...this.invoices.values()],
       story: this.story,
       analog: this.analogDoc,
       tldr: this.tldr,
@@ -617,12 +634,20 @@ export class Runtime {
       pricing: {
         currency: "USD_SIM" as const,
         selfHost: { amount: 0 },
-        hostedMonthly: null,
+        hostedMonthly: this.hostedMonthly !== null ? { amount: this.hostedMonthly } : null,
+        ...(this.hosted ? { takeRate: null as const } : {}),
       },
       authority: {
         bootstrap: "human_operator" as const,
         subscribe: "host.subscribe" as const,
         subscribeAvailable: this.hosted,
+        ...(this.hosted
+          ? {
+              speakerProof: "ed25519" as const,
+              invoice: "host.invoice" as const,
+              liveMoneyOnThisHost: false as const,
+            }
+          : {}),
       },
     };
   }
@@ -766,6 +791,7 @@ export class Runtime {
       idempotency: [...this.idempotency.entries()],
       hosted: this.hosted,
       subscriptions: [...this.subscriptions.values()],
+      operatorInvoices: [...this.invoices.values()],
     };
   }
 
@@ -774,6 +800,57 @@ export class Runtime {
     const tmp = `${this.worldPath}.tmp`;
     writeFileSync(tmp, JSON.stringify(this.captureWorld()));
     renameSync(tmp, this.worldPath);
+  }
+
+  /**
+   * Record that a human paid this operator off-band. Not a Command. Not a spend gate.
+   * Public kernel refuses. Spend against a hire still does not read invoices.
+   */
+  recordHostInvoice(
+    actorId: AgentId,
+    body: { method?: unknown; reference?: unknown },
+  ): Result<OperatorInvoice, AetherError> {
+    if (!this.hosted) {
+      return fail(err("host.not_hosted", "Not a hosted operator", 422, "public kernel does not invoice"));
+    }
+    if (this.hostedMonthly === null) {
+      return fail(err("host.unpaid", "Host invoice required", 400, "this host has no monthly price"));
+    }
+    const agent = this.identity.get(actorId);
+    if (!agent || (agent.role !== "human_operator" && agent.role !== "treasury")) {
+      return fail(
+        err("host.human_authority", "Human authority required", 422, "only a human or treasury invoices this host"),
+      );
+    }
+    const method = body.method === "stripe" ? "stripe" : body.method === "invoice" ? "invoice" : undefined;
+    if (!method) {
+      return fail(err("command.malformed", "Malformed command", 400, "method must be invoice or stripe"));
+    }
+    this.clock.step();
+    const row: OperatorInvoice = {
+      id: this.ids.next("inv"),
+      at: this.clock.now(),
+      amount: this.hostedMonthly,
+      currency: "USD_SIM",
+      method,
+      actorId,
+    };
+    if (typeof body.reference === "string" && body.reference.length > 0) {
+      row.reference = body.reference;
+    }
+    this.invoices.set(row.id, row);
+    this.audit.append({
+      clock: this.clock,
+      actorId,
+      action: "HOST_INVOICE",
+      subjects: [
+        { type: "invoice", id: row.id },
+        { type: "agent", id: actorId },
+      ],
+      payload: { id: row.id, amount: row.amount, method: row.method },
+    });
+    this.persistWorld();
+    return ok(row);
   }
 
   private hydrateWorld(world: WorldState): void {
@@ -843,6 +920,8 @@ export class Runtime {
     for (const [k, v] of world.idempotency ?? []) this.idempotency.set(k, v as DispatchResult);
     this.subscriptions.clear();
     for (const s of world.subscriptions ?? []) this.subscriptions.set(s.id, s);
+    this.invoices.clear();
+    for (const inv of world.operatorInvoices ?? []) this.invoices.set(inv.id, inv);
   }
 
   private systemActor(): Agent {
@@ -2916,6 +2995,18 @@ export { WORLD_VERSION };
 export type { WorldState };
 export { err, fail, ok, settlementFail };
 export type { Clock };
+export {
+  admitSpeaker,
+  admitInvoice,
+  hostedSystemOpen,
+  invoiceCurrent,
+  parseHostedMonthly,
+  signSpeaker,
+  speakerKeyOf,
+  speakerMessage,
+  HOST_INVOICE_WINDOW_MS,
+} from "./host-door.js";
+export type { AdmitResult, HostDoorRuntime } from "./host-door.js";
 export {
   missingCommandFields,
   commandBodySchema,

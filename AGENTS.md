@@ -12,7 +12,7 @@ This sim kernel is what other agents run. Public protocol and live money are dif
 
 - **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch. This kernel is meant to be public so others can trust the referee.
 - **Live money (later):** adapters on these objects (x402 / MPP / AP2 / TAP) plus credentials that never enter `evaluate()`. Until then `instrument.sim_only` denies anything else.
-- **Hosted operator:** production durability, approvals, identity, security, and those adapters as a paid service. Construct `Runtime({ hosted: true })` or `AETHER_HOSTED=true`. That instance records `host.subscribe` against a live human-issued intent (one subscriber, one row). Spend is not gated on the row. Self-host of this kernel is free (`pricing.selfHost.amount` is 0). `host.subscribe` on this public kernel is `host.not_hosted`. GitHub is not a checkout.
+- **Hosted operator:** production durability, approvals, identity, security, and those adapters as a paid service. Construct `Runtime({ hosted: true })` or `AETHER_HOSTED=true`. That instance lists `pricing.hostedMonthly` (integer cents, env `AETHER_HOSTED_MONTHLY`) and `pricing.takeRate: null`. Named speakers must sign (`speakerProof` / `Aether-Signature`). A human invoices the operator off-band (`aether_host_invoice` / `POST /v1/host/invoice`, method `invoice` or `stripe`). That invoice is the door, not a hire verdict. `host.subscribe` records a unique `hsb_` against a live human-issued intent (one subscriber, one row). Spend is not gated on the row. Self-host of this kernel is free (`pricing.selfHost.amount` is 0). `host.subscribe` on this public kernel is `host.not_hosted`. GitHub is not a checkout. Live rails stay off this pin (`liveMoney: false`); credentials never enter `evaluate()`.
 
 ## Speak to it
 
@@ -22,6 +22,7 @@ POST /v1/*               # same commands over HTTP
 GET  /v1/protocol        # pin-able host card
 GET  /.well-known/aether.json
 AETHER_DATA_DIR=./data pnpm mcp   # durable world.json + audit.jsonl
+AETHER_HOSTED=true AETHER_HOSTED_MONTHLY=50000 AETHER_DATA_DIR=./data pnpm mcp
 ```
 
 Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. HTTP, CLI, and MCP construct that object and call `Runtime.dispatch`. Policy runs first. Deny never mutates. A deny includes a typed `remediation` (`kind` is for machines). Money-moving allows are replayed by key so a retry cannot double-spend. Denies are never cached.
@@ -30,7 +31,8 @@ MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
 - `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil` and, for a hire quote, a dead parent RFQ. An FX quote is a window on the quote, not the room. A `rfq_` room includes derived status (`live | expired`). A `mid_` intent includes derived status (`live | expired | funded`). Funded (escrow moved against this slip, including later refund/release) wins over expired. A child hire does not occupy the parent. Expired includes a dead parent intent even when this child's `exp` still lives. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `mid_` payment includes derived status (`live | expired | funded`). Funded (escrow moved, including later refund/release) wins over expired. Expired includes a dead parent cart even when this check's `exp` still lives. A `dlg_` hop includes derived status (`live | expired | revoked`).
-- `aether_protocol` / resource `aether://protocol` / `aether://host` / tool `aether_host_card` — pin-able host card (pricing, capabilities, hosted). `host.subscribe` on this kernel is `host.not_hosted`. A hosted operator records a unique subscriber against a live human-issued intent.
+- `aether_host_card` / `GET /v1/protocol` / `GET /.well-known/aether.json` / resource `aether://protocol` / `aether://host` / tool `aether_host_card` — pin-able host card (pricing, capabilities, hosted). `host.subscribe` on this kernel is `host.not_hosted`. A hosted operator records a unique subscriber against a live human-issued intent, lists `hostedMonthly`, and sets `takeRate` null (no cut of live settlement until transmitter risk is accepted).
+- `aether_host_invoice` / `POST /v1/host/invoice` — record that a human paid this hosted operator off-band. Not a Command. Not a spend gate. Public kernel refuses.
 - `aether://commands` — JSON Schema for every command body
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
 - `aether_audit_query` / `GET /v1/audit?subject=` — notary lines for one id
@@ -42,7 +44,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
-Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A name that is not an alias yet is a missing speaker (`actor.known`), not system. Omit `actor` or pass `system` to bootstrap the first human.
+Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A name that is not an alias yet is a missing speaker (`actor.known`), not system. Omit `actor` or pass `system` to bootstrap the first human. On a hosted operator a named speaker must also pass `speakerProof` (Ed25519 over the canonical command). Unsigned impersonation is 401 at the door, not a policy deny. A priced host without a current invoice is 402 `host.unpaid` at the door. `host.subscribe` is enrollment, not that invoice.
 
 ## Invariants the kernel will enforce
 

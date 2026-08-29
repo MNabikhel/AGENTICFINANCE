@@ -6,11 +6,11 @@
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Runtime, cmd, type DispatchResult } from "@aether/runtime";
+import { Runtime, admitInvoice, admitSpeaker, cmd, parseHostedMonthly, speakerKeyOf, type DispatchResult } from "@aether/runtime";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
-import { PROTOCOL, type CommandType } from "@aether/types";
+import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
 
@@ -57,8 +57,12 @@ const COMMAND_BY_TOOL = new Map(
 const DEMO_TOOLS = new Set(["aether_demo_sprint", "aether_demo_night_watch", "aether_demo_sub_hire"]);
 
 const ACTOR_PROPERTIES = {
-  actor: { type: "string", description: "Runtime alias after register (ops-human, desk, scout), aid_, or system. Unknown names are missing speakers, not system. Omit to bootstrap." },
+  actor: { type: "string", description: "Runtime alias after register (ops-human, desk, scout), aid_, or system. Unknown names are missing speakers, not system. Omit to bootstrap. On a hosted operator a named speaker must also pass speakerProof." },
   actorId: { type: "string" },
+  speakerProof: {
+    type: "string",
+    description: "Hosted operator only. Ed25519 signature (base64url) of the canonical command. Public kernel ignores it.",
+  },
   idempotencyKey: {
     type: "string",
     description: "Stable key for money-moving retries. Denies are never cached. Same key + allow = replay, not a second spend.",
@@ -90,12 +94,15 @@ function hostedOpt(): { hosted: boolean } | Record<string, never> {
 
 function boot(): Runtime {
   const dir = dataDir();
+  const hosted = hostedOpt();
+  const hostedMonthly = parseHostedMonthly(process.env.AETHER_HOSTED_MONTHLY);
   return new Runtime({
     startIso: "2026-08-28T00:00:00.000Z",
     genesisNonce: "01J6AETHERGENESISMCP00000001",
     dailyLimit: 10_000_000,
     ...(dir ? { dataDir: dir } : {}),
-    ...hostedOpt(),
+    ...hosted,
+    ...("hosted" in hosted && hosted.hosted === true && hostedMonthly !== undefined ? { hostedMonthly } : {}),
   });
 }
 
@@ -103,7 +110,7 @@ function mcpResult(value: unknown): { content: Array<{ type: "text"; text: strin
   return { content: [{ type: "text", text: typeof value === "string" ? value : JSON.stringify(value, null, 2) }] };
 }
 
-function serializeDispatch(r: DispatchResult) {
+function serializeDispatch(r: DispatchResult, rt: Runtime, type?: CommandType) {
   if (!r.ok) {
     return {
       ok: false,
@@ -113,11 +120,17 @@ function serializeDispatch(r: DispatchResult) {
       remediation: r.error.decision?.remediation ?? null,
     };
   }
+  let data = r.value.data;
+  if (type === "identity.register" && rt.hosted) {
+    const agent = data as { id: string };
+    const speakerKey = speakerKeyOf(rt, agent.id as AgentId);
+    if (speakerKey) data = { ...agent, speakerKey };
+  }
   return {
     ok: true,
     kind: r.value.kind,
     verdict: r.value.decision.verdict,
-    data: r.value.data,
+    data,
     ticket: r.value.ticket ?? null,
     replayed: r.value.replayed === true,
     remediation: r.value.decision.remediation ?? null,
@@ -125,7 +138,11 @@ function serializeDispatch(r: DispatchResult) {
 }
 
 export class AetherMcp {
-  runtime: Runtime = boot();
+  runtime: Runtime;
+
+  constructor(opts?: { runtime?: Runtime }) {
+    this.runtime = opts?.runtime ?? boot();
+  }
 
   reset(): void {
     this.runtime = boot();
@@ -190,6 +207,19 @@ export class AetherMcp {
             name: "aether_protocol",
             description: "Pin-able protocol card. liveMoney is false until adapters exist. evaluateLlm is false. hosted is false on this public kernel.",
             inputSchema: { type: "object", properties: {} },
+          },
+          {
+            name: "aether_host_invoice",
+            description: "Record that a human paid this hosted operator off-band (invoice or Stripe). Not a Command. Not a spend gate. Public kernel refuses. Named speaker must sign.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                ...ACTOR_PROPERTIES,
+                method: { type: "string", description: "invoice or stripe" },
+                reference: { type: "string" },
+              },
+              required: ["method"],
+            },
           },
           {
             name: "aether_reset",
@@ -307,12 +337,46 @@ export class AetherMcp {
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }
+    if (name === "aether_host_invoice") {
+      const { actor, actorId, speakerProof, method, reference } = args;
+      const invoiceBody: Record<string, unknown> = { method };
+      if (typeof reference === "string" && reference.length > 0) invoiceBody.reference = reference;
+      const admitted = admitInvoice(this.runtime, {
+        actor,
+        actorId,
+        body: invoiceBody,
+        ...(typeof speakerProof === "string" && speakerProof.length > 0 ? { proof: speakerProof } : {}),
+      });
+      if (!admitted.ok) {
+        return { ok: false, error: admitted.error, remediation: null };
+      }
+      if (admitted.actorId === "system") {
+        return { ok: false, error: { title: "Speaker proof required", status: 401 }, remediation: null };
+      }
+      const invoiced = this.runtime.recordHostInvoice(admitted.actorId, invoiceBody);
+      if (!invoiced.ok) return { ok: false, error: invoiced.error, remediation: null };
+      return { ok: true, data: invoiced.value };
+    }
     const type = COMMAND_BY_TOOL.get(name);
     if (!type) throw new Error(`unknown tool ${name}`);
-    const actor = this.runtime.speakerOf(args);
-    const { actor: _a, actorId: _b, idempotencyKey, ...body } = args;
+    const { actor, actorId, idempotencyKey, speakerProof, ...body } = args;
     const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
-    return serializeDispatch(this.runtime.dispatch(cmd(type, actor, body, key)));
+    const admitted = admitSpeaker(this.runtime, {
+      type,
+      actor,
+      actorId,
+      body,
+      ...(key ? { idempotencyKey: key } : {}),
+      ...(typeof speakerProof === "string" && speakerProof.length > 0 ? { proof: speakerProof } : {}),
+    });
+    if (!admitted.ok) {
+      return { ok: false, error: admitted.error, remediation: null };
+    }
+    return serializeDispatch(
+      this.runtime.dispatch(cmd(type, admitted.actorId, body, key)),
+      this.runtime,
+      type,
+    );
   }
 }
 
