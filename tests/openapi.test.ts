@@ -92,6 +92,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a wider handshake");
     expect(spec).toContain("/v1/demo/born:");
     expect(spec).toContain("cannot be born dead");
+    expect(spec).toContain("/v1/demo/reach:");
+    expect(spec).toContain("opens after the slip dies");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

@@ -30,6 +30,7 @@ import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
 import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
 import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
+import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 
 const [, , command, name] = process.argv;
 
@@ -235,6 +236,12 @@ if (command === "demo" && (name === "born" || name === "fx-fresh" || name === "d
   process.exit(0);
 }
 
+if (command === "demo" && (name === "reach" || name === "horizon" || name === "window-reach")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/reach/scenario.json");
+  printReport(runWindowReach(loadWindowReach(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -271,5 +278,6 @@ usage:
   pnpm demo payee
   pnpm demo climb
   pnpm demo born
+  pnpm demo reach
   pnpm mcp`);
 process.exit(command ? 1 : 0);

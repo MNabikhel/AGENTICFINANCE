@@ -305,6 +305,11 @@
       "name": "aether_demo_born",
       "commandType": "demo.born",
       "description": "Run the born TAP: an FX window cannot be born dead. A quote with validUntil already past is market.fx_fresh; no window written; an open window still settles."
+    },
+    {
+      "name": "aether_demo_reach",
+      "commandType": "demo.reach",
+      "description": "Run the reach TAP: a window that opens after the slip dies is not a window. issue_intent is mandate.window_reach; a reachable future still mints; funded work still finishes."
     }
   ]
 }

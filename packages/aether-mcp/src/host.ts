@@ -37,6 +37,7 @@ import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
 import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
 import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
+import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -112,6 +113,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_payee",
   "aether_demo_climb",
   "aether_demo_born",
+  "aether_demo_reach",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -524,6 +526,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_born") {
       const report = runFxFresh(loadFxFresh("fixtures/demo/born/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_reach") {
+      const report = runWindowReach(loadWindowReach("fixtures/demo/reach/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

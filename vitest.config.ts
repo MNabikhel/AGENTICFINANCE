@@ -54,6 +54,7 @@ export default defineConfig({
       "@aether/payment-payees": path.resolve(__dirname, "packages/aether-runtime/src/payment-payees.ts"),
       "@aether/capability-subset": path.resolve(__dirname, "packages/aether-runtime/src/capability-subset.ts"),
       "@aether/fx-fresh": path.resolve(__dirname, "packages/aether-runtime/src/fx-fresh.ts"),
+      "@aether/window-reach": path.resolve(__dirname, "packages/aether-runtime/src/window-reach.ts"),
     },
   },
 });

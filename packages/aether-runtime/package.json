@@ -33,7 +33,8 @@
     "./operating-book": "./src/operating-book.ts",
     "./payment-payees": "./src/payment-payees.ts",
     "./capability-subset": "./src/capability-subset.ts",
-    "./fx-fresh": "./src/fx-fresh.ts"
+    "./fx-fresh": "./src/fx-fresh.ts",
+    "./window-reach": "./src/window-reach.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -373,6 +373,12 @@ paths:
       responses:
         "200": { description: Born TAP report. An FX window cannot be born dead. }
         "500": { description: Assertions failed }
+  /v1/demo/reach:
+    post:
+      operationId: demoReach
+      responses:
+        "200": { description: Reach TAP report. A window that opens after the slip dies is not a window. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

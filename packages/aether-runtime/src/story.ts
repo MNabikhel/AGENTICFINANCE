@@ -109,6 +109,9 @@ export const CLIMB_TLDR =
 export const BORN_TLDR =
   "A market maker quoted a conversion that had already closed. That was market.fx_fresh — no window written. An open window went through and settled. A later lapse is still market.not_expired. An FX window cannot be born dead.";
 
+export const REACH_TLDR =
+  "A founder funded an $800 hire on a live slip. A calendar that only opened after that slip would die was mandate.window_reach — no second slip written. A future window that still opens while the slip lives still minted. That funded work still released. A window that opens after the slip dies is not a window.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
