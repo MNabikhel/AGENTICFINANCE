@@ -94,6 +94,9 @@ export const PURSE_TLDR =
 export const SEAT_TLDR =
   "A hosted operator recorded one subscribe row. The desk funded an $800 hire — spend is not gated on the row. A second subscribe was host.unique_subscriber — no second row. A different agent took its own seat. That funded work still released. One subscriber, one row.";
 
+export const COVER_TLDR =
+  "A founder wrote a $1,000 parent envelope. The desk funded an $800 hire against the parent. A $400 scout hire on a tighter child was payment.parent_budget — the child's own envelope still allowed. That funded work still released. A parent envelope is not a child's leftover.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -545,6 +548,8 @@ export function autoBeat(input: {
         body += " Hard constraints cannot be waved through by a manager — someone has to issue a new permission slip.";
       } else if (ruleId === "payment.budget") {
         body = "This permission slip’s envelope is spent. The per-item cap is a different object. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.parent_budget") {
+        body = "The parent permission slip’s envelope is spent. The child’s own leftover is not a new parent envelope. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {
         body = "The daily fuse blew. Standing permission does not mean unlimited. Until a human resets the circuit, even a tiny hire is refused.";
       } else if (ruleId === "kya.principal_not_frozen") {

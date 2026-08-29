@@ -32,6 +32,7 @@ import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
 import { loadMmInventory, runMmInventory } from "@aether/mm-inventory";
 import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
 import { loadHostUnique, runHostUnique } from "@aether/host-unique";
+import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -102,6 +103,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_stock",
   "aether_demo_purse",
   "aether_demo_seat",
+  "aether_demo_cover",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -489,6 +491,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_seat") {
       const report = runHostUnique(loadHostUnique("fixtures/demo/seat/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cover") {
+      const report = runParentBudget(loadParentBudget("fixtures/demo/cover/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }
