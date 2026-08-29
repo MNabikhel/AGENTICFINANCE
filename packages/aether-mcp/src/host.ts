@@ -73,6 +73,7 @@ import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 import { loadKnownParent, runKnownParent } from "@aether/known-parent";
 import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
 import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent";
+import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -184,6 +185,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_root",
   "aether_demo_docket",
   "aether_demo_graft",
+  "aether_demo_seal",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -776,6 +778,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_graft") {
       const report = runKyaKnownParent(loadKyaKnownParent("fixtures/demo/graft/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_seal") {
+      const report = runKnownAttestation(loadKnownAttestation("fixtures/demo/seal/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

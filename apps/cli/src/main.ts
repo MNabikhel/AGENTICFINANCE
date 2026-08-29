@@ -66,6 +66,7 @@ import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 import { loadKnownParent, runKnownParent } from "@aether/known-parent";
 import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
 import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent";
+import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
 
 const [, , command, name] = process.argv;
 
@@ -487,6 +488,12 @@ if (command === "demo" && (name === "graft" || name === "twig" || name === "scio
   process.exit(0);
 }
 
+if (command === "demo" && (name === "seal" || name === "wax" || name === "stamp")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/seal/scenario.json");
+  printReport(runKnownAttestation(loadKnownAttestation(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -559,5 +566,6 @@ usage:
   pnpm demo root
   pnpm demo docket
   pnpm demo graft
+  pnpm demo seal
   pnpm mcp`);
 process.exit(command ? 1 : 0);

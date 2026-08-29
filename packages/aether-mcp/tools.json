@@ -485,6 +485,11 @@
       "name": "aether_demo_graft",
       "commandType": "demo.graft",
       "description": "Run the graft TAP: a missing hop parent is not a nested handshake. kya.attest under a ghost parent hop is kya.known_parent; a dead hop and a missing slip parent still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_seal",
+      "commandType": "demo.seal",
+      "description": "Run the seal TAP: a missing handshake is not a silent tombstone. kya.revoke of a ghost handshake is kya.known_attestation; a missing hop parent and someone else’s name still allow; the live handshake still lives; funded work still finishes."
     }
   ]
 }

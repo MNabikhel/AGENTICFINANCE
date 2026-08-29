@@ -217,6 +217,9 @@ export const DOCKET_TLDR =
 export const GRAFT_TLDR =
   "A founder funded an $800 hire. A nested hop under a ghost parent was kya.known_parent — a dead hop is not this deny, a missing slip parent is not this deny. That funded work still released. A missing hop parent is not a nested handshake.";
 
+export const SEAL_TLDR =
+  "A founder funded an $800 hire and shook hands with the desk. Revoke of a ghost handshake was kya.known_attestation — a missing hop parent is not this deny, someone else’s name is not this deny. The live handshake still lived. That funded work still released. A missing handshake is not a silent tombstone.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

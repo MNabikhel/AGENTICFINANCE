@@ -90,6 +90,7 @@ export default defineConfig({
       "@aether/known-parent": path.resolve(__dirname, "packages/aether-runtime/src/known-parent.ts"),
       "@aether/known-approval": path.resolve(__dirname, "packages/aether-runtime/src/known-approval.ts"),
       "@aether/kya-known-parent": path.resolve(__dirname, "packages/aether-runtime/src/kya-known-parent.ts"),
+      "@aether/known-attestation": path.resolve(__dirname, "packages/aether-runtime/src/known-attestation.ts"),
     },
   },
 });

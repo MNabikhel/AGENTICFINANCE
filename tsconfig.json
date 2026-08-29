@@ -83,7 +83,8 @@
       "@aether/known-hire": ["packages/aether-runtime/src/known-hire.ts"],
       "@aether/known-parent": ["packages/aether-runtime/src/known-parent.ts"],
       "@aether/known-approval": ["packages/aether-runtime/src/known-approval.ts"],
-      "@aether/kya-known-parent": ["packages/aether-runtime/src/kya-known-parent.ts"]
+      "@aether/kya-known-parent": ["packages/aether-runtime/src/kya-known-parent.ts"],
+      "@aether/known-attestation": ["packages/aether-runtime/src/known-attestation.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
