@@ -1,4 +1,4 @@
-import { appendFileSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Runtime, cmd, parseHostedMonthly } from "@aether/runtime";
@@ -32,9 +32,10 @@ export function cliLedgerReplay(rt = bootCliRuntime()): boolean {
   const dir = mkdtempSync(join(tmpdir(), "aether-ledger-replay-"));
   const path = join(dir, "ledger.jsonl");
   try {
-    for (const entry of rt.ledger.entries) {
-      appendFileSync(path, `${JSON.stringify(entry)}\n`);
-    }
+    writeFileSync(
+      path,
+      rt.ledger.entries.map((entry) => `${JSON.stringify(entry)}\n`).join(""),
+    );
     return rt.ledger.replayEqualsMemory(path);
   } finally {
     rmSync(dir, { recursive: true, force: true });

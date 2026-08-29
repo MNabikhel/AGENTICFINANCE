@@ -27,6 +27,18 @@ describe("CLI bus", () => {
       }),
     );
     expect(founder.ok).toBe(true);
+    const treasury = rt.dispatch(
+      cmd("identity.register", rt.alias("ops-human").id, {
+        key: "treasury",
+        displayName: "Treasury",
+        role: "treasury",
+        autonomyLevel: 3,
+      }),
+    );
+    expect(treasury.ok).toBe(true);
+    rt.seedOpening({
+      "treasury:cash": { amount: 5_000_000, currency: "USD_SIM" },
+    });
     expect(rt.ledger.entries.length).toBeGreaterThan(0);
     expect(cliLedgerReplay(rt)).toBe(true);
   });
