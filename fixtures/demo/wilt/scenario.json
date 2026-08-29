@@ -1,0 +1,21 @@
+{
+  "id": "window-fresh",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000078",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "deadNotAfter": "2020-01-01T00:00:00.000Z",
+  "intent": {
+    "task": "A permission slip cannot be born with a closed calendar. Completing funded work is legal. A window that opens after the slip dies is a different object. A hire-time calendar is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

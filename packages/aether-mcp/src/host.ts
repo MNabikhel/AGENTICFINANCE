@@ -82,6 +82,7 @@ import { loadSystemScope, runSystemScope } from "@aether/system-scope";
 import { loadActorKnown, runActorKnown } from "@aether/actor-known";
 import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
 import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
+import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -202,6 +203,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_mute",
   "aether_demo_nil",
   "aether_demo_spark",
+  "aether_demo_wilt",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -839,6 +841,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_spark") {
       const report = runKyaMintFresh(loadKyaMintFresh("fixtures/demo/spark/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_wilt") {
+      const report = runWindowFresh(loadWindowFresh("fixtures/demo/wilt/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

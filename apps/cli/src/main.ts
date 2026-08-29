@@ -75,6 +75,7 @@ import { loadSystemScope, runSystemScope } from "@aether/system-scope";
 import { loadActorKnown, runActorKnown } from "@aether/actor-known";
 import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
 import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
+import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
 
 const [, , command, name] = process.argv;
 
@@ -550,6 +551,12 @@ if (command === "demo" && (name === "spark" || name === "kindle" || name === "wi
   process.exit(0);
 }
 
+if (command === "demo" && (name === "wilt" || name === "fade" || name === "dusk")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/wilt/scenario.json");
+  printReport(runWindowFresh(loadWindowFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -631,5 +638,6 @@ usage:
   pnpm demo mute
   pnpm demo nil
   pnpm demo spark
+  pnpm demo wilt
   pnpm mcp`);
 process.exit(command ? 1 : 0);

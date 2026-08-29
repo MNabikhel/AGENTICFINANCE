@@ -99,6 +99,7 @@ export default defineConfig({
       "@aether/actor-known": path.resolve(__dirname, "packages/aether-runtime/src/actor-known.ts"),
       "@aether/receipt-known": path.resolve(__dirname, "packages/aether-runtime/src/receipt-known.ts"),
       "@aether/kya-mint-fresh": path.resolve(__dirname, "packages/aether-runtime/src/kya-mint-fresh.ts"),
+      "@aether/window-fresh": path.resolve(__dirname, "packages/aether-runtime/src/window-fresh.ts"),
     },
   },
 });

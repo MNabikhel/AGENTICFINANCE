@@ -530,6 +530,11 @@
       "name": "aether_demo_spark",
       "commandType": "demo.spark",
       "description": "Run the spark TAP: a handshake cannot be born dead. kya.attest with expiresAt already past is kya.mint_fresh; a century mint and a second live hop still allow; no handshake is written; a one-year hop still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_wilt",
+      "commandType": "demo.wilt",
+      "description": "Run the wilt TAP: a permission slip cannot be born with a closed calendar. mandate.issue_intent with not_after already past is mandate.window_fresh; a window that opens after the slip dies and a hire-time calendar still allow; no slip is written; a live slip still mints; funded work still finishes."
     }
   ]
 }

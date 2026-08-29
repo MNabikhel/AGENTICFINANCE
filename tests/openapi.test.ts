@@ -182,6 +182,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not an empty success");
     expect(spec).toContain("/v1/demo/spark:");
     expect(spec).toContain("cannot be born dead");
+    expect(spec).toContain("/v1/demo/wilt:");
+    expect(spec).toContain("cannot be born with a closed calendar");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

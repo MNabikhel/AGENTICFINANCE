@@ -244,6 +244,9 @@ export const NIL_TLDR =
 export const SPARK_TLDR =
   "A founder funded an $800 hire. A handshake born expired was kya.mint_fresh — a century mint is not this deny, a second live hop is not this deny. No handshake was written. A one-year hop still minted. That funded work still released. A handshake cannot be born dead.";
 
+export const WILT_TLDR =
+  "A founder funded an $800 hire. A slip born with a closed calendar was mandate.window_fresh — a window that opens after the slip dies is not this deny, a hire-time calendar is not this deny. No slip was written. A live slip still minted. That funded work still released. A permission slip cannot be born with a closed calendar.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
