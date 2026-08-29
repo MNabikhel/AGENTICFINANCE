@@ -64,6 +64,7 @@ import {
   YEAR_TLDR,
   FUSE_TLDR,
   SKU_TLDR,
+  PRICED_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -961,6 +962,11 @@ export class Runtime {
           id: "allowed-skus",
           name: "SKU TAP",
           description: "POST /v1/demo/sku — a listed SKU is not any catalog good",
+        },
+        {
+          id: "sku-currency",
+          name: "Priced TAP",
+          description: "POST /v1/demo/priced — a listed SKU is only priced in a currency the catalog names",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3362,7 +3368,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

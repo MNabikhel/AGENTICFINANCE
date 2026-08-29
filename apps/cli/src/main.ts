@@ -34,6 +34,7 @@ import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
 import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 import { loadPaymentSkus, runPaymentSkus } from "@aether/payment-skus";
+import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
 
 const [, , command, name] = process.argv;
 
@@ -263,6 +264,12 @@ if (command === "demo" && (name === "sku" || name === "goods" || name === "allow
   process.exit(0);
 }
 
+if (command === "demo" && (name === "priced" || name === "currency" || name === "sku-currency")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/priced/scenario.json");
+  printReport(runSkuCurrency(loadSkuCurrency(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -303,5 +310,6 @@ usage:
   pnpm demo year
   pnpm demo fuse
   pnpm demo sku
+  pnpm demo priced
   pnpm mcp`);
 process.exit(command ? 1 : 0);

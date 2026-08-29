@@ -58,6 +58,7 @@ export default defineConfig({
       "@aether/kya-window": path.resolve(__dirname, "packages/aether-runtime/src/kya-window.ts"),
       "@aether/circuit-daily": path.resolve(__dirname, "packages/aether-runtime/src/circuit-daily.ts"),
       "@aether/payment-skus": path.resolve(__dirname, "packages/aether-runtime/src/payment-skus.ts"),
+      "@aether/sku-currency": path.resolve(__dirname, "packages/aether-runtime/src/sku-currency.ts"),
     },
   },
 });

@@ -121,6 +121,9 @@ export const FUSE_TLDR =
 export const SKU_TLDR =
   "A founder listed research.brief. The desk funded an $800 hire of that good. A catalog deep-research quote was payment.allowed_skus — the room still wrote the quote. That funded work still released. A listed SKU is not any catalog good.";
 
+export const PRICED_TLDR =
+  "A vendor quoted research.brief in USDC. That was market.sku_currency — no quote written. A USD quote went through and the $800 hire released. Convert with market.fx_settle. A listed SKU is only priced in a currency the catalog names.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -539,6 +542,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} quoted outside the 200bps band`,
           body: "The nested rate is what is stored and what settle uses. A top-level rateE6 is not the band. Re-quote inside 980000–1020000.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.sku_currency") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a listed SKU in a currency the catalog does not name`,
+          body: "Research is USD_SIM. Convert with market.fx_settle. A deny does not write a quote. Ghost SKU stays market.known_sku.",
           tone: "deny",
           commandType: cmd.type,
         };

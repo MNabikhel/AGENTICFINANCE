@@ -325,6 +325,11 @@
       "name": "aether_demo_sku",
       "commandType": "demo.sku",
       "description": "Run the sku TAP: a listed SKU is not any catalog good. hire.create of a catalog good not on the slip is payment.allowed_skus; the quote is still written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_priced",
+      "commandType": "demo.priced",
+      "description": "Run the priced TAP: a listed SKU is only priced in a currency the catalog names. market.quote of research.brief in USDC_SIM is market.sku_currency; no quote is written; a USD quote still hires."
     }
   ]
 }

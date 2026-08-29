@@ -41,6 +41,7 @@ import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
 import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 import { loadPaymentSkus, runPaymentSkus } from "@aether/payment-skus";
+import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -120,6 +121,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_year",
   "aether_demo_fuse",
   "aether_demo_sku",
+  "aether_demo_priced",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -552,6 +554,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_sku") {
       const report = runPaymentSkus(loadPaymentSkus("fixtures/demo/sku/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_priced") {
+      const report = runSkuCurrency(loadSkuCurrency("fixtures/demo/priced/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

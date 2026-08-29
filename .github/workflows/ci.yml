@@ -49,3 +49,4 @@ jobs:
       - run: pnpm demo:year
       - run: pnpm demo:fuse
       - run: pnpm demo:sku
+      - run: pnpm demo:priced

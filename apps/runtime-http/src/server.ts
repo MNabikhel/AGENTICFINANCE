@@ -46,6 +46,7 @@ import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
 import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 import { loadPaymentSkus, runPaymentSkus } from "@aether/payment-skus";
+import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -84,6 +85,7 @@ const reachFixture = join(process.cwd(), "fixtures/demo/reach/scenario.json");
 const yearFixture = join(process.cwd(), "fixtures/demo/year/scenario.json");
 const fuseFixture = join(process.cwd(), "fixtures/demo/fuse/scenario.json");
 const skuFixture = join(process.cwd(), "fixtures/demo/sku/scenario.json");
+const pricedFixture = join(process.cwd(), "fixtures/demo/priced/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -571,6 +573,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runPaymentSkus(loadPaymentSkus(skuFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "sku" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/priced") {
+        const report = runSkuCurrency(loadSkuCurrency(pricedFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "priced" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

@@ -397,6 +397,12 @@ paths:
       responses:
         "200": { description: SKU TAP report. A listed SKU is not any catalog good. }
         "500": { description: Assertions failed }
+  /v1/demo/priced:
+    post:
+      operationId: demoPriced
+      responses:
+        "200": { description: Priced TAP report. A listed SKU is only priced in a currency the catalog names. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

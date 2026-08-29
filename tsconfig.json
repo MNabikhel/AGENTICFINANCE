@@ -51,7 +51,8 @@
       "@aether/window-reach": ["packages/aether-runtime/src/window-reach.ts"],
       "@aether/kya-window": ["packages/aether-runtime/src/kya-window.ts"],
       "@aether/circuit-daily": ["packages/aether-runtime/src/circuit-daily.ts"],
-      "@aether/payment-skus": ["packages/aether-runtime/src/payment-skus.ts"]
+      "@aether/payment-skus": ["packages/aether-runtime/src/payment-skus.ts"],
+      "@aether/sku-currency": ["packages/aether-runtime/src/sku-currency.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
