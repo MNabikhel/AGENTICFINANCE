@@ -55,6 +55,7 @@
     "demo:paper": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo paper",
     "demo:mix": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mix",
     "demo:rung": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo rung",
+    "demo:grade": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo grade",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

@@ -180,6 +180,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "same-currency")?.description).toContain("POST /v1/demo/mix");
     expect(card.skills.some((s) => s.id === "ladder-legal")).toBe(true);
     expect(card.skills.find((s) => s.id === "ladder-legal")?.description).toContain("POST /v1/demo/rung");
+    expect(card.skills.some((s) => s.id === "min-level")).toBe(true);
+    expect(card.skills.find((s) => s.id === "min-level")?.description).toContain("POST /v1/demo/grade");
   });
 
   it("lets a registered desk read the same card", () => {

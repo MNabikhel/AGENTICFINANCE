@@ -1321,6 +1321,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     commandType: "mandate.issue_intent",
     hint: "This slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not. Issue a new slip, or demote.",
   },
+  "ladder.min_level": {
+    kind: "none",
+    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter.",
+  },
   "circuit.daily": {
     kind: "reset_circuit",
     commandType: "circuit.reset",

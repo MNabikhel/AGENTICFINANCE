@@ -47,6 +47,7 @@ import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
 import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
 import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
+import { loadMinLevel, runMinLevel } from "@aether/min-level";
 
 const [, , command, name] = process.argv;
 
@@ -354,6 +355,12 @@ if (command === "demo" && (name === "rung" || name === "skip-rung" || name === "
   process.exit(0);
 }
 
+if (command === "demo" && (name === "grade" || name === "min-level" || name === "junior")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/grade/scenario.json");
+  printReport(runMinLevel(loadMinLevel(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -407,5 +414,6 @@ usage:
   pnpm demo paper
   pnpm demo mix
   pnpm demo rung
+  pnpm demo grade
   pnpm mcp`);
 process.exit(command ? 1 : 0);

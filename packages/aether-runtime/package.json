@@ -50,7 +50,8 @@
     "./intent-subject": "./src/intent-subject.ts",
     "./fx-quote": "./src/fx-quote.ts",
     "./same-currency": "./src/same-currency.ts",
-    "./ladder-legal": "./src/ladder-legal.ts"
+    "./ladder-legal": "./src/ladder-legal.ts",
+    "./min-level": "./src/min-level.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

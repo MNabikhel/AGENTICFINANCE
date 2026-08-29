@@ -475,6 +475,12 @@ paths:
       responses:
         "200": { description: Rung TAP report. A skipped rung is not a promotion. }
         "500": { description: Assertions failed }
+  /v1/demo/grade:
+    post:
+      operationId: demoGrade
+      responses:
+        "200": { description: Grade TAP report. A junior desk is not a nested-slip mint. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

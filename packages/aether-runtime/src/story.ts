@@ -160,6 +160,9 @@ export const MIX_TLDR =
 export const RUNG_TLDR =
   "A founder funded an $800 hire. Skipping L2→L4 on a scout was ladder.legal — the scout still exists, the founder may still set rungs. A one-rung climb still went through. That funded work still released. A skipped rung is not a promotion.";
 
+export const GRADE_TLDR =
+  "A founder funded an $800 hire. An L3 scout minting a nested slip was ladder.min_level — the parent still exists, the child is still tighter, the handshake ceiling still allows. An L4 desk still minted that child. That funded work still released. A junior desk is not a nested-slip mint.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -407,6 +410,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a cadence with no slots`,
           body: "A permission slip cannot be born with max_occurrences already exhausted. Name at least one slot, or omit the cap. Hire still checks cadence when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "ladder.min_level") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a nested slip below L4`,
+          body: "Issuing a sub-intent is L4. A junior desk cannot hand down a child mandate. A grown-up ticket does not waive that verb. Climb, then issue. Completing funded work is still legal.",
           tone: "deny",
           commandType: cmd.type,
         };

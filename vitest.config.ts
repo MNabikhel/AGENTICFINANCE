@@ -71,6 +71,7 @@ export default defineConfig({
       "@aether/fx-quote": path.resolve(__dirname, "packages/aether-runtime/src/fx-quote.ts"),
       "@aether/same-currency": path.resolve(__dirname, "packages/aether-runtime/src/same-currency.ts"),
       "@aether/ladder-legal": path.resolve(__dirname, "packages/aether-runtime/src/ladder-legal.ts"),
+      "@aether/min-level": path.resolve(__dirname, "packages/aether-runtime/src/min-level.ts"),
     },
   },
 });

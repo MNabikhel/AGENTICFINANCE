@@ -77,6 +77,7 @@ import {
   PAPER_TLDR,
   MIX_TLDR,
   RUNG_TLDR,
+  GRADE_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -1039,6 +1040,11 @@ export class Runtime {
           id: "ladder-legal",
           name: "Rung TAP",
           description: "POST /v1/demo/rung — a skipped rung is not a promotion",
+        },
+        {
+          id: "min-level",
+          name: "Grade TAP",
+          description: "POST /v1/demo/grade — a junior desk is not a nested-slip mint",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3453,7 +3459,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };
