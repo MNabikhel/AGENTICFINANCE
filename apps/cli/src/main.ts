@@ -94,6 +94,7 @@ import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
+import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -684,6 +685,12 @@ if (command === "demo" && (name === "spike" || name === "ditch" || name === "jun
   process.exit(0);
 }
 
+if (command === "demo" && (name === "week" || name === "tide" || name === "cycle")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/week/scenario.json");
+  printReport(runCadenceReach(loadCadenceReach(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -800,6 +807,7 @@ usage:
   pnpm demo shut
   pnpm demo dump
   pnpm demo spike
+  pnpm demo week
   aether audit verify
   aether ledger replay
   pnpm mcp`);

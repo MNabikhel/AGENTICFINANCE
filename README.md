@@ -103,6 +103,13 @@ pnpm demo pen             # a junior signature is not a grown-up pause
 pnpm demo well            # a fourth hop is not a nested parent
 pnpm demo cite            # a listed reference is not decoration once a check exists
 pnpm demo lock            # someone else's key is not yours to turn
+pnpm demo void            # a void is not a refund
+pnpm demo fold            # someone else's bid is not yours to pull
+pnpm demo rip             # someone else's unused slip is not yours to tear
+pnpm demo shut            # someone else's room is not yours to close
+pnpm demo dump            # someone else's unused checkout is not yours to dump
+pnpm demo spike           # someone else's unused payment is not yours to spike
+pnpm demo week            # a week is not a cadence on a seven-day slip
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
@@ -130,6 +137,8 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 **Slot:** a founder writes a one-slot slip. The desk funds, then unwinds. Cash and spend come back. The cadence slot does not. A second hire is refused. A refund is not a new slot.
 
 **Daily:** a founder writes a daily cadence. The desk hires once. A same-day second hire is refused. After 24 hours that hire goes through. A cadence is a gap, not a burst.
+
+**Week:** a founder funds an $800 hire. Minting WEEKLY or MONTHLY that cannot admit a second hire before the seven-day exp is refused. A one-shot WEEKLY still mints. DAILY still mints. That funded work still releases. A week is not a cadence on a seven-day slip.
 
 **Cart occupancy:** a desk accepts an $800 hire. Funding with a loose cartId is refused. Binding a cart occupies the hire; a second cart is refused. A second payment on that cart is refused. The same fund command then goes through. Occupancy is a bind, not a field on fund. Ink TAP is a USDC cart on a USD hire.
 

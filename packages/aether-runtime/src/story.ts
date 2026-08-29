@@ -301,6 +301,9 @@ export const DUMP_TLDR =
 export const SPIKE_TLDR =
   "A founder funded an $800 hire. A second desk spiking the research desk's unused check was mandate.payment_party — a missing payment is not this deny, an expired window is not this deny. mandate.cart_party still allows. No PAYMENT_REVOKE line was written. The buyer still spiked its own unused payment. Funding that spiked payment was mandate.not_expired. Occupancy freed. That funded work still released. Someone else's unused payment is not yours to spike.";
 
+export const WEEK_TLDR =
+  "A founder funded an $800 hire. Minting WEEKLY or MONTHLY that cannot admit a second hire before the seven-day exp was mandate.cadence_reach — not a vacant slot, not a closed calendar, not hire-time recurrence. A one-shot WEEKLY still minted. DAILY still minted. That funded work still released. A week is not a cadence on a seven-day slip.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -598,6 +601,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a cadence with no slots`,
           body: "A permission slip cannot be born with max_occurrences already exhausted. Name at least one slot, or omit the cap. Hire still checks cadence when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.cadence_reach") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a week on a seven-day slip`,
+          body: "A permission slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY, or omit recurrence. Hire still checks cadence when money would move.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1658,6 +1671,7 @@ export function analog(): Analog {
       "A live room can be shut. That is not an expired window. Expired is when the day dies. Someone else's room is not yours to close.",
       "A checkout can be torn up. That is not a refund. Bound is when a payment occupies it. Someone else's unused checkout is not yours to dump.",
       "A check can be torn up. That is not a refund. Funded is when escrow occupies it. Someone else's unused payment is not yours to spike.",
+      "A week is not a cadence on a seven-day slip. Daily is 24 hours. A vacant cap is no slots. A one-shot WEEKLY still mints.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

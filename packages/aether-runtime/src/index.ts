@@ -124,6 +124,7 @@ import {
   SHUT_TLDR,
   DUMP_TLDR,
   SPIKE_TLDR,
+  WEEK_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -164,6 +165,7 @@ import type {
   LineItem,
   MandateConstraint,
   MandateId,
+  RecurrenceFrequency,
   Merchant,
   Money,
   PaymentMandate,
@@ -180,7 +182,7 @@ import type {
   SubscriptionStatus,
   WindowId,
 } from "@aether/types";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, INTENT_TTL_SEC, KYA_TTL_MS, PROTOCOL, ROLE_CAPABILITY, SIM_INSTRUMENT, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, INTENT_TTL_MS, INTENT_TTL_SEC, KYA_TTL_MS, PROTOCOL, RECURRENCE_GAP_MS, ROLE_CAPABILITY, SIM_INSTRUMENT, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -267,6 +269,20 @@ function recurrenceMintable(c: { max_occurrences?: unknown }): boolean {
   if (c.max_occurrences === undefined) return true;
   if (typeof c.max_occurrences !== "number" || !Number.isFinite(c.max_occurrences)) return false;
   return c.max_occurrences > 0;
+}
+
+/**
+ * A frequency whose next slot opens at or after the seven-day exp cannot admit
+ * hire 2. Vacant caps stay occurrence_fresh. One-shot WEEKLY still mints.
+ */
+function cadenceReachable(c: { frequency?: unknown; max_occurrences?: unknown }): boolean {
+  if (!recurrenceMintable(c)) return true;
+  if (typeof c.frequency !== "string") return false;
+  if (!(c.frequency in RECURRENCE_GAP_MS)) return false;
+  const gap = RECURRENCE_GAP_MS[c.frequency as RecurrenceFrequency];
+  if (gap === 0) return true;
+  if (c.max_occurrences === 1) return true;
+  return gap < INTENT_TTL_MS;
 }
 
 /** Closed when validUntil ≤ now (same exclusive end as quote expiresAt). Unparseable is not a window. */
@@ -1343,6 +1359,11 @@ export class Runtime {
           name: "Spike TAP",
           description: "POST /v1/demo/spike — someone else's unused payment is not yours to spike",
         },
+        {
+          id: "cadence-reach",
+          name: "Week TAP",
+          description: "POST /v1/demo/week — a week is not a cadence on a seven-day slip",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2024,7 +2045,10 @@ export class Runtime {
         ctx.windowReachOk = executionWindowReachable(win, this.clock.now());
       }
       const rec = ctx.proposedConstraints.find((c) => c.type === "payment.agent_recurrence");
-      if (rec) ctx.occurrenceMintOk = recurrenceMintable(rec);
+      if (rec) {
+        ctx.occurrenceMintOk = recurrenceMintable(rec);
+        ctx.cadenceReachOk = cadenceReachable(rec);
+      }
     }
     const namedIds = this.namedAgentIds(cmd, body);
     if (namedIds.length > 0) {
@@ -3002,6 +3026,9 @@ export class Runtime {
     const rec = constraints.find((c) => c.type === "payment.agent_recurrence");
     if (rec && !recurrenceMintable(rec)) {
       throw new Error("intent recurrence already exhausted");
+    }
+    if (rec && !cadenceReachable(rec)) {
+      throw new Error("intent cadence unreachable");
     }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",
@@ -4084,7 +4111,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

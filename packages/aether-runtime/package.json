@@ -97,7 +97,8 @@
     "./mandate-party": "./src/mandate-party.ts",
     "./rfq-party": "./src/rfq-party.ts",
     "./cart-party": "./src/cart-party.ts",
-    "./payment-party": "./src/payment-party.ts"
+    "./payment-party": "./src/payment-party.ts",
+    "./cadence-reach": "./src/cadence-reach.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

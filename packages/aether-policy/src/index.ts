@@ -1410,6 +1410,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.payment_party", "deny", "actor is not the named signer or payee");
     },
   },
+  {
+    id: "mandate.cadence_reach",
+    evaluate: (ctx) => {
+      if (ctx.cadenceReachOk === undefined) return v("mandate.cadence_reach", "allow", "not a cadence mint");
+      return ctx.cadenceReachOk
+        ? v("mandate.cadence_reach", "allow", "next slot opens while the slip lives")
+        : v("mandate.cadence_reach", "deny", "next slot opens after the slip dies");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1710,7 +1719,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.occurrence_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with a cadence that has no slots. Name max_occurrences of at least one, or omit the cap. A non-number is not a cap. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.recurrence.",
+    hint: "A slip cannot be born with a cadence that has no slots. Name max_occurrences of at least one, or omit the cap. A non-number is not a cap. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.recurrence. A week that cannot admit a second hire is mandate.cadence_reach.",
+  },
+  "mandate.cadence_reach": {
+    kind: "none",
+    hint: "A slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY (max_occurrences 1), or omit recurrence. A vacant cap stays mandate.occurrence_fresh. Hire still names payment.recurrence.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

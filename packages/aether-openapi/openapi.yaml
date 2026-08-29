@@ -848,6 +848,12 @@ paths:
       responses:
         "200": { description: Spike TAP report. Someone else's unused payment is not yours to spike. }
         "500": { description: Assertions failed }
+  /v1/demo/week:
+    post:
+      operationId: demoWeek
+      responses:
+        "200": { description: Week TAP report. A week is not a cadence on a seven-day slip. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

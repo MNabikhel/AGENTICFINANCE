@@ -101,6 +101,7 @@ import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
+import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -240,6 +241,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_shut",
   "aether_demo_dump",
   "aether_demo_spike",
+  "aether_demo_week",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -972,6 +974,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_spike") {
       const report = runPaymentParty(loadPaymentParty("fixtures/demo/spike/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_week") {
+      const report = runCadenceReach(loadCadenceReach("fixtures/demo/week/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

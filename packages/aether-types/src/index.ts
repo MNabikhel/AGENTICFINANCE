@@ -1094,9 +1094,18 @@ export interface PolicyContext {
    * Absent = not issue_intent, or the slip has no agent_recurrence constraint.
    * Omit max_occurrences is unlimited and still mints. Hire/fund still names
    * `payment.recurrence`. Ghost subject, missing parent, and a wider child
-   * keep first deny.
+   * keep first deny. A week that cannot admit a second hire is `mandate.cadence_reach`.
    */
   occurrenceMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write a recurrence whose next slot
+   * opens at or after the slip's seven-day exp (`WEEKLY` / `MONTHLY` with the
+   * cap omitted or greater than one). Absent = not issue_intent, or no
+   * agent_recurrence constraint. A vacant cap stays `mandate.occurrence_fresh`.
+   * A one-shot WEEKLY (`max_occurrences` 1) still mints. DAILY still mints.
+   * Hire/fund still names `payment.recurrence`.
+   */
+  cadenceReachOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.

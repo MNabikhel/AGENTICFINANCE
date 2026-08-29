@@ -660,6 +660,11 @@
       "name": "aether_demo_spike",
       "commandType": "demo.spike",
       "description": "Run the spike TAP: someone else's unused payment is not yours to spike. mandate.revoke_payment of a live unused payment by a second desk is mandate.payment_party; a missing payment and an expired window still allow; mandate.cart_party still allows; no PAYMENT_REVOKE line; the buyer still spikes its own unused payment; hire.fund of that spiked payment is mandate.not_expired; occupancy frees; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_week",
+      "commandType": "demo.week",
+      "description": "Run the week TAP: a week is not a cadence on a seven-day slip. mandate.issue_intent with WEEKLY or MONTHLY that cannot admit a second hire is mandate.cadence_reach; a vacant slot, a closed calendar, and hire-time recurrence still allow; a one-shot WEEKLY still mints; DAILY still mints; funded work still finishes."
     }
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "id": "cadence-reach",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000097",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneak": {
+    "task": "a week is not a cadence on a seven-day slip"
+  },
+  "legal": {
+    "task": "buy research once this week"
+  },
+  "daily": {
+    "task": "buy research on a daily cadence"
+  },
+  "intent": {
+    "task": "A week is not a cadence on a seven-day slip. Completing funded work is legal. A vacant slot is a different object. A calendar that opens after the slip dies is a different object. A same-day burst is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

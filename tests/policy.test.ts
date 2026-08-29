@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 96 rules", () => {
-    expect(RULE_IDS).toHaveLength(96);
+  it("has 97 rules", () => {
+    expect(RULE_IDS).toHaveLength(97);
   });
 
   it("denies frozen actors", () => {
@@ -2843,6 +2843,59 @@ describe("policy catalog", () => {
   it("does not name mandate.occurrence_fresh when the speaker is not minting a slip", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+  });
+
+  it("denies a week that cannot admit a second hire as mandate.cadence_reach", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: true,
+        cadenceReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.cadence_reach");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.cadence_reach when the next slot still opens while the slip lives", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: true,
+        cadenceReachOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.cadence_reach when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.occurrence_fresh first when a vacant cap also cannot admit a second hire", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: false,
+        cadenceReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.occurrence_fresh");
   });
 
   it("still names identity.known first when a ghost subject is also born with no slots", () => {

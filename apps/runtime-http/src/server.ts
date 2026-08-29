@@ -106,6 +106,7 @@ import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
+import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -204,6 +205,7 @@ const ripFixture = join(process.cwd(), "fixtures/demo/rip/scenario.json");
 const shutFixture = join(process.cwd(), "fixtures/demo/shut/scenario.json");
 const dumpFixture = join(process.cwd(), "fixtures/demo/dump/scenario.json");
 const spikeFixture = join(process.cwd(), "fixtures/demo/spike/scenario.json");
+const weekFixture = join(process.cwd(), "fixtures/demo/week/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1111,6 +1113,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runPaymentParty(loadPaymentParty(spikeFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "spike" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/week") {
+        const report = runCadenceReach(loadCadenceReach(weekFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "week" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
