@@ -118,6 +118,7 @@ import {
   WELL_TLDR,
   CITE_TLDR,
   LOCK_TLDR,
+  VOID_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -210,6 +211,7 @@ const HIRE_LIVE_COMMANDS = new Set<CommandType>([
   "hire.deliver",
   "hire.release",
   "hire.refund",
+  "hire.void",
   "envelope.require",
   "envelope.submit",
 ]);
@@ -1288,6 +1290,11 @@ export class Runtime {
           name: "Lock TAP",
           description: "POST /v1/demo/lock — someone else's key is not yours to turn",
         },
+        {
+          id: "hire-void",
+          name: "Void TAP",
+          description: "POST /v1/demo/void — a void is not a refund",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -1902,6 +1909,9 @@ export class Runtime {
         ctx.hirePartyOk = hire.sellerId === actor.id;
       } else if (cmd.type === "hire.refund" || cmd.type === "hire.release") {
         ctx.hirePartyOk = hire.buyerId === actor.id || actor.role === "treasury";
+      } else if (cmd.type === "hire.void") {
+        ctx.hirePartyOk =
+          hire.buyerId === actor.id || hire.sellerId === actor.id || actor.role === "treasury";
       }
     }
     if (amount) ctx.amount = amount;
@@ -2447,7 +2457,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -2530,6 +2540,8 @@ export class Runtime {
         return this.mutHireFund(body, actor);
       case "hire.refund":
         return this.mutHireRefund(body, actor);
+      case "hire.void":
+        return this.mutHireVoid(body, actor);
       case "hire.deliver":
         return this.mutHireDeliver(body, actor);
       case "hire.release":
@@ -3027,6 +3039,20 @@ export class Runtime {
     const hire = this.requireHire(body.hireId as HireId);
     if (hire.sellerId !== actor.id) throw new Error("only seller may accept");
     const next = transitionHire(hire, "accepted");
+    this.hires.set(next.id, next);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "HIRE_TRANSITION",
+      subjects: [{ type: "hire", id: hire.id }],
+      payload: { id: hire.id, state: next.state },
+    });
+    return next;
+  }
+
+  private mutHireVoid(body: Record<string, unknown>, actor: Agent) {
+    const hire = this.requireHire(body.hireId as HireId);
+    const next = transitionHire(hire, "void");
     this.hires.set(next.id, next);
     this.audit.append({
       clock: this.clock,
@@ -3750,7 +3776,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

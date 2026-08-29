@@ -283,6 +283,9 @@ export const CITE_TLDR =
 export const LOCK_TLDR =
   "A founder funded an $800 hire. A vendor turning the desk's lock was identity.party — a missing agent is not this deny, a frozen speaker is not this deny. No IDENTITY_ROTATE line was written. The desk still turned its own lock. That funded work still released. Someone else's key is not yours to turn.";
 
+export const VOID_TLDR =
+  "A founder funded an $800 hire. Voiding that funded hire was hire.state — the party still allowed; a missing hire is not this deny. No void line was written. An unfunded offer still voided. That quote stayed spent. That funded work still released. A void is not a refund.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1062,6 +1065,34 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "hire.void") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not tear up that offer`,
+        body:
+          rule?.ruleId === "hire.state"
+            ? "A void is offered or accepted, before escrow moves. Funded work refunds. A void is not a refund."
+            : rule?.ruleId === "hire.party"
+              ? "The other side of the table does not tear up this offer. Buyer, seller, or treasury may void an unfunded hire."
+              : rule?.ruleId === "hire.known"
+                ? "That hire is not in this world. A missing hire is not a torn-up offer."
+                : "A void is not a refund. Offered or accepted, before escrow moves.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} tore up an unfunded offer`,
+      body: "The hire is void. Escrow never moved. The quote stays spent. A void is not a refund.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "hire.release") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -1464,6 +1495,7 @@ export function analog(): Analog {
       "A notary (the audit log) writes every decision in ink that smudges if you try to rewrite yesterday.",
       "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
       "An agent can change the lock on its key without becoming someone else. Someone else's key is not yours to turn.",
+      "An unfunded offer can be torn up. That is not a refund. A refund is cash coming back after escrow moved.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

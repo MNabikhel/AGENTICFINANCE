@@ -200,6 +200,16 @@
       "required": ["hireId"],
       "properties": { "hireId": { "type": "string" } }
     },
+    "hire.void": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": {
+          "type": "string",
+          "description": "Cancel an unfunded offer. Offered or accepted only. Funded work refunds. A void does not restore the quote."
+        }
+      }
+    },
     "envelope.require": {
       "type": "object",
       "required": ["hireId"],

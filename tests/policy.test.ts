@@ -975,6 +975,35 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("denies void of a funded hire as hire.state, not a missing party", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.void",
+        hire: hire({ state: "funded" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.state");
+  });
+
+  it("allows void from offered", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.void",
+        hire: hire({ state: "offered" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+  });
+
   it("allows an accept from offered", () => {
     const d = evaluate(
       ctx({

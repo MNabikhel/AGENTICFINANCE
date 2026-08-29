@@ -84,6 +84,20 @@ describe("known hire", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("hire.known");
   });
+
+  it("refuses to void a missing hire as hire.known, not a mutate throw", () => {
+    const rt = boot();
+    const { desk } = economy(rt);
+    const r = rt.dispatch(
+      cmd("hire.void", desk.id, { hireId: "hid_01J6AETHERGHOSTHIRE0000001" }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.known");
+  });
 });
 
 describe("known intent", () => {
@@ -1283,6 +1297,70 @@ describe("hire state", () => {
     expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
     expect(rt.spentByIntent.get(intentId)).toBe(80_000);
   });
+
+  it("refuses to void a funded hire as hire.state, and does not unwind escrow", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, hireId } = offered(rt);
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const cash = rt.ledger.balanceByName("procurement:cash").amount;
+    const r = rt.dispatch(cmd("hire.void", desk.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.state");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("funded");
+    expect(rt.ledger.balanceByName("procurement:cash").amount).toBe(cash);
+    expect(rt.spentByIntent.get(intentId)).toBe(80_000);
+  });
+
+  it("voids an offered hire without restoring the quote", () => {
+    const rt = boot();
+    const { desk, hireId } = offered(rt);
+    const quoteId = rt.hires.get(hireId as HireContract["id"])?.quoteId;
+    expect(typeof quoteId).toBe("string");
+    const r = rt.dispatch(cmd("hire.void", desk.id, { hireId }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("void");
+    expect(quoteId && rt.consumedQuotes.has(quoteId)).toBe(true);
+  });
+
+  it("refuses a stranger's void as hire.party", () => {
+    const rt = boot();
+    const { vendor, hireId } = offered(rt);
+    const founder = rt.alias("ops-human");
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "outsider",
+          displayName: "Outsider",
+          role: "data_vendor",
+          autonomyLevel: 2,
+        }),
+      ),
+      "outsider",
+    );
+    const outsider = rt.alias("outsider");
+    const r = rt.dispatch(cmd("hire.void", outsider.id, { hireId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.party");
+    expect(rt.hires.get(hireId as HireContract["id"])?.state).toBe("offered");
+  });
+
 
   it("refuses to release before deliver as hire.state", () => {
     const rt = boot();

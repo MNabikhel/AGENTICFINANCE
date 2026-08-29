@@ -447,6 +447,7 @@ export const HIRE_COMMAND_TARGET = {
   "hire.deliver": "delivered",
   "hire.refund": "refunded",
   "hire.release": "released",
+  "hire.void": "void",
   "envelope.submit": "released",
 } as const satisfies Record<string, HireState>;
 
@@ -1258,6 +1259,7 @@ export type CommandType =
   | "hire.deliver"
   | "hire.release"
   | "hire.refund"
+  | "hire.void"
   | "envelope.require"
   | "envelope.submit"
   | "approval.resolve"
@@ -1343,6 +1345,7 @@ export const ROLE_CAPABILITY: Record<
     "hire.fund",
     "hire.release",
     "hire.refund",
+    "hire.void",
     "envelope.require",
     "envelope.submit",
     "approval.resolve",
@@ -1370,6 +1373,7 @@ export const ROLE_CAPABILITY: Record<
     "hire.fund",
     "hire.release",
     "hire.refund",
+    "hire.void",
     "envelope.require",
     "envelope.submit",
     "ledger.balances",
@@ -1384,6 +1388,7 @@ export const ROLE_CAPABILITY: Record<
     "market.quote",
     "market.fx_settle",
     "hire.accept",
+    "hire.void",
     "hire.deliver",
     "envelope.require",
     "envelope.submit",
@@ -1398,6 +1403,7 @@ export const ROLE_CAPABILITY: Record<
     "market.quote",
     "market.fx_settle",
     "hire.accept",
+    "hire.void",
     "hire.deliver",
     "envelope.require",
     "envelope.submit",

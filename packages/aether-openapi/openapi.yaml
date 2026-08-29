@@ -130,6 +130,20 @@ paths:
       responses:
         "200": { description: Escrow returned to buyer. Mandate spend restored. Circuit stays sticky. }
         "422": { description: Policy deny. Illegal hire transition is hire.state, not HTTP 409. }
+  /v1/hires/{id}/void:
+    post:
+      operationId: hireVoid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Unfunded offer cancelled. Quote stays spent. Escrow never moved. }
+        "422": { description: Policy deny. Funded work is hire.state, not a refund. Ghost hire is hire.known. Stranger is hire.party. }
   /v1/fx/settle:
     post:
       operationId: marketFxSettle
@@ -727,6 +741,12 @@ paths:
       operationId: demoLock
       responses:
         "200": { description: Lock TAP report. Someone else's key is not yours to turn. }
+        "500": { description: Assertions failed }
+  /v1/demo/void:
+    post:
+      operationId: demoVoid
+      responses:
+        "200": { description: Void TAP report. A void is not a refund. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:

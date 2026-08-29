@@ -112,6 +112,7 @@ export default defineConfig({
       "@aether/delegation-depth": path.resolve(__dirname, "packages/aether-runtime/src/delegation-depth.ts"),
       "@aether/payment-reference": path.resolve(__dirname, "packages/aether-runtime/src/payment-reference.ts"),
       "@aether/identity-party": path.resolve(__dirname, "packages/aether-runtime/src/identity-party.ts"),
+      "@aether/hire-void": path.resolve(__dirname, "packages/aether-runtime/src/hire-void.ts"),
     },
   },
 });

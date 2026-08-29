@@ -77,6 +77,11 @@
       "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release. Completing after the cart, handshake, grant, or a hot settle hour is legal; freeze and revoke still bind."
     },
     {
+      "name": "aether_hire_void",
+      "commandType": "hire.void",
+      "description": "Cancel an unfunded hire (offered or accepted). Escrow never moved. The quote stays spent. Funded work refunds. A void is not a refund. Ghost hire stays hire.known. Stranger stays hire.party."
+    },
+    {
       "name": "aether_hire_release",
       "commandType": "hire.release",
       "description": "Release funded+delivered escrow to the seller without an x402 envelope. Same books as envelope.submit. Completing after the cart, handshake, grant, or a hot settle hour is legal; freeze and revoke still bind."
@@ -600,6 +605,11 @@
       "name": "aether_demo_lock",
       "commandType": "demo.lock",
       "description": "Run the lock TAP: someone else's key is not yours to turn. identity.rotate of a desk by a vendor is identity.party; a missing agent and a frozen speaker still allow; no IDENTITY_ROTATE line; the desk still turns its own lock; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_void",
+      "commandType": "demo.void",
+      "description": "Run the void TAP: a void is not a refund. hire.void of a funded hire is hire.state; the party still allows; a missing hire is not this deny; no void line; an unfunded offer still voids without restoring the quote; funded work still finishes."
     }
   ]
 }

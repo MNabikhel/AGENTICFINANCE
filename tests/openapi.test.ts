@@ -208,6 +208,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not decoration once a check exists");
     expect(spec).toContain("/v1/demo/lock:");
     expect(spec).toContain("not yours to turn");
+    expect(spec).toContain("/v1/demo/void:");
+    expect(spec).toContain("not a refund");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {

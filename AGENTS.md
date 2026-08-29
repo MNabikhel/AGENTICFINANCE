@@ -63,7 +63,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 11. `clearing.settle_window` archives net exposure. It is not a second payment. Money already moved at escrow.
 12. Idempotency: same key (or auto-hash of a money-moving command) + prior **allow/escalate** = replay, no second mutation, no extra clock step, no extra audit. **Denies are not cached.** An escalate whose ticket is past `expiresAt` is not a live hit — sweep it, free the quote, let the original command retry. Unfreeze / new intent / circuit reset must be retryable with the same body. Approval replay (`thresholdWaived`) bypasses the lookup so the books can actually change.
 13. `PolicyDecision.remediation.kind` is a machine enum (`issue_intent`, `wait_approval`, `attest_kya`, `unfreeze_actor`, `unfreeze_principal`, `reset_circuit`, `role_forbidden`, `none`). Do not parse English `hint`.
-14. `hire.refund` is legal only from `funded` (not after deliver/release) — that is `hire.state`. It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky.
+14. `hire.refund` is legal only from `funded` (not after deliver/release) — that is `hire.state`. It reverses escrow, restores `spentByIntent` along the parent chain, and reverse-records clearing. The daily circuit stays sticky. `hire.void` is legal from `offered` or `accepted` only — that is also `hire.state`. It does not restore the quote. Funded work refunds.
 15. `SIM_RAIL.live === false`. Live adapters implement that shape. They do not enter `evaluate()`.
 16. Approval tickets expire (`approval.pending`). Resolving an expired or already-resolved ticket is a policy deny, not a late yes. The original command may be retried (new ticket) if it is still legal. Approving a live ticket whose paused command is no longer an allow is `approval.replay` — not a mutate throw after writing yes. Reject still releases the quote.
 17. Only catalog SKUs may be RFQ’d or hired (`market.catalog`). A listed SKU may only be priced in a currency the catalog names (`market.sku_currency`). Stale quotes/RFQs cannot be hired (`market.not_expired`).
@@ -239,6 +239,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 187. `verifyChain` is signatures and hashes, not the referee. Intent constraints evaluate in policy. A ghost `payment.reference` still verifyChains. Cite TAP is the referee. Self-deal is a unit deny; no role has both `hire.create` and `market.quote`. No new policy rule.
 188. The CLI audit verify is the command bus. `aether audit verify` dispatches `audit.verify` (system speaker). `aether ledger replay` is jsonl ≡ memory. Registering a founder is not an opening journal. No new policy rule.
 189. Someone else's key is not yours to turn. `pnpm demo lock` / `aether_demo_lock` / `POST /v1/demo/lock` funds an $800 hire, refuses `identity.rotate` of a desk by a vendor as `identity.party` (a missing agent and a frozen speaker still allow; no `IDENTITY_ROTATE` line; the desk kid is unchanged), then the desk still turns its own lock and that funded work still releases. Ghost rotate stays `identity.known`. Frozen speaker stays `actor.not_frozen`. System stays `actor.system_scope`. Rotation is not a new identity. Retired keys still verify. New first-deny: `identity.party`.
+190. A void is not a refund. `pnpm demo void` / `aether_demo_void` / `POST /v1/demo/void` funds an $800 hire, refuses `hire.void` of that funded hire as `hire.state` (the party still allows; a missing hire is not this deny; no void line), then an unfunded offer still voids without restoring the quote and that funded work still releases. Ghost void stays `hire.known`. A stranger stays `hire.party`. Arrow TAP is release before deliver. Refund TAP is unwind funded escrow. No new policy rule.
 
 ## Autonomy
 
@@ -347,4 +348,5 @@ pnpm demo pen
 pnpm demo well
 pnpm demo cite
 pnpm demo lock
+pnpm demo void
 ```

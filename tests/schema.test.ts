@@ -50,6 +50,10 @@ describe("command shape enums and integer ranges", () => {
     expect(commandShapeError("identity.rotate", { agentId: 1 })).toBe("invalid type: agentId");
   });
 
+  it("rejects a numeric hireId as a type miss, not a void after yes", () => {
+    expect(commandShapeError("hire.void", { hireId: 1 })).toBe("invalid type: hireId");
+  });
+
   it("rejects a string where an invite list belongs", () => {
     expect(commandShapeError("market.rfq", { sku: "research.brief", spec: "x", invitedSellerIds: "aid_x" })).toBe(
       "invalid type: invitedSellerIds",

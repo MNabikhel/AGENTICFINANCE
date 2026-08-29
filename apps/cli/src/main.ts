@@ -88,6 +88,7 @@ import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
 import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
 import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
+import { loadHireVoid, runHireVoid } from "@aether/hire-void";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -642,6 +643,12 @@ if (command === "demo" && (name === "lock" || name === "ring" || name === "ward"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "void" || name === "nix" || name === "scrap")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/void/scenario.json");
+  printReport(runHireVoid(loadHireVoid(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -752,6 +759,7 @@ usage:
   pnpm demo well
   pnpm demo cite
   pnpm demo lock
+  pnpm demo void
   aether audit verify
   aether ledger replay
   pnpm mcp`);
