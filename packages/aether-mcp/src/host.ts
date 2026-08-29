@@ -35,6 +35,7 @@ import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
 import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
+import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -108,6 +109,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_cover",
   "aether_demo_mint",
   "aether_demo_payee",
+  "aether_demo_climb",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -510,6 +512,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_payee") {
       const report = runPaymentPayees(loadPaymentPayees("fixtures/demo/payee/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_climb") {
+      const report = runCapabilitySubset(loadCapabilitySubset("fixtures/demo/climb/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

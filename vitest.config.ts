@@ -52,6 +52,7 @@ export default defineConfig({
       "@aether/payment-parent": path.resolve(__dirname, "packages/aether-runtime/src/payment-parent.ts"),
       "@aether/operating-book": path.resolve(__dirname, "packages/aether-runtime/src/operating-book.ts"),
       "@aether/payment-payees": path.resolve(__dirname, "packages/aether-runtime/src/payment-payees.ts"),
+      "@aether/capability-subset": path.resolve(__dirname, "packages/aether-runtime/src/capability-subset.ts"),
     },
   },
 });

@@ -45,7 +45,8 @@
       "@aether/host-unique": ["packages/aether-runtime/src/host-unique.ts"],
       "@aether/payment-parent": ["packages/aether-runtime/src/payment-parent.ts"],
       "@aether/operating-book": ["packages/aether-runtime/src/operating-book.ts"],
-      "@aether/payment-payees": ["packages/aether-runtime/src/payment-payees.ts"]
+      "@aether/payment-payees": ["packages/aether-runtime/src/payment-payees.ts"],
+      "@aether/capability-subset": ["packages/aether-runtime/src/capability-subset.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

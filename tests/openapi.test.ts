@@ -88,6 +88,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a mint");
     expect(spec).toContain("/v1/demo/payee:");
     expect(spec).toContain("not any registered vendor");
+    expect(spec).toContain("/v1/demo/climb:");
+    expect(spec).toContain("not a wider handshake");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

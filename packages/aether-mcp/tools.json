@@ -295,6 +295,11 @@
       "name": "aether_demo_payee",
       "commandType": "demo.payee",
       "description": "Run the payee TAP: a listed payee is not any registered vendor. Unlisted hire.create is payment.allowed_payees; the quote is still written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_climb",
+      "commandType": "demo.climb",
+      "description": "Run the climb TAP: a climb is not a wider handshake. New hire.create after L3→L4 is kya.capability_subset; the slip ceiling still allows; funded work still finishes."
     }
   ]
 }

@@ -361,6 +361,12 @@ paths:
       responses:
         "200": { description: Payee TAP report. A listed payee is not any registered vendor. }
         "500": { description: Assertions failed }
+  /v1/demo/climb:
+    post:
+      operationId: demoClimb
+      responses:
+        "200": { description: Climb TAP report. A climb is not a wider handshake. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

@@ -31,7 +31,8 @@
     "./host-unique": "./src/host-unique.ts",
     "./payment-parent": "./src/payment-parent.ts",
     "./operating-book": "./src/operating-book.ts",
-    "./payment-payees": "./src/payment-payees.ts"
+    "./payment-payees": "./src/payment-payees.ts",
+    "./capability-subset": "./src/capability-subset.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

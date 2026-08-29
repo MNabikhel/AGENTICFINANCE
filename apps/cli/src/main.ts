@@ -28,6 +28,7 @@ import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
 import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
+import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
 
 const [, , command, name] = process.argv;
 
@@ -221,6 +222,12 @@ if (command === "demo" && (name === "payee" || name === "roster" || name === "al
   process.exit(0);
 }
 
+if (command === "demo" && (name === "climb" || name === "grant" || name === "capability-subset")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/climb/scenario.json");
+  printReport(runCapabilitySubset(loadCapabilitySubset(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -255,5 +262,6 @@ usage:
   pnpm demo cover
   pnpm demo mint
   pnpm demo payee
+  pnpm demo climb
   pnpm mcp`);
 process.exit(command ? 1 : 0);

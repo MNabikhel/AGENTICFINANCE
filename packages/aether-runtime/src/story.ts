@@ -103,6 +103,9 @@ export const MINT_TLDR =
 export const PAYEE_TLDR =
   "A founder listed one research vendor. The desk funded an $800 hire to that name. A registered outsider quoted and hire.create was payment.allowed_payees — the room still wrote the quote. That funded work still released. A listed payee is not any registered vendor.";
 
+export const CLIMB_TLDR =
+  "A founder shook hands with a desk at a ceiling of L3. The desk funded an $800 hire. After a climb to L4, a new hire was kya.capability_subset — the slip ceiling still allowed. That funded work still released. A climb is not a wider handshake.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
