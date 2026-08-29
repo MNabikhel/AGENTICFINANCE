@@ -112,7 +112,8 @@
       "@aether/rfq-party": ["packages/aether-runtime/src/rfq-party.ts"],
       "@aether/cart-party": ["packages/aether-runtime/src/cart-party.ts"],
       "@aether/payment-party": ["packages/aether-runtime/src/payment-party.ts"],
-      "@aether/cadence-reach": ["packages/aether-runtime/src/cadence-reach.ts"]
+      "@aether/cadence-reach": ["packages/aether-runtime/src/cadence-reach.ts"],
+      "@aether/range-fresh": ["packages/aether-runtime/src/range-fresh.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

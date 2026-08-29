@@ -304,6 +304,9 @@ export const SPIKE_TLDR =
 export const WEEK_TLDR =
   "A founder funded an $800 hire. Minting WEEKLY or MONTHLY that cannot admit a second hire before the seven-day exp was mandate.cadence_reach — not a vacant slot, not a closed calendar, not hire-time recurrence. A one-shot WEEKLY still minted. DAILY still minted. That funded work still released. A week is not a cadence on a seven-day slip.";
 
+export const GULF_TLDR =
+  "A founder funded an $800 hire. Minting an amount_range whose min exceeds max was mandate.range_fresh — not a vacant slot, not a week on a seven-day slip, not hire-time max. An exact band still minted. An open floor still minted. That funded work still released. A floor above the lid is not a range.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -611,6 +614,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a week on a seven-day slip`,
           body: "A permission slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY, or omit recurrence. Hire still checks cadence when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.range_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a floor above the lid`,
+          body: "A permission slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band. Hire still checks the lid when money would move.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1672,6 +1685,7 @@ export function analog(): Analog {
       "A checkout can be torn up. That is not a refund. Bound is when a payment occupies it. Someone else's unused checkout is not yours to dump.",
       "A check can be torn up. That is not a refund. Funded is when escrow occupies it. Someone else's unused payment is not yours to spike.",
       "A week is not a cadence on a seven-day slip. Daily is 24 hours. A vacant cap is no slots. A one-shot WEEKLY still mints.",
+      "A floor above the lid is not a range. An exact band still mints. An open floor still mints. Hire-time max is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

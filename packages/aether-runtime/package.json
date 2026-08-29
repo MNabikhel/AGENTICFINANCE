@@ -98,7 +98,8 @@
     "./rfq-party": "./src/rfq-party.ts",
     "./cart-party": "./src/cart-party.ts",
     "./payment-party": "./src/payment-party.ts",
-    "./cadence-reach": "./src/cadence-reach.ts"
+    "./cadence-reach": "./src/cadence-reach.ts",
+    "./range-fresh": "./src/range-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

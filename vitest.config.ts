@@ -119,6 +119,7 @@ export default defineConfig({
       "@aether/cart-party": path.resolve(__dirname, "packages/aether-runtime/src/cart-party.ts"),
       "@aether/payment-party": path.resolve(__dirname, "packages/aether-runtime/src/payment-party.ts"),
       "@aether/cadence-reach": path.resolve(__dirname, "packages/aether-runtime/src/cadence-reach.ts"),
+      "@aether/range-fresh": path.resolve(__dirname, "packages/aether-runtime/src/range-fresh.ts"),
     },
   },
 });

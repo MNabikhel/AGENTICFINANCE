@@ -125,6 +125,7 @@ import {
   DUMP_TLDR,
   SPIKE_TLDR,
   WEEK_TLDR,
+  GULF_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -283,6 +284,14 @@ function cadenceReachable(c: { frequency?: unknown; max_occurrences?: unknown })
   if (gap === 0) return true;
   if (c.max_occurrences === 1) return true;
   return gap < INTENT_TTL_MS;
+}
+
+/** A min that exceeds max cannot admit any amount. Omit min is an open floor. min === max still mints. */
+function rangeMintable(c: { min?: unknown; max?: unknown }): boolean {
+  if (typeof c.max !== "number" || !Number.isFinite(c.max)) return true;
+  if (c.min === undefined) return true;
+  if (typeof c.min !== "number" || !Number.isFinite(c.min)) return false;
+  return c.min <= c.max;
 }
 
 /** Closed when validUntil ≤ now (same exclusive end as quote expiresAt). Unparseable is not a window. */
@@ -1364,6 +1373,11 @@ export class Runtime {
           name: "Week TAP",
           description: "POST /v1/demo/week — a week is not a cadence on a seven-day slip",
         },
+        {
+          id: "range-fresh",
+          name: "Gulf TAP",
+          description: "POST /v1/demo/gulf — a floor above the lid is not a range",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2048,6 +2062,10 @@ export class Runtime {
       if (rec) {
         ctx.occurrenceMintOk = recurrenceMintable(rec);
         ctx.cadenceReachOk = cadenceReachable(rec);
+      }
+      const range = ctx.proposedConstraints.find((c) => c.type === "payment.amount_range");
+      if (range) {
+        ctx.rangeMintOk = rangeMintable(range);
       }
     }
     const namedIds = this.namedAgentIds(cmd, body);
@@ -3029,6 +3047,10 @@ export class Runtime {
     }
     if (rec && !cadenceReachable(rec)) {
       throw new Error("intent cadence unreachable");
+    }
+    const range = constraints.find((c) => c.type === "payment.amount_range");
+    if (range && !rangeMintable(range)) {
+      throw new Error("intent range empty");
     }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",
@@ -4111,7 +4133,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

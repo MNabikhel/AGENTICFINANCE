@@ -110,6 +110,7 @@ pnpm demo shut            # someone else's room is not yours to close
 pnpm demo dump            # someone else's unused checkout is not yours to dump
 pnpm demo spike           # someone else's unused payment is not yours to spike
 pnpm demo week            # a week is not a cadence on a seven-day slip
+pnpm demo gulf            # a floor above the lid is not a range
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
@@ -139,6 +140,8 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 **Daily:** a founder writes a daily cadence. The desk hires once. A same-day second hire is refused. After 24 hours that hire goes through. A cadence is a gap, not a burst.
 
 **Week:** a founder funds an $800 hire. Minting WEEKLY or MONTHLY that cannot admit a second hire before the seven-day exp is refused. A one-shot WEEKLY still mints. DAILY still mints. That funded work still releases. A week is not a cadence on a seven-day slip.
+
+**Gulf:** a founder funds an $800 hire. Minting an amount_range whose min exceeds max is refused. An exact band still mints. An open floor still mints. That funded work still releases. A floor above the lid is not a range.
 
 **Cart occupancy:** a desk accepts an $800 hire. Funding with a loose cartId is refused. Binding a cart occupies the hire; a second cart is refused. A second payment on that cart is refused. The same fund command then goes through. Occupancy is a bind, not a field on fund. Ink TAP is a USDC cart on a USD hire.
 

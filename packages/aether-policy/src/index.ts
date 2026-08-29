@@ -727,6 +727,16 @@ export const RULES: readonly Rule[] = [
           childMax: childRange?.max ?? null,
         });
       }
+      if (parentRange && childRange) {
+        const parentMin = typeof parentRange.min === "number" ? parentRange.min : 0;
+        const childMin = typeof childRange.min === "number" ? childRange.min : 0;
+        if (childMin < parentMin) {
+          return v("mandate.child_tighter", "deny", "child amount_range floor wider than parent", {
+            parentMin,
+            childMin,
+          });
+        }
+      }
       const parentBudget = listed(parent, "payment.budget");
       const childBudget = listed(child, "payment.budget");
       if (
@@ -1419,6 +1429,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.cadence_reach", "deny", "next slot opens after the slip dies");
     },
   },
+  {
+    id: "mandate.range_fresh",
+    evaluate: (ctx) => {
+      if (ctx.rangeMintOk === undefined) return v("mandate.range_fresh", "allow", "not a range mint");
+      return ctx.rangeMintOk
+        ? v("mandate.range_fresh", "allow", "amount_range can still admit an amount")
+        : v("mandate.range_fresh", "deny", "amount_range min exceeds max");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1723,7 +1742,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.cadence_reach": {
     kind: "none",
-    hint: "A slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY (max_occurrences 1), or omit recurrence. A vacant cap stays mandate.occurrence_fresh. Hire still names payment.recurrence.",
+    hint: "A slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY (max_occurrences 1), or omit recurrence. A vacant cap stays mandate.occurrence_fresh. Hire still names payment.recurrence. A floor above the lid is mandate.range_fresh.",
+  },
+  "mandate.range_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band (min === max). Hire still names payment.amount_range. A vacant cap stays mandate.occurrence_fresh. A week that cannot admit a second hire stays mandate.cadence_reach. Lid TAP is hire-time max.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

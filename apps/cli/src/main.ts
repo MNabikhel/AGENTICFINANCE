@@ -95,6 +95,7 @@ import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
 import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
+import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -691,6 +692,12 @@ if (command === "demo" && (name === "week" || name === "tide" || name === "cycle
   process.exit(0);
 }
 
+if (command === "demo" && (name === "gulf" || name === "rift" || name === "span")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/gulf/scenario.json");
+  printReport(runRangeFresh(loadRangeFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -808,6 +815,7 @@ usage:
   pnpm demo dump
   pnpm demo spike
   pnpm demo week
+  pnpm demo gulf
   aether audit verify
   aether ledger replay
   pnpm mcp`);

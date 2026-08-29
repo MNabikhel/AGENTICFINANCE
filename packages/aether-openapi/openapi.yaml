@@ -854,6 +854,12 @@ paths:
       responses:
         "200": { description: Week TAP report. A week is not a cadence on a seven-day slip. }
         "500": { description: Assertions failed }
+  /v1/demo/gulf:
+    post:
+      operationId: demoGulf
+      responses:
+        "200": { description: Gulf TAP report. A floor above the lid is not a range. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

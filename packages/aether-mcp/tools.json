@@ -665,6 +665,11 @@
       "name": "aether_demo_week",
       "commandType": "demo.week",
       "description": "Run the week TAP: a week is not a cadence on a seven-day slip. mandate.issue_intent with WEEKLY or MONTHLY that cannot admit a second hire is mandate.cadence_reach; a vacant slot, a closed calendar, and hire-time recurrence still allow; a one-shot WEEKLY still mints; DAILY still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_gulf",
+      "commandType": "demo.gulf",
+      "description": "Run the gulf TAP: a floor above the lid is not a range. mandate.issue_intent with amount_range min exceeding max is mandate.range_fresh; a vacant slot, a week on a seven-day slip, and hire-time max still allow; an exact band still mints; an open floor still mints; funded work still finishes."
     }
   ]
 }

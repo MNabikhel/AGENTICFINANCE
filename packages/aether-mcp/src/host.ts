@@ -102,6 +102,7 @@ import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
 import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
+import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -242,6 +243,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_dump",
   "aether_demo_spike",
   "aether_demo_week",
+  "aether_demo_gulf",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -979,6 +981,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_week") {
       const report = runCadenceReach(loadCadenceReach("fixtures/demo/week/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_gulf") {
+      const report = runRangeFresh(loadRangeFresh("fixtures/demo/gulf/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }
