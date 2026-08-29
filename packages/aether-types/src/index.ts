@@ -1054,6 +1054,20 @@ export interface HostSubscription {
   createdAt: Instant;
 }
 
+/**
+ * Off-band monthly payment for a hosted operator. Not a Command. Not a spend gate.
+ * Humans pay the operator (invoice or Stripe). The public kernel has no invoices.
+ */
+export interface OperatorInvoice {
+  id: string;
+  at: Instant;
+  amount: number;
+  currency: CurrencyCode;
+  method: "invoice" | "stripe";
+  actorId: AgentId;
+  reference?: string;
+}
+
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
   procurement: 500_000,
   treasury: 2_000_000,
@@ -1115,7 +1129,8 @@ export type AuditAction =
   | "CIRCUIT_RESET"
   | "CLEARING_WINDOW"
   | "AUDIT_VERIFY"
-  | "HOST_SUBSCRIBE";
+  | "HOST_SUBSCRIBE"
+  | "HOST_INVOICE";
 
 export interface AuditSubject {
   type: string;

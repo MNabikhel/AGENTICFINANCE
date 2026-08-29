@@ -163,6 +163,14 @@ paths:
       responses:
         "200": { description: Hosted operator recorded a unique subscriber against a live human-issued intent. }
         "422": { description: host.not_hosted on this public kernel; hosted also names mandate.known_intent, mandate.not_expired, host.human_authority, host.unique_subscriber. GitHub is not a checkout. }
+  /v1/host/invoice:
+    post:
+      operationId: hostInvoice
+      responses:
+        "200": { description: Recorded that a human paid this hosted operator off-band (invoice or Stripe). Not a Command. Not a spend gate. }
+        "401": { description: Named speaker must sign. }
+        "402": { description: Not used here — unpaid commands are 402 host.unpaid at the command door. }
+        "422": { description: Public kernel does not invoice. Only human_operator or treasury on a hosted instance. }
   /v1/catalog:
     get:
       operationId: marketCatalog

@@ -19,6 +19,7 @@ import type {
   DelegationAttestation,
   HireContract,
   HostSubscription,
+  OperatorInvoice,
   IntentMandate,
   Instant,
   JournalEntry,
@@ -88,4 +89,6 @@ export interface WorldState {
   hosted?: boolean;
   /** Unique subscriber rows. Optional so 0.89 worlds boot. */
   subscriptions?: HostSubscription[];
+  /** Off-band operator invoices. Optional so 0.95 worlds boot. Spend is not gated on these. */
+  operatorInvoices?: OperatorInvoice[];
 }

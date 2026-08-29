@@ -3,7 +3,15 @@ import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { encodeRequired, encodeResponse } from "@aether/envelope";
-import { Runtime, cmd, type DispatchResult } from "@aether/runtime";
+import {
+  Runtime,
+  admitSpeaker,
+  admitInvoice,
+  cmd,
+  parseHostedMonthly,
+  speakerKeyOf,
+  type DispatchResult,
+} from "@aether/runtime";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
@@ -27,12 +35,14 @@ function boot(): Runtime {
       : hostedEnv === "false" || hostedEnv === "0"
         ? false
         : undefined;
+  const hostedMonthly = parseHostedMonthly(process.env.AETHER_HOSTED_MONTHLY);
   return new Runtime({
     startIso: "2026-08-28T00:00:00.000Z",
     genesisNonce: "01J6AETHERGENESIS0000000001",
     dailyLimit: 10_000_000,
     ...(dir && dir.length > 0 ? { dataDir: dir } : {}),
     ...(hosted !== undefined ? { hosted } : {}),
+    ...(hosted === true && hostedMonthly !== undefined ? { hostedMonthly } : {}),
   });
 }
 
@@ -41,7 +51,7 @@ function json(res: ServerResponse, status: number, body: unknown, headers?: Reco
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
-    "access-control-allow-headers": "content-type, payment-signature, payment-required",
+    "access-control-allow-headers": "content-type, payment-signature, payment-required, aether-signature, aether-actor",
     "access-control-allow-methods": "GET,POST,OPTIONS",
     ...headers,
   });
@@ -54,18 +64,49 @@ async function readBody(req: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function actorOf(body: Record<string, unknown>): AgentId | "system" {
-  return runtime.speakerOf(body);
+function proofOf(req: IncomingMessage, body: Record<string, unknown>): string | undefined {
+  const header = req.headers["aether-signature"];
+  if (typeof header === "string" && header.length > 0) return header;
+  if (typeof body.speakerProof === "string" && body.speakerProof.length > 0) return body.speakerProof;
+  return undefined;
 }
 
-function dispatchJson(type: CommandType, reqBody: Record<string, unknown>): DispatchResult {
-  const { actorId: _a, actor: _b, idempotencyKey, ...body } = reqBody;
+function dispatchJson(type: CommandType, reqBody: Record<string, unknown>, actorId: AgentId | "system"): DispatchResult {
+  const { actorId: _a, actor: _b, idempotencyKey, speakerProof: _p, ...body } = reqBody;
   const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
-  return runtime.dispatch(cmd(type, actorOf(reqBody), body, key));
+  return runtime.dispatch(cmd(type, actorId, body, key));
 }
 
-function handleDispatch(res: ServerResponse, type: CommandType, reqBody: Record<string, unknown>, extra?: (r: DispatchResult) => Record<string, string> | undefined) {
-  const result = dispatchJson(type, reqBody);
+function attachSpeakerKey(type: CommandType, result: DispatchResult): DispatchResult {
+  if (type !== "identity.register" || !runtime.hosted || !result.ok) return result;
+  const data = result.value.data as { id: string };
+  const speakerKey = speakerKeyOf(runtime, data.id as AgentId);
+  if (!speakerKey) return result;
+  return { ok: true, value: { ...result.value, data: { ...data, speakerKey } } };
+}
+
+function handleDispatch(
+  req: IncomingMessage,
+  res: ServerResponse,
+  type: CommandType,
+  reqBody: Record<string, unknown>,
+  extra?: (r: DispatchResult) => Record<string, string> | undefined,
+) {
+  const { actorId: _a, actor: _b, idempotencyKey, speakerProof: _p, ...body } = reqBody;
+  const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
+  const admitted = admitSpeaker(runtime, {
+    type,
+    actor: reqBody.actor,
+    actorId: reqBody.actorId,
+    body,
+    ...(key ? { idempotencyKey: key } : {}),
+    ...(proofOf(req, reqBody) ? { proof: proofOf(req, reqBody) } : {}),
+  });
+  if (!admitted.ok) {
+    json(res, admitted.error.status, { ...admitted.error });
+    return;
+  }
+  const result = attachSpeakerKey(type, dispatchJson(type, reqBody, admitted.actorId));
   const headers = extra?.(result);
   if (!result.ok) {
     json(res, result.error.error.status, { ...result.error.error, decision: result.error.decision }, headers);
@@ -82,7 +123,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       if (req.method === "OPTIONS") {
         res.writeHead(204, {
           "access-control-allow-origin": "*",
-          "access-control-allow-headers": "content-type, payment-signature",
+          "access-control-allow-headers": "content-type, payment-signature, aether-signature, aether-actor",
           "access-control-allow-methods": "GET,POST,OPTIONS",
         });
         res.end();
@@ -140,11 +181,11 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         if (subject) q.subjectId = subject;
         if (action) q.action = action;
         if (limit) q.limit = Number(limit);
-        handleDispatch(res, "audit.query", { ...q, actor: "system" });
+        handleDispatch(req, res, "audit.query", { ...q, actor: "system" });
         return;
       }
       if (req.method === "GET" && path === "/v1/audit/verify") {
-        handleDispatch(res, "audit.verify", { actor: "system" });
+        handleDispatch(req, res, "audit.verify", { actor: "system" });
         return;
       }
       if (req.method === "GET" && path === "/v1/commands") {
@@ -259,6 +300,31 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const bodyText = req.method === "POST" ? await readBody(req) : "{}";
       const body = bodyText ? (JSON.parse(bodyText) as Record<string, unknown>) : {};
 
+      if (req.method === "POST" && path === "/v1/host/invoice") {
+        const { actorId: _ia, actor: _ib, idempotencyKey: _ik, speakerProof: _ip, ...invoiceBody } = body;
+        const admitted = admitInvoice(runtime, {
+          actor: body.actor,
+          actorId: body.actorId,
+          body: invoiceBody,
+          ...(proofOf(req, body) ? { proof: proofOf(req, body) } : {}),
+        });
+        if (!admitted.ok) {
+          json(res, admitted.error.status, { ...admitted.error });
+          return;
+        }
+        if (admitted.actorId === "system") {
+          json(res, 401, { title: "Speaker proof required" });
+          return;
+        }
+        const invoiced = runtime.recordHostInvoice(admitted.actorId, invoiceBody);
+        if (!invoiced.ok) {
+          json(res, invoiced.error.status, { ...invoiced.error });
+          return;
+        }
+        json(res, 200, { kind: "allow", data: invoiced.value });
+        return;
+      }
+
       const routes: Record<string, CommandType> = {
         "/v1/identities": "identity.register",
         "/v1/kya/attest": "kya.attest",
@@ -282,7 +348,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
 
       if (req.method === "POST" && routes[path]) {
         const type = routes[path]!;
-        handleDispatch(res, type, body, (r) => {
+        handleDispatch(req, res, type, body, (r) => {
           if (!r.ok) return undefined;
           if (type === "envelope.require") {
             return { "PAYMENT-REQUIRED": encodeRequired(r.value.data as never) };
@@ -298,47 +364,47 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
 
       const hireAccept = path.match(/^\/v1\/hires\/([^/]+)\/accept$/);
       if (req.method === "POST" && hireAccept) {
-        handleDispatch(res, "hire.accept", { ...body, hireId: hireAccept[1] });
+        handleDispatch(req, res, "hire.accept", { ...body, hireId: hireAccept[1] });
         return;
       }
       const hireFund = path.match(/^\/v1\/hires\/([^/]+)\/fund$/);
       if (req.method === "POST" && hireFund) {
-        handleDispatch(res, "hire.fund", { ...body, hireId: hireFund[1] });
+        handleDispatch(req, res, "hire.fund", { ...body, hireId: hireFund[1] });
         return;
       }
       const hireRefund = path.match(/^\/v1\/hires\/([^/]+)\/refund$/);
       if (req.method === "POST" && hireRefund) {
-        handleDispatch(res, "hire.refund", { ...body, hireId: hireRefund[1] });
+        handleDispatch(req, res, "hire.refund", { ...body, hireId: hireRefund[1] });
         return;
       }
       const approval = path.match(/^\/v1\/approvals\/([^/]+)\/resolve$/);
       if (req.method === "POST" && approval) {
-        handleDispatch(res, "approval.resolve", { ...body, approvalId: approval[1] });
+        handleDispatch(req, res, "approval.resolve", { ...body, approvalId: approval[1] });
         return;
       }
       const autonomy = path.match(/^\/v1\/agents\/([^/]+)\/autonomy$/);
       if (req.method === "POST" && autonomy) {
-        handleDispatch(res, "ladder.set", { ...body, agentId: autonomy[1] });
+        handleDispatch(req, res, "ladder.set", { ...body, agentId: autonomy[1] });
         return;
       }
       const freeze = path.match(/^\/v1\/agents\/([^/]+)\/freeze$/);
       if (req.method === "POST" && freeze) {
-        handleDispatch(res, "identity.freeze", { ...body, agentId: freeze[1] });
+        handleDispatch(req, res, "identity.freeze", { ...body, agentId: freeze[1] });
         return;
       }
       const unfreeze = path.match(/^\/v1\/agents\/([^/]+)\/unfreeze$/);
       if (req.method === "POST" && unfreeze) {
-        handleDispatch(res, "identity.unfreeze", { ...body, agentId: unfreeze[1] });
+        handleDispatch(req, res, "identity.unfreeze", { ...body, agentId: unfreeze[1] });
         return;
       }
       const account = path.match(/^\/v1\/accounts\/([^/]+)$/);
       if (req.method === "GET" && account) {
-        handleDispatch(res, "ledger.balances", { name: decodeURIComponent(account[1]!), actor: "system" });
+        handleDispatch(req, res, "ledger.balances", { name: decodeURIComponent(account[1]!), actor: "system" });
         return;
       }
       const receipt = path.match(/^\/v1\/receipts\/([^/]+)$/);
       if (req.method === "GET" && receipt) {
-        handleDispatch(res, "receipt.get", { receiptId: receipt[1], actor: "system" });
+        handleDispatch(req, res, "receipt.get", { receiptId: receipt[1], actor: "system" });
         return;
       }
 

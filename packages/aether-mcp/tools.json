@@ -139,12 +139,12 @@
     {
       "name": "aether_host_card",
       "commandType": "host.card",
-      "description": "Pin-able host card: protocol, pricing, capabilities, whether this instance is a hosted operator. liveMoney is false. evaluateLlm is false. This public kernel is hosted false. Self-host is free. System may read it."
+      "description": "Pin-able host card: protocol, pricing, capabilities, whether this instance is a hosted operator. liveMoney is false. evaluateLlm is false. This public kernel is hosted false. Self-host is free. System may read it. A hosted operator lists hostedMonthly and takeRate null."
     },
     {
       "name": "aether_host_subscribe",
       "commandType": "host.subscribe",
-      "description": "Subscribe an authorized agent to a hosted operator against a live human-issued intent. This public kernel refuses as host.not_hosted. One subscriber, one row. Spend is not gated on the row. GitHub is not a checkout."
+      "description": "Subscribe an authorized agent to a hosted operator against a live human-issued intent. This public kernel refuses as host.not_hosted. One subscriber, one row. Spend is not gated on the row. GitHub is not a checkout. Hosted named speakers must sign. Monthly invoice is the door, not a hire verdict."
     },
     {
       "name": "aether_demo_sprint",
