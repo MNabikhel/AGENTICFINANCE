@@ -365,6 +365,11 @@
       "name": "aether_demo_name",
       "commandType": "demo.name",
       "description": "Run the name TAP: someone else's name is not a handshake. An L4 scout kya.attest in the founder's name is kya.party; unique-live and capability-subset still allow; no hop is written; the founder still mints that pair; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pane",
+      "commandType": "demo.pane",
+      "description": "Run the pane TAP: an FX SKU is a window, not a good. market.quote of an FX SKU without an fx window is market.fx_window; known SKU, known room, and pair still allow; a real window still quotes and converts; funded work still finishes."
     }
   ]
 }

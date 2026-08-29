@@ -59,7 +59,8 @@
       "@aether/chain-integrity": ["packages/aether-runtime/src/chain-integrity.ts"],
       "@aether/hire-state": ["packages/aether-runtime/src/hire-state.ts"],
       "@aether/ledger-known": ["packages/aether-runtime/src/ledger-known.ts"],
-      "@aether/kya-party": ["packages/aether-runtime/src/kya-party.ts"]
+      "@aether/kya-party": ["packages/aether-runtime/src/kya-party.ts"],
+      "@aether/fx-window": ["packages/aether-runtime/src/fx-window.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

@@ -445,6 +445,12 @@ paths:
       responses:
         "200": { description: Name TAP report. Someone else's name is not a handshake. }
         "500": { description: Assertions failed }
+  /v1/demo/pane:
+    post:
+      operationId: demoPane
+      responses:
+        "200": { description: Pane TAP report. An FX SKU is a window, not a good. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

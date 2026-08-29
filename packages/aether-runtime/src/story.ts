@@ -145,6 +145,9 @@ export const WALLET_TLDR =
 export const NAME_TLDR =
   "A founder funded an $800 hire. An L4 scout minting a handshake in the founder’s name was kya.party — not a second hop, not a climb above the grant. The founder still minted that pair. That funded work still released. Someone else’s name is not a handshake.";
 
+export const PANE_TLDR =
+  "A founder funded an $800 hire. A market maker quoted an FX SKU with no window. That was market.fx_window — known SKU, known room, pair still allows. A real window still quoted and converted. That funded work still released. An FX SKU is a window, not a good.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -563,6 +566,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} quoted a conversion window that was already closed`,
           body: "An FX window cannot be born dead. Name a validUntil after now. Settle of a window that later lapses is still market.not_expired.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.fx_window") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted an FX SKU without a window`,
+          body: "An FX SKU is a conversion window, not a hireable good. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. A missing window is not a quote.",
           tone: "deny",
           commandType: cmd.type,
         };

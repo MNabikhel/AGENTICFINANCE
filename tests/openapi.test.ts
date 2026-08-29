@@ -116,6 +116,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a USDC wallet");
     expect(spec).toContain("/v1/demo/name:");
     expect(spec).toContain("not a handshake");
+    expect(spec).toContain("/v1/demo/pane:");
+    expect(spec).toContain("not a good");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

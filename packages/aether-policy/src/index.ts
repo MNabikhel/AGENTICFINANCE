@@ -1487,7 +1487,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.fx_window": {
     kind: "none",
-    hint: "An FX SKU is a conversion window. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. It is not a hireable good.",
+    hint: "An FX SKU is a conversion window. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. It is not a hireable good. A missing window is not a quote. Ghost SKU stays market.known_sku. A swapped pair stays market.fx_pair. A corpse mint stays market.fx_fresh.",
   },
   "hire.bound_cart": {
     kind: "none",

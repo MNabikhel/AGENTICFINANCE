@@ -57,3 +57,4 @@ jobs:
       - run: pnpm demo:arrow
       - run: pnpm demo:wallet
       - run: pnpm demo:name
+      - run: pnpm demo:pane
