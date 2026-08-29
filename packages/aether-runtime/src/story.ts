@@ -205,6 +205,9 @@ export const WRIT_TLDR =
 export const CRATE_TLDR =
   "A founder funded an $800 hire. A payment on a ghost cart was mandate.known_cart — occupancy is not this deny, a dead cart at fund is not this deny. That funded work still released. A missing cart is not a broken payment chain.";
 
+export const PACT_TLDR =
+  "A founder funded an $800 hire. Deliver on a ghost hire was hire.known — a stranger’s deliver is not this deny, unfunded work is not this deny. That funded work still released. A missing contract is not a broken mandate chain.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

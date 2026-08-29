@@ -65,7 +65,8 @@
     "./known-sku": "./src/known-sku.ts",
     "./known-rfq": "./src/known-rfq.ts",
     "./known-intent": "./src/known-intent.ts",
-    "./known-cart": "./src/known-cart.ts"
+    "./known-cart": "./src/known-cart.ts",
+    "./known-hire": "./src/known-hire.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

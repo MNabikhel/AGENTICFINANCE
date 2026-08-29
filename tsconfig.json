@@ -79,7 +79,8 @@
       "@aether/known-sku": ["packages/aether-runtime/src/known-sku.ts"],
       "@aether/known-rfq": ["packages/aether-runtime/src/known-rfq.ts"],
       "@aether/known-intent": ["packages/aether-runtime/src/known-intent.ts"],
-      "@aether/known-cart": ["packages/aether-runtime/src/known-cart.ts"]
+      "@aether/known-cart": ["packages/aether-runtime/src/known-cart.ts"],
+      "@aether/known-hire": ["packages/aether-runtime/src/known-hire.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

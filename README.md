@@ -77,6 +77,7 @@ pnpm demo shelf           # a ghost SKU is not a catalog good
 pnpm demo hall            # a missing room is not a missing SKU
 pnpm demo writ            # a missing slip is not a missing handshake
 pnpm demo crate           # a missing cart is not a broken payment chain
+pnpm demo pact            # a missing contract is not a broken mandate chain
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

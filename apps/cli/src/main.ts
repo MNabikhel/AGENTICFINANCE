@@ -62,6 +62,7 @@ import { loadKnownSku, runKnownSku } from "@aether/known-sku";
 import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
 import { loadKnownCart, runKnownCart } from "@aether/known-cart";
+import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 
 const [, , command, name] = process.argv;
 
@@ -459,6 +460,12 @@ if (command === "demo" && (name === "crate" || name === "bin" || name === "tray"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "pact" || name === "bond" || name === "lease")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/pact/scenario.json");
+  printReport(runKnownHire(loadKnownHire(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -527,5 +534,6 @@ usage:
   pnpm demo hall
   pnpm demo writ
   pnpm demo crate
+  pnpm demo pact
   pnpm mcp`);
 process.exit(command ? 1 : 0);

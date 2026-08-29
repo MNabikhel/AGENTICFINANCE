@@ -1383,7 +1383,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "hire.known": {
     kind: "none",
-    hint: "That hire id is not in this world. Create the hire first. A missing contract is not a broken mandate chain.",
+    hint: "That hire id is not in this world. Create the hire first. A missing contract is not a broken mandate chain. A stranger on a live hire stays hire.party. Unfunded work stays hire.escrow_required. Completing funded work is legal.",
   },
   "mandate.known_intent": {
     kind: "none",

@@ -69,6 +69,7 @@ import { loadKnownSku, runKnownSku } from "@aether/known-sku";
 import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
 import { loadKnownCart, runKnownCart } from "@aether/known-cart";
+import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -176,6 +177,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_hall",
   "aether_demo_writ",
   "aether_demo_crate",
+  "aether_demo_pact",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -748,6 +750,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_crate") {
       const report = runKnownCart(loadKnownCart("fixtures/demo/crate/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pact") {
+      const report = runKnownHire(loadKnownHire("fixtures/demo/pact/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

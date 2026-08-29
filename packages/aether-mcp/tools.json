@@ -465,6 +465,11 @@
       "name": "aether_demo_crate",
       "commandType": "demo.crate",
       "description": "Run the crate TAP: a missing cart is not a broken payment chain. mandate.issue_payment on a ghost cart is mandate.known_cart; occupancy and a dead cart at fund still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pact",
+      "commandType": "demo.pact",
+      "description": "Run the pact TAP: a missing contract is not a broken mandate chain. hire.deliver on a ghost hire is hire.known; a stranger’s deliver and unfunded work still allow; funded work still finishes."
     }
   ]
 }

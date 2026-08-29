@@ -74,6 +74,7 @@ import { loadKnownSku, runKnownSku } from "@aether/known-sku";
 import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
 import { loadKnownCart, runKnownCart } from "@aether/known-cart";
+import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -140,6 +141,7 @@ const shelfFixture = join(process.cwd(), "fixtures/demo/shelf/scenario.json");
 const hallFixture = join(process.cwd(), "fixtures/demo/hall/scenario.json");
 const writFixture = join(process.cwd(), "fixtures/demo/writ/scenario.json");
 const crateFixture = join(process.cwd(), "fixtures/demo/crate/scenario.json");
+const pactFixture = join(process.cwd(), "fixtures/demo/pact/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -823,6 +825,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runKnownCart(loadKnownCart(crateFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "crate" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/pact") {
+        const report = runKnownHire(loadKnownHire(pactFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "pact" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

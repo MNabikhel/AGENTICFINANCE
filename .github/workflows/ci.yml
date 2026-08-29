@@ -77,3 +77,4 @@ jobs:
       - run: pnpm demo:hall
       - run: pnpm demo:writ
       - run: pnpm demo:crate
+      - run: pnpm demo:pact

@@ -565,6 +565,12 @@ paths:
       responses:
         "200": { description: Crate TAP report. A missing cart is not a broken payment chain. }
         "500": { description: Assertions failed }
+  /v1/demo/pact:
+    post:
+      operationId: demoPact
+      responses:
+        "200": { description: Pact TAP report. A missing contract is not a broken mandate chain. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
