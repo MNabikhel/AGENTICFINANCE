@@ -59,7 +59,8 @@
     "./kya-not-self": "./src/kya-not-self.ts",
     "./host-authority": "./src/host-authority.ts",
     "./occurrence-fresh": "./src/occurrence-fresh.ts",
-    "./role-capability": "./src/role-capability.ts"
+    "./role-capability": "./src/role-capability.ts",
+    "./amount-range": "./src/amount-range.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

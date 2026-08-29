@@ -435,6 +435,11 @@
       "name": "aether_demo_badge",
       "commandType": "demo.badge",
       "description": "Run the badge TAP: a badge is not a shopping pass. hire.create by an auditor is actor.role_capability; a freeze, a missing speaker, and a spent quote still allow; the auditor still verifies; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_lid",
+      "commandType": "demo.lid",
+      "description": "Run the lid TAP: an item cap is not an envelope. hire.create over the per-item cap is payment.amount_range; the envelope and the fuse still allow; funded work still finishes."
     }
   ]
 }

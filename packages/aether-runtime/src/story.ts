@@ -187,6 +187,9 @@ export const VACANT_TLDR =
 export const BADGE_TLDR =
   "A founder funded an $800 hire. An auditor’s hire.create was actor.role_capability — not a freeze, not a missing speaker, not a spent quote. The auditor still verified the notary. That funded work still released. A badge is not a shopping pass.";
 
+export const LID_TLDR =
+  "A founder wrote a $1,000 item cap with a $5,000 envelope. The desk funded an $800 hire. A $1,500 second hire was payment.amount_range — the envelope and the fuse still allowed. That funded work still released. An item cap is not an envelope.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -675,7 +678,7 @@ export function autoBeat(input: {
       const ruleId = rule?.ruleId ?? "unknown";
       let body = `The referee (policy kernel) said no. Rule: ${ruleId}. ${rule?.message ?? ""}`;
       if (ruleId === "payment.amount_range") {
-        body += " Hard constraints cannot be waved through by a manager — someone has to issue a new permission slip.";
+        body = "This permission slip’s per-item cap is the lid. The envelope is a different object. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.budget") {
         body = "This permission slip’s envelope is spent. The per-item cap is a different object. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.parent_budget") {

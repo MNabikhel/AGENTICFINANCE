@@ -286,7 +286,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 41. A budget is not an item cap
 
-`payment.budget` already binds new spend when `spent + amount > max`. Completing funded work is legal. Sprint hits `payment.amount_range`. Recurrence is a cadence.
+`payment.budget` already binds new spend when `spent + amount > max`. Completing funded work is legal. Sprint hits `payment.amount_range` inside a longer story. Lid TAP is the focused item cap. Recurrence is a cadence.
 
 - [x] A TAP (`pnpm demo purse`) funds an $800 hire against a $1,000 envelope with a $5,000 per-item cap, refuses a $400 second `hire.create` as `payment.budget` without writing a hire, then that funded work still releases.
 - [x] No new policy rule unless a current allow is a second hire through an exhausted envelope, or a current deny traps funded work.
@@ -403,7 +403,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 59. A daily fuse is not a freeze on funded work
 
-`circuit.daily` already binds new spend when the daily cap would trip. Completing funded work is legal. Night Watch first-denies `payment.amount_range`. Refund TAP is unwind plus sticky. Velocity TAP is a hot hour.
+`circuit.daily` already binds new spend when the daily cap would trip. Completing funded work is legal. Night Watch first-denies `payment.amount_range` inside a longer story. Lid TAP is the focused item cap. Refund TAP is unwind plus sticky. Velocity TAP is a hot hour.
 
 - [x] A TAP (`pnpm demo fuse`) funds an $800 hire against a $1,000 daily fuse, refuses a $400 second `hire.create` as `circuit.daily` without writing a hire (the envelope and the item cap still allow; the fuse blows), then that funded work still releases.
 - [x] No new policy rule unless a current allow is spend after the fuse, or a current deny traps funded work.
@@ -707,7 +707,20 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list vaca
 - [x] A TAP (`pnpm demo badge`) funds an $800 hire, refuses an auditor's `hire.create` as `actor.role_capability` without writing a hire (a freeze, a missing speaker, and a spent quote still allow; the quote stays unspent), then the auditor still verifies the notary and that funded work still releases.
 - [x] No new policy rule unless a current allow is an auditor hire, or a current deny traps funded work.
 
-### 106. Next: only if the pin would lie
+### 106. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list badge. No lying allow.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through badge. No inspect-overlay grind.
+
+### 107. An item cap is not an envelope
+
+`payment.amount_range` already binds new spend when `amount > max`. Completing funded work is legal. Purse TAP is the envelope (`payment.budget`). Fuse TAP is the daily cap (`circuit.daily`). Sprint and Night Watch hit this rule inside a longer story.
+
+- [x] A TAP (`pnpm demo lid`) funds an $800 hire against a $1,000 item cap with a $5,000 envelope, refuses a $1,500 `hire.create` as `payment.amount_range` without writing a hire (the envelope still allows; the fuse still allows; the quote stays unspent), then that funded work still releases.
+- [x] No new policy rule unless a current allow is a hire over the item cap, or a current deny traps funded work.
+
+### 108. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -715,4 +728,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

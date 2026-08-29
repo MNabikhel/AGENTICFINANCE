@@ -73,7 +73,8 @@
       "@aether/kya-not-self": ["packages/aether-runtime/src/kya-not-self.ts"],
       "@aether/host-authority": ["packages/aether-runtime/src/host-authority.ts"],
       "@aether/occurrence-fresh": ["packages/aether-runtime/src/occurrence-fresh.ts"],
-      "@aether/role-capability": ["packages/aether-runtime/src/role-capability.ts"]
+      "@aether/role-capability": ["packages/aether-runtime/src/role-capability.ts"],
+      "@aether/amount-range": ["packages/aether-runtime/src/amount-range.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

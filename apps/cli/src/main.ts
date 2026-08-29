@@ -56,6 +56,7 @@ import { loadKyaNotSelf, runKyaNotSelf } from "@aether/kya-not-self";
 import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
 import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fresh";
 import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
+import { loadAmountRange, runAmountRange } from "@aether/amount-range";
 
 const [, , command, name] = process.argv;
 
@@ -417,6 +418,12 @@ if (command === "demo" && (name === "badge" || name === "hat" || name === "vest"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "lid" || name === "sticker" || name === "tag")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/lid/scenario.json");
+  printReport(runAmountRange(loadAmountRange(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -479,5 +486,6 @@ usage:
   pnpm demo warrant
   pnpm demo vacant
   pnpm demo badge
+  pnpm demo lid
   pnpm mcp`);
 process.exit(command ? 1 : 0);
