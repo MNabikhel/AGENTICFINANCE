@@ -1110,7 +1110,14 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list well
 - [x] A TAP (`pnpm demo cite`) funds an $800 hire, refuses a new `hire.create` against a slip that cites a ghost checkout as `payment.reference` without writing a hire (a listed payee, a listed rail, and a listed SKU still allow), then a citation of that funded check still hires and that funded work still releases.
 - [x] New first-deny: `payment.reference`. Catalog 88 → 89. Protocol stays 0.96.0.
 
-### 168. Next: only if the pin would lie
+### 168. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list cite. The submit header is not the command bus. No lying allow on the cite listing.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through cite. No inspect-overlay grind.
+- [x] OpenAPI `PAYMENT-SIGNATURE` is optional. The command bus is the JSON body. Omit is a policy deny, not a missing header. `envelope.require` is HTTP 402 with `PAYMENT-REQUIRED`. Hosted unpaid stays the door (`host.unpaid`).
+
+### 169. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 

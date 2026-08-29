@@ -208,6 +208,13 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not decoration once a check exists");
   });
 
+  it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {
+    expect(spec).toContain("name: PAYMENT-SIGNATURE");
+    expect(spec).toContain("JSON body is the bus");
+    expect(spec).toContain("Submits may carry PAYMENT-SIGNATURE");
+    expect(spec).not.toMatch(/name: PAYMENT-SIGNATURE\s+required: true/);
+  });
+
   it("lists HTTP aliases the bus actually serves", () => {
     expect(spec).toContain("/v1/kya/attest:");
     expect(spec).toContain("/v1/kya/revoke:");

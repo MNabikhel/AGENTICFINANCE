@@ -4,7 +4,7 @@ info:
   version: 0.96.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
-    402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
+    402 responses carry PAYMENT-REQUIRED. Submits may carry PAYMENT-SIGNATURE; the JSON body is the command bus.
     All amounts are integer minor units. Rail is sim:aether-1 only.
 servers:
   - url: http://127.0.0.1:8787
@@ -152,8 +152,9 @@ paths:
       parameters:
         - in: header
           name: PAYMENT-SIGNATURE
-          required: true
+          required: false
           schema: { type: string }
+          description: Optional x402-shaped practice. The command bus is the JSON body. Omit is not malformed.
       responses:
         "200":
           description: Settled

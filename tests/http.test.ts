@@ -1060,6 +1060,125 @@ describe("HTTP command bus", () => {
     expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
   });
 
+  it("POST /v1/payments/submit without PAYMENT-SIGNATURE is the command bus, not a missing header", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const founder = await json("/v1/identities", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "system",
+        key: "ops-human",
+        displayName: "Founder",
+        role: "human_operator",
+        autonomyLevel: 0,
+      }),
+    });
+    expect(founder.status).toBe(200);
+    const r = await json("/v1/payments/submit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "ops-human", hireId: "hid_01J6AETHERGHOSTHIRE0000001", nonce: "n1" }),
+    });
+    expect(r.status).toBe(422);
+    expect((r.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("hire.known");
+  });
+
+  it("POST /v1/payments/require is HTTP 402 with PAYMENT-REQUIRED; submit omits PAYMENT-SIGNATURE", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const demo = await json("/v1/demo/cite", { method: "POST" });
+    expect(demo.status).toBe(200);
+    expect(demo.body.ok).toBe(true);
+    const snap = await json("/v1/snapshot");
+    const hires = snap.body.hires as {
+      id: string;
+      state: string;
+      intentId: string;
+      sku: string;
+      price: { amount: number };
+    }[];
+    const offered = hires.find((h) => h.state === "offered");
+    expect(offered).toBeDefined();
+    const hireId = offered!.id;
+
+    const accept = await json(`/v1/hires/${hireId}/accept`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "research-vendor" }),
+    });
+    expect(accept.status).toBe(200);
+
+    const cart = await json("/v1/mandates/cart", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "desk",
+        intentId: offered!.intentId,
+        merchantId: (snap.body.aliases as Record<string, { id: string }>)["research-vendor"]?.id,
+        hireId,
+        line_items: [
+          {
+            sku: offered!.sku,
+            description: offered!.sku,
+            quantity: 1,
+            unitAmount: { amount: offered!.price.amount, currency: "USD_SIM" },
+          },
+        ],
+      }),
+    });
+    expect(cart.status).toBe(200);
+    const cartId = (cart.body.data as { payload: { id: string } }).payload.id;
+
+    const payment = await json("/v1/mandates/payment", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "desk", cartId }),
+    });
+    expect(payment.status).toBe(200);
+    const paymentMandateId = (payment.body.data as { payload: { id: string } }).payload.id;
+
+    const fund = await json(`/v1/hires/${hireId}/fund`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "desk", paymentMandateId }),
+    });
+    expect(fund.status).toBe(200);
+
+    const deliver = await json(`/v1/hires/${hireId}/deliver`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "research-vendor", deliverable: { n: 1 } }),
+    });
+    expect(deliver.status).toBe(200);
+
+    const requireRes = await fetch(`${base}/v1/payments/require`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "research-vendor", hireId }),
+    });
+    expect(requireRes.status).toBe(402);
+    const requiredHeader = requireRes.headers.get("payment-required");
+    expect(requiredHeader).toBeTruthy();
+    const requiredBody = (await requireRes.json()) as {
+      kind: string;
+      data: { x402Version: number; accepted: { network: string; amount: string; scheme: string }[] };
+    };
+    expect(requiredBody.kind).toBe("allow");
+    expect(requiredBody.data.x402Version).toBe(2);
+    expect(requiredBody.data.accepted[0]?.network).toBe("sim:aether-1");
+    expect(requiredBody.data.accepted[0]?.scheme).toBe("exact");
+    expect(requiredBody.data.accepted[0]?.amount).toBe(String(offered!.price.amount));
+
+    const submitRes = await fetch(`${base}/v1/payments/submit`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "desk", hireId, nonce: `nonce-${hireId}` }),
+    });
+    expect(submitRes.status).toBe(200);
+    expect(submitRes.headers.get("payment-response")).toBeTruthy();
+    const submitted = (await submitRes.json()) as { kind: string };
+    expect(submitted.kind).toBe("allow");
+  });
+
   it("GET /v1/kya and GET /v1/objects/iss_* are the genesis issuer catalog", async () => {
     await json("/v1/reset", { method: "POST" });
     const kya = await json("/v1/kya");
