@@ -355,6 +355,12 @@ paths:
       responses:
         "200": { description: Mint TAP report. A transfer is not a mint. }
         "500": { description: Assertions failed }
+  /v1/demo/payee:
+    post:
+      operationId: demoPayee
+      responses:
+        "200": { description: Payee TAP report. A listed payee is not any registered vendor. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

@@ -290,6 +290,11 @@
       "name": "aether_demo_mint",
       "commandType": "demo.mint",
       "description": "Run the mint TAP: a transfer is not a mint. Equity and escrow transfers are ledger.operating_book; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_payee",
+      "commandType": "demo.payee",
+      "description": "Run the payee TAP: a listed payee is not any registered vendor. Unlisted hire.create is payment.allowed_payees; the quote is still written; funded work still finishes."
     }
   ]
 }

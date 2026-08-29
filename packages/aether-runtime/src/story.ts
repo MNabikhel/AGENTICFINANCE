@@ -100,6 +100,9 @@ export const COVER_TLDR =
 export const MINT_TLDR =
   "Treasury tried to pull from equity. That was ledger.operating_book — not a mint. The desk funded an $800 hire. Pulling that escrow was ledger.operating_book — not an allocation. That funded work still released. A transfer moves operating cash.";
 
+export const PAYEE_TLDR =
+  "A founder listed one research vendor. The desk funded an $800 hire to that name. A registered outsider quoted and hire.create was payment.allowed_payees — the room still wrote the quote. That funded work still released. A listed payee is not any registered vendor.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -553,6 +556,8 @@ export function autoBeat(input: {
         body = "This permission slip’s envelope is spent. The per-item cap is a different object. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.parent_budget") {
         body = "The parent permission slip’s envelope is spent. The child’s own leftover is not a new parent envelope. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.allowed_payees") {
+        body = "That seller is not on this permission slip’s payee list. A registered vendor is not a listed payee. A closed room is a guest list on the RFQ; this is the slip. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {
         body = "The daily fuse blew. Standing permission does not mean unlimited. Until a human resets the circuit, even a tiny hire is refused.";
       } else if (ruleId === "kya.principal_not_frozen") {

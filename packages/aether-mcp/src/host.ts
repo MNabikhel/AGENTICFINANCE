@@ -34,6 +34,7 @@ import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
 import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
+import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -106,6 +107,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_seat",
   "aether_demo_cover",
   "aether_demo_mint",
+  "aether_demo_payee",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -503,6 +505,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_mint") {
       const report = runOperatingBook(loadOperatingBook("fixtures/demo/mint/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_payee") {
+      const report = runPaymentPayees(loadPaymentPayees("fixtures/demo/payee/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

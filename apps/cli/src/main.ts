@@ -27,6 +27,7 @@ import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
 import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
+import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 
 const [, , command, name] = process.argv;
 
@@ -214,6 +215,12 @@ if (command === "demo" && (name === "mint" || name === "lock" || name === "opera
   process.exit(0);
 }
 
+if (command === "demo" && (name === "payee" || name === "roster" || name === "allowed-payees")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/payee/scenario.json");
+  printReport(runPaymentPayees(loadPaymentPayees(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -247,5 +254,6 @@ usage:
   pnpm demo seat
   pnpm demo cover
   pnpm demo mint
+  pnpm demo payee
   pnpm mcp`);
 process.exit(command ? 1 : 0);

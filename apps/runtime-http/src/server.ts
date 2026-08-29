@@ -39,6 +39,7 @@ import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
 import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
+import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -70,6 +71,7 @@ const purseFixture = join(process.cwd(), "fixtures/demo/purse/scenario.json");
 const seatFixture = join(process.cwd(), "fixtures/demo/seat/scenario.json");
 const coverFixture = join(process.cwd(), "fixtures/demo/cover/scenario.json");
 const mintFixture = join(process.cwd(), "fixtures/demo/mint/scenario.json");
+const payeeFixture = join(process.cwd(), "fixtures/demo/payee/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -508,6 +510,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runOperatingBook(loadOperatingBook(mintFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "mint" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/payee") {
+        const report = runPaymentPayees(loadPaymentPayees(payeeFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "payee" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
