@@ -77,6 +77,7 @@ export default defineConfig({
       "@aether/attestation-fresh": path.resolve(__dirname, "packages/aether-runtime/src/attestation-fresh.ts"),
       "@aether/approval-pending": path.resolve(__dirname, "packages/aether-runtime/src/approval-pending.ts"),
       "@aether/kya-not-self": path.resolve(__dirname, "packages/aether-runtime/src/kya-not-self.ts"),
+      "@aether/host-authority": path.resolve(__dirname, "packages/aether-runtime/src/host-authority.ts"),
     },
   },
 });

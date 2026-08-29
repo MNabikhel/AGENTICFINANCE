@@ -178,6 +178,9 @@ export const PAUSE_TLDR =
 export const MIRROR_TLDR =
   "A founder funded an $800 hire. Attesting themselves was kya.not_self — not someone else's name, not a second hop, not a corpse mint. The founder still minted a real pair. That funded work still released. A handshake is not a mirror.";
 
+export const WARRANT_TLDR =
+  "A founder funded an $800 hire. Subscribe on an agent-issued slip was host.human_authority — not a missing seat, not the public kernel. A human-issued slip still seated. That funded work still released. An agent-issued slip is not host authority.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

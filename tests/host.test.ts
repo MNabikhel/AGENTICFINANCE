@@ -192,6 +192,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "approval-pending")?.description).toContain("POST /v1/demo/pause");
     expect(card.skills.some((s) => s.id === "not-self")).toBe(true);
     expect(card.skills.find((s) => s.id === "not-self")?.description).toContain("POST /v1/demo/mirror");
+    expect(card.skills.some((s) => s.id === "human-authority")).toBe(true);
+    expect(card.skills.find((s) => s.id === "human-authority")?.description).toContain("POST /v1/demo/warrant");
   });
 
   it("lets a registered desk read the same card", () => {

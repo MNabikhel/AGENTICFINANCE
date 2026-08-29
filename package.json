@@ -61,6 +61,7 @@
     "demo:lapse": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo lapse",
     "demo:pause": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo pause",
     "demo:mirror": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mirror",
+    "demo:warrant": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo warrant",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

@@ -53,6 +53,7 @@ import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
 import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-fresh";
 import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
 import { loadKyaNotSelf, runKyaNotSelf } from "@aether/kya-not-self";
+import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
 
 const [, , command, name] = process.argv;
 
@@ -396,6 +397,12 @@ if (command === "demo" && (name === "mirror" || name === "selfie" || name === "e
   process.exit(0);
 }
 
+if (command === "demo" && (name === "warrant" || name === "signet" || name === "charter")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/warrant/scenario.json");
+  printReport(runHostAuthority(loadHostAuthority(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -455,5 +462,6 @@ usage:
   pnpm demo lapse
   pnpm demo pause
   pnpm demo mirror
+  pnpm demo warrant
   pnpm mcp`);
 process.exit(command ? 1 : 0);

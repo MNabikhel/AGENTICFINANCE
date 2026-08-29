@@ -511,6 +511,12 @@ paths:
       responses:
         "200": { description: Mirror TAP report. A handshake is not a mirror. }
         "500": { description: Assertions failed }
+  /v1/demo/warrant:
+    post:
+      operationId: demoWarrant
+      responses:
+        "200": { description: Warrant TAP report. An agent-issued slip is not host authority. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

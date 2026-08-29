@@ -420,6 +420,11 @@
       "name": "aether_demo_mirror",
       "commandType": "demo.mirror",
       "description": "Run the mirror TAP: a handshake is not a mirror. kya.attest of yourself is kya.not_self; someone else's name, a second hop, and a corpse mint still allow; a real pair still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_warrant",
+      "commandType": "demo.warrant",
+      "description": "Run the warrant TAP: an agent-issued slip is not host authority. host.subscribe on an agent-issued intent is host.human_authority; a missing seat and the public kernel still allow; a human-issued slip still seats; funded work still finishes."
     }
   ]
 }
