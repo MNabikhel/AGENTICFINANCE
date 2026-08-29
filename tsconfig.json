@@ -110,7 +110,8 @@
       "@aether/market-party": ["packages/aether-runtime/src/market-party.ts"],
       "@aether/mandate-party": ["packages/aether-runtime/src/mandate-party.ts"],
       "@aether/rfq-party": ["packages/aether-runtime/src/rfq-party.ts"],
-      "@aether/cart-party": ["packages/aether-runtime/src/cart-party.ts"]
+      "@aether/cart-party": ["packages/aether-runtime/src/cart-party.ts"],
+      "@aether/payment-party": ["packages/aether-runtime/src/payment-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

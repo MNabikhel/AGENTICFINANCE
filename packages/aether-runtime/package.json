@@ -96,7 +96,8 @@
     "./market-party": "./src/market-party.ts",
     "./mandate-party": "./src/mandate-party.ts",
     "./rfq-party": "./src/rfq-party.ts",
-    "./cart-party": "./src/cart-party.ts"
+    "./cart-party": "./src/cart-party.ts",
+    "./payment-party": "./src/payment-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -223,6 +223,9 @@ export const RULES: readonly Rule[] = [
       if (ctx.cartWindowLive === false) {
         return v("mandate.not_expired", "deny", "cart revoked");
       }
+      if (ctx.paymentWindowLive === false) {
+        return v("mandate.not_expired", "deny", "payment revoked");
+      }
       const nowSec = Math.floor(Date.parse(ctx.clock) / 1000);
       if (ctx.intent && ctx.intent.payload.exp <= nowSec) {
         return v("mandate.not_expired", "deny", "intent expired");
@@ -936,6 +939,15 @@ export const RULES: readonly Rule[] = [
     },
   },
   {
+    id: "mandate.known_payment",
+    evaluate: (ctx) => {
+      if (ctx.paymentKnown === undefined) return v("mandate.known_payment", "allow", "not a payment-gated command");
+      return ctx.paymentKnown
+        ? v("mandate.known_payment", "allow", "payment exists")
+        : v("mandate.known_payment", "deny", "payment not found");
+    },
+  },
+  {
     id: "approval.known",
     evaluate: (ctx) => {
       if (ctx.approvalKnown === undefined) return v("approval.known", "allow", "not an approval.resolve");
@@ -1389,6 +1401,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.cart_party", "deny", "actor is not the named merchant or hire buyer");
     },
   },
+  {
+    id: "mandate.payment_party",
+    evaluate: (ctx) => {
+      if (ctx.paymentPartyOk === undefined) return v("mandate.payment_party", "allow", "not a spike");
+      return ctx.paymentPartyOk
+        ? v("mandate.payment_party", "allow", "actor is the named signer, payee, hire buyer, intent subject, or a kill-switch role")
+        : v("mandate.payment_party", "deny", "actor is not the named signer or payee");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1514,6 +1535,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.known_cart": {
     kind: "none",
     hint: "That cart id is not in this world. Issue the cart first. A missing cart is not a broken payment chain. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. Completing funded work is legal.",
+  },
+  "mandate.known_payment": {
+    kind: "none",
+    hint: "That payment id is not in this world. Issue the payment first. A missing check is not a broken payment chain. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. Completing funded work is legal.",
   },
   "approval.known": {
     kind: "none",
@@ -1733,6 +1758,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "Dump your own unused checkout, or ask a human or treasury. Someone else's cart is not yours to dump. A missing cart is mandate.known_cart. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal.",
   },
+  "mandate.payment_party": {
+    kind: "none",
+    hint: "Spike your own unused check, or ask a human or treasury. Someone else's payment is not yours to spike. A missing payment is mandate.known_payment. A spiked unused payment is mandate.not_expired on fund. Funded is when escrow occupies it. Completing funded work is legal.",
+  },
   "clearing.bilateral_limit": {
     kind: "none",
     commandType: "clearing.settle_window",
@@ -1744,7 +1773,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.not_expired": {
     kind: "none",
-    hint: "That cart, payment, or slip window has closed. A ripped unused slip is this deny on a new hire. A dumped unused cart is this deny on a new payment. Bound dump is this deny, not a refund. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart.",
+    hint: "That cart, payment, or slip window has closed. A ripped unused slip is this deny on a new hire. A dumped unused cart is this deny on a new payment. A spiked unused payment is this deny on fund. Bound dump is this deny, not a refund. Funded spike is this deny, not a refund. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart. A missing payment stays mandate.known_payment.",
   },
 };
 

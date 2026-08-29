@@ -95,6 +95,20 @@ paths:
       responses:
         "200": { description: Live unused cart torn up. Store stays raw. Inspect labels revoked. Occupancy on the hire frees. }
         "422": { description: Policy deny. Stranger is mandate.cart_party. Ghost cart is mandate.known_cart. Already dumped or bound is mandate.not_expired. }
+  /v1/checks/{id}/spike:
+    post:
+      operationId: mandateRevokePayment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live unused payment torn up. Store stays raw. Inspect labels revoked. Occupancy on the cart frees. }
+        "422": { description: Policy deny. Stranger is mandate.payment_party. Ghost payment is mandate.known_payment. Already spiked or funded is mandate.not_expired. }
   /v1/mandates/cart:
     post:
       operationId: mandateIssueCart
@@ -827,6 +841,12 @@ paths:
       operationId: demoDump
       responses:
         "200": { description: Dump TAP report. Someone else's unused checkout is not yours to dump. }
+        "500": { description: Assertions failed }
+  /v1/demo/spike:
+    post:
+      operationId: demoSpike
+      responses:
+        "200": { description: Spike TAP report. Someone else's unused payment is not yours to spike. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:

@@ -298,6 +298,9 @@ export const SHUT_TLDR =
 export const DUMP_TLDR =
   "A founder funded an $800 hire. A second desk dumping the research desk's unused checkout was mandate.cart_party — a missing cart is not this deny, an expired window is not this deny. mandate.party still allows. No CART_REVOKE line was written. The buyer still dumped its own unused cart. Paying that dumped cart was mandate.not_expired. Occupancy freed. That funded work still released. Someone else's unused checkout is not yours to dump.";
 
+export const SPIKE_TLDR =
+  "A founder funded an $800 hire. A second desk spiking the research desk's unused check was mandate.payment_party — a missing payment is not this deny, an expired window is not this deny. mandate.cart_party still allows. No PAYMENT_REVOKE line was written. The buyer still spiked its own unused payment. Funding that spiked payment was mandate.not_expired. Occupancy freed. That funded work still released. Someone else's unused payment is not yours to spike.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1219,6 +1222,34 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "mandate.revoke_payment") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not spike that check`,
+        body:
+          rule?.ruleId === "mandate.payment_party"
+            ? "Someone else's unused payment is not yours to spike. The signer, the payee, the hire's buyer, a human, or treasury may spike a live unused payment."
+            : rule?.ruleId === "mandate.known_payment"
+              ? "That payment is not in this world. A missing check is not a spiked check."
+              : rule?.ruleId === "mandate.not_expired"
+                ? "That window is already closed. Funded is when escrow occupies it. A spiked payment is not a second spike."
+                : "A check can be torn up. That is not a refund.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} spiked an unused check`,
+      body: "The payment is off the table. Hire.fund of a spiked unused payment is mandate.not_expired. Funded is when escrow occupies it. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "hire.release") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -1626,6 +1657,7 @@ export function analog(): Analog {
       "A permission slip can be torn up. That is not a void and not firing a handshake. Someone else's unused slip is not yours to tear.",
       "A live room can be shut. That is not an expired window. Expired is when the day dies. Someone else's room is not yours to close.",
       "A checkout can be torn up. That is not a refund. Bound is when a payment occupies it. Someone else's unused checkout is not yours to dump.",
+      "A check can be torn up. That is not a refund. Funded is when escrow occupies it. Someone else's unused payment is not yours to spike.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

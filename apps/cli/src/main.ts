@@ -93,6 +93,7 @@ import { loadMarketParty, runMarketParty } from "@aether/market-party";
 import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
+import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -677,6 +678,12 @@ if (command === "demo" && (name === "dump" || name === "chuck" || name === "toss
   process.exit(0);
 }
 
+if (command === "demo" && (name === "spike" || name === "ditch" || name === "junk")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/spike/scenario.json");
+  printReport(runPaymentParty(loadPaymentParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -792,6 +799,7 @@ usage:
   pnpm demo rip
   pnpm demo shut
   pnpm demo dump
+  pnpm demo spike
   aether audit verify
   aether ledger replay
   pnpm mcp`);

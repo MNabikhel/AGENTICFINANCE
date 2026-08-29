@@ -330,9 +330,11 @@ export type CartStatus = "live" | "expired" | "bound" | "revoked";
  * wins over expired. Expired includes the payment `exp` and a dead parent cart
  * (`expiresAt`), even when this check's own window still lives. A cart that this
  * payment occupies is not funded — that occupancy lives on the cart
- * (`mandate.unique_payment` / bound). The store stays raw (`exp` only).
+ * (`mandate.unique_payment` / bound). Revoked (torn by mandate.revoke_payment)
+ * wins over expired. Funded wins over revoked and expired. The store stays raw
+ * (`exp` only).
  */
-export type PaymentStatus = "live" | "expired" | "funded";
+export type PaymentStatus = "live" | "expired" | "funded" | "revoked";
 
 export interface PaymentMandate {
   vct: "aether.mandate.payment.1" | "aether.mandate.payment.open.1";
@@ -830,6 +832,11 @@ export interface PolicyContext {
    */
   cartKnown?: boolean;
   /**
+   * False when mandate.revoke_payment points at a payment that is not in this world.
+   * Absent = command does not require a live payment.
+   */
+  paymentKnown?: boolean;
+  /**
    * False when approval.resolve points at a ticket that is not in this world.
    * Absent = not an approval.resolve.
    */
@@ -936,6 +943,14 @@ export interface PolicyContext {
    */
   cartPartyOk?: boolean;
   /**
+   * False when mandate.revoke_payment names a payment whose signer, payee, hire
+   * buyer, or intent subject is not the speaker, and the speaker is not a human
+   * or treasury. Absent = not a spike, or the payment is unknown (`paymentKnown`
+   * handles that). A desk cannot spike someone else's check. Do not reuse
+   * `mandate.cart_party` — that flag is the named merchant of a cart.
+   */
+  paymentPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.
@@ -958,6 +973,15 @@ export interface PolicyContext {
    * Bound is when a payment occupies it — dump of a bound cart is not a refund.
    */
   cartWindowLive?: boolean;
+  /**
+   * False when hire.fund / mandate.revoke_payment would use a payment that
+   * mandate.revoke_payment already tore up, or when mandate.revoke_payment names a
+   * payment escrow already occupies. Absent = not those commands, or the payment is
+   * unknown (`paymentKnown` handles that). Completing funded work after that is legal.
+   * A spiked unused payment is `mandate.not_expired` on fund, not occupancy.
+   * Funded is when escrow occupies it — spike of a funded payment is not a refund.
+   */
+  paymentWindowLive?: boolean;
   /**
    * False when identity.register would reuse a runtime alias or its operating book
    * (USD cash, and USDC for data_vendor / market_maker).
@@ -1089,9 +1113,10 @@ export interface PolicyContext {
   cartUnbound?: boolean;
   /**
    * False when issue_payment points at a cart that already has a payment mandate
-   * (same cart hash / transaction_id).
+   * (same cart hash / transaction_id) that is not revoked.
    * Absent = not issue_payment, or the cart is unknown (`mandate.known_cart` handles that).
-   * A cart takes one payment. A second payment is not a second check.
+   * A cart takes one occupying payment. A second payment is not a second check.
+   * A spiked unused payment frees occupancy.
    */
   paymentUnbound?: boolean;
   /**
@@ -1231,6 +1256,7 @@ export type AuditAction =
   | "MANDATE_ISSUE"
   | "MANDATE_REVOKE"
   | "CART_REVOKE"
+  | "PAYMENT_REVOKE"
   | "RFQ_CREATE"
   | "RFQ_CLOSE"
   | "QUOTE_SUBMIT"
@@ -1300,6 +1326,7 @@ export type CommandType =
   | "mandate.issue_intent"
   | "mandate.revoke"
   | "mandate.revoke_cart"
+  | "mandate.revoke_payment"
   | "mandate.issue_cart"
   | "mandate.issue_payment"
   | "market.rfq"
@@ -1393,6 +1420,7 @@ export const ROLE_CAPABILITY: Record<
     "mandate.issue_intent",
     "mandate.revoke",
     "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
@@ -1424,6 +1452,7 @@ export const ROLE_CAPABILITY: Record<
     "mandate.issue_intent",
     "mandate.revoke",
     "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "kya.attest",
     "kya.revoke",
     "mandate.issue_cart",
@@ -1448,6 +1477,7 @@ export const ROLE_CAPABILITY: Record<
   data_vendor: [
     "identity.rotate",
     "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "market.quote",
     "market.withdraw",
     "market.fx_settle",
@@ -1465,6 +1495,7 @@ export const ROLE_CAPABILITY: Record<
   compute_vendor: [
     "identity.rotate",
     "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "market.quote",
     "market.withdraw",
     "market.fx_settle",
@@ -1506,6 +1537,7 @@ export const ROLE_CAPABILITY: Record<
     "mandate.issue_intent",
     "mandate.revoke",
     "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "approval.resolve",
     "ladder.set",
     "audit.verify",

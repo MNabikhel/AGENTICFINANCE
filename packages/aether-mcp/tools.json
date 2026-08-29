@@ -37,6 +37,11 @@
       "description": "Tear up a live unused cart. Merchant, hire buyer, intent subject, human, or treasury. Ghost cart stays mandate.known_cart. Stranger stays mandate.cart_party. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal. Someone else's unused checkout is not yours to dump."
     },
     {
+      "name": "aether_mandate_revoke_payment",
+      "commandType": "mandate.revoke_payment",
+      "description": "Tear up a live unused payment. Signer, payee, hire buyer, intent subject, human, or treasury. Ghost payment stays mandate.known_payment. Stranger stays mandate.payment_party. A spiked unused payment is mandate.not_expired on fund. Funded is when escrow occupies it. Completing funded work is legal. Someone else's unused payment is not yours to spike."
+    },
+    {
       "name": "aether_mandate_issue_cart",
       "commandType": "mandate.issue_cart",
       "description": "Issue a merchant-bound cart hashed to an intent. Completing a funded hire after the cart window is legal; fund of a stale cart is not."
@@ -44,7 +49,7 @@
     {
       "name": "aether_mandate_issue_payment",
       "commandType": "mandate.issue_payment",
-      "description": "Issue a payment mandate whose transaction_id is sha256(cart). A cart takes one payment; inspect of that cart then labels bound. Inspect of the payment labels live | expired | funded."
+      "description": "Issue a payment mandate whose transaction_id is sha256(cart). A cart takes one payment; inspect of that cart then labels bound. Inspect of the payment labels live | expired | funded | revoked."
     },
     {
       "name": "aether_market_rfq",
@@ -650,6 +655,11 @@
       "name": "aether_demo_dump",
       "commandType": "demo.dump",
       "description": "Run the dump TAP: someone else's unused checkout is not yours to dump. mandate.revoke_cart of a live unused cart by a second desk is mandate.cart_party; a missing cart and an expired window still allow; mandate.party still allows; no CART_REVOKE line; the buyer still dumps its own unused cart; issue_payment of that dumped cart is mandate.not_expired; occupancy frees; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_spike",
+      "commandType": "demo.spike",
+      "description": "Run the spike TAP: someone else's unused payment is not yours to spike. mandate.revoke_payment of a live unused payment by a second desk is mandate.payment_party; a missing payment and an expired window still allow; mandate.cart_party still allows; no PAYMENT_REVOKE line; the buyer still spikes its own unused payment; hire.fund of that spiked payment is mandate.not_expired; occupancy frees; funded work still finishes."
     }
   ]
 }

@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 94 rules", () => {
-    expect(RULE_IDS).toHaveLength(94);
+  it("has 96 rules", () => {
+    expect(RULE_IDS).toHaveLength(96);
   });
 
   it("denies frozen actors", () => {
@@ -1114,6 +1114,63 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_payment first when spiking a missing check", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_payment")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_payment");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies spiking someone else's unused payment as mandate.payment_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: true,
+        paymentWindowLive: true,
+        paymentPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_payment")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.payment_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a buyer spiking its own unused payment as mandate.payment_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: true,
+        paymentWindowLive: true,
+        paymentPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_payment")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
   });
 

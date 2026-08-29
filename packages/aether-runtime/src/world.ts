@@ -84,6 +84,8 @@ export interface WorldState {
   revokedIntents?: MandateId[];
   /** Cart ids torn by mandate.revoke_cart. Optional so old worlds boot. */
   revokedCarts?: MandateId[];
+  /** Payment ids torn by mandate.revoke_payment. Optional so old worlds boot. */
+  revokedPayments?: MandateId[];
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];

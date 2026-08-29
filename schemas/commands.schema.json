@@ -115,6 +115,16 @@
         }
       }
     },
+    "mandate.revoke_payment": {
+      "type": "object",
+      "required": ["paymentId"],
+      "properties": {
+        "paymentId": {
+          "type": "string",
+          "description": "Tear up a live unused payment. Signer, payee, hire buyer, intent subject, human, or treasury. A spiked unused payment is mandate.not_expired on fund. Funded is when escrow occupies it. Completing funded work is legal."
+        }
+      }
+    },
     "mandate.issue_cart": {
       "type": "object",
       "required": ["intentId", "merchantId", "line_items"],

@@ -322,6 +322,18 @@ describe("HTTP command bus", () => {
     expect(decision.remediation?.ruleId).toBe("mandate.known_cart");
   });
 
+  it("POST /v1/checks/{id}/spike is mandate.revoke_payment on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/checks/mid_01J6AETHERGHOSTPAY00000096/spike", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("mandate.known_payment");
+  });
+
   it("POST /v1/fx/settle and POST /v1/ledger/transfers are the command bus", async () => {
     await json("/v1/reset", { method: "POST" });
     const fx = await json("/v1/fx/settle", {
@@ -1171,6 +1183,15 @@ describe("HTTP command bus", () => {
     expect(r.status).toBe(200);
     expect(r.body.ok).toBe(true);
     expect(r.body.demo).toBe("dump");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/spike is the spike TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/spike", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("spike");
     expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
   });
 

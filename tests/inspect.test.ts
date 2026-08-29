@@ -1052,6 +1052,64 @@ describe("payment inspect", () => {
     const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
     expect(delivered.ok).toBe(true);
   });
+
+  it("labels a spiked unused payment revoked and frees cart occupancy", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    const spiked = rt.dispatch(cmd("mandate.revoke_payment", desk.id, { paymentId }));
+    expect(spiked.ok).toBe(true);
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.snapshotState().payments.find((p) => p.payload.id === paymentId)?.status).toBe("revoked");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+    const again = rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId }));
+    expect(again.ok).toBe(true);
+  });
+
+  it("labels a funded payment funded even after a spike is refused", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    const { paymentId } = fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const spikeFunded = rt.dispatch(cmd("mandate.revoke_payment", desk.id, { paymentId }));
+    expect(spikeFunded.ok).toBe(false);
+    if (spikeFunded.ok) return;
+    expect(spikeFunded.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("funded");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a spiked unused payment revoked even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    must(rt.dispatch(cmd("mandate.revoke_payment", desk.id, { paymentId })), "spike");
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("revoked");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+  });
 });
 
 const INTENT_DEAD = "2026-09-05T00:00:00.000Z";

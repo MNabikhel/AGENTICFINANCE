@@ -218,6 +218,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not yours to close");
     expect(spec).toContain("/v1/demo/dump:");
     expect(spec).toContain("not yours to dump");
+    expect(spec).toContain("/v1/demo/spike:");
+    expect(spec).toContain("not yours to spike");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {

@@ -68,6 +68,7 @@ describe("command shape enums and integer ranges", () => {
 
   it("rejects a numeric cartId as a type miss, not a dump after yes", () => {
     expect(commandShapeError("mandate.revoke_cart", { cartId: 1 })).toBe("invalid type: cartId");
+    expect(commandShapeError("mandate.revoke_payment", { paymentId: 1 })).toBe("invalid type: paymentId");
   });
 
   it("rejects a string where an invite list belongs", () => {
