@@ -258,6 +258,20 @@
       "type": "object",
       "required": ["receiptId"],
       "properties": { "receiptId": { "type": "string" } }
+    },
+    "host.card": {
+      "type": "object",
+      "properties": {},
+      "description": "Pin-able host card: protocol, pricing, capabilities, whether this instance is hosted. System may read it."
+    },
+    "host.subscribe": {
+      "type": "object",
+      "properties": {
+        "intentId": {
+          "type": "string",
+          "description": "Standing slip from the human/org that established identity, budget, and authority. Required on a hosted operator (ghost is mandate.known_intent). This public kernel refuses subscribe as host.not_hosted even when omitted."
+        }
+      }
     }
   }
 }

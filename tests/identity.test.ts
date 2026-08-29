@@ -1486,4 +1486,35 @@ describe("system is not a treasurer", () => {
     const again = rt.dispatch(cmd("market.catalog", "system", {}));
     expect(again.ok).toBe(true);
   });
+
+  it("lets system verify the notary, and writes the check", () => {
+    const rt = boot();
+    const clockBefore = rt.clock.now();
+    const lengthBefore = rt.audit.length;
+    const r = rt.dispatch(cmd("audit.verify", "system", {}));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.kind).toBe("allow");
+    expect((r.value.data as { ok: boolean }).ok).toBe(true);
+    expect(r.value.decision.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.audit.length).toBeGreaterThan(lengthBefore);
+    expect(rt.audit.query({ action: "POLICY_DECISION" }).matched).toBeGreaterThan(0);
+    expect(rt.audit.query({ action: "AUDIT_VERIFY" }).matched).toBe(1);
+  });
+
+  it("names actor.role_capability first when a vendor verifies the notary", () => {
+    const rt = boot();
+    const { vendor } = economy(rt);
+    const clockBefore = rt.clock.now();
+    const verifyBefore = rt.audit.query({ action: "AUDIT_VERIFY" }).matched;
+    const r = rt.dispatch(cmd("audit.verify", vendor.id, {}));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.role_capability");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(rt.audit.query({ action: "AUDIT_VERIFY" }).matched).toBe(verifyBefore);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
 });

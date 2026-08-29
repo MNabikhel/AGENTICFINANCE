@@ -23,15 +23,25 @@ export const AUDIT_GENESIS_PREV = "0".repeat(64);
 export const RECEIPT_ISSUER = "did:aether:runtime" as const;
 
 /**
- * Pin this. There is no finish date for the kernel.
+ * Pin this. Further protocol bumps are not the default.
  * `liveMoney: false` until adapters exist. Public protocol ≠ live bank.
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.85.0",
+  version: "0.95.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
+  /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
+  evaluateLlm: false,
+  /**
+   * This public kernel is not a paid operator. Self-host is free.
+   * A process may construct `Runtime({ hosted: true })` (or `AETHER_HOSTED=true`).
+   * That instance records `host.subscribe`. This pin stays false. GitHub is not a checkout.
+   */
+  hosted: false,
   currencies: ["USD_SIM", "USDC_SIM"] as const,
+  /** Shape-only. Credentials never enter `evaluate()`. */
+  adapters: { ap2: "shape", x402: "shape", mpp: "shape" } as const,
 } as const;
 
 export interface Money {
@@ -101,6 +111,7 @@ export type JournalId = `jnl_${Ulid}`;
 export type RfqId = `rfq_${Ulid}`;
 export type QuoteId = `qte_${Ulid}`;
 export type DelegationId = `dlg_${Ulid}`;
+export type SubscriptionId = `hsb_${Ulid}`;
 export type Did = `did:aether:${string}`;
 
 export interface Agent {
@@ -271,8 +282,18 @@ export interface IntentMandate {
   /** Parent intent when an L4+ agent hands a smaller slip to another agent. */
   parentId?: MandateId;
   iat: number;
+  /** Unix seconds. Seven days from `iat`. Not milliseconds. */
   exp: number;
 }
+
+/**
+ * Inspect / snapshot view. Funded (escrow moved against this slip, including
+ * later refund/release) wins over expired. Expired includes the slip `exp` and a
+ * dead parent intent, even when this child's own window still lives. A child
+ * hire does not occupy the parent. Recurrence `spentByIntent` is not occupancy.
+ * The store stays raw (`exp` only).
+ */
+export type IntentStatus = "live" | "expired" | "funded";
 
 export interface CartMandate {
   vct: "aether.mandate.cart.1";
@@ -292,6 +313,15 @@ export interface CartMandate {
  * The store stays raw.
  */
 export type CartStatus = "live" | "expired" | "bound";
+
+/**
+ * Inspect / snapshot view. Funded (escrow moved, including later refund/release)
+ * wins over expired. Expired includes the payment `exp` and a dead parent cart
+ * (`expiresAt`), even when this check's own window still lives. A cart that this
+ * payment occupies is not funded — that occupancy lives on the cart
+ * (`mandate.unique_payment` / bound). The store stays raw (`exp` only).
+ */
+export type PaymentStatus = "live" | "expired" | "funded";
 
 export interface PaymentMandate {
   vct: "aether.mandate.payment.1" | "aether.mandate.payment.open.1";
@@ -443,6 +473,12 @@ export interface Rfq {
   expiresAt: Instant;
 }
 
+/**
+ * Inspect / snapshot view. A room past `expiresAt` is `expired`, not `live`.
+ * The store stays raw (`expiresAt` only). Quoting or hiring still names `market.not_expired`.
+ */
+export type RfqStatus = "live" | "expired";
+
 export interface Quote {
   id: QuoteId;
   rfqId: RfqId;
@@ -460,7 +496,9 @@ export interface Quote {
 
 /**
  * Inspect / snapshot view. Spent and held win over expired. Expired includes the
- * quote envelope and a lapsed FX `validUntil`. The store stays raw.
+ * quote envelope, a lapsed FX `validUntil`, and (for a hire quote) a dead parent RFQ.
+ * An FX quote is a window on the quote, not the room — RFQ death does not expire it.
+ * The store stays raw.
  */
 export type QuoteStatus = "live" | "expired" | "spent" | "held";
 
@@ -737,8 +775,9 @@ export interface PolicyContext {
    */
   hireKnown?: boolean;
   /**
-   * False when hire.create or issue_cart points at an intent that is not in this world.
-   * Absent = command does not require a live intent.
+   * False when hire.create, issue_cart, or hosted `host.subscribe` points at an
+   * intent that is not in this world. Absent = command does not require a live intent.
+   * Public-kernel subscribe does not set this — that deny is `host.not_hosted`.
    */
   intentKnown?: boolean;
   /**
@@ -977,12 +1016,42 @@ export interface PolicyContext {
   actorKnown?: boolean;
   /**
    * False when Command.actorId is `system` and the command is not a bootstrap of the
-   * first human or a read (catalog / audit.query / balances / receipt.get).
+   * first human or a read (catalog / audit.query / audit.verify / balances / receipt.get / host.card).
    * Absent = speaker is not system. System is the runtime, not a treasurer.
    * HTTP/MCP omitting actor still becomes system; this rule is the fence.
    * A provided name that is not a live alias is `actor.known`, not silent system.
+   * `GET /v1/audit/verify` is this read, not a bypass of evaluate().
+   * `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}` are this read as system, not ops-human.
    */
   systemOk?: boolean;
+  /**
+   * False when `host.subscribe` targets an instance that is not hosted
+   * (`Runtime.hosted` / `PROTOCOL.hosted` is false). Absent = not a subscribe.
+   * Self-host is free. GitHub is not a checkout. `host.card` is a read, not a subscribe.
+   */
+  hostedOk?: boolean;
+  /**
+   * False when hosted `host.subscribe` carries a live intent whose issuer is not
+   * `human_operator` or `treasury`. Absent = not a hosted subscribe with a known intent
+   * (`mandate.known_intent` handles a ghost). An agent-issued slip is not host authority.
+   */
+  hostIssuerOk?: boolean;
+  /**
+   * False when hosted `host.subscribe` would bind an agent that already has a row.
+   * Absent = not a hosted subscribe with a known intent. One subscriber, one row.
+   */
+  subscribeUnique?: boolean;
+}
+
+/**
+ * Recorded when a hosted operator allows `host.subscribe`.
+ * The store stays raw. Spend is not gated on this row.
+ */
+export interface HostSubscription {
+  id: SubscriptionId;
+  subscriberId: AgentId;
+  intentId: MandateId;
+  createdAt: Instant;
 }
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
@@ -1045,7 +1114,8 @@ export type AuditAction =
   | "KYA_REVOKE"
   | "CIRCUIT_RESET"
   | "CLEARING_WINDOW"
-  | "AUDIT_VERIFY";
+  | "AUDIT_VERIFY"
+  | "HOST_SUBSCRIBE";
 
 export interface AuditSubject {
   type: string;
@@ -1112,7 +1182,9 @@ export type CommandType =
   | "clearing.settle_window"
   | "audit.verify"
   | "audit.query"
-  | "receipt.get";
+  | "receipt.get"
+  | "host.card"
+  | "host.subscribe";
 
 /**
  * What another agent should do next. English is for humans; `kind` is for machines.
@@ -1151,12 +1223,17 @@ export const KYA_GATED_COMMANDS: readonly CommandType[] = [
  * Commands `system` may run besides bootstrapping the first human_operator.
  * System is the runtime, not a treasurer. HTTP/MCP omitting actor still becomes system.
  * A provided name that is not a live alias is `actor.known`, not silent system.
+ * `audit.verify` is a notary read: `GET /v1/audit/verify` is this command, not a bypass.
+ * `ledger.balances` / `receipt.get`: `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}`
+ * are these commands as system, not ops-human.
  */
 export const SYSTEM_READ_COMMANDS: readonly CommandType[] = [
   "market.catalog",
   "audit.query",
+  "audit.verify",
   "ledger.balances",
   "receipt.get",
+  "host.card",
 ];
 
 export const ROLE_CAPABILITY: Record<
@@ -1191,6 +1268,8 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
+    "host.subscribe",
   ],
   procurement: [
     "mandate.issue_intent",
@@ -1210,6 +1289,8 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
+    "host.subscribe",
   ],
   data_vendor: [
     "market.quote",
@@ -1222,6 +1303,7 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
   ],
   compute_vendor: [
     "market.quote",
@@ -1234,6 +1316,7 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
   ],
   market_maker: [
     "market.quote",
@@ -1244,8 +1327,9 @@ export const ROLE_CAPABILITY: Record<
     "audit.query",
     "market.catalog",
     "receipt.get",
+    "host.card",
   ],
-  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog"],
+  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog", "host.card"],
   human_operator: [
     "identity.register",
     "identity.freeze",
@@ -1262,5 +1346,7 @@ export const ROLE_CAPABILITY: Record<
     "ledger.balances",
     "clearing.settle_window",
     "receipt.get",
+    "host.card",
+    "host.subscribe",
   ],
 };

@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 84 rules", () => {
-    expect(RULE_IDS).toHaveLength(84);
+  it("has 87 rules", () => {
+    expect(RULE_IDS).toHaveLength(87);
   });
 
   it("denies frozen actors", () => {
@@ -1705,6 +1705,11 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
   });
 
+  it("allows system to verify the notary", () => {
+    const d = evaluate(ctx({ commandType: "audit.verify", systemOk: true }));
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+  });
+
   it("does not name actor.system_scope when the speaker is a registered agent", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
@@ -3275,5 +3280,195 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mm.spread_bound");
+  });
+
+  it("does not escalate velocity.window on release after a hot settle hour", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.release",
+        hire: hire({ state: "delivered" }),
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).not.toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("not a spend");
+  });
+
+  it("does not escalate velocity.window on refund, submit, require, or deliver after a hot settle hour", () => {
+    for (const commandType of ["hire.refund", "envelope.submit", "envelope.require", "hire.deliver"] as const) {
+      const d = evaluate(
+        ctx({
+          commandType,
+          hire: hire({ state: commandType === "hire.refund" ? "funded" : "delivered" }),
+          velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+        }),
+      );
+      expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    }
+  });
+
+  it("still escalates a new hire after a hot settle hour as velocity.window", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]),
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "approval.threshold")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+    expect(remediationFor(d)?.kind).toBe("wait_approval");
+  });
+
+  it("still escalates fund after a hot settle hour as velocity.window", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.fund",
+        hire: hire({ state: "accepted" }),
+        cart: signedCart(),
+        payment: signedPayment(),
+        intent: signedIntent([]),
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "mandate.chain_integrity")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+  });
+
+  it("still escalates an FX settle after a hot settle hour as velocity.window", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+  });
+
+  it("does not escalate a catalog read after a hot settle hour", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "market.catalog",
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("not a spend");
+  });
+
+  it("counts spend at fund so a second fund of an already-funded hire is not a velocity event", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.fund",
+        hire: hire({ state: "funded" }),
+        cart: signedCart(),
+        payment: signedPayment(),
+        intent: signedIntent([]),
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        velocity: { windowSeconds: 3600, count: 21, volume: 0 },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.message).toBe("spend counted at fund");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+  });
+
+  it("still escalates a new hire when the hour is over the volume cap", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]),
+        velocity: { windowSeconds: 3600, count: 0, volume: 2_000_001 },
+      }),
+    );
+    expect(d.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "velocity.window")?.verdict).toBe("escalate");
+    expect(remediationFor(d)?.ruleId).toBe("velocity.window");
+  });
+
+  it("denies subscribe on the public kernel as host.not_hosted", () => {
+    const d = evaluate(ctx({ commandType: "host.subscribe", hostedOk: false }));
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("host.not_hosted");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name host.not_hosted on a hosted operator", () => {
+    const d = evaluate(ctx({ commandType: "host.subscribe", hostedOk: true }));
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
+  });
+
+  it("does not name host.not_hosted when the speaker is not subscribing", () => {
+    const d = evaluate(ctx({ commandType: "host.card" }));
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.message).toBe("not a host subscribe");
+  });
+
+  it("allows system to read the host card", () => {
+    const d = evaluate(ctx({ commandType: "host.card", systemOk: true }));
+    expect(d.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
+  });
+
+  it("denies hosted subscribe when the intent issuer is not human or treasury", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "host.subscribe",
+        hostedOk: true,
+        intentKnown: true,
+        hostIssuerOk: false,
+        subscribeUnique: true,
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "host.human_authority")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("host.human_authority");
+  });
+
+  it("denies a second hosted subscribe for the same agent", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "host.subscribe",
+        hostedOk: true,
+        intentKnown: true,
+        hostIssuerOk: true,
+        subscribeUnique: false,
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "host.unique_subscriber")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("host.unique_subscriber");
+  });
+
+  it("allows hosted subscribe when the issuer is human and the subscriber is free", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "host.subscribe",
+        hostedOk: true,
+        intentKnown: true,
+        hostIssuerOk: true,
+        subscribeUnique: true,
+        intent: signedIntent([]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "host.human_authority")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.unique_subscriber")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "host.not_hosted")?.verdict).toBe("allow");
   });
 });

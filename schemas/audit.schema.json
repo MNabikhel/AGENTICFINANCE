@@ -27,7 +27,8 @@
         "JOURNAL_POST",
         "RECEIPT_ISSUE",
         "FREEZE",
-        "AUDIT_VERIFY"
+        "AUDIT_VERIFY",
+        "HOST_SUBSCRIBE"
       ]
     },
     "subjects": {

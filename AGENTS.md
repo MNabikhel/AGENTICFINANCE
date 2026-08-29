@@ -2,23 +2,25 @@
 
 Aether is an economic runtime for software agents. Humans write permission. Agents hire and pay. A deterministic policy kernel says `allow`, `deny`, or `escalate`. An append-only audit log records every decision. There is no live bank or chain. Rail: `sim:aether-1`. Money: integer minor units (`USD_SIM`, `USDC_SIM`).
 
-Pin `aether.protocol.1` (`GET /v1/protocol`, resource `aether://protocol`, tool `aether_protocol`). `liveMoney` is `false` until adapters exist. Current card: `0.85.0`.
+Pin `aether.protocol.1` (`GET /v1/protocol`, `GET /.well-known/aether.json`, resource `aether://protocol` / `aether://host`, tool `aether_protocol` / `aether_host_card`). `liveMoney` is `false` until adapters exist. `evaluateLlm` is `false`. `hosted` is `false` on this public kernel. Current card: `0.95.0`.
 
 Do not put an LLM in `evaluate()`. Do not skip rungs. L5 is not god mode.
 
-## There is no finish date
+## Pin this
 
-This is a kernel. You extend it. Public protocol and live money are different switches.
+This sim kernel is what other agents run. Public protocol and live money are different switches. Further protocol bumps are not the default workstream.
 
-- **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch.
+- **Public (now):** other agents speak MCP/HTTP, pin the spec, run a durable sim (`AETHER_DATA_DIR`). The GitHub repo being public is a human visibility switch, not a runtime switch. This kernel is meant to be public so others can trust the referee.
 - **Live money (later):** adapters on these objects (x402 / MPP / AP2 / TAP) plus credentials that never enter `evaluate()`. Until then `instrument.sim_only` denies anything else.
+- **Hosted operator:** production durability, approvals, identity, security, and those adapters as a paid service. Construct `Runtime({ hosted: true })` or `AETHER_HOSTED=true`. That instance records `host.subscribe` against a live human-issued intent (one subscriber, one row). Spend is not gated on the row. Self-host of this kernel is free (`pricing.selfHost.amount` is 0). `host.subscribe` on this public kernel is `host.not_hosted`. GitHub is not a checkout.
 
 ## Speak to it
 
 ```
 pnpm mcp                 # stdio MCP (Content-Length JSON-RPC)
 POST /v1/*               # same commands over HTTP
-GET  /v1/protocol        # pin-able card
+GET  /v1/protocol        # pin-able host card
+GET  /.well-known/aether.json
 AETHER_DATA_DIR=./data pnpm mcp   # durable world.json + audit.jsonl
 ```
 
@@ -27,11 +29,14 @@ Every mutating verb is a `Command`: `{ type, actorId, body, idempotencyKey? }`. 
 MCP tools map 1:1 onto `CommandType` plus:
 
 - `aether_snapshot` / resource `aether://snapshot`
-- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil`. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `dlg_` hop includes derived status (`live | expired | revoked`).
-- `aether_protocol` / resource `aether://protocol`
+- `aether_get` `{ id }` — one hire, mandate, agent, receipt, ticket, quote… by id or alias. Also `GET /v1/objects/:id`. A `qte_` quote includes derived status (`live | expired | spent | held`). Expired includes a lapsed FX `validUntil` and, for a hire quote, a dead parent RFQ. An FX quote is a window on the quote, not the room. A `rfq_` room includes derived status (`live | expired`). A `mid_` intent includes derived status (`live | expired | funded`). Funded (escrow moved against this slip, including later refund/release) wins over expired. A child hire does not occupy the parent. Expired includes a dead parent intent even when this child's `exp` still lives. A `mid_` cart includes derived status (`live | expired | bound`). Bound is unique_payment occupancy and wins over expired. A `mid_` payment includes derived status (`live | expired | funded`). Funded (escrow moved, including later refund/release) wins over expired. Expired includes a dead parent cart even when this check's `exp` still lives. A `dlg_` hop includes derived status (`live | expired | revoked`).
+- `aether_protocol` / resource `aether://protocol` / `aether://host` / tool `aether_host_card` — pin-able host card (pricing, capabilities, hosted). `host.subscribe` on this kernel is `host.not_hosted`. A hosted operator records a unique subscriber against a live human-issued intent.
 - `aether://commands` — JSON Schema for every command body
 - `aether_market_catalog` / `GET /v1/catalog` — SKUs that may be hired
 - `aether_audit_query` / `GET /v1/audit?subject=` — notary lines for one id
+- `aether_audit_verify` / `GET /v1/audit/verify` — replay the hash chain. System may. A vendor cannot. Writes POLICY_DECISION. Not a silent peek.
+- `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
+- `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
 - `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
 
@@ -43,7 +48,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on fund (`hire.fund`). Submit verifies signatures and hashes; expiry was checked at fund. Completing a funded hire after the cart or payment window is legal.
-3. 84 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 87 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`). Completing a funded hire after the hop expires, or after a climb above the grant, is legal; freeze and revoke still bind.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -98,7 +103,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 55. Settling FX with no market maker (or missing `market_maker:cash_usd` / `market_maker:cash_usdc`) is `mm.known`. A window is not a journal against nobody. Ghost quote stays `market.fx_quote`. Vendor without a USDC book stays `ledger.known_account`. Empty MM USDC stays `mm.inventory`.
 56. A command whose `actorId` is not `system` and is not a registered agent is `actor.known`. A missing speaker is not a 500. Named *targets* (freeze, handshake, merchant, subject, RFQ invitee) stay `identity.known`.
 57. A journal that would leave a touched book outside `Number.isSafeInteger` is `ledger.safe_balance`. IEEE rounding is not a mint. Overdraft stays `ledger.sufficient`. Ghost book stays `ledger.known_account`. Restore of old worlds still applies historical journals; a new post does not.
-58. `system` is the runtime, not a treasurer (`actor.system_scope`). It may bootstrap the first human and read the catalog, the notary, balances, and receipts. It cannot spend, freeze, or mint further agents. HTTP/MCP omitting actor still becomes system; this rule is the fence.
+58. `system` is the runtime, not a treasurer (`actor.system_scope`). It may bootstrap the first human and read the catalog, the notary (query and verify), balances, receipts, and the host card. It cannot spend, freeze, or mint further agents. HTTP/MCP omitting actor still becomes system; this rule is the fence.
 59. A transfer that would journal against equity or escrow is `ledger.operating_book`. Opening cash is `seedOpening`. Escrow moves through `hire.fund` / refund / release. Overdraft stays `ledger.sufficient`. Dest overflow of operating cash stays `ledger.safe_balance`. Ghost book stays `ledger.known_account`. A transfer is not a mint, and it cannot pick the escrow lock.
 60. A data vendor’s `key:usdc` and a market maker’s `market_maker:cash_usdc` belong to that agent, not system. Register writes `ownerId` after the id exists. A USDC name collision is `identity.unique_key`, not `account exists` after opening USD cash. Restore of old worlds may still show system as owner; a new register does not.
 61. L5 is not a birthright (`ladder.birth_rung`). `identity.register` may mint L0–L4. L5 is a climb (`ladder.set` 4→5) after a freeze that was actually tested. Listing the gate names is not the test. A reused alias stays `identity.unique_key`. Skipping a rung on an existing agent stays `ladder.legal`. System minting a second agent stays `actor.system_scope`.
@@ -126,6 +131,16 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 83. Completing a funded hire after the KYA hop expires is legal. `kya.attestation_fresh` binds new spends (`hire.create`, `hire.fund`, `mandate.issue_intent`). Deliver, release, refund, require, and submit after that window are not a trapped escrow. Freeze of the principal and revoke still bind. Unique_live still occupies. A nested hop whose parent died still names `kya.parent_fresh` on a new hire.
 84. Completing a funded hire after a climb above the handshake ceiling is legal. `kya.capability_subset` binds new spends (`hire.create`, `hire.fund`, `kya.attest`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. Freeze and revoke still bind. An expired hop still names `kya.attestation_fresh` first on a new hire.
 85. Completing a funded hire after a climb above the permission-slip ceiling is legal. `ladder.max_autonomy_constraint` binds new spends (`hire.create`, `hire.fund`). Deliver, release, refund, require, and submit after that climb are not a trapped escrow. A handshake grant below the climb still names `kya.capability_subset` on a new hire, but the slip ceiling is first.
+86. Completing a funded hire after a hot settle hour is legal. `velocity.window` binds new spends (`hire.create`, `hire.fund`, `market.fx_settle`). Deliver, release, refund, require, submit, accept, and reads after that hour are not a trapped escrow and are not a grown-up pause. A new hire, fund, or FX settle still asks a grown-up.
+87. Fetching one payment by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `funded`. Funded (escrow moved, including later refund/release) wins over expired. A cart that this payment occupies is not funded — that occupancy lives on the cart (`bound`). The store stays raw. Snapshot uses the same derivation and lists payments. A second payment still names `mandate.unique_payment`. Fund of a stale unpaid payment still names `mandate.chain_integrity`.
+88. Fetching one intent by id (`aether_get` / `GET /v1/objects/mid_*`) labels it `live`, `expired`, or `funded`. Funded (escrow moved against this slip, including later refund/release) wins over expired. A child hire does not occupy the parent. Recurrence spend is not occupancy. The store stays raw (`exp` only). Snapshot uses the same derivation (signed view, not payload-only). A new hire against a stale unused slip still names `mandate.not_expired`. Completing a funded hire after the seven-day window is legal.
+89. Other agents discover this referee by pinning the host card (`host.card` / `GET /v1/protocol` / `GET /.well-known/aether.json`). `evaluateLlm` is false. `hosted` is false on this public kernel. Self-host is free. `host.subscribe` is `host.not_hosted`. System may read the card. A vendor subscribe stays `actor.role_capability`. System subscribe stays `actor.system_scope`. GitHub is not a checkout. Live adapters (AP2 / x402 / MPP) are shape-only until `liveMoney`. Humans establish identity, budget, and authority first.
+90. A hosted operator (`Runtime({ hosted: true })` / `AETHER_HOSTED=true`) records `host.subscribe` as a unique subscriber (`hsb_`) against a live intent issued by a human_operator or treasury. The speaker must be the intent subject. Ghost slip is `mandate.known_intent`. Expired slip is `mandate.not_expired`. Agent-issued slip is `host.human_authority`. A second row is `host.unique_subscriber`. System subscribe stays `actor.system_scope`. The public kernel pin stays `hosted: false`. Spend is not gated on the row. The store stays raw. Old worlds boot without `subscriptions` (`WORLD_VERSION` stays 1).
+91. Fetching one RFQ by id (`aether_get` / `GET /v1/objects/rfq_*`) labels it `live` or `expired`. A dead room is not an open room. The store stays raw (`expiresAt` only). Snapshot uses the same derivation. A hire quote whose parent RFQ died is `expired` even if the quote envelope still lives (spent and held still win). An FX quote is a window on the quote, not the room — RFQ death does not expire it. Quoting or hiring against a stale room still names `market.not_expired`.
+92. `GET /v1/audit/verify` is `audit.verify` on the command bus. System may verify the notary (same as catalog / audit.query). A vendor POST stays `actor.role_capability`. The check writes `POLICY_DECISION` and `AUDIT_VERIFY`. There is no anonymous bypass of `evaluate()`. MCP omit-actor is the same speaker as HTTP GET.
+93. A payment whose parent cart died is not live. Inspect and snapshot label that unpaid check `expired` even when its own `exp` still lives. Funded still wins (complete-after-fund). Bound occupancy still lives on the cart. The store stays raw. Fund of that unpaid chain still names `mandate.chain_integrity`.
+94. A child slip whose parent died is not live. Inspect and snapshot label that unpaid child `expired` even when its own `exp` still lives. Funded still wins (complete-after-fund). A child hire does not occupy the parent. The store stays raw. Hire or fund against that unpaid child still names `mandate.parent_fresh`. The child's own expiry stays `mandate.not_expired` when the parent still lives.
+95. `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}` are `ledger.balances` and `receipt.get` on the command bus as system. They are not `ops-human`. System may read the books and receipts (same as catalog / audit). A missing founder is not `actor.known` on those GETs. A frozen founder is not `actor.not_frozen`. A ghost book is `ledger.known_account`. A ghost receipt is `receipt.known`. The check writes `POLICY_DECISION`. MCP omit-actor is the same speaker as HTTP GET.
 
 ## Autonomy
 

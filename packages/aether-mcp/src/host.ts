@@ -81,6 +81,13 @@ function dataDir(): string | undefined {
   return dir && dir.length > 0 ? dir : undefined;
 }
 
+function hostedOpt(): { hosted: boolean } | Record<string, never> {
+  const v = process.env.AETHER_HOSTED;
+  if (v === "true" || v === "1") return { hosted: true };
+  if (v === "false" || v === "0") return { hosted: false };
+  return {};
+}
+
 function boot(): Runtime {
   const dir = dataDir();
   return new Runtime({
@@ -88,6 +95,7 @@ function boot(): Runtime {
     genesisNonce: "01J6AETHERGENESISMCP00000001",
     dailyLimit: 10_000_000,
     ...(dir ? { dataDir: dir } : {}),
+    ...hostedOpt(),
   });
 }
 
@@ -166,12 +174,12 @@ export class AetherMcp {
           })),
           {
             name: "aether_snapshot",
-            description: "Read-only runtime snapshot: agents, mandates, carts, hires, KYA, clearing, audit head. Carts include derived live | expired | bound.",
+            description: "Read-only runtime snapshot: agents, mandates, carts, payments, hires, KYA, clearing, audit head. Intents include derived live | expired | funded (a child whose parent died is expired). Carts include derived live | expired | bound. Payments include derived live | expired | funded (a payment whose parent cart died is expired). RFQs include derived live | expired. Quotes include derived live | expired | spent | held (a hire quote in a dead room is expired).",
             inputSchema: { type: "object", properties: {} },
           },
           {
             name: "aether_get",
-            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A dlg_ hop includes derived status (live | expired | revoked).",
+            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ. An FX quote is a window on the quote, not the room. A rfq_ room includes derived status (live | expired). A mid_ intent includes derived status (live | expired | funded). Funded is escrow-moved occupancy against this slip and wins over expired. Expired includes a dead parent intent even when this child's exp still lives. A child hire does not occupy the parent. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A mid_ payment includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. Expired includes a dead parent cart even when this check's exp still lives. A dlg_ hop includes derived status (live | expired | revoked).",
             inputSchema: {
               type: "object",
               properties: { id: { type: "string" } },
@@ -180,7 +188,7 @@ export class AetherMcp {
           },
           {
             name: "aether_protocol",
-            description: "Pin-able protocol card. liveMoney is false until adapters exist.",
+            description: "Pin-able protocol card. liveMoney is false until adapters exist. evaluateLlm is false. hosted is false on this public kernel.",
             inputSchema: { type: "object", properties: {} },
           },
           {
@@ -197,6 +205,11 @@ export class AetherMcp {
           {
             uri: "aether://protocol",
             name: "protocol card",
+            mimeType: "application/json",
+          },
+          {
+            uri: "aether://host",
+            name: "host card (same pin as protocol: pricing, capabilities, hosted)",
             mimeType: "application/json",
           },
           {
@@ -219,7 +232,7 @@ export class AetherMcp {
     }
     if (method === "resources/read") {
       const uri = (params as { uri?: string })?.uri;
-      if (uri === "aether://protocol") {
+      if (uri === "aether://protocol" || uri === "aether://host") {
         return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(this.runtime.protocolCard()) }] };
       }
       if (uri === "aether://snapshot") {

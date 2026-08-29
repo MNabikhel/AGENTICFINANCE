@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.85.0
+  version: 0.95.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
     402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
@@ -128,12 +128,14 @@ paths:
     get:
       operationId: ledgerBalances
       responses:
-        "200": { description: Balances }
+        "200": { description: Named book. Same command as MCP aether_ledger_balances. System speaker. Writes POLICY_DECISION. Not ops-human. }
+        "422": { description: ledger.known_account for a missing book. }
   /v1/receipts/{id}:
     get:
       operationId: receiptGet
       responses:
-        "200": { description: Receipt }
+        "200": { description: One receipt. Same command as MCP aether_receipt_get. System speaker. Writes POLICY_DECISION. Not ops-human. }
+        "422": { description: receipt.known for a missing receipt. }
   /v1/demo/sub-hire:
     post:
       operationId: demoSubHire
@@ -144,7 +146,23 @@ paths:
     get:
       operationId: protocolCard
       responses:
-        "200": { description: Pin-able aether.protocol.1 card. liveMoney is false until adapters exist. }
+        "200": { description: Pin-able aether.protocol.1 host card. liveMoney false. evaluateLlm false. hosted false on this public kernel. }
+  /.well-known/aether.json:
+    get:
+      operationId: wellKnownHostCard
+      responses:
+        "200": { description: Same pin as GET /v1/protocol. Machine discovery. }
+  /v1/host/card:
+    post:
+      operationId: hostCard
+      responses:
+        "200": { description: Same pin via the command bus. System may read it. }
+  /v1/host/subscribe:
+    post:
+      operationId: hostSubscribe
+      responses:
+        "200": { description: Hosted operator recorded a unique subscriber against a live human-issued intent. }
+        "422": { description: host.not_hosted on this public kernel; hosted also names mandate.known_intent, mandate.not_expired, host.human_authority, host.unique_subscriber. GitHub is not a checkout. }
   /v1/catalog:
     get:
       operationId: marketCatalog
@@ -174,7 +192,7 @@ paths:
     get:
       operationId: inspect
       responses:
-        "200": { description: One object by id or alias. A cart includes derived live | expired | bound. }
+        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. Funded wins. }
         "404": { description: Unknown id }
   /v1/hires/{id}:
     get:
@@ -193,10 +211,15 @@ paths:
       responses:
         "200": { description: Runtime snapshot }
   /v1/audit/verify:
+    get:
+      operationId: auditVerifyGet
+      responses:
+        "200": { description: Chain ok or first failure. Same command as POST. System speaker. Writes POLICY_DECISION and AUDIT_VERIFY. Not a silent peek. }
     post:
       operationId: auditVerify
       responses:
-        "200": { description: Chain ok or first failure }
+        "200": { description: Chain ok or first failure. Same command as GET. Auditor, treasury, human_operator, and system may verify. }
+        "422": { description: actor.role_capability for a vendor. }
   /openapi.json:
     get:
       operationId: openapi

@@ -38,6 +38,7 @@ import type {
   AutonomyLevel,
   CartMandate,
   CartStatus,
+  PaymentStatus,
   Command,
   CommandType,
   CurrencyCode,
@@ -45,8 +46,10 @@ import type {
   DelegationId,
   HireContract,
   HireId,
+  HostSubscription,
   Instant,
   IntentMandate,
+  IntentStatus,
   JournalEntry,
   KyaIssuerKind,
   KyaHopStatus,
@@ -64,7 +67,9 @@ import type {
   Receipt,
   Result,
   Rfq,
+  RfqStatus,
   Signed,
+  SubscriptionId,
   WindowId,
 } from "@aether/types";
 import { err } from "@aether/kernel";
@@ -224,10 +229,12 @@ export class Runtime {
   readonly kya = new DelegationGraph();
   readonly killSwitchTested = new Set<AgentId>();
   readonly idempotency = new Map<string, DispatchResult>();
+  readonly subscriptions = new Map<SubscriptionId, HostSubscription>();
   circuitTripped = false;
   tldr = IDLE_TLDR;
   analogDoc: Analog = analog();
   readonly genesisNonce: string;
+  readonly hosted: boolean;
   readonly dataDir?: string;
   private readonly worldPath?: string;
 
@@ -238,6 +245,8 @@ export class Runtime {
     auditPath?: string;
     ledgerPath?: string;
     dataDir?: string;
+    /** Hosted operator. Default is `PROTOCOL.hosted` (false) or the restored world's flag. */
+    hosted?: boolean;
   }) {
     const worldPath = opts.dataDir ? join(opts.dataDir, "world.json") : undefined;
     const existing =
@@ -245,6 +254,7 @@ export class Runtime {
     this.clock = new ManualClock(existing?.clock ?? opts.startIso);
     this.ids = new IdFactory(this.clock);
     this.genesisNonce = existing?.genesisNonce ?? opts.genesisNonce;
+    this.hosted = opts.hosted ?? existing?.hosted ?? PROTOCOL.hosted;
     this.dataDir = opts.dataDir;
     this.worldPath = worldPath;
     if (opts.dataDir) mkdirSync(opts.dataDir, { recursive: true });
@@ -435,14 +445,16 @@ export class Runtime {
         ...a,
         balance: this.ledger.balance(a.id),
       })),
-      intents: [...this.intents.values()].map((s) => s.payload),
+      intents: [...this.intents.values()].map((s) => this.intentView(s)),
       spentByIntent: Object.fromEntries(this.spentByIntent),
       carts: [...this.carts.values()].map((c) => this.cartView(c)),
+      payments: [...this.payments.values()].map((p) => this.paymentView(p)),
       hires: [...this.hires.values()],
-      rfqs: [...this.rfqs.values()],
+      rfqs: [...this.rfqs.values()].map((r) => this.rfqView(r)),
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
+      subscriptions: [...this.subscriptions.values()],
       story: this.story,
       analog: this.analogDoc,
       tldr: this.tldr,
@@ -484,8 +496,9 @@ export class Runtime {
 
   /**
    * Quote view for other agents. Spent (consumed) and held (live reserved ticket)
-   * win over expired. Expired includes the quote envelope and a lapsed FX validUntil.
-   * A reservation whose ticket is past expiresAt is not held.
+   * win over expired. Expired includes the quote envelope, a lapsed FX validUntil,
+   * and (for a hire quote) a dead parent RFQ. An FX quote is a window on the quote,
+   * not the room. A reservation whose ticket is past expiresAt is not held.
    * The store stays raw (expiresAt / validUntil only).
    */
   quoteView(quote: Quote): Quote & { status: QuoteStatus } {
@@ -510,8 +523,24 @@ export class Runtime {
       if (!Number.isFinite(until) || until <= now) {
         return { ...quote, status: "expired" };
       }
+    } else {
+      const rfq = this.rfqs.get(quote.rfqId);
+      if (!rfq || Date.parse(rfq.expiresAt) <= now) {
+        return { ...quote, status: "expired" };
+      }
     }
     return { ...quote, status: "live" };
+  }
+
+  /**
+   * RFQ view for other agents. A room past expiresAt is `expired`, not `live`.
+   * The store stays raw (expiresAt only). Quoting or hiring still names `market.not_expired`.
+   */
+  rfqView(rfq: Rfq): Rfq & { status: RfqStatus } {
+    if (Date.parse(rfq.expiresAt) <= Date.parse(this.clock.now())) {
+      return { ...rfq, status: "expired" };
+    }
+    return { ...rfq, status: "live" };
   }
 
   /**
@@ -528,22 +557,91 @@ export class Runtime {
     return { ...cart, status: "live" };
   }
 
+  /**
+   * Payment view for other agents. A payment whose hire has moved escrow is
+   * `funded`, not `live`. Funded wins over expired (refunded and released still
+   * funded — the mandate was drawn). Expired includes the payment `exp` and a
+   * dead parent cart, even when this check's own window still lives. A cart this
+   * payment occupies is not funded — that occupancy lives on the cart (`bound`).
+   * The store stays raw (`exp` only).
+   */
+  paymentView(payment: Signed<PaymentMandate>): Signed<PaymentMandate> & { status: PaymentStatus } {
+    if (this.hireDrawnPayment(payment)) return { ...payment, status: "funded" };
+    if (payment.payload.exp <= unixSeconds(this.clock.now())) {
+      return { ...payment, status: "expired" };
+    }
+    const cart = this.cartMatchingPayment(payment);
+    if (!cart || Date.parse(cart.payload.expiresAt) <= Date.parse(this.clock.now())) {
+      return { ...payment, status: "expired" };
+    }
+    return { ...payment, status: "live" };
+  }
+
+  /**
+   * Intent view for other agents. A slip whose hire has moved escrow is
+   * `funded`, not `live`. Funded wins over expired (refunded and released still
+   * funded — the slip was drawn). Expired includes the slip `exp` and a dead
+   * parent intent, even when this child's own window still lives. A child hire
+   * does not occupy the parent. Recurrence spend is not occupancy. The store
+   * stays raw (`exp` only).
+   */
+  intentView(intent: Signed<IntentMandate>): Signed<IntentMandate> & { status: IntentStatus } {
+    if (this.hireDrawnIntent(intent)) return { ...intent, status: "funded" };
+    if (intent.payload.exp <= unixSeconds(this.clock.now())) {
+      return { ...intent, status: "expired" };
+    }
+    if (intent.payload.parentId) {
+      const parent = this.intents.get(intent.payload.parentId);
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+        return { ...intent, status: "expired" };
+      }
+    }
+    return { ...intent, status: "live" };
+  }
+
   protocolCard() {
     return {
       ...PROTOCOL,
+      hosted: this.hosted,
       durable: Boolean(this.worldPath),
       dataDir: this.dataDir ?? null,
       clock: this.clock.now(),
       auditHead: this.audit.head(),
       auditLength: this.audit.length,
+      discovery: {
+        wellKnown: "/.well-known/aether.json",
+        protocol: "/v1/protocol",
+        commands: "/v1/commands",
+        mcp: "aether://protocol",
+      },
+      pricing: {
+        currency: "USD_SIM" as const,
+        selfHost: { amount: 0 },
+        hostedMonthly: null,
+      },
+      authority: {
+        bootstrap: "human_operator" as const,
+        subscribe: "host.subscribe" as const,
+        subscribeAvailable: this.hosted,
+      },
     };
   }
 
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
-   * aid_ agent, hid_ hire, mid_ mandate (carts include derived live | expired | bound;
-   * bound is unique_payment occupancy and wins over expired), rid_ receipt, apd_ approval,
-   * rfq_ / qte_ market (qte_ includes derived live | expired | spent | held; expired includes a lapsed FX validUntil), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked).
+   * aid_ agent, hid_ hire, mid_ mandate (intents include derived live | expired | funded;
+   * funded is escrow-moved occupancy against this slip and wins over expired;
+   * expired includes a dead parent intent even when this child's `exp` still lives;
+   * a child hire does not occupy the parent;
+   * carts include derived live | expired | bound;
+   * bound is unique_payment occupancy and wins over expired; payments include derived
+   * live | expired | funded; funded is escrow-moved occupancy and wins over expired;
+   * expired includes a dead parent cart even when the payment `exp` still lives),
+   * rid_ receipt, apd_ approval, rfq_ / qte_ market (rfq_ includes derived live | expired;
+   * qte_ includes derived live | expired | spent | held;
+   * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
+   * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
+   * hsb_ host subscription (raw; spend is not gated on the row).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -558,11 +656,11 @@ export class Runtime {
     }
     if (id.startsWith("mid_")) {
       const intent = this.intents.get(id as MandateId);
-      if (intent) return { type: "intent", id, value: intent };
+      if (intent) return { type: "intent", id, value: this.intentView(intent) };
       const cart = this.carts.get(id as MandateId);
       if (cart) return { type: "cart", id, value: this.cartView(cart) };
       const payment = this.payments.get(id as MandateId);
-      if (payment) return { type: "payment", id, value: payment };
+      if (payment) return { type: "payment", id, value: this.paymentView(payment) };
       return undefined;
     }
     if (id.startsWith("rid_")) {
@@ -575,7 +673,7 @@ export class Runtime {
     }
     if (id.startsWith("rfq_")) {
       const rfq = this.rfqs.get(id);
-      return rfq ? { type: "rfq", id: rfq.id, value: rfq } : undefined;
+      return rfq ? { type: "rfq", id: rfq.id, value: this.rfqView(rfq) } : undefined;
     }
     if (id.startsWith("qte_")) {
       const quote = this.quotes.get(id);
@@ -584,6 +682,10 @@ export class Runtime {
     if (id.startsWith("dlg_")) {
       const att = this.kya.attestations.get(id as DelegationId);
       return att ? { type: "delegation", id: att.id, value: this.hopView(att) } : undefined;
+    }
+    if (id.startsWith("hsb_")) {
+      const sub = this.subscriptions.get(id as SubscriptionId);
+      return sub ? { type: "subscription", id: sub.id, value: sub } : undefined;
     }
     if (id.startsWith("acct_")) {
       const account = [...this.ledger.accounts.values()].find((a) => a.id === id);
@@ -662,6 +764,8 @@ export class Runtime {
       clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.windows },
       killSwitchTested: [...this.killSwitchTested],
       idempotency: [...this.idempotency.entries()],
+      hosted: this.hosted,
+      subscriptions: [...this.subscriptions.values()],
     };
   }
 
@@ -737,6 +841,8 @@ export class Runtime {
     for (const id of world.killSwitchTested) this.killSwitchTested.add(id);
     this.idempotency.clear();
     for (const [k, v] of world.idempotency ?? []) this.idempotency.set(k, v as DispatchResult);
+    this.subscriptions.clear();
+    for (const s of world.subscriptions ?? []) this.subscriptions.set(s.id, s);
   }
 
   private systemActor(): Agent {
@@ -974,6 +1080,19 @@ export class Runtime {
     }
     if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart") {
       ctx.intentKnown = Boolean(intent);
+    }
+    if (cmd.type === "host.subscribe") {
+      ctx.hostedOk = this.hosted;
+      if (this.hosted && cmd.actorId !== "system") {
+        ctx.intentKnown = Boolean(intent);
+        if (intent) {
+          const issuer = this.identity.get(intent.payload.issuerId);
+          ctx.hostIssuerOk = Boolean(
+            issuer && (issuer.role === "human_operator" || issuer.role === "treasury"),
+          );
+          ctx.subscribeUnique = ![...this.subscriptions.values()].some((s) => s.subscriberId === actor.id);
+        }
+      }
     }
     if (cmd.type === "mandate.issue_payment") {
       ctx.cartKnown = Boolean(cart);
@@ -1264,6 +1383,15 @@ export class Runtime {
       );
       if (nested !== undefined) ctx.kyaParentFresh = nested;
     }
+    ctx.kya = this.resolveKya(cmd, actor, intent, body, parentIntent, hire, ctx);
+    if (KYA_NESTED_SPEND.has(cmd.type)) {
+      const nested = nestedKyaParentsLive(
+        ctx.kya.hops,
+        (id) => this.kya.attestations.get(id),
+        this.clock.now(),
+      );
+      if (nested !== undefined) ctx.kyaParentFresh = nested;
+    }
     return ctx;
   }
 
@@ -1503,10 +1631,11 @@ export class Runtime {
   }
 
   private lookupIntent(
-    _cmd: Command,
+    cmd: Command,
     body: Record<string, unknown>,
     hire?: HireContract,
   ): Signed<IntentMandate> | undefined {
+    if (cmd.type === "host.subscribe" && (!this.hosted || cmd.actorId === "system")) return undefined;
     const id = (body.intentId as MandateId | undefined) ?? hire?.intentId;
     return id ? this.intents.get(id) : undefined;
   }
@@ -1532,7 +1661,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -1634,6 +1763,10 @@ export class Runtime {
         return this.mutAuditQuery(body);
       case "market.catalog":
         return { skus: CATALOG };
+      case "host.card":
+        return this.protocolCard();
+      case "host.subscribe":
+        return this.mutHostSubscribe(body, actor);
       case "receipt.get": {
         const receipt = this.receipts.get(String(body.receiptId));
         if (!receipt) throw new Error("unknown receipt");
@@ -1642,6 +1775,32 @@ export class Runtime {
       default:
         throw new Error(`unhandled ${cmd.type}`);
     }
+  }
+
+  private mutHostSubscribe(body: Record<string, unknown>, actor: Agent): HostSubscription {
+    if (!this.hosted) throw new Error("not hosted");
+    if (typeof body.intentId !== "string" || body.intentId.length === 0) {
+      throw new Error("missing intent");
+    }
+    const row: HostSubscription = {
+      id: this.ids.next("hsb") as SubscriptionId,
+      subscriberId: actor.id,
+      intentId: body.intentId as MandateId,
+      createdAt: this.clock.now(),
+    };
+    this.subscriptions.set(row.id, row);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "HOST_SUBSCRIBE",
+      subjects: [
+        { type: "subscription", id: row.id },
+        { type: "intent", id: row.intentId },
+        { type: "agent", id: actor.id },
+      ],
+      payload: { id: row.id, subscriberId: actor.id, intentId: row.intentId },
+    });
+    return row;
   }
 
   private mutRegister(body: Record<string, unknown>, actor: Agent) {
@@ -2505,6 +2664,49 @@ export class Runtime {
       if (p.payload.transaction_id === hash) return p;
     }
     return undefined;
+  }
+
+  private cartMatchingPayment(payment: Signed<PaymentMandate>): Signed<CartMandate> | undefined {
+    for (const c of this.carts.values()) {
+      if (cartHash(c.payload) === payment.payload.transaction_id) return c;
+    }
+    return undefined;
+  }
+
+  /** Escrow moved against this slip. Refunded and released still count — the slip was drawn. */
+  private hireDrawnIntent(intent: Signed<IntentMandate>): boolean {
+    for (const hire of this.hires.values()) {
+      if (
+        hire.state !== "funded" &&
+        hire.state !== "delivered" &&
+        hire.state !== "released" &&
+        hire.state !== "refunded"
+      ) {
+        continue;
+      }
+      if (hire.intentId === intent.payload.id) return true;
+    }
+    return false;
+  }
+
+  /** Escrow moved using this payment. Refunded and released still count — the mandate was drawn. */
+  private hireDrawnPayment(payment: Signed<PaymentMandate>): boolean {
+    for (const hire of this.hires.values()) {
+      if (
+        hire.state !== "funded" &&
+        hire.state !== "delivered" &&
+        hire.state !== "released" &&
+        hire.state !== "refunded"
+      ) {
+        continue;
+      }
+      if (!hire.cartId) continue;
+      const cart = this.carts.get(hire.cartId);
+      if (!cart) continue;
+      const bound = this.paymentMatchingCart(cart);
+      if (bound?.payload.id === payment.payload.id) return true;
+    }
+    return false;
   }
 
   /** Live hire holds a cart, and that cart has a payment. A body cartId is not a bind. */

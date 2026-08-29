@@ -98,4 +98,4 @@ You can:
 
 1. Read this page.
 2. Run `pnpm demo` (shopping trip), `pnpm demo night-watch` (standing permission), and `pnpm demo sub-hire` (one agent handing a smaller slip to another).
-3. Come back for the next chapter — real payment rails as adapters, never as the brain. There is no finish date. Making the spec public and wiring a live bank are different steps, and only the first is a switch you can flip.
+3. Making the spec public is the switch you can flip now. Wiring a live bank is later, as adapters, never as the brain.
