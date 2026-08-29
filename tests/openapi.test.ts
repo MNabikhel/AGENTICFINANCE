@@ -210,7 +210,7 @@ describe("OpenAPI honesty", () => {
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {
     expect(spec).toContain("name: PAYMENT-SIGNATURE");
-    expect(spec).toContain("JSON body is the bus");
+    expect(spec).toContain("The command bus is the JSON body");
     expect(spec).toContain("Submits may carry PAYMENT-SIGNATURE");
     expect(spec).not.toMatch(/name: PAYMENT-SIGNATURE\s+required: true/);
   });

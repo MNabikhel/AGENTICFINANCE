@@ -1074,10 +1074,22 @@ describe("HTTP command bus", () => {
       }),
     });
     expect(founder.status).toBe(200);
+    const desk = await json("/v1/identities", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "ops-human",
+        key: "desk",
+        displayName: "Desk",
+        role: "procurement",
+        autonomyLevel: 3,
+      }),
+    });
+    expect(desk.status).toBe(200);
     const r = await json("/v1/payments/submit", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ actor: "ops-human", hireId: "hid_01J6AETHERGHOSTHIRE0000001", nonce: "n1" }),
+      body: JSON.stringify({ actor: "desk", hireId: "hid_01J6AETHERGHOSTHIRE0000001", nonce: "n1" }),
     });
     expect(r.status).toBe(422);
     expect((r.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("hire.known");
@@ -1093,6 +1105,7 @@ describe("HTTP command bus", () => {
       id: string;
       state: string;
       intentId: string;
+      sellerId: string;
       sku: string;
       price: { amount: number };
     }[];
@@ -1113,7 +1126,7 @@ describe("HTTP command bus", () => {
       body: JSON.stringify({
         actor: "desk",
         intentId: offered!.intentId,
-        merchantId: (snap.body.aliases as Record<string, { id: string }>)["research-vendor"]?.id,
+        merchantId: offered!.sellerId,
         hireId,
         line_items: [
           {
