@@ -53,6 +53,7 @@ import { loadFxWindow, runFxWindow } from "@aether/fx-window";
 import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
 import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
+import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -144,6 +145,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_subject",
   "aether_demo_paper",
   "aether_demo_mix",
+  "aether_demo_rung",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -636,6 +638,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_mix") {
       const report = runSameCurrency(loadSameCurrency("fixtures/demo/mix/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_rung") {
+      const report = runLadderLegal(loadLadderLegal("fixtures/demo/rung/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

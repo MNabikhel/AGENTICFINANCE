@@ -469,6 +469,12 @@ paths:
       responses:
         "200": { description: Mix TAP report. A mixed journal is not a conversion. }
         "500": { description: Assertions failed }
+  /v1/demo/rung:
+    post:
+      operationId: demoRung
+      responses:
+        "200": { description: Rung TAP report. A skipped rung is not a promotion. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

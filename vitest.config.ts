@@ -70,6 +70,7 @@ export default defineConfig({
       "@aether/intent-subject": path.resolve(__dirname, "packages/aether-runtime/src/intent-subject.ts"),
       "@aether/fx-quote": path.resolve(__dirname, "packages/aether-runtime/src/fx-quote.ts"),
       "@aether/same-currency": path.resolve(__dirname, "packages/aether-runtime/src/same-currency.ts"),
+      "@aether/ladder-legal": path.resolve(__dirname, "packages/aether-runtime/src/ladder-legal.ts"),
     },
   },
 });

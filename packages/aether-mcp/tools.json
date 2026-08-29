@@ -385,6 +385,11 @@
       "name": "aether_demo_mix",
       "commandType": "demo.mix",
       "description": "Run the mix TAP: a mixed journal is not a conversion. ledger.transfer of USD into a USDC book is ledger.same_currency; known books, operating cash, and source still allow; no journal posted; a real window still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_rung",
+      "commandType": "demo.rung",
+      "description": "Run the rung TAP: a skipped rung is not a promotion. ladder.set L2→L4 is ladder.legal; the scout still exists; a one-rung climb still goes through; funded work still finishes."
     }
   ]
 }

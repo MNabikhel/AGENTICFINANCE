@@ -157,6 +157,9 @@ export const PAPER_TLDR =
 export const MIX_TLDR =
   "A founder funded an $800 hire. Treasury posting USD into a USDC book was ledger.same_currency — the dest book, operating cash, and source still allow. A real window still converted. That funded work still released. A mixed journal is not a conversion.";
 
+export const RUNG_TLDR =
+  "A founder funded an $800 hire. Skipping L2→L4 on a scout was ladder.legal — the scout still exists, the founder may still set rungs. A one-rung climb still went through. That funded work still released. A skipped rung is not a promotion.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

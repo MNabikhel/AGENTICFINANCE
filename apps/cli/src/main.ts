@@ -46,6 +46,7 @@ import { loadFxWindow, runFxWindow } from "@aether/fx-window";
 import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
 import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
 import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
+import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
 
 const [, , command, name] = process.argv;
 
@@ -347,6 +348,12 @@ if (command === "demo" && (name === "mix" || name === "same-currency" || name ==
   process.exit(0);
 }
 
+if (command === "demo" && (name === "rung" || name === "skip-rung" || name === "ladder-legal")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/rung/scenario.json");
+  printReport(runLadderLegal(loadLadderLegal(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -399,5 +406,6 @@ usage:
   pnpm demo subject
   pnpm demo paper
   pnpm demo mix
+  pnpm demo rung
   pnpm mcp`);
 process.exit(command ? 1 : 0);
