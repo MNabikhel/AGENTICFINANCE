@@ -81,6 +81,20 @@ paths:
       responses:
         "200": { description: Live unused intent torn up. Store stays raw. Inspect labels revoked. }
         "422": { description: Policy deny. Stranger is mandate.party. Ghost intent is mandate.known_intent. Already ripped is mandate.not_expired. }
+  /v1/carts/{id}/dump:
+    post:
+      operationId: mandateRevokeCart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live unused cart torn up. Store stays raw. Inspect labels revoked. Occupancy on the hire frees. }
+        "422": { description: Policy deny. Stranger is mandate.cart_party. Ghost cart is mandate.known_cart. Already dumped or bound is mandate.not_expired. }
   /v1/mandates/cart:
     post:
       operationId: mandateIssueCart
@@ -807,6 +821,12 @@ paths:
       operationId: demoShut
       responses:
         "200": { description: Shut TAP report. Someone else's room is not yours to close. }
+        "500": { description: Assertions failed }
+  /v1/demo/dump:
+    post:
+      operationId: demoDump
+      responses:
+        "200": { description: Dump TAP report. Someone else's unused checkout is not yours to dump. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:

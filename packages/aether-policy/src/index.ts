@@ -220,6 +220,9 @@ export const RULES: readonly Rule[] = [
       if (ctx.intentWindowLive === false) {
         return v("mandate.not_expired", "deny", "intent revoked");
       }
+      if (ctx.cartWindowLive === false) {
+        return v("mandate.not_expired", "deny", "cart revoked");
+      }
       const nowSec = Math.floor(Date.parse(ctx.clock) / 1000);
       if (ctx.intent && ctx.intent.payload.exp <= nowSec) {
         return v("mandate.not_expired", "deny", "intent expired");
@@ -1377,6 +1380,15 @@ export const RULES: readonly Rule[] = [
         : v("market.rfq_party", "deny", "actor is not the named buyer");
     },
   },
+  {
+    id: "mandate.cart_party",
+    evaluate: (ctx) => {
+      if (ctx.cartPartyOk === undefined) return v("mandate.cart_party", "allow", "not a dump");
+      return ctx.cartPartyOk
+        ? v("mandate.cart_party", "allow", "actor is the named merchant, hire buyer, intent subject, or a kill-switch role")
+        : v("mandate.cart_party", "deny", "actor is not the named merchant or hire buyer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1717,6 +1729,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "Shut your own room, or ask a human or treasury. Someone else's RFQ is not yours to close. A missing room is market.known_rfq. A shut room is market.not_expired on quote or hire.create.",
   },
+  "mandate.cart_party": {
+    kind: "none",
+    hint: "Dump your own unused checkout, or ask a human or treasury. Someone else's cart is not yours to dump. A missing cart is mandate.known_cart. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal.",
+  },
   "clearing.bilateral_limit": {
     kind: "none",
     commandType: "clearing.settle_window",
@@ -1728,7 +1744,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.not_expired": {
     kind: "none",
-    hint: "That cart, payment, or slip window has closed. A ripped unused slip is this deny on a new hire. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart.",
+    hint: "That cart, payment, or slip window has closed. A ripped unused slip is this deny on a new hire. A dumped unused cart is this deny on a new payment. Bound dump is this deny, not a refund. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart.",
   },
 };
 

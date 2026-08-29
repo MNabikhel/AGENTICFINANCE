@@ -105,6 +105,16 @@
         }
       }
     },
+    "mandate.revoke_cart": {
+      "type": "object",
+      "required": ["cartId"],
+      "properties": {
+        "cartId": {
+          "type": "string",
+          "description": "Tear up a live unused cart. Merchant, hire buyer, intent subject, human, or treasury. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal."
+        }
+      }
+    },
     "mandate.issue_cart": {
       "type": "object",
       "required": ["intentId", "merchantId", "line_items"],

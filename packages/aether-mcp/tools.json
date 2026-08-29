@@ -32,6 +32,11 @@
       "description": "Tear up a live unused intent. Issuer, human, or treasury. Ghost slip stays mandate.known_intent. Stranger stays mandate.party. A ripped unused slip is mandate.not_expired on hire.create. Completing funded work is legal. Someone else's unused slip is not yours to tear."
     },
     {
+      "name": "aether_mandate_revoke_cart",
+      "commandType": "mandate.revoke_cart",
+      "description": "Tear up a live unused cart. Merchant, hire buyer, intent subject, human, or treasury. Ghost cart stays mandate.known_cart. Stranger stays mandate.cart_party. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal. Someone else's unused checkout is not yours to dump."
+    },
+    {
       "name": "aether_mandate_issue_cart",
       "commandType": "mandate.issue_cart",
       "description": "Issue a merchant-bound cart hashed to an intent. Completing a funded hire after the cart window is legal; fund of a stale cart is not."
@@ -640,6 +645,11 @@
       "name": "aether_demo_shut",
       "commandType": "demo.shut",
       "description": "Run the shut TAP: someone else's room is not yours to close. market.close of a live RFQ by a second desk is market.rfq_party; a missing room and an expired window still allow; market.party still allows; no RFQ_CLOSE line; the buyer still shuts its own room; hire.create of that shut room's quote is market.not_expired; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_dump",
+      "commandType": "demo.dump",
+      "description": "Run the dump TAP: someone else's unused checkout is not yours to dump. mandate.revoke_cart of a live unused cart by a second desk is mandate.cart_party; a missing cart and an expired window still allow; mandate.party still allows; no CART_REVOKE line; the buyer still dumps its own unused cart; issue_payment of that dumped cart is mandate.not_expired; occupancy frees; funded work still finishes."
     }
   ]
 }

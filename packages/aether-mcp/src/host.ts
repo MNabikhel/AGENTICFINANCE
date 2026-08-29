@@ -99,6 +99,7 @@ import { loadHireVoid, runHireVoid } from "@aether/hire-void";
 import { loadMarketParty, runMarketParty } from "@aether/market-party";
 import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
+import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -236,6 +237,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_fold",
   "aether_demo_rip",
   "aether_demo_shut",
+  "aether_demo_dump",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -958,6 +960,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_shut") {
       const report = runRfqParty(loadRfqParty("fixtures/demo/shut/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_dump") {
+      const report = runCartParty(loadCartParty("fixtures/demo/dump/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

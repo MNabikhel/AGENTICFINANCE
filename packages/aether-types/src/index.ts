@@ -318,11 +318,12 @@ export interface CartMandate {
 }
 
 /**
- * Inspect / snapshot view. Bound (unique_payment occupies) wins over expired.
+ * Inspect / snapshot view. Bound (unique_payment occupies) wins over revoked
+ * and expired. Revoked (torn by mandate.revoke_cart) wins over expired.
  * A hire that points at this cart is not bound — that occupancy lives on the hire.
- * The store stays raw.
+ * The store stays raw (`expiresAt` only).
  */
-export type CartStatus = "live" | "expired" | "bound";
+export type CartStatus = "live" | "expired" | "bound" | "revoked";
 
 /**
  * Inspect / snapshot view. Funded (escrow moved, including later refund/release)
@@ -824,7 +825,7 @@ export interface PolicyContext {
    */
   intentKnown?: boolean;
   /**
-   * False when issue_payment points at a cart that is not in this world.
+   * False when issue_payment or mandate.revoke_cart points at a cart that is not in this world.
    * Absent = command does not require a live cart.
    */
   cartKnown?: boolean;
@@ -927,6 +928,14 @@ export interface PolicyContext {
    */
   rfqPartyOk?: boolean;
   /**
+   * False when mandate.revoke_cart names a cart whose merchant, hire buyer, or
+   * intent subject is not the speaker, and the speaker is not a human or treasury.
+   * Absent = not a dump, or the cart is unknown (`cartKnown` handles that).
+   * A desk cannot dump someone else's checkout. Do not reuse `mandate.party` —
+   * that flag is the named issuer of an intent.
+   */
+  cartPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.
@@ -940,6 +949,15 @@ export interface PolicyContext {
    * A ripped unused slip is `mandate.not_expired` on a new hire, not occupancy.
    */
   intentWindowLive?: boolean;
+  /**
+   * False when issue_payment / hire.fund / mandate.revoke_cart would use a cart
+   * that mandate.revoke_cart already tore up, or when mandate.revoke_cart names a
+   * cart a payment already occupies. Absent = not those commands, or the cart is
+   * unknown (`cartKnown` handles that). Completing funded work after that is legal.
+   * A dumped unused cart is `mandate.not_expired` on a new payment, not occupancy.
+   * Bound is when a payment occupies it — dump of a bound cart is not a refund.
+   */
+  cartWindowLive?: boolean;
   /**
    * False when identity.register would reuse a runtime alias or its operating book
    * (USD cash, and USDC for data_vendor / market_maker).
@@ -1212,6 +1230,7 @@ export type AuditAction =
   | "LADDER_SET"
   | "MANDATE_ISSUE"
   | "MANDATE_REVOKE"
+  | "CART_REVOKE"
   | "RFQ_CREATE"
   | "RFQ_CLOSE"
   | "QUOTE_SUBMIT"
@@ -1280,6 +1299,7 @@ export type CommandType =
   | "circuit.reset"
   | "mandate.issue_intent"
   | "mandate.revoke"
+  | "mandate.revoke_cart"
   | "mandate.issue_cart"
   | "mandate.issue_payment"
   | "market.rfq"
@@ -1372,6 +1392,7 @@ export const ROLE_CAPABILITY: Record<
     "circuit.reset",
     "mandate.issue_intent",
     "mandate.revoke",
+    "mandate.revoke_cart",
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
@@ -1402,6 +1423,7 @@ export const ROLE_CAPABILITY: Record<
     "identity.rotate",
     "mandate.issue_intent",
     "mandate.revoke",
+    "mandate.revoke_cart",
     "kya.attest",
     "kya.revoke",
     "mandate.issue_cart",
@@ -1425,6 +1447,7 @@ export const ROLE_CAPABILITY: Record<
   ],
   data_vendor: [
     "identity.rotate",
+    "mandate.revoke_cart",
     "market.quote",
     "market.withdraw",
     "market.fx_settle",
@@ -1441,6 +1464,7 @@ export const ROLE_CAPABILITY: Record<
   ],
   compute_vendor: [
     "identity.rotate",
+    "mandate.revoke_cart",
     "market.quote",
     "market.withdraw",
     "market.fx_settle",
@@ -1481,6 +1505,7 @@ export const ROLE_CAPABILITY: Record<
     "circuit.reset",
     "mandate.issue_intent",
     "mandate.revoke",
+    "mandate.revoke_cart",
     "approval.resolve",
     "ladder.set",
     "audit.verify",

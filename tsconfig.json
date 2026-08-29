@@ -109,7 +109,8 @@
       "@aether/hire-void": ["packages/aether-runtime/src/hire-void.ts"],
       "@aether/market-party": ["packages/aether-runtime/src/market-party.ts"],
       "@aether/mandate-party": ["packages/aether-runtime/src/mandate-party.ts"],
-      "@aether/rfq-party": ["packages/aether-runtime/src/rfq-party.ts"]
+      "@aether/rfq-party": ["packages/aether-runtime/src/rfq-party.ts"],
+      "@aether/cart-party": ["packages/aether-runtime/src/cart-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

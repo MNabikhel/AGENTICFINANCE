@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 93 rules", () => {
-    expect(RULE_IDS).toHaveLength(93);
+  it("has 94 rules", () => {
+    expect(RULE_IDS).toHaveLength(94);
   });
 
   it("denies frozen actors", () => {
@@ -1059,6 +1059,61 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_cart first when dumping a missing checkout", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_cart");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies dumping someone else's unused checkout as mandate.cart_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: true,
+        cartWindowLive: true,
+        cartPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.cart_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a buyer dumping its own unused checkout as mandate.cart_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: true,
+        cartWindowLive: true,
+        cartPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
   });
 

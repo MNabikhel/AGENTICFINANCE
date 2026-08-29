@@ -95,7 +95,8 @@
     "./hire-void": "./src/hire-void.ts",
     "./market-party": "./src/market-party.ts",
     "./mandate-party": "./src/mandate-party.ts",
-    "./rfq-party": "./src/rfq-party.ts"
+    "./rfq-party": "./src/rfq-party.ts",
+    "./cart-party": "./src/cart-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

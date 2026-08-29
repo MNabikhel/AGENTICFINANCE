@@ -731,7 +731,7 @@ describe("cart inspect", () => {
     expect(again.error.decision?.remediation?.ruleId).toBe("mandate.unique_payment");
   });
 
-  it("labels a hire-attached cart live until a payment occupies it", () => {
+  it("labels a hire-attached unused cart live, then dump frees occupancy", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
     const offered = offerHire(rt, {
@@ -749,6 +749,10 @@ describe("cart inspect", () => {
     const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
     expect(rt.hires.get(hireId)?.cartId).toBe(cartId);
     expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+    const dumped = rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId }));
+    expect(dumped.ok).toBe(true);
+    expect(rt.hires.get(hireId)?.cartId).toBeUndefined();
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("revoked");
   });
 
   it("labels a stale unpaid cart expired, not live", () => {
@@ -768,6 +772,40 @@ describe("cart inspect", () => {
     must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
     rt.clock.set("2026-08-29T12:00:00.000Z");
     expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a dumped unused cart revoked, not expired or bound", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const dumped = rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId }));
+    expect(dumped.ok).toBe(true);
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("revoked");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a bound cart bound even if dump is refused", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    const dumpBound = rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId }));
+    expect(dumpBound.ok).toBe(false);
+    if (dumpBound.ok) return;
+    expect(dumpBound.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a dumped unused cart revoked even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId })), "dump");
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("revoked");
     expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
   });
 });

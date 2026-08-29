@@ -82,6 +82,8 @@ export interface WorldState {
   closedRfqs?: string[];
   /** Intent ids torn by mandate.revoke. Optional so old worlds boot. */
   revokedIntents?: MandateId[];
+  /** Cart ids torn by mandate.revoke_cart. Optional so old worlds boot. */
+  revokedCarts?: MandateId[];
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];

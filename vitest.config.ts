@@ -116,6 +116,7 @@ export default defineConfig({
       "@aether/market-party": path.resolve(__dirname, "packages/aether-runtime/src/market-party.ts"),
       "@aether/mandate-party": path.resolve(__dirname, "packages/aether-runtime/src/mandate-party.ts"),
       "@aether/rfq-party": path.resolve(__dirname, "packages/aether-runtime/src/rfq-party.ts"),
+      "@aether/cart-party": path.resolve(__dirname, "packages/aether-runtime/src/cart-party.ts"),
     },
   },
 });

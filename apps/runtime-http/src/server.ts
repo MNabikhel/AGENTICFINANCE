@@ -104,6 +104,7 @@ import { loadHireVoid, runHireVoid } from "@aether/hire-void";
 import { loadMarketParty, runMarketParty } from "@aether/market-party";
 import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
 import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
+import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -200,6 +201,7 @@ const voidFixture = join(process.cwd(), "fixtures/demo/void/scenario.json");
 const foldFixture = join(process.cwd(), "fixtures/demo/fold/scenario.json");
 const ripFixture = join(process.cwd(), "fixtures/demo/rip/scenario.json");
 const shutFixture = join(process.cwd(), "fixtures/demo/shut/scenario.json");
+const dumpFixture = join(process.cwd(), "fixtures/demo/dump/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1096,6 +1098,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
+      if (req.method === "POST" && path === "/v1/demo/dump") {
+        const report = runCartParty(loadCartParty(dumpFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "dump" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
       if (req.method === "POST" && path === "/v1/reset") {
         runtime = boot();
         lastDemo = null;
@@ -1232,6 +1241,11 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const mandateRevoke = path.match(/^\/v1\/mandates\/([^/]+)\/revoke$/);
       if (req.method === "POST" && mandateRevoke) {
         handleDispatch(req, res, "mandate.revoke", { ...body, intentId: mandateRevoke[1] });
+        return;
+      }
+      const cartDump = path.match(/^\/v1\/carts\/([^/]+)\/dump$/);
+      if (req.method === "POST" && cartDump) {
+        handleDispatch(req, res, "mandate.revoke_cart", { ...body, cartId: cartDump[1] });
         return;
       }
       const approval = path.match(/^\/v1\/approvals\/([^/]+)\/resolve$/);

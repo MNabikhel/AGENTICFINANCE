@@ -122,6 +122,7 @@ import {
   FOLD_TLDR,
   RIP_TLDR,
   SHUT_TLDR,
+  DUMP_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -332,6 +333,7 @@ export class Runtime {
   readonly withdrawnQuotes = new Set<string>();
   readonly closedRfqs = new Set<string>();
   readonly revokedIntents = new Set<MandateId>();
+  readonly revokedCarts = new Set<MandateId>();
   readonly reservedQuotes = new Map<string, ApprovalId>();
   readonly settleEvents: { at: string; volume: number }[] = [];
   dailySpend = 0;
@@ -714,12 +716,14 @@ export class Runtime {
 
   /**
    * Cart view for other agents. A cart whose unique_payment occupies is `bound`,
-   * not `live`. Bound wins over expired. A hire that points at this cart is not
+   * not `live`. Bound wins over revoked and expired. Revoked (torn by
+   * mandate.revoke_cart) wins over expired. A hire that points at this cart is not
    * bound — that occupancy lives on the hire (`hire.unique_cart`).
-   * The store stays raw (expiresAt only).
+   * The store stays raw (`expiresAt` only).
    */
   cartView(cart: Signed<CartMandate>): Signed<CartMandate> & { status: CartStatus } {
     if (this.paymentMatchingCart(cart)) return { ...cart, status: "bound" };
+    if (this.revokedCarts.has(cart.payload.id)) return { ...cart, status: "revoked" };
     if (Date.parse(cart.payload.expiresAt) <= Date.parse(this.clock.now())) {
       return { ...cart, status: "expired" };
     }
@@ -1325,6 +1329,11 @@ export class Runtime {
           name: "Shut TAP",
           description: "POST /v1/demo/shut — someone else's room is not yours to close",
         },
+        {
+          id: "cart-party",
+          name: "Dump TAP",
+          description: "POST /v1/demo/dump — someone else's unused checkout is not yours to dump",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -1518,6 +1527,7 @@ export class Runtime {
       withdrawnQuotes: [...this.withdrawnQuotes],
       closedRfqs: [...this.closedRfqs],
       revokedIntents: [...this.revokedIntents],
+      revokedCarts: [...this.revokedCarts],
       reservedQuotes: [...this.reservedQuotes.entries()],
       settledFxQuotes: [...this.consumedQuotes],
       settleEvents: [...this.settleEvents],
@@ -1657,6 +1667,8 @@ export class Runtime {
     for (const id of world.closedRfqs ?? []) this.closedRfqs.add(id);
     this.revokedIntents.clear();
     for (const id of world.revokedIntents ?? []) this.revokedIntents.add(id);
+    this.revokedCarts.clear();
+    for (const id of world.revokedCarts ?? []) this.revokedCarts.add(id);
     this.reservedQuotes.clear();
     for (const [quoteId, ticketId] of world.reservedQuotes ?? []) {
       this.reservedQuotes.set(quoteId, ticketId as ApprovalId);
@@ -1916,9 +1928,9 @@ export class Runtime {
         }
       }
     }
-    if (cmd.type === "mandate.issue_payment") {
+    if (cmd.type === "mandate.issue_payment" || cmd.type === "mandate.revoke_cart") {
       ctx.cartKnown = Boolean(cart);
-      if (cart) ctx.paymentUnbound = this.paymentMatchingCart(cart) === undefined;
+      if (cmd.type === "mandate.issue_payment" && cart) ctx.paymentUnbound = this.paymentMatchingCart(cart) === undefined;
     }
     if (cmd.type === "approval.resolve") {
       const ticket =
@@ -2159,6 +2171,24 @@ export class Runtime {
     if (cmd.type === "mandate.revoke" && intent) {
       ctx.mandatePartyOk =
         actor.role === "human_operator" || actor.role === "treasury" || actor.id === intent.payload.issuerId;
+    }
+    if (cmd.type === "mandate.revoke_cart" && cart) {
+      const occupying = this.hireOccupyingCart(cart.payload.id);
+      const slip = this.intents.get(cart.payload.intentId);
+      ctx.cartPartyOk =
+        actor.role === "human_operator" ||
+        actor.role === "treasury" ||
+        actor.id === cart.payload.merchant.id ||
+        (occupying !== undefined && actor.id === occupying.buyerId) ||
+        (slip !== undefined && actor.id === slip.payload.subjectId);
+    }
+    if (cart && (cmd.type === "mandate.revoke_cart" || cmd.type === "mandate.issue_payment" || cmd.type === "hire.fund")) {
+      const revoked = this.revokedCarts.has(cart.payload.id);
+      if (cmd.type === "mandate.revoke_cart") {
+        ctx.cartWindowLive = !revoked && this.paymentMatchingCart(cart) === undefined;
+      } else {
+        ctx.cartWindowLive = !revoked;
+      }
     }
     if (
       intent &&
@@ -2565,7 +2595,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "market.withdraw" || cmd.type === "market.close" || cmd.type === "mandate.revoke" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "market.withdraw" || cmd.type === "market.close" || cmd.type === "mandate.revoke" || cmd.type === "mandate.revoke_cart" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -2632,6 +2662,8 @@ export class Runtime {
         return this.mutIntent(body, actor);
       case "mandate.revoke":
         return this.mutIntentRevoke(body, actor);
+      case "mandate.revoke_cart":
+        return this.mutCartRevoke(body, actor);
       case "mandate.issue_cart":
         return this.mutCart(body, actor);
       case "mandate.issue_payment":
@@ -2975,6 +3007,35 @@ export class Runtime {
     return intent;
   }
 
+  private hireOccupyingCart(cartId: MandateId): HireContract | undefined {
+    for (const hire of this.hires.values()) {
+      if (hire.cartId === cartId) return hire;
+    }
+    return undefined;
+  }
+
+  private mutCartRevoke(body: Record<string, unknown>, actor: Agent) {
+    const cart = this.carts.get(body.cartId as MandateId);
+    if (!cart) throw new Error("unknown cart");
+    if (this.paymentMatchingCart(cart)) throw new Error("cart bound");
+    if (this.revokedCarts.has(cart.payload.id)) throw new Error("cart already revoked");
+    this.revokedCarts.add(cart.payload.id);
+    const occupying = this.hireOccupyingCart(cart.payload.id);
+    if (occupying) {
+      const next: HireContract = { ...occupying };
+      delete next.cartId;
+      this.hires.set(occupying.id, next);
+    }
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "CART_REVOKE",
+      subjects: [{ type: "cart", id: cart.payload.id }],
+      payload: { id: cart.payload.id, merchantId: cart.payload.merchant.id },
+    });
+    return cart;
+  }
+
   private mutCart(body: Record<string, unknown>, actor: Agent) {
     const boundHire =
       typeof body.hireId === "string" ? this.hires.get(body.hireId as HireId) : undefined;
@@ -3027,6 +3088,7 @@ export class Runtime {
   private mutPayment(body: Record<string, unknown>, actor: Agent) {
     const cart = this.carts.get(body.cartId as MandateId);
     if (!cart) throw new Error("unknown cart");
+    if (this.revokedCarts.has(cart.payload.id)) throw new Error("cart revoked");
     if (this.paymentMatchingCart(cart)) throw new Error("cart already has a payment");
     const payload: PaymentMandate = {
       vct: "aether.mandate.payment.1",
@@ -3944,7 +4006,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

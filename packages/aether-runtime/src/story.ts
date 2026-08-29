@@ -295,6 +295,9 @@ export const RIP_TLDR =
 export const SHUT_TLDR =
   "A founder funded an $800 hire. A second desk shutting the research desk's live room was market.rfq_party — a missing room is not this deny, an expired window is not this deny. No RFQ_CLOSE line was written. The buyer still shut its own room. Hiring that shut room's quote was market.not_expired. That funded work still released. Someone else's room is not yours to close.";
 
+export const DUMP_TLDR =
+  "A founder funded an $800 hire. A second desk dumping the research desk's unused checkout was mandate.cart_party — a missing cart is not this deny, an expired window is not this deny. mandate.party still allows. No CART_REVOKE line was written. The buyer still dumped its own unused cart. Paying that dumped cart was mandate.not_expired. Occupancy freed. That funded work still released. Someone else's unused checkout is not yours to dump.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1188,6 +1191,34 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "mandate.revoke_cart") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not dump that checkout`,
+        body:
+          rule?.ruleId === "mandate.cart_party"
+            ? "Someone else's unused checkout is not yours to dump. The merchant, the hire's buyer, a human, or treasury may dump a live unused cart."
+            : rule?.ruleId === "mandate.known_cart"
+              ? "That cart is not in this world. A missing checkout is not a dumped checkout."
+              : rule?.ruleId === "mandate.not_expired"
+                ? "That window is already closed. Bound is when a payment occupies it. A dumped cart is not a second dump."
+                : "A checkout can be torn up. That is not a refund.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} dumped an unused checkout`,
+      body: "The cart is off the table. Issue_payment of a dumped unused cart is mandate.not_expired. Bound is when a payment occupies it. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "hire.release") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -1594,6 +1625,7 @@ export function analog(): Analog {
       "A live bid can be folded. That is not a spent quote. Spent is when hire.create consumed it. Someone else's bid is not yours to pull.",
       "A permission slip can be torn up. That is not a void and not firing a handshake. Someone else's unused slip is not yours to tear.",
       "A live room can be shut. That is not an expired window. Expired is when the day dies. Someone else's room is not yours to close.",
+      "A checkout can be torn up. That is not a refund. Bound is when a payment occupies it. Someone else's unused checkout is not yours to dump.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };
