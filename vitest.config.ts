@@ -94,6 +94,7 @@ export default defineConfig({
       "@aether/known-invitee": path.resolve(__dirname, "packages/aether-runtime/src/known-invitee.ts"),
       "@aether/cart-fresh": path.resolve(__dirname, "packages/aether-runtime/src/cart-fresh.ts"),
       "@aether/freeze-state": path.resolve(__dirname, "packages/aether-runtime/src/freeze-state.ts"),
+      "@aether/unique-key": path.resolve(__dirname, "packages/aether-runtime/src/unique-key.ts"),
     },
   },
 });

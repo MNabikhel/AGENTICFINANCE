@@ -172,6 +172,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a late check");
     expect(spec).toContain("/v1/demo/thaw:");
     expect(spec).toContain("not a kill-switch test");
+    expect(spec).toContain("/v1/demo/twin:");
+    expect(spec).toContain("not a second agent");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

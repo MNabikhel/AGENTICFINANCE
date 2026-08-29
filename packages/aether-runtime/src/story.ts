@@ -229,6 +229,9 @@ export const DUST_TLDR =
 export const THAW_TLDR =
   "A founder funded an $800 hire. Unfreeze of a live unfrozen auditor was identity.freeze_state — a missing agent is not this deny, a frozen speaker is not this deny. No UNFREEZE line was written. That funded work still released. The auditor still verified. A no-op thaw is not a kill-switch test.";
 
+export const TWIN_TLDR =
+  "A founder funded an $800 hire. Registering a second desk on the taken alias was identity.unique_key — L5 at birth is not this deny, system minting a second agent is not this deny. No agent was written. That funded work still released. A taken alias is not a second agent.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

@@ -82,6 +82,7 @@ import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attesta
 import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
 import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
+import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -156,6 +157,7 @@ const sealFixture = join(process.cwd(), "fixtures/demo/seal/scenario.json");
 const guestFixture = join(process.cwd(), "fixtures/demo/guest/scenario.json");
 const dustFixture = join(process.cwd(), "fixtures/demo/dust/scenario.json");
 const thawFixture = join(process.cwd(), "fixtures/demo/thaw/scenario.json");
+const twinFixture = join(process.cwd(), "fixtures/demo/twin/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -895,6 +897,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runFreezeState(loadFreezeState(thawFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "thaw" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/twin") {
+        const report = runUniqueKey(loadUniqueKey(twinFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "twin" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

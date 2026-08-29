@@ -613,6 +613,12 @@ paths:
       responses:
         "200": { description: Thaw TAP report. A no-op thaw is not a kill-switch test. }
         "500": { description: Assertions failed }
+  /v1/demo/twin:
+    post:
+      operationId: demoTwin
+      responses:
+        "200": { description: Twin TAP report. A taken alias is not a second agent. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

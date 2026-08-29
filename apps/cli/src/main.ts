@@ -70,6 +70,7 @@ import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attesta
 import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
 import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
+import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
 
 const [, , command, name] = process.argv;
 
@@ -515,6 +516,12 @@ if (command === "demo" && (name === "thaw" || name === "frost" || name === "rime
   process.exit(0);
 }
 
+if (command === "demo" && (name === "twin" || name === "clone" || name === "doppel")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/twin/scenario.json");
+  printReport(runUniqueKey(loadUniqueKey(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -591,5 +598,6 @@ usage:
   pnpm demo guest
   pnpm demo dust
   pnpm demo thaw
+  pnpm demo twin
   pnpm mcp`);
 process.exit(command ? 1 : 0);

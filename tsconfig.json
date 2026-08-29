@@ -87,7 +87,8 @@
       "@aether/known-attestation": ["packages/aether-runtime/src/known-attestation.ts"],
       "@aether/known-invitee": ["packages/aether-runtime/src/known-invitee.ts"],
       "@aether/cart-fresh": ["packages/aether-runtime/src/cart-fresh.ts"],
-      "@aether/freeze-state": ["packages/aether-runtime/src/freeze-state.ts"]
+      "@aether/freeze-state": ["packages/aether-runtime/src/freeze-state.ts"],
+      "@aether/unique-key": ["packages/aether-runtime/src/unique-key.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
