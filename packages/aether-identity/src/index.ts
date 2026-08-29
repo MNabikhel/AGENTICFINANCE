@@ -7,18 +7,35 @@ import {
   type AutonomyLevel,
   type Instant,
   type LadderExtraGate,
+  type PublicKeyRef,
 } from "@aether/types";
 
 export class IdentityRegistry {
   readonly agents = new Map<AgentId, Agent>();
   readonly byDid = new Map<string, Agent>();
   readonly keys = new Map<AgentId, Ed25519Keypair>();
+  /** Previous signing keys. verifyChain still accepts them. The current key signs. */
+  readonly retired = new Map<AgentId, Ed25519Keypair[]>();
 
   register(agent: Agent, keypair: Ed25519Keypair): Agent {
     this.agents.set(agent.id, agent);
     this.byDid.set(agent.did, agent);
     this.keys.set(agent.id, keypair);
     return agent;
+  }
+
+  rotate(id: AgentId, next: Ed25519Keypair): Agent {
+    const agent = this.require(id);
+    const current = this.keys.get(id);
+    if (!current) throw new Error(`no key for ${id}`);
+    const prior = this.retired.get(id) ?? [];
+    this.retired.set(id, [...prior, current]);
+    this.keys.set(id, next);
+    const pub: PublicKeyRef = { kid: next.kid, kty: "OKP", crv: "Ed25519", x: next.x };
+    const updated: Agent = { ...agent, keys: [pub, ...agent.keys] };
+    this.agents.set(id, updated);
+    this.byDid.set(updated.did, updated);
+    return updated;
   }
 
   mintKey(kid: string): Ed25519Keypair {

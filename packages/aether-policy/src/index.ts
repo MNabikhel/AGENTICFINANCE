@@ -13,6 +13,7 @@ import {
   MM_RATE_BAND_E6,
   RECURRENCE_GAP_MS,
   ROLE_CAPABILITY,
+  SIM_INSTRUMENT,
   VELOCITY_CAPS,
   type AutonomyLevel,
   type CommandType,
@@ -216,6 +217,15 @@ export const RULES: readonly Rule[] = [
       if (COMPLETE_AFTER_FUND.has(ctx.commandType as CommandType)) {
         return v("mandate.not_expired", "allow", "window checked at fund");
       }
+      if (ctx.intentWindowLive === false) {
+        return v("mandate.not_expired", "deny", "intent revoked");
+      }
+      if (ctx.cartWindowLive === false) {
+        return v("mandate.not_expired", "deny", "cart revoked");
+      }
+      if (ctx.paymentWindowLive === false) {
+        return v("mandate.not_expired", "deny", "payment revoked");
+      }
       const nowSec = Math.floor(Date.parse(ctx.clock) / 1000);
       if (ctx.intent && ctx.intent.payload.exp <= nowSec) {
         return v("mandate.not_expired", "deny", "intent expired");
@@ -316,6 +326,43 @@ export const RULES: readonly Rule[] = [
       return c.allowed.some((m) => m.id === ctx.payeeId)
         ? v("payment.allowed_payees", "allow", "payee listed")
         : v("payment.allowed_payees", "deny", "payee not in allow-list");
+    },
+  },
+  {
+    id: "payment.allowed_payment_instruments",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.allowed_payment_instruments");
+      if (!c) return v("payment.allowed_payment_instruments", "allow", "no instrument constraint");
+      const instrument = ctx.payment?.payload.payment_instrument
+        ? ctx.payment.payload.payment_instrument
+        : SPEND_START_COMMANDS.has(ctx.commandType as CommandType)
+          ? SIM_INSTRUMENT
+          : undefined;
+      if (!instrument) {
+        return v("payment.allowed_payment_instruments", "allow", "no payment instrument");
+      }
+      if (!Array.isArray(c.allowed)) {
+        return v("payment.allowed_payment_instruments", "deny", "instrument list missing");
+      }
+      return c.allowed.some((m) => m.id === instrument.id)
+        ? v("payment.allowed_payment_instruments", "allow", "instrument listed")
+        : v("payment.allowed_payment_instruments", "deny", "instrument not in allow-list");
+    },
+  },
+  {
+    id: "payment.reference",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.reference");
+      if (!c) return v("payment.reference", "allow", "no reference constraint");
+      if (!SPEND_START_COMMANDS.has(ctx.commandType as CommandType)) {
+        return v("payment.reference", "allow", "not a spend start");
+      }
+      if (ctx.referenceOk === undefined) {
+        return v("payment.reference", "allow", "no prior funded payment");
+      }
+      return ctx.referenceOk
+        ? v("payment.reference", "allow", "citation matches a funded check")
+        : v("payment.reference", "deny", "citation is not a funded check");
     },
   },
   {
@@ -713,6 +760,25 @@ export const RULES: readonly Rule[] = [
       ) {
         return v("mandate.child_tighter", "deny", "child payees not a subset of parent");
       }
+      const parentRails = listed(parent, "payment.allowed_payment_instruments");
+      const childRails = listed(child, "payment.allowed_payment_instruments");
+      if (
+        parentRails &&
+        (!Array.isArray(parentRails.allowed) ||
+          !childRails ||
+          !Array.isArray(childRails.allowed) ||
+          childRails.allowed.some((m) => !parentRails.allowed.some((p) => p.id === m.id)))
+      ) {
+        return v("mandate.child_tighter", "deny", "child instruments not a subset of parent");
+      }
+      const parentRef = listed(parent, "payment.reference");
+      const childRef = listed(child, "payment.reference");
+      if (parentRef) {
+        if (!childRef) return v("mandate.child_tighter", "deny", "child missing payment.reference");
+        if (childRef.conditional_transaction_id !== parentRef.conditional_transaction_id) {
+          return v("mandate.child_tighter", "deny", "child payment.reference does not match parent");
+        }
+      }
       const parentMax = listed(parent, "aether.max_autonomy");
       const childMax = listed(child, "aether.max_autonomy");
       if (parentMax && (!childMax || typeof childMax.max !== "number" || typeof parentMax.max !== "number" || childMax.max > parentMax.max)) {
@@ -839,7 +905,7 @@ export const RULES: readonly Rule[] = [
   {
     id: "hire.quote_unspent",
     evaluate: (ctx) => {
-      if (ctx.quoteUnspent === undefined) return v("hire.quote_unspent", "allow", "not a hire.create");
+      if (ctx.quoteUnspent === undefined) return v("hire.quote_unspent", "allow", "not a spend-or-withdraw of a known quote");
       return ctx.quoteUnspent
         ? v("hire.quote_unspent", "allow", "quote has not been used")
         : v("hire.quote_unspent", "deny", "quote already used");
@@ -870,6 +936,15 @@ export const RULES: readonly Rule[] = [
       return ctx.cartKnown
         ? v("mandate.known_cart", "allow", "cart exists")
         : v("mandate.known_cart", "deny", "cart not found");
+    },
+  },
+  {
+    id: "mandate.known_payment",
+    evaluate: (ctx) => {
+      if (ctx.paymentKnown === undefined) return v("mandate.known_payment", "allow", "not a payment-gated command");
+      return ctx.paymentKnown
+        ? v("mandate.known_payment", "allow", "payment exists")
+        : v("mandate.known_payment", "deny", "payment not found");
     },
   },
   {
@@ -1281,6 +1356,69 @@ export const RULES: readonly Rule[] = [
         : v("host.unique_subscriber", "deny", "subscriber already bound");
     },
   },
+  {
+    id: "identity.party",
+    evaluate: (ctx) => {
+      if (ctx.identityPartyOk === undefined) return v("identity.party", "allow", "not a rotate");
+      return ctx.identityPartyOk
+        ? v("identity.party", "allow", "actor is the named agent or a kill-switch role")
+        : v("identity.party", "deny", "actor is not the named agent");
+    },
+  },
+  {
+    id: "market.party",
+    evaluate: (ctx) => {
+      if (ctx.marketPartyOk === undefined) return v("market.party", "allow", "not a withdraw");
+      return ctx.marketPartyOk
+        ? v("market.party", "allow", "actor is the named seller or a kill-switch role")
+        : v("market.party", "deny", "actor is not the named seller");
+    },
+  },
+  {
+    id: "mandate.party",
+    evaluate: (ctx) => {
+      if (ctx.mandatePartyOk === undefined) return v("mandate.party", "allow", "not a revoke");
+      return ctx.mandatePartyOk
+        ? v("mandate.party", "allow", "actor is the named issuer or a kill-switch role")
+        : v("mandate.party", "deny", "actor is not the named issuer");
+    },
+  },
+  {
+    id: "market.rfq_party",
+    evaluate: (ctx) => {
+      if (ctx.rfqPartyOk === undefined) return v("market.rfq_party", "allow", "not a close");
+      return ctx.rfqPartyOk
+        ? v("market.rfq_party", "allow", "actor is the named buyer or a kill-switch role")
+        : v("market.rfq_party", "deny", "actor is not the named buyer");
+    },
+  },
+  {
+    id: "mandate.cart_party",
+    evaluate: (ctx) => {
+      if (ctx.cartPartyOk === undefined) return v("mandate.cart_party", "allow", "not a dump");
+      return ctx.cartPartyOk
+        ? v("mandate.cart_party", "allow", "actor is the named merchant, hire buyer, intent subject, or a kill-switch role")
+        : v("mandate.cart_party", "deny", "actor is not the named merchant or hire buyer");
+    },
+  },
+  {
+    id: "mandate.payment_party",
+    evaluate: (ctx) => {
+      if (ctx.paymentPartyOk === undefined) return v("mandate.payment_party", "allow", "not a spike");
+      return ctx.paymentPartyOk
+        ? v("mandate.payment_party", "allow", "actor is the named signer, payee, hire buyer, intent subject, or a kill-switch role")
+        : v("mandate.payment_party", "deny", "actor is not the named signer or payee");
+    },
+  },
+  {
+    id: "mandate.cadence_reach",
+    evaluate: (ctx) => {
+      if (ctx.cadenceReachOk === undefined) return v("mandate.cadence_reach", "allow", "not a cadence mint");
+      return ctx.cadenceReachOk
+        ? v("mandate.cadence_reach", "allow", "next slot opens while the slip lives")
+        : v("mandate.cadence_reach", "deny", "next slot opens after the slip dies");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1310,16 +1448,30 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "role_forbidden",
     hint: "This role cannot run that command. Use a different actor. An auditor cannot spend.",
   },
+  "human.signature_present": {
+    kind: "none",
+    hint: "L0/L1 envelope.submit needs a human_operator payment JWS. A grown-up pause does not wink a junior signature. Climb to L2 to self-sign, or have a human sign the payment. Completing funded work is legal via hire.release. A vendor pull stays mandate.subject_is_actor. An auditor stays actor.role_capability.",
+  },
   "payment.amount_range": ISSUE_INTENT,
   "payment.budget": ISSUE_INTENT,
   "payment.parent_budget": ISSUE_INTENT,
   "mandate.child_tighter": ISSUE_INTENT,
   "payment.allowed_payees": ISSUE_INTENT,
+  "payment.allowed_payment_instruments": ISSUE_INTENT,
+  "payment.reference": {
+    kind: "issue_intent",
+    commandType: "mandate.issue_intent",
+    hint: "Cite a funded check's transaction_id (the cart hash), or omit the constraint until a check exists. Completing funded work is legal. A listed payee, a listed rail, and a listed SKU are different objects. Before any funded payment, the constraint is still AP2-shaped catalog surface.",
+  },
   "payment.allowed_skus": ISSUE_INTENT,
   "ladder.max_autonomy_constraint": {
     kind: "issue_intent",
     commandType: "mandate.issue_intent",
     hint: "This slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not. Issue a new slip, or demote.",
+  },
+  "ladder.min_level": {
+    kind: "none",
+    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter.",
   },
   "circuit.daily": {
     kind: "reset_circuit",
@@ -1329,12 +1481,16 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.chain_intact": {
     kind: "attest_kya",
     commandType: "kya.attest",
-    hint: "No live handshake from the principal. Attest, or stop. Revoke is a tombstone.",
+    hint: "No live handshake from the principal. Attest, or stop. Revoke is a tombstone. An expired hop stays kya.attestation_fresh. A nested parent stays kya.parent_fresh. A frozen speaker stays actor.not_frozen. A frozen principal stays kya.principal_not_frozen. A ghost revoke stays kya.known_attestation. Completing funded work after expiry is legal; freeze and revoke still bind.",
+  },
+  "kya.delegation_depth": {
+    kind: "none",
+    hint: "Hop count > 3 is a refuse. Shorten the chain. A missing path stays kya.chain_intact. A dead parent hop stays kya.parent_fresh. A climb stays kya.capability_subset. Completing funded work is legal. A nested parentId under the same grantor does not add hops.",
   },
   "kya.principal_not_frozen": {
     kind: "unfreeze_principal",
     commandType: "identity.unfreeze",
-    hint: "The money’s owner is frozen. Unfreeze the principal, not only the delegate.",
+    hint: "The money’s owner is frozen. Unfreeze the principal, not only the delegate. A frozen speaker stays actor.not_frozen. A revoked hop stays kya.chain_intact. A no-op thaw stays identity.freeze_state. Completing funded work after expiry is legal; freeze and revoke still bind.",
   },
   "kya.attestation_fresh": {
     kind: "attest_kya",
@@ -1347,7 +1503,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.known_sku": {
     kind: "none",
-    hint: "This is not a storefront. Only catalog SKUs can be hired. Read market.catalog.",
+    hint: "This is not a storefront. Only catalog SKUs can be hired. Read market.catalog. A listed SKU not on the slip stays payment.allowed_skus. Completing funded work is legal. A ghost SKU is not a catalog good.",
   },
   "market.not_expired": {
     kind: "none",
@@ -1367,11 +1523,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.known_rfq": {
     kind: "none",
-    hint: "That RFQ or quote id is unknown. Issue a real RFQ, then quote it. A missing room is not a missing SKU.",
+    hint: "That RFQ or quote id is unknown. Issue a real RFQ, then quote it. A missing room is not a missing SKU. A closed guest list stays market.invited_seller. Completing funded work is legal.",
   },
   "market.fx_quote": {
     kind: "none",
-    hint: "An FX quote is a one-shot window. A missing quote, a research quote, a spent quote, or a quote held by an open hire ticket is not a second settle.",
+    hint: "An FX quote is a one-shot window. A research quote is not a conversion. A missing quote, a spent quote, or a quote held by an open hire ticket is not a second settle. Hiring the window stays hire.not_fx. A missing window on quote stays market.fx_window.",
   },
   "hire.quote_unspent": {
     kind: "none",
@@ -1379,15 +1535,19 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "hire.known": {
     kind: "none",
-    hint: "That hire id is not in this world. Create the hire first. A missing contract is not a broken mandate chain.",
+    hint: "That hire id is not in this world. Create the hire first. A missing contract is not a broken mandate chain. A stranger on a live hire stays hire.party. Unfunded work stays hire.escrow_required. Completing funded work is legal.",
   },
   "mandate.known_intent": {
     kind: "none",
-    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake.",
+    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake. A missing handshake stays kya.chain_intact. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
   },
   "mandate.known_cart": {
     kind: "none",
-    hint: "That cart id is not in this world. Issue the cart first. A missing cart is not a broken payment chain.",
+    hint: "That cart id is not in this world. Issue the cart first. A missing cart is not a broken payment chain. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. Completing funded work is legal.",
+  },
+  "mandate.known_payment": {
+    kind: "none",
+    hint: "That payment id is not in this world. Issue the payment first. A missing check is not a broken payment chain. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. Completing funded work is legal.",
   },
   "approval.known": {
     kind: "none",
@@ -1403,15 +1563,19 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_parent": {
     kind: "none",
-    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child.",
+    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
   },
   "identity.known": {
     kind: "none",
     hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, a revoke target, or an RFQ guest.",
   },
+  "hire.escrow_required": {
+    kind: "none",
+    hint: "Escrow must be funded before the vendor delivers. Offered or accepted is not funded. Completing funded work is legal. Unfunded work is not a delivery. Release before deliver stays hire.state.",
+  },
   "hire.state": {
     kind: "none",
-    hint: "A hire only walks offered → accepted → funded → delivered → released. Refund is only from funded. Payment-required is only after deliver. An illegal arrow is a refuse. Delivered work cannot be unwound.",
+    hint: "A hire only walks offered → accepted → funded → delivered → released. Void is offered or accepted, before escrow moves. Refund is only from funded. Release is only after deliver. Payment-required is only after deliver. An illegal arrow is a refuse. A void is not a refund. Delivered work cannot be unwound. Unfinished work is not a payout. Unfunded work is not a delivery.",
   },
   "ladder.legal": {
     kind: "none",
@@ -1433,6 +1597,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "One journal is one currency. USD_SIM and USDC_SIM do not mix. Convert with market.fx_settle, not a transfer. Escrow cannot lock USD cash into a USDC hire.",
   },
+  "payment.currency_match": {
+    kind: "none",
+    hint: "The cart or payment is not this hire’s currency. A USDC sticker is not a USD hire. Convert with market.fx_settle. A mixed journal stays ledger.same_currency. A USDC quote stays market.sku_currency. A loose USD pointer stays hire.bound_cart. A cheaper cart stays hire.cart_matches.",
+  },
   "ledger.sufficient": {
     kind: "none",
     hint: "The source book does not have that many cents. A transfer is not an overdraft. Escrow cannot lock on empty cash. An FX settle cannot spend USD the vendor does not hold. Seed or allocate first.",
@@ -1443,7 +1611,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.party": {
     kind: "none",
-    hint: "You can only mint or tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
+    hint: "You can only mint or tombstone a handshake for which you are the principal. A human or treasury may revoke any pair. An L4 scout cannot write a founder’s handshake by filling in the ids. Someone else’s name is not a handshake.",
   },
   "identity.unique_key": {
     kind: "none",
@@ -1487,15 +1655,31 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.fx_window": {
     kind: "none",
-    hint: "An FX SKU is a conversion window. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. It is not a hireable good.",
+    hint: "An FX SKU is a conversion window. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. It is not a hireable good. A missing window is not a quote. Ghost SKU stays market.known_sku. A swapped pair stays market.fx_pair. A corpse mint stays market.fx_fresh.",
   },
   "hire.bound_cart": {
     kind: "none",
     hint: "That hire has not bound a cart (and that cart’s payment). Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer. A loose cart is not this hire’s check.",
   },
+  "mandate.chain_integrity": {
+    kind: "none",
+    hint: "The cart or payment window has closed, or the chain hashes no longer verify. Completing a funded hire after that is legal; a new fund is not. Occupancy stays hire.bound_cart. Issue a live cart.",
+  },
+  "mandate.subject_is_actor": {
+    kind: "none",
+    hint: "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row.",
+  },
   "mm.known": {
     kind: "none",
     hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books.",
+  },
+  "mm.spread_bound": {
+    kind: "none",
+    hint: "The nested fx.rateE6 is the stored rate. It must sit inside the 200bps band (980000–1020000). A top-level rateE6 is not the band.",
+  },
+  "mm.inventory": {
+    kind: "none",
+    hint: "The market maker’s USDC book does not cover this payout. Restock inventory, or settle a smaller window. Empty MM USDC is not a missing maker, not a vendor overdraft, and not the 200bps band. A deny does not consume the window.",
   },
   "actor.known": {
     kind: "none",
@@ -1535,7 +1719,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.occurrence_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with a cadence that has no slots. Name max_occurrences of at least one, or omit the cap. A non-number is not a cap. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.recurrence.",
+    hint: "A slip cannot be born with a cadence that has no slots. Name max_occurrences of at least one, or omit the cap. A non-number is not a cap. Ghost subject, missing parent, and a wider child keep first deny. Hire still names payment.recurrence. A week that cannot admit a second hire is mandate.cadence_reach.",
+  },
+  "mandate.cadence_reach": {
+    kind: "none",
+    hint: "A slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY (max_occurrences 1), or omit recurrence. A vacant cap stays mandate.occurrence_fresh. Hire still names payment.recurrence.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",
@@ -1563,9 +1751,42 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "This agent already has a subscription on this host. One subscriber, one row. Spend is not gated on the row.",
   },
+  "identity.party": {
+    kind: "none",
+    hint: "Rotate your own key, or ask a human or treasury. Someone else's key is not yours to turn. A missing agent is identity.known. System is not a treasurer.",
+  },
+  "market.party": {
+    kind: "none",
+    hint: "Fold your own bid, or ask a human or treasury. Someone else's quote is not yours to pull. A missing quote is market.known_rfq. A spent quote is hire.quote_unspent. A folded quote is market.not_expired.",
+  },
+  "mandate.party": {
+    kind: "none",
+    hint: "Rip your own unused slip, or ask a human or treasury. Someone else's permission is not yours to tear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired on a new hire. Completing funded work is legal.",
+  },
+  "market.rfq_party": {
+    kind: "none",
+    hint: "Shut your own room, or ask a human or treasury. Someone else's RFQ is not yours to close. A missing room is market.known_rfq. A shut room is market.not_expired on quote or hire.create.",
+  },
+  "mandate.cart_party": {
+    kind: "none",
+    hint: "Dump your own unused checkout, or ask a human or treasury. Someone else's cart is not yours to dump. A missing cart is mandate.known_cart. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal.",
+  },
+  "mandate.payment_party": {
+    kind: "none",
+    hint: "Spike your own unused check, or ask a human or treasury. Someone else's payment is not yours to spike. A missing payment is mandate.known_payment. A spiked unused payment is mandate.not_expired on fund. Funded is when escrow occupies it. Completing funded work is legal.",
+  },
+  "clearing.bilateral_limit": {
+    kind: "none",
+    commandType: "clearing.settle_window",
+    hint: "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.",
+  },
   "payment.execution_date": {
     kind: "none",
     hint: "This slip's calendar window is closed for new spends. Completing a funded hire is not a new spend. Issue a new intent if you need another hire.",
+  },
+  "mandate.not_expired": {
+    kind: "none",
+    hint: "That cart, payment, or slip window has closed. A ripped unused slip is this deny on a new hire. A dumped unused cart is this deny on a new payment. A spiked unused payment is this deny on fund. Bound dump is this deny, not a refund. Funded spike is this deny, not a refund. Issue a live cart. Completing a funded hire after that is legal. Occupancy stays mandate.unique_payment. A dead cart at fund stays mandate.chain_integrity. A missing cart stays mandate.known_cart. A missing payment stays mandate.known_payment.",
   },
 };
 

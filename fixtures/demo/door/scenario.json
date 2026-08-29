@@ -1,0 +1,14 @@
+{
+  "id": "operator-door",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000016",
+  "hostedNonce": "01J6AETHERGENESIS0000000017",
+  "hostedMonthly": 50000,
+  "circuit": { "dailyLimit": 10000000 },
+  "intent": {
+    "task": "The public kernel is not a checkout. A hosted operator sits around evaluate(), not inside it.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 80000 }
+    ]
+  }
+}

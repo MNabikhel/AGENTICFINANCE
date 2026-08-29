@@ -1,0 +1,25 @@
+{
+  "id": "fx-not-hire",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000020",
+  "opening": {
+    "research-vendor:cash": { "amount": 200000, "currency": "USD_SIM" },
+    "market_maker:cash_usdc": { "amount": 1000000, "currency": "USDC_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "intent": {
+    "task": "An FX window is a conversion, not a good. Hire.create against it is hire.not_fx. Settle it.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 80000 },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "fx": {
+      "amount": 80000,
+      "currency": "USD_SIM",
+      "rateE6": 998000,
+      "validUntil": "2026-08-29T00:00:00.000Z"
+    }
+  }
+}

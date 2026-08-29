@@ -24,7 +24,11 @@ export interface NetPosition {
 export class ExposureBook {
   private readonly legs: ExposureLeg[] = [];
   readonly windows: SettlementWindow[] = [];
-  readonly defaultBilateralLimit = 50_000_000;
+  defaultBilateralLimit: number;
+
+  constructor(limit = 50_000_000) {
+    this.defaultBilateralLimit = limit;
+  }
 
   record(payer: AgentId, payee: AgentId, amount: number, currency: CurrencyCode): void {
     if (amount <= 0) return;
@@ -118,8 +122,9 @@ export class ExposureBook {
 
   snapshot() {
     return {
-      legs: this.legs,
-      windows: this.windows,
+      legs: [...this.legs],
+      windows: [...this.windows],
+      bilateralLimit: this.defaultBilateralLimit,
       usd: {
         positions: this.positions("USD_SIM"),
         netting: this.nettingGrid("USD_SIM"),

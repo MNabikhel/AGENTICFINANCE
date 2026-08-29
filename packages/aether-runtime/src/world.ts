@@ -32,6 +32,7 @@ import type {
   SettlementWindow,
   Signed,
   CartMandate,
+  KyaIssuer,
 } from "@aether/types";
 import type { Analog, StoryBeat } from "./story.js";
 import type { ExposureLeg } from "@aether/clearing";
@@ -75,10 +76,20 @@ export interface WorldState {
   consumedQuotes?: string[];
   /** Quote id → pending approval id. Optional so old worlds boot. */
   reservedQuotes?: Array<[string, string]>;
+  /** Quote ids folded by market.withdraw. Optional so old worlds boot. */
+  withdrawnQuotes?: string[];
+  /** RFQ ids shut by market.close. Optional so old worlds boot. */
+  closedRfqs?: string[];
+  /** Intent ids torn by mandate.revoke. Optional so old worlds boot. */
+  revokedIntents?: MandateId[];
+  /** Cart ids torn by mandate.revoke_cart. Optional so old worlds boot. */
+  revokedCarts?: MandateId[];
+  /** Payment ids torn by mandate.revoke_payment. Optional so old worlds boot. */
+  revokedPayments?: MandateId[];
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];
-  kya: { attestations: DelegationAttestation[]; blocked: string[] };
+  kya: { attestations: DelegationAttestation[]; blocked: string[]; issuers?: KyaIssuer[] };
   clearing: { legs: ExposureLeg[]; windows: SettlementWindow[] };
   killSwitchTested: AgentId[];
   idempotency?: Array<[string, unknown]>;

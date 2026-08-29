@@ -26,6 +26,12 @@
       "required": ["agentId"],
       "properties": { "agentId": { "type": "string" } }
     },
+    "identity.rotate": {
+      "type": "object",
+      "properties": {
+        "agentId": { "type": "string", "description": "Omit to rotate the speaker. A missing agent is identity.known. Someone else's key is identity.party unless you are a human or treasury." }
+      }
+    },
     "kya.attest": {
       "type": "object",
       "required": ["delegateId"],
@@ -89,6 +95,36 @@
         }
       }
     },
+    "mandate.revoke": {
+      "type": "object",
+      "required": ["intentId"],
+      "properties": {
+        "intentId": {
+          "type": "string",
+          "description": "Tear up a live unused intent. Issuer, human, or treasury. A ripped slip is mandate.not_expired on a new hire. Completing funded work is legal."
+        }
+      }
+    },
+    "mandate.revoke_cart": {
+      "type": "object",
+      "required": ["cartId"],
+      "properties": {
+        "cartId": {
+          "type": "string",
+          "description": "Tear up a live unused cart. Merchant, hire buyer, intent subject, human, or treasury. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal."
+        }
+      }
+    },
+    "mandate.revoke_payment": {
+      "type": "object",
+      "required": ["paymentId"],
+      "properties": {
+        "paymentId": {
+          "type": "string",
+          "description": "Tear up a live unused payment. Signer, payee, hire buyer, intent subject, human, or treasury. A spiked unused payment is mandate.not_expired on fund. Funded is when escrow occupies it. Completing funded work is legal."
+        }
+      }
+    },
     "mandate.issue_cart": {
       "type": "object",
       "required": ["intentId", "merchantId", "line_items"],
@@ -131,6 +167,16 @@
         }
       }
     },
+    "market.close": {
+      "type": "object",
+      "required": ["rfqId"],
+      "properties": {
+        "rfqId": {
+          "type": "string",
+          "description": "Shut a live RFQ. Buyer, human, or treasury. A shut room is market.not_expired on quote or hire.create. Completing funded work is legal."
+        }
+      }
+    },
     "market.quote": {
       "type": "object",
       "required": ["rfqId", "price"],
@@ -146,6 +192,16 @@
             "rateE6": { "type": "integer", "minimum": 0 },
             "validUntil": { "type": "string", "description": "ISO Instant. Must be strictly after now. A dead or unparseable window is market.fx_fresh. Settle of a later lapse is market.not_expired." }
           }
+        }
+      }
+    },
+    "market.withdraw": {
+      "type": "object",
+      "required": ["quoteId"],
+      "properties": {
+        "quoteId": {
+          "type": "string",
+          "description": "Pull a live unspent quote off the table. Seller, human, or treasury. A spent quote stays spent. A folded quote is not a hire."
         }
       }
     },
@@ -193,6 +249,16 @@
       "type": "object",
       "required": ["hireId"],
       "properties": { "hireId": { "type": "string" } }
+    },
+    "hire.void": {
+      "type": "object",
+      "required": ["hireId"],
+      "properties": {
+        "hireId": {
+          "type": "string",
+          "description": "Cancel an unfunded offer. Offered or accepted only. Funded work refunds. A void does not restore the quote."
+        }
+      }
     },
     "envelope.require": {
       "type": "object",

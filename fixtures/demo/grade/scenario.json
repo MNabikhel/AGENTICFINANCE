@@ -1,0 +1,31 @@
+{
+  "id": "min-level",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000050",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "parent": {
+    "task": "A junior desk is not a nested-slip mint. Completing funded work is legal. A skipped rung is a different object. A handshake ceiling is a different object. A wider child is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 1000000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 4 }
+    ]
+  },
+  "child": {
+    "task": "Scout may buy research briefs. Max $2,000 per hire, $3,000 total.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 200000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 300000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

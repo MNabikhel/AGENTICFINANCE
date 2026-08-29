@@ -1,0 +1,22 @@
+{
+  "id": "ladder-legal",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000049",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneak": { "to": 4 },
+  "legal": { "to": 3, "gates": ["clean_audit_7d"] },
+  "intent": {
+    "task": "A skipped rung is not a promotion. Completing funded work is legal. A climb above a handshake is a different object. L5 before a freeze test is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

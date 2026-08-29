@@ -207,4 +207,1157 @@ describe("HTTP ledger.balances and receipt.get", () => {
     expect(decision.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
     expect(decision.trace.find((t) => t.ruleId === "actor.known")?.verdict).toBe("allow");
   });
+
+  it("GET /.well-known/agent-card.json pins this runtime, not a fake A2A JSON-RPC server", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/.well-known/agent-card.json");
+    expect(r.status).toBe(200);
+    expect(r.body.spec).toBe("aether.protocol.1");
+    expect(r.body.protocolVersion).toBe("0.96.0");
+    expect((r.body.capabilities as { liveMoney: boolean; evaluateLlm: boolean; hosted: boolean }).liveMoney).toBe(
+      false,
+    );
+    expect((r.body.capabilities as { hosted: boolean }).hosted).toBe(false);
+    expect((r.body.pin as { version: string }).version).toBe("0.96.0");
+    expect(String(r.body.url)).toContain("127.0.0.1");
+  });
 });
+
+describe("HTTP command bus", () => {
+  it("POST /v1/commands dispatches every CommandType", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "host.card", actor: "system" }),
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.kind).toBe("allow");
+    const card = r.body.data as { hosted: boolean; evaluateLlm: boolean };
+    expect(card.hosted).toBe(false);
+    expect(card.evaluateLlm).toBe(false);
+  });
+
+  it("POST /v1/commands names command.malformed for an unknown type", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "not.a.command", actor: "system" }),
+    });
+    expect(r.status).toBe(400);
+    expect(r.body.type).toBe("https://aether.dev/errors/command.malformed");
+    expect(String(r.body.detail)).toContain("unknown command type");
+  });
+
+  it("POST /v1/hires/{id}/deliver is hire.deliver on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/hires/hid_01J6AETHERGHOSTHIRE0000001/deliver", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("actor.role_capability");
+  });
+
+  it("POST /v1/hires/{id}/void is hire.void on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/hires/hid_01J6AETHERGHOSTHIRE0000001/void", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("hire.known");
+  });
+
+  it("POST /v1/quotes/{id}/withdraw is market.withdraw on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/quotes/qte_01J6AETHERGHOSTQUOTE00001/withdraw", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("POST /v1/mandates/{id}/revoke is mandate.revoke on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/mandates/mid_01J6AETHERGHOSTINTENT00001/revoke", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("mandate.known_intent");
+  });
+
+  it("POST /v1/rfqs/{id}/close is market.close on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/rfqs/rfq_01J6AETHERGHOSTRFQ00000001/close", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("POST /v1/carts/{id}/dump is mandate.revoke_cart on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/carts/mid_01J6AETHERGHOSTCART0000095/dump", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("mandate.known_cart");
+  });
+
+  it("POST /v1/checks/{id}/spike is mandate.revoke_payment on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/checks/mid_01J6AETHERGHOSTPAY00000096/spike", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("mandate.known_payment");
+  });
+
+  it("POST /v1/fx/settle and POST /v1/ledger/transfers are the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const fx = await json("/v1/fx/settle", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system", quoteId: "qte_01J6AETHERGHOSTQUOTE00001" }),
+    });
+    expect(fx.status).toBe(422);
+    expect((fx.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("market.fx_quote");
+    const xfer = await json("/v1/ledger/transfers", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "system",
+        fromAccount: "system:equity",
+        toAccount: "system:equity",
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    });
+    expect(xfer.status).toBe(422);
+    expect((xfer.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("ledger.sufficient");
+  });
+
+  it("GET /openapi.yaml is the document, not a laptop path", async () => {
+    const res = await fetch(`${base}/openapi.yaml`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("yaml");
+    const text = await res.text();
+    expect(text).toContain("openapi: 3.1.0");
+    expect(text).toContain("operationId: commandDispatch");
+    expect(text).not.toMatch(/"201":/);
+  });
+
+  it("GET /openapi.json carries the YAML document, not a filesystem note", async () => {
+    const r = await json("/openapi.json");
+    expect(r.status).toBe(200);
+    expect(r.body.format).toBe("yaml");
+    expect(String(r.body.document)).toContain("openapi: 3.1.0");
+    expect(r.body.path).toBeUndefined();
+    expect(r.body.note).toBeUndefined();
+  });
+
+  it("POST /v1/demo/clearing is the clearing-window TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/clearing", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("clearing");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/refund is the refund TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/refund", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("refund");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/replay is the replay TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/replay", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("replay");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/nonce is the envelope-nonce TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/nonce", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("nonce");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/deny is the deny-cache TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/deny", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("deny");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/recurrence is the recurrence TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/recurrence", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("recurrence");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/calendar is the calendar TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/calendar", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("calendar");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/slot is the slot TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/slot", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("slot");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/daily is the daily TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/daily", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("daily");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/cart is the cart occupancy TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/cart", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("cart");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/velocity is the velocity TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/velocity", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("velocity");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/door is the operator-door TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/door", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("door");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/match is the cart-match TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/match", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("match");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/room is the closed-room TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/room", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("room");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/conversion is the conversion TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/conversion", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("conversion");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/pair is the unique-live TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/pair", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("pair");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/band is the spread TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/band", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("band");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/nest is the nest TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/nest", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("nest");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/heir is the heir TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/heir", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("heir");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/stock is the stock TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/stock", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("stock");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/purse is the purse TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/purse", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("purse");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/seat is the seat TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/seat", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("seat");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/cover is the cover TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/cover", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("cover");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/mint is the mint TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/mint", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("mint");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/payee is the payee TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/payee", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("payee");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/climb is the climb TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/climb", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("climb");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/born is the born TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/born", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("born");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/reach is the reach TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/reach", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("reach");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/year is the year TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/year", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("year");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/fuse is the fuse TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/fuse", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("fuse");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/sku is the sku TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/sku", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("sku");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/priced is the priced TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/priced", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("priced");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/party is the party TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/party", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("party");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/cash is the cash TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/cash", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("cash");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/stale is the stale TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/stale", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("stale");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/chain is the chain TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/chain", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("chain");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/arrow is the arrow TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/arrow", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("arrow");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/wallet is the wallet TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/wallet", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("wallet");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/name is the name TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/name", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("name");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/pane is the pane TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/pane", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("pane");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/subject is the subject TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/subject", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("subject");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/paper is the paper TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/paper", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("paper");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/mix is the mix TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/mix", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("mix");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/rung is the rung TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/rung", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("rung");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/grade is the grade TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/grade", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("grade");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/cradle is the cradle TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/cradle", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("cradle");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/ceiling is the ceiling TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/ceiling", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("ceiling");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/lapse is the lapse TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/lapse", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("lapse");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/pause is the pause TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/pause", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("pause");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/mirror is the mirror TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/mirror", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("mirror");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/warrant is the warrant TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/warrant", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("warrant");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/vacant is the vacant TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/vacant", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("vacant");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/badge is the badge TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/badge", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("badge");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/lid is the lid TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/lid", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("lid");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/bare is the bare TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/bare", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("bare");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/shelf is the shelf TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/shelf", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("shelf");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/hall is the hall TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/hall", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("hall");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/writ is the writ TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/writ", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("writ");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/crate is the crate TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/crate", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("crate");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/pact is the pact TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/pact", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("pact");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/root is the root TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/root", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("root");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/docket is the docket TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/docket", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("docket");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/graft is the graft TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/graft", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("graft");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/seal is the seal TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/seal", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("seal");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/guest is the guest TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/guest", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("guest");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/dust is the dust TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/dust", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("dust");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/thaw is the thaw TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/thaw", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("thaw");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/twin is the twin TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/twin", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("twin");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/fence is the fence TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/fence", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("fence");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/mute is the mute TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/mute", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("mute");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/nil is the nil TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/nil", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("nil");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/spark is the spark TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/spark", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("spark");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/wilt is the wilt TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/wilt", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("wilt");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/maker is the maker TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/maker", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("maker");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/ink is the ink TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/ink", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("ink");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/brim is the brim TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/brim", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("brim");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/swap is the swap TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/swap", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("swap");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/sour is the sour TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/sour", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("sour");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/cut is the cut TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/cut", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("cut");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/ice is the ice TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/ice", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("ice");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/rail is the rail TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/rail", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("rail");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/pen is the pen TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/pen", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("pen");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/well is the well TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/well", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("well");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/cite is the cite TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/cite", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("cite");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/lock is the lock TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/lock", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("lock");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/void is the void TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/void", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("void");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/fold is the fold TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/fold", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("fold");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/rip is the rip TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/rip", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("rip");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/shut is the shut TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/shut", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("shut");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/dump is the dump TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/dump", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("dump");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/spike is the spike TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/spike", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("spike");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/demo/week is the week TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/week", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("week");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
+  it("POST /v1/payments/submit without PAYMENT-SIGNATURE is the command bus, not a missing header", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const founder = await json("/v1/identities", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "system",
+        key: "ops-human",
+        displayName: "Founder",
+        role: "human_operator",
+        autonomyLevel: 0,
+      }),
+    });
+    expect(founder.status).toBe(200);
+    const desk = await json("/v1/identities", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "ops-human",
+        key: "desk",
+        displayName: "Desk",
+        role: "procurement",
+        autonomyLevel: 3,
+      }),
+    });
+    expect(desk.status).toBe(200);
+    const r = await json("/v1/payments/submit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "desk", hireId: "hid_01J6AETHERGHOSTHIRE0000001", nonce: "n1" }),
+    });
+    expect(r.status).toBe(422);
+    expect((r.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("hire.known");
+  });
+
+  it("POST /v1/payments/require is HTTP 402 with PAYMENT-REQUIRED; submit omits PAYMENT-SIGNATURE", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const demo = await json("/v1/demo/cite", { method: "POST" });
+    expect(demo.status).toBe(200);
+    expect(demo.body.ok).toBe(true);
+    const snap = await json("/v1/snapshot");
+    const hires = snap.body.hires as {
+      id: string;
+      state: string;
+      intentId: string;
+      sellerId: string;
+      sku: string;
+      price: { amount: number };
+    }[];
+    const offered = hires.find((h) => h.state === "offered");
+    expect(offered).toBeDefined();
+    const hireId = offered!.id;
+
+    const accept = await json(`/v1/hires/${hireId}/accept`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "research-vendor" }),
+    });
+    expect(accept.status).toBe(200);
+
+    const cart = await json("/v1/mandates/cart", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "desk",
+        intentId: offered!.intentId,
+        merchantId: offered!.sellerId,
+        hireId,
+        line_items: [
+          {
+            sku: offered!.sku,
+            description: offered!.sku,
+            quantity: 1,
+            unitAmount: { amount: offered!.price.amount, currency: "USD_SIM" },
+          },
+        ],
+      }),
+    });
+    expect(cart.status).toBe(200);
+    const cartId = (cart.body.data as { payload: { id: string } }).payload.id;
+
+    const payment = await json("/v1/mandates/payment", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "desk", cartId }),
+    });
+    expect(payment.status).toBe(200);
+    const paymentMandateId = (payment.body.data as { payload: { id: string } }).payload.id;
+
+    const fund = await json(`/v1/hires/${hireId}/fund`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "desk", paymentMandateId }),
+    });
+    expect(fund.status).toBe(200);
+
+    const deliver = await json(`/v1/hires/${hireId}/deliver`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "research-vendor", deliverable: { n: 1 } }),
+    });
+    expect(deliver.status).toBe(200);
+
+    const requireRes = await fetch(`${base}/v1/payments/require`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "research-vendor", hireId }),
+    });
+    expect(requireRes.status).toBe(402);
+    const requiredHeader = requireRes.headers.get("payment-required");
+    expect(requiredHeader).toBeTruthy();
+    const requiredBody = (await requireRes.json()) as {
+      kind: string;
+      data: { x402Version: number; accepted: { network: string; amount: string; scheme: string }[] };
+    };
+    expect(requiredBody.kind).toBe("allow");
+    expect(requiredBody.data.x402Version).toBe(2);
+    expect(requiredBody.data.accepted[0]?.network).toBe("sim:aether-1");
+    expect(requiredBody.data.accepted[0]?.scheme).toBe("exact");
+    expect(requiredBody.data.accepted[0]?.amount).toBe(String(offered!.price.amount));
+
+    const submitRes = await fetch(`${base}/v1/payments/submit`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "desk", hireId, nonce: `nonce-${hireId}` }),
+    });
+    expect(submitRes.status).toBe(200);
+    expect(submitRes.headers.get("payment-response")).toBeTruthy();
+    const submitted = (await submitRes.json()) as { kind: string };
+    expect(submitted.kind).toBe("allow");
+  });
+
+  it("GET /v1/kya and GET /v1/objects/iss_* are the genesis issuer catalog", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const kya = await json("/v1/kya");
+    expect(kya.status).toBe(200);
+    const issuers = kya.body.issuers as { id: string; live: boolean; adapter: string }[];
+    expect(issuers).toHaveLength(4);
+    expect(issuers.every((i) => i.live === false && i.adapter === "shape")).toBe(true);
+    const row = await json(`/v1/objects/${issuers[0]!.id}`);
+    expect(row.status).toBe(200);
+    expect(row.body.type).toBe("issuer");
+    expect((row.body.value as { live: boolean }).live).toBe(false);
+  });
+
+  it("POST /v1/clearing/windows is clearing.settle_window on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/clearing/windows", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system", currency: "USD_SIM" }),
+    });
+    expect(r.status).toBe(422);
+    expect((r.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("actor.system_scope");
+  });
+});
+

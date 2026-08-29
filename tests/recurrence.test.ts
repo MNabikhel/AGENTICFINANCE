@@ -187,6 +187,45 @@ describe("recurrence", () => {
     expect(rt.intents.size).toBe(before + 1);
   });
 
+  it("refuses WEEKLY max 8 as mandate.cadence_reach, not a written corpse", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt, []);
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "buy research every week",
+        constraints: [{ type: "payment.agent_recurrence", frequency: "WEEKLY", max_occurrences: 8 }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.cadence_reach");
+    expect(rt.intents.size).toBe(before);
+  });
+
+  it("still writes a one-shot WEEKLY", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt, []);
+    const before = rt.intents.size;
+    const r = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "buy research once this week",
+          constraints: [{ type: "payment.agent_recurrence", frequency: "WEEKLY", max_occurrences: 1 }],
+        }),
+      ),
+      "one-shot weekly",
+    );
+    expect(r.decision.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(rt.intents.size).toBe(before + 1);
+  });
+
   it("still names identity.known first when the subject is missing", () => {
     const rt = boot();
     const { founder } = economy(rt, []);

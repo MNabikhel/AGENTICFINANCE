@@ -1,0 +1,26 @@
+{
+  "id": "mandate-parent",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000024",
+  "opening": {
+    "desk:cash": { "amount": 1500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "beforeParentDies": "2026-09-03T00:00:00.000Z",
+  "afterParent": "2026-09-05T00:00:00.000Z",
+  "parent": {
+    "task": "A dead parent is not a parent. New spend is mandate.parent_fresh. Funded work still finishes.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 }
+    ]
+  },
+  "child": {
+    "task": "tighter child while the parent lives",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 200000 }
+    ]
+  },
+  "quotes": {
+    "once": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

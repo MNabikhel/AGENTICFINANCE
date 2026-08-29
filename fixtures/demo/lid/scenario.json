@@ -1,0 +1,23 @@
+{
+  "id": "amount-range",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000059",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "An item cap is not an envelope. New spend over the lid is payment.amount_range. Funded work still finishes.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 100000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "sneak": { "amount": 150000, "currency": "USD_SIM" }
+  }
+}

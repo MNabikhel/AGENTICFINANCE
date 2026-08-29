@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 87 rules", () => {
-    expect(RULE_IDS).toHaveLength(87);
+  it("has 97 rules", () => {
+    expect(RULE_IDS).toHaveLength(97);
   });
 
   it("denies frozen actors", () => {
@@ -193,6 +193,145 @@ describe("policy catalog", () => {
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "payment.allowed_payees")?.verdict).toBe("deny");
+  });
+
+  it("denies hire.create when the slip lists a ghost rail", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        payeeId: MERCHANT.id,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([
+          {
+            type: "payment.allowed_payment_instruments",
+            allowed: [{ id: "ghost-rail", type: "sim_ledger", description: "x" }],
+          },
+        ]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.allowed_payment_instruments")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "instrument.sim_only")?.verdict).toBe("allow");
+  });
+
+  it("allows hire.create when the slip lists the sim ledger", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        payeeId: MERCHANT.id,
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        intent: signedIntent([
+          {
+            type: "payment.allowed_payment_instruments",
+            allowed: [{ id: "sim-ledger", type: "sim_ledger", description: "sim" }],
+          },
+        ]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.allowed_payment_instruments")?.verdict).toBe("allow");
+  });
+
+  it("denies a child instrument list that is not a subset of the parent", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      {
+        type: "payment.allowed_payment_instruments",
+        allowed: [{ id: "sim-ledger", type: "sim_ledger", description: "sim" }],
+      },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200000 }],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+  });
+
+  it("denies hire.create when a ghost citation misses a funded check", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        referenceOk: false,
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: "f".repeat(64) }]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("deny");
+    const rem = remediationFor(d);
+    expect(rem?.kind).toBe("issue_intent");
+    expect(rem?.ruleId).toBe("payment.reference");
+    expect(rem?.commandType).toBe("mandate.issue_intent");
+  });
+
+  it("allows hire.create with payment.reference when no prior funded payment exists", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: "f".repeat(64) }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("allow");
+  });
+
+  it("allows hire.create when the citation matches a funded check", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        referenceOk: true,
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: HASH }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("allow");
+  });
+
+  it("allows complete-after-fund even when the citation would miss", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.deliver",
+        referenceOk: false,
+        hire: hire({ state: "funded" }),
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: "f".repeat(64) }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("allow");
+  });
+
+  it("denies a child that drops the parent's payment.reference", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      { type: "payment.reference", conditional_transaction_id: HASH },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200000 }],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+  });
+
+  it("denies a child that changes the parent's payment.reference", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      { type: "payment.reference", conditional_transaction_id: HASH },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 200000 },
+          { type: "payment.reference", conditional_transaction_id: "f".repeat(64) },
+        ],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
   });
 
   it("escalates procurement above $5,000", () => {
@@ -312,6 +451,49 @@ describe("policy catalog", () => {
       }),
     );
     expect(d.trace.find((t) => t.ruleId === "kya.principal_not_frozen")?.verdict).toBe("deny");
+  });
+
+  it("denies spend when KYA depth exceeds max", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 4,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.delegation_depth")?.verdict).toBe("deny");
+    expect(d.verdict).toBe("deny");
+  });
+
+  it("allows spend when KYA depth is at the max", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 3,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.delegation_depth")?.verdict).toBe("allow");
   });
 
   it("allows L5 to skip the approval threshold while amount_range still denies", () => {
@@ -676,6 +858,337 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.kind).toBe("none");
   });
 
+  it("still names identity.known first when rotating a missing agent", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "identity.rotate",
+        targetKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies rotating someone else's key as identity.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "identity.rotate",
+        targetKnown: true,
+        identityPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.not_frozen")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a desk rotating its own lock as identity.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "identity.rotate",
+        targetKnown: true,
+        identityPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names market.known_rfq first when folding a missing quote", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.withdraw",
+        rfqKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies folding someone else's bid as market.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "compute_vendor", autonomyLevel: 2 }),
+        commandType: "market.withdraw",
+        rfqKnown: true,
+        marketFresh: true,
+        quoteUnspent: true,
+        marketPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a seller folding its own bid as market.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.withdraw",
+        rfqKnown: true,
+        marketFresh: true,
+        quoteUnspent: true,
+        marketPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_intent first when ripping a missing slip", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke",
+        intentKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_intent");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies ripping someone else's unused slip as mandate.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke",
+        intentKnown: true,
+        intentWindowLive: true,
+        mandatePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows an issuer ripping its own unused slip as mandate.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.revoke",
+        intentKnown: true,
+        intentWindowLive: true,
+        mandatePartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names market.known_rfq first when shutting a missing room", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "market.close",
+        rfqKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies shutting someone else's room as market.rfq_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "market.close",
+        rfqKnown: true,
+        marketFresh: true,
+        rfqPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.rfq_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a buyer shutting its own room as market.rfq_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "market.close",
+        rfqKnown: true,
+        marketFresh: true,
+        rfqPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_cart first when dumping a missing checkout", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_cart");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies dumping someone else's unused checkout as mandate.cart_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: true,
+        cartWindowLive: true,
+        cartPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.cart_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a buyer dumping its own unused checkout as mandate.cart_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: true,
+        cartWindowLive: true,
+        cartPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_payment first when spiking a missing check", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_payment")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_payment");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies spiking someone else's unused payment as mandate.payment_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: true,
+        paymentWindowLive: true,
+        paymentPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_payment")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.payment_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a buyer spiking its own unused payment as mandate.payment_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: true,
+        paymentWindowLive: true,
+        paymentPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_payment")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("denies hiring a ripped unused slip as mandate.not_expired", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intentKnown: true,
+        intentWindowLive: false,
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500000 }]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.not_expired");
+  });
+
   it("denies an RFQ that invites a missing agent as identity.known", () => {
     const d = evaluate(
       ctx({
@@ -743,6 +1256,35 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("hire.state");
     expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies void of a funded hire as hire.state, not a missing party", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.void",
+        hire: hire({ state: "funded" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.state");
+  });
+
+  it("allows void from offered", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.void",
+        hire: hire({ state: "offered" }),
+        hireKnown: true,
+        hirePartyOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.state")?.verdict).toBe("allow");
   });
 
   it("allows an accept from offered", () => {
@@ -1895,6 +2437,65 @@ describe("policy catalog", () => {
     expect(d.verdict).not.toBe("deny");
   });
 
+  it("denies L0/L1 envelope.submit without a human payment JWS as human.signature_present", () => {
+    const human = agent({ role: "human_operator", autonomyLevel: 0, did: "did:aether:human" });
+    const desk = agent({ autonomyLevel: 1, did: "did:aether:proc" });
+    const d = evaluate(
+      ctx({
+        actor: desk,
+        counterparties: [desk, human],
+        commandType: "envelope.submit",
+        payment: signedPayment(),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("escalate");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("human.signature_present");
+  });
+
+  it("allows L2+ to self-sign envelope.submit", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 2 }),
+        commandType: "envelope.submit",
+        payment: signedPayment(),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("allow");
+  });
+
+  it("allows L1 envelope.submit when a human_operator signed the payment", () => {
+    const human = agent({ role: "human_operator", autonomyLevel: 0, did: "did:aether:human" });
+    const desk = agent({ autonomyLevel: 1, did: "did:aether:proc" });
+    const d = evaluate(
+      ctx({
+        actor: desk,
+        counterparties: [desk, human],
+        commandType: "envelope.submit",
+        payment: { ...signedPayment(), issuer: human.did },
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("allow");
+    expect(d.verdict).toBe("escalate");
+  });
+
+  it("does not let a waived ticket wink a junior signature", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 1 }),
+        commandType: "envelope.submit",
+        payment: signedPayment(),
+        thresholdWaived: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "human.signature_present")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("human.signature_present");
+  });
+
   it("denies a handshake born expired as kya.mint_fresh", () => {
     const d = evaluate(
       ctx({
@@ -2242,6 +2843,59 @@ describe("policy catalog", () => {
   it("does not name mandate.occurrence_fresh when the speaker is not minting a slip", () => {
     const d = evaluate(ctx({ commandType: "ledger.balances" }));
     expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+  });
+
+  it("denies a week that cannot admit a second hire as mandate.cadence_reach", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: true,
+        cadenceReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.window_reach")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "payment.recurrence")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.cadence_reach");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.cadence_reach when the next slot still opens while the slip lives", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: true,
+        cadenceReachOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.cadence_reach when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.occurrence_fresh first when a vacant cap also cannot admit a second hire", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        occurrenceMintOk: false,
+        cadenceReachOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cadence_reach")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.occurrence_fresh");
   });
 
   it("still names identity.known first when a ghost subject is also born with no slots", () => {

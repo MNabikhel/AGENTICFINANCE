@@ -1,0 +1,21 @@
+{
+  "id": "known-invitee",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000070",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneakInvitedSellerId": "aid_01J6AETHERGHOSTSELLER000070",
+  "intent": {
+    "task": "A missing invitee is not a closed room. Completing funded work is legal. A closed guest list is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

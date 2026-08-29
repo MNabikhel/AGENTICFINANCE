@@ -174,6 +174,34 @@ describe("approval expiry", () => {
     expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("expired");
     expect(rt.snapshotState().approvals.find((a) => a.id === ticket.id)?.status).toBe("expired");
   });
+
+  it("labels a pending ticket stale when the paused command would not allow", () => {
+    const rt = boot();
+    const { desk, vendor, treasury, intentId } = economy(rt, 700_000);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.deep",
+      spec: "needs a grown-up",
+      price: { amount: 640_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    expect(offered.attempt.value.kind).toBe("escalated");
+    const ticket = offered.attempt.value.ticket as ApprovalTicket;
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("pending");
+    rt.clock.set("2026-08-28T02:00:00.000Z");
+    expect(rt.approvals.get(ticket.id)?.status).toBe("pending");
+    expect((rt.inspect(ticket.id)?.value as ApprovalTicket).status).toBe("stale");
+    expect(rt.snapshotState().approvals.find((a) => a.id === ticket.id)?.status).toBe("stale");
+    const yes = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "approved" }));
+    expect(yes.ok).toBe(false);
+    if (yes.ok) return;
+    expect(yes.error.decision?.remediation?.ruleId).toBe("approval.replay");
+    const no = rt.dispatch(cmd("approval.resolve", treasury.id, { approvalId: ticket.id, decision: "rejected" }));
+    expect(no.ok).toBe(true);
+  });
 });
 
 describe("delegation inspect", () => {
@@ -220,6 +248,37 @@ describe("delegation inspect", () => {
     expect((rt.inspect(hop.id)?.value as { status: string }).status).toBe("revoked");
     expect(rt.kyaSnapshot().edges.find((e) => e.to === desk.id)?.status).toBe("revoked");
   });
+
+  it("pins a genesis issuer object on a hop; inspect of iss_ is shape-only", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const self = rt.kya.issuerOfKind("aether.self");
+    expect(rt.inspect(self.id)?.type).toBe("issuer");
+    const issuer = rt.inspect(self.id)?.value as {
+      kind: string;
+      adapter: string;
+      live: boolean;
+      credential?: unknown;
+    };
+    expect(issuer.kind).toBe("aether.self");
+    expect(issuer.adapter).toBe("shape");
+    expect(issuer.live).toBe(false);
+    expect(issuer.credential).toBeUndefined();
+    expect(rt.kyaSnapshot().issuers).toHaveLength(4);
+
+    const issued = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3, issuerKind: "tap.http-sig" })),
+      "attest",
+    );
+    const hop = issued.data as DelegationAttestation;
+    expect(hop.issuerKind).toBe("tap.http-sig");
+    expect(hop.issuerId).toBe(rt.kya.issuerOfKind("tap.http-sig").id);
+    const viewed = rt.inspect(hop.id)?.value as { status: string; issuerId: string };
+    expect(viewed.status).toBe("live");
+    expect(viewed.issuerId).toBe(hop.issuerId);
+    expect("status" in (rt.kya.attestations.get(hop.id) ?? {})).toBe(false);
+    expect(rt.protocolCard().liveMoney).toBe(false);
+  });
 });
 
 describe("quote inspect", () => {
@@ -235,6 +294,23 @@ describe("quote inspect", () => {
     });
     expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("live");
     expect(rt.snapshotState().quotes.find((q) => q.id === invited.quoteId)?.status).toBe("live");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+  });
+
+  it("labels a folded quote withdrawn, not expired or spent", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "fold me",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const folded = rt.dispatch(cmd("market.withdraw", vendor.id, { quoteId: invited.quoteId }));
+    expect(folded.ok).toBe(true);
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("withdrawn");
+    expect(rt.snapshotState().quotes.find((q) => q.id === invited.quoteId)?.status).toBe("withdrawn");
     expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
   });
 
@@ -328,6 +404,62 @@ describe("quote inspect", () => {
     expect(late.ok).toBe(false);
     if (late.ok) return;
     expect(late.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+  });
+
+  it("labels a shut RFQ closed, not expired, without writing status into the store", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "shut me",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    const shut = rt.dispatch(cmd("market.close", desk.id, { rfqId }));
+    expect(shut.ok).toBe(true);
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
+    expect(rt.snapshotState().rfqs.find((r) => r.id === rfqId)?.status).toBe("closed");
+    expect("status" in (rt.rfqs.get(rfqId) ?? {})).toBe(false);
+  });
+
+  it("labels a shut RFQ closed even after the day dies", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "shut then wait",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "shut");
+    rt.clock.set("2026-08-29T00:01:00.000Z");
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
+    expect("status" in (rt.rfqs.get(rfqId) ?? {})).toBe(false);
+  });
+
+  it("labels a hire quote expired when the parent RFQ is shut while the quote envelope still lives", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "shut");
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("expired");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+    const hire = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(hire.ok).toBe(false);
+    if (hire.ok) return;
+    expect(hire.error.decision?.remediation?.ruleId).toBe("market.not_expired");
   });
 
   it("labels a hire quote expired when the parent RFQ dies while the quote envelope still lives", () => {
@@ -457,6 +589,54 @@ describe("quote inspect", () => {
     expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
   });
 
+  it("does not expire an FX quote when the parent RFQ is shut — the window lives on the quote", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "mm-shut",
+          displayName: "Market Maker",
+          role: "market_maker",
+          autonomyLevel: 2,
+        }),
+      ),
+      "mm-shut",
+    );
+    const mm = rt.alias("mm-shut");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [mm.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-28T12:00:00.000Z",
+          },
+        }),
+      ),
+      "fx quote",
+    );
+    const rfqId = (rfq.data as { id: string }).id;
+    const quoteId = (quoted.data as { id: string }).id;
+    must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "shut fx room");
+    expect((rt.inspect(rfqId)?.value as { status: string }).status).toBe("closed");
+    expect((rt.inspect(quoteId)?.value as { status: string }).status).toBe("live");
+    expect("status" in (rt.quotes.get(quoteId) ?? {})).toBe(false);
+  });
+
   it("does not label a quote held when the pause is already dead", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt, 700_000);
@@ -551,7 +731,7 @@ describe("cart inspect", () => {
     expect(again.error.decision?.remediation?.ruleId).toBe("mandate.unique_payment");
   });
 
-  it("labels a hire-attached cart live until a payment occupies it", () => {
+  it("labels a hire-attached unused cart live, then dump frees occupancy", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
     const offered = offerHire(rt, {
@@ -569,6 +749,10 @@ describe("cart inspect", () => {
     const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId, hireId });
     expect(rt.hires.get(hireId)?.cartId).toBe(cartId);
     expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+    const dumped = rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId }));
+    expect(dumped.ok).toBe(true);
+    expect(rt.hires.get(hireId)?.cartId).toBeUndefined();
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("revoked");
   });
 
   it("labels a stale unpaid cart expired, not live", () => {
@@ -588,6 +772,40 @@ describe("cart inspect", () => {
     must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
     rt.clock.set("2026-08-29T12:00:00.000Z");
     expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a dumped unused cart revoked, not expired or bound", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const dumped = rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId }));
+    expect(dumped.ok).toBe(true);
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.snapshotState().carts.find((c) => c.payload.id === cartId)?.status).toBe("revoked");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a bound cart bound even if dump is refused", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "payment");
+    const dumpBound = rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId }));
+    expect(dumpBound.ok).toBe(false);
+    if (dumpBound.ok) return;
+    expect(dumpBound.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a dumped unused cart revoked even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    must(rt.dispatch(cmd("mandate.revoke_cart", desk.id, { cartId })), "dump");
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("revoked");
     expect("status" in (rt.carts.get(cartId as MandateId) ?? {})).toBe(false);
   });
 });
@@ -834,6 +1052,64 @@ describe("payment inspect", () => {
     const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
     expect(delivered.ok).toBe(true);
   });
+
+  it("labels a spiked unused payment revoked and frees cart occupancy", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("bound");
+    const spiked = rt.dispatch(cmd("mandate.revoke_payment", desk.id, { paymentId }));
+    expect(spiked.ok).toBe(true);
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.snapshotState().payments.find((p) => p.payload.id === paymentId)?.status).toBe("revoked");
+    expect((rt.inspect(cartId)?.value as { status: string }).status).toBe("live");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+    const again = rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId }));
+    expect(again.ok).toBe(true);
+  });
+
+  it("labels a funded payment funded even after a spike is refused", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    const { paymentId } = fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const spikeFunded = rt.dispatch(cmd("mandate.revoke_payment", desk.id, { paymentId }));
+    expect(spikeFunded.ok).toBe(false);
+    if (spikeFunded.ok) return;
+    expect(spikeFunded.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("funded");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+  });
+
+  it("labels a spiked unused payment revoked even after the window has closed", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const cartId = issueCart(rt, { buyer: desk.id, seller: vendor.id, intentId });
+    const paymentId = issuePayment(rt, cartId, desk.id);
+    must(rt.dispatch(cmd("mandate.revoke_payment", desk.id, { paymentId })), "spike");
+    rt.clock.set("2026-08-29T12:00:00.000Z");
+    expect((rt.inspect(paymentId)?.value as { status: string }).status).toBe("revoked");
+    expect("status" in (rt.payments.get(paymentId as MandateId) ?? {})).toBe(false);
+  });
 });
 
 const INTENT_DEAD = "2026-09-05T00:00:00.000Z";
@@ -844,6 +1120,45 @@ describe("intent inspect", () => {
     const { intentId } = economy(rt);
     expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("live");
     expect(rt.snapshotState().intents.find((s) => s.payload.id === intentId)?.status).toBe("live");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+  });
+
+  it("labels a ripped unused intent revoked, not expired or funded", () => {
+    const rt = boot();
+    const { founder, intentId } = economy(rt);
+    const ripped = rt.dispatch(cmd("mandate.revoke", founder.id, { intentId }));
+    expect(ripped.ok).toBe(true);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("revoked");
+    expect(rt.snapshotState().intents.find((s) => s.payload.id === intentId)?.status).toBe("revoked");
+    expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
+  });
+
+  it("labels a funded intent funded even after the slip is ripped", () => {
+    const rt = boot();
+    const { desk, vendor, founder, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    const ripped = rt.dispatch(cmd("mandate.revoke", founder.id, { intentId }));
+    expect(ripped.ok).toBe(true);
+    expect((rt.inspect(intentId)?.value as { status: string }).status).toBe("funded");
     expect("status" in (rt.intents.get(intentId) ?? {})).toBe(false);
   });
 
@@ -1154,17 +1469,145 @@ describe("intent inspect", () => {
   });
 });
 
+describe("hire inspect", () => {
+  it("labels an offered hire live and does not write status into the store", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    expect((rt.inspect(hireId)?.value as { status: string }).status).toBe("live");
+    expect(rt.snapshotState().hires.find((h) => h.id === hireId)?.status).toBe("live");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+  });
+
+  it("labels an offered hire expired when the slip dies, and accept still names mandate.not_expired", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(hireId)?.value as { status: string; state: string }).status).toBe("expired");
+    expect((rt.inspect(hireId)?.value as { state: string }).state).toBe("offered");
+    expect(rt.snapshotState().hires.find((h) => h.id === hireId)?.status).toBe("expired");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+    const accepted = rt.dispatch(cmd("hire.accept", vendor.id, { hireId }));
+    expect(accepted.ok).toBe(false);
+    if (accepted.ok) return;
+    expect(accepted.error.decision?.remediation?.ruleId).toBe("mandate.not_expired");
+  });
+
+  it("labels a funded hire funded after the slip dies, and completing is legal", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    fundHire(rt, {
+      hireId,
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      intentId,
+      qty: 1,
+      unitAmount: 80_000,
+    });
+    rt.clock.set(INTENT_DEAD);
+    expect((rt.inspect(hireId)?.value as { status: string; state: string }).status).toBe("funded");
+    expect((rt.inspect(hireId)?.value as { state: string }).state).toBe("funded");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+    const delivered = rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } }));
+    expect(delivered.ok).toBe(true);
+    expect((rt.inspect(hireId)?.value as { status: string; state: string }).status).toBe("funded");
+    expect((rt.inspect(hireId)?.value as { state: string }).state).toBe("delivered");
+  });
+
+  it("labels an offered child hire expired when the parent dies while the child exp still lives", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    rt.clock.set("2026-09-03T00:00:00.000Z");
+    const child = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          parentId: intentId,
+          task: "hand down before the parent dies",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+            { type: "payment.budget", currency: "USD_SIM", max: 100_000 },
+            {
+              type: "payment.allowed_payees",
+              allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+            },
+          ],
+        }),
+      ),
+      "child",
+    );
+    const childId = (child.data as { payload: { id: string; exp: number } }).payload.id;
+    const childExp = (child.data as { payload: { exp: number } }).payload.exp;
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId: childId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) return;
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    rt.clock.set(INTENT_DEAD);
+    expect(childExp).toBeGreaterThan(Math.floor(Date.parse(INTENT_DEAD) / 1000));
+    expect((rt.inspect(childId)?.value as { status: string }).status).toBe("expired");
+    expect((rt.inspect(hireId)?.value as { status: string }).status).toBe("expired");
+    expect("status" in (rt.hires.get(hireId) ?? {})).toBe(false);
+    const accepted = rt.dispatch(cmd("hire.accept", vendor.id, { hireId }));
+    expect(accepted.ok).toBe(false);
+    if (accepted.ok) return;
+    expect(accepted.error.decision?.remediation?.ruleId).toBe("mandate.parent_fresh");
+  });
+});
+
 describe("MCP command schemas", () => {
   it("lists real body fields so agents do not guess additionalProperties", () => {
     const mcp = new AetherMcp();
     const listed = mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
-    const tools = (listed as { result: { tools: { name: string; inputSchema: { properties: Record<string, unknown> } }[] } })
+    const tools = (listed as { result: { tools: { name: string; description?: string; inputSchema: { properties: Record<string, unknown> } }[] } })
       .result.tools;
     const hire = tools.find((t) => t.name === "aether_hire_create");
     expect(hire?.inputSchema.properties.quoteId).toBeTruthy();
     expect(hire?.inputSchema.properties.intentId).toBeTruthy();
     expect(hire?.inputSchema.properties.actor).toBeTruthy();
     expect(tools.some((t) => t.name === "aether_get")).toBe(true);
+    const get = tools.find((t) => t.name === "aether_get");
+    expect(get?.description).toContain("hsb_");
+    expect(get?.description).toContain("live | expired");
 
     mcp.callTool("aether_identity_register", {
       actor: "system",
@@ -1180,6 +1623,13 @@ describe("MCP command schemas", () => {
     const cmds = mcp.handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: "aether://commands" } });
     const text = (cmds as { result: { contents: { text: string }[] } }).result.contents[0]?.text ?? "";
     expect(text).toContain("hire.create");
+
+    const card = mcp.handle({ jsonrpc: "2.0", id: 3, method: "resources/read", params: { uri: "aether://agent-card" } });
+    const cardText = (card as { result: { contents: { text: string }[] } }).result.contents[0]?.text ?? "";
+    const parsed = JSON.parse(cardText) as { spec: string; protocolVersion: string; capabilities: { liveMoney: boolean } };
+    expect(parsed.spec).toBe("aether.protocol.1");
+    expect(parsed.protocolVersion).toBe("0.96.0");
+    expect(parsed.capabilities.liveMoney).toBe(false);
   });
 });
 

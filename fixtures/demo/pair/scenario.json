@@ -1,0 +1,7 @@
+{
+  "id": "unique-live",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000021",
+  "opening": {},
+  "circuit": { "dailyLimit": 10000000 }
+}

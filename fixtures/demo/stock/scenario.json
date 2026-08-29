@@ -1,0 +1,24 @@
+{
+  "id": "mm-inventory",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000025",
+  "opening": {
+    "research-vendor:cash": { "amount": 200000, "currency": "USD_SIM" },
+    "market_maker:cash_usdc": { "amount": 10000, "currency": "USDC_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "quotes": {
+    "large": {
+      "amount": 80000,
+      "currency": "USD_SIM",
+      "rateE6": 998000,
+      "validUntil": "2026-08-29T00:00:00.000Z"
+    },
+    "small": {
+      "amount": 1000,
+      "currency": "USD_SIM",
+      "rateE6": 998000,
+      "validUntil": "2026-08-29T00:00:00.000Z"
+    }
+  }
+}

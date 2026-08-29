@@ -10,6 +10,7 @@ import {
   cmd,
   invoiceCurrent,
   signSpeaker,
+  HOST_INVOICE_WINDOW_MS,
 } from "@aether/runtime";
 import { PROTOCOL, type AgentId } from "@aether/types";
 
@@ -54,7 +55,7 @@ describe("hosted operator door", () => {
     expect(publicRt.protocolCard().hosted).toBe(false);
     expect(PROTOCOL.hosted).toBe(false);
     expect(PROTOCOL.liveMoney).toBe(false);
-    expect(PROTOCOL.version).toBe("0.95.0");
+    expect(PROTOCOL.version).toBe("0.96.0");
 
     const hosted = boot({ hosted: true, hostedMonthly: 50_000 });
     const card = hosted.protocolCard();
@@ -205,5 +206,32 @@ describe("hosted operator door", () => {
       method: "invoice",
     }) as { ok: boolean };
     expect(billed.ok).toBe(true);
+  });
+
+  it("labels an operator invoice current then lapsed without writing status into the store", () => {
+    const rt = boot({ hosted: true, hostedMonthly: 12_000 });
+    mustDispatch(
+      rt.dispatch(
+        cmd("identity.register", "system", {
+          key: "ops-human",
+          displayName: "Founder",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+    );
+    const founder = rt.alias("ops-human");
+    const billed = rt.recordHostInvoice(founder.id, { method: "invoice" });
+    expect(billed.ok).toBe(true);
+    if (!billed.ok) return;
+    const id = billed.value.id;
+    expect((rt.inspect(id)?.value as { status: string }).status).toBe("current");
+    expect(rt.snapshotState().invoices.find((i) => i.id === id)?.status).toBe("current");
+    expect("status" in (rt.invoices.get(id) ?? {})).toBe(false);
+    rt.clock.set(new Date(Date.parse(rt.clock.now()) + HOST_INVOICE_WINDOW_MS + 1).toISOString());
+    expect((rt.inspect(id)?.value as { status: string }).status).toBe("lapsed");
+    expect(rt.snapshotState().invoices.find((i) => i.id === id)?.status).toBe("lapsed");
+    expect("status" in (rt.invoices.get(id) ?? {})).toBe(false);
+    expect(invoiceCurrent(rt)).toBe(false);
   });
 });

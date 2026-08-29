@@ -1,0 +1,22 @@
+{
+  "id": "principal-not-frozen",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000085",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "hop": { "maxAutonomy": 3 },
+  "intent": {
+    "task": "A frozen principal is not a frozen desk. Completing funded work after hop expiry is legal; freeze and revoke still bind. A frozen speaker is a different object. A revoked hop is a different object. A no-op thaw is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "sneak": { "amount": 40000, "currency": "USD_SIM" }
+  }
+}

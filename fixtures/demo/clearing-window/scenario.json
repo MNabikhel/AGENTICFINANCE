@@ -1,0 +1,24 @@
+{
+  "id": "clearing-window",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000004",
+  "bilateralLimit": 100000,
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "Desk may buy research. Max $800 per hire, $2,000 total. Pair credit is $1,000 until a window closes.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 80000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 200000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "over": { "amount": 40000, "currency": "USD_SIM" }
+  }
+}

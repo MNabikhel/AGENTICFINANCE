@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Aether Agent Economic Runtime
-  version: 0.95.0
+  version: 0.96.0
   description: |
     Machine-first HTTP face of the same command bus as MCP.
-    402 responses carry PAYMENT-REQUIRED. Submits carry PAYMENT-SIGNATURE.
+    402 responses carry PAYMENT-REQUIRED. Submits may carry PAYMENT-SIGNATURE; the JSON body is the command bus.
     All amounts are integer minor units. Rail is sim:aether-1 only.
 servers:
   - url: http://127.0.0.1:8787
@@ -19,44 +19,153 @@ paths:
             schema:
               $ref: "#/components/schemas/RegisterAgent"
       responses:
-        "201": { description: Agent created }
+        "200": { description: Agent created. Command bus allow, not HTTP 201 Created. }
+  /v1/kya/attest:
+    post:
+      operationId: kyaAttest
+      responses:
+        "200": { description: Handshake issued. Pins a genesis iss_ issuer object. Shape-only. Credentials never enter evaluate(). }
+        "422": { description: Policy deny }
+  /v1/kya/revoke:
+    post:
+      operationId: kyaRevoke
+      responses:
+        "200": { description: Handshake revoked. Cascades. }
+        "422": { description: Policy deny }
+  /v1/kya:
+    get:
+      operationId: kyaSnapshot
+      responses:
+        "200": { description: Graph view. Genesis issuers are shape-only. Edges include derived live | expired | revoked. }
+  /v1/circuit/reset:
+    post:
+      operationId: circuitReset
+      responses:
+        "200": { description: Daily fuse reset. Mandate budgets unchanged. }
+        "422": { description: Policy deny }
+  /v1/agents/{id}/freeze:
+    post:
+      operationId: identityFreeze
+      responses:
+        "200": { description: Agent frozen to L0 }
+        "422": { description: Policy deny }
+  /v1/agents/{id}/unfreeze:
+    post:
+      operationId: identityUnfreeze
+      responses:
+        "200": { description: Freeze lifted. Counts as a kill-switch test. }
+        "422": { description: Policy deny }
+  /v1/agents/{id}/rotate:
+    post:
+      operationId: identityRotate
+      responses:
+        "200": { description: Current signing key replaced. Retired keys still verify. }
+        "422": { description: Policy deny. Someone else's key is identity.party. }
   /v1/mandates/intent:
     post:
       operationId: mandateIssueIntent
       responses:
-        "201": { description: Signed intent }
+        "200": { description: Signed intent. Command bus allow, not HTTP 201 Created. }
         "422": { description: Policy deny }
+  /v1/mandates/{id}/revoke:
+    post:
+      operationId: mandateRevoke
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live unused intent torn up. Store stays raw. Inspect labels revoked. }
+        "422": { description: Policy deny. Stranger is mandate.party. Ghost intent is mandate.known_intent. Already ripped is mandate.not_expired. }
+  /v1/carts/{id}/dump:
+    post:
+      operationId: mandateRevokeCart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live unused cart torn up. Store stays raw. Inspect labels revoked. Occupancy on the hire frees. }
+        "422": { description: Policy deny. Stranger is mandate.cart_party. Ghost cart is mandate.known_cart. Already dumped or bound is mandate.not_expired. }
+  /v1/checks/{id}/spike:
+    post:
+      operationId: mandateRevokePayment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live unused payment torn up. Store stays raw. Inspect labels revoked. Occupancy on the cart frees. }
+        "422": { description: Policy deny. Stranger is mandate.payment_party. Ghost payment is mandate.known_payment. Already spiked or funded is mandate.not_expired. }
   /v1/mandates/cart:
     post:
       operationId: mandateIssueCart
       responses:
-        "201": { description: Signed cart }
+        "200": { description: Signed cart. Command bus allow, not HTTP 201 Created. }
   /v1/mandates/payment:
     post:
       operationId: mandateIssuePayment
       responses:
-        "201": { description: Signed payment mandate }
+        "200": { description: Signed payment mandate. Command bus allow, not HTTP 201 Created. }
   /v1/rfqs:
     post:
       operationId: marketRfq
       responses:
-        "201": { description: RFQ created }
+        "200": { description: RFQ created. Command bus allow, not HTTP 201 Created. }
+  /v1/rfqs/{id}/close:
+    post:
+      operationId: marketClose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live RFQ shut. Store stays raw. Inspect labels closed. }
+        "422": { description: Policy deny. Stranger is market.rfq_party. Ghost RFQ is market.known_rfq. Already shut or expired is market.not_expired. }
   /v1/quotes:
     post:
       operationId: marketQuote
       responses:
-        "201": { description: Quote created }
+        "200": { description: Quote created. Command bus allow, not HTTP 201 Created. }
   /v1/hires:
     post:
       operationId: hireCreate
       responses:
-        "201": { description: Hire offered }
+        "200": { description: Hire offered. Command bus allow, not HTTP 201 Created. }
         "422": { description: Policy deny }
   /v1/hires/{id}/accept:
     post:
       operationId: hireAccept
       responses:
         "200": { description: Hire accepted }
+  /v1/hires/{id}/deliver:
+    post:
+      operationId: hireDeliver
+      responses:
+        "200": { description: Work marked delivered }
+        "422": { description: Policy deny }
+  /v1/hires/{id}/release:
+    post:
+      operationId: hireRelease
+      responses:
+        "200": { description: Escrow released to the seller }
+        "422": { description: Policy deny }
   /v1/hires/{id}/fund:
     post:
       operationId: hireFund
@@ -76,7 +185,46 @@ paths:
                 idempotencyKey: { type: string }
       responses:
         "200": { description: Escrow returned to buyer. Mandate spend restored. Circuit stays sticky. }
-        "409": { description: Illegal hire transition (already delivered/released) }
+        "422": { description: Policy deny. Illegal hire transition is hire.state, not HTTP 409. }
+  /v1/hires/{id}/void:
+    post:
+      operationId: hireVoid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Unfunded offer cancelled. Quote stays spent. Escrow never moved. }
+        "422": { description: Policy deny. Funded work is hire.state, not a refund. Ghost hire is hire.known. Stranger is hire.party. }
+  /v1/quotes/{id}/withdraw:
+    post:
+      operationId: marketWithdraw
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Live unspent quote folded. Store stays raw. Inspect labels withdrawn. }
+        "422": { description: Policy deny. Stranger is market.party. Ghost quote is market.known_rfq. Spent is hire.quote_unspent. Already folded is market.not_expired. }
+  /v1/fx/settle:
+    post:
+      operationId: marketFxSettle
+      responses:
+        "200": { description: FX window settled }
+        "422": { description: Policy deny }
+  /v1/ledger/transfers:
+    post:
+      operationId: ledgerTransfer
+      responses:
+        "200": { description: Treasury book transfer }
         "422": { description: Policy deny }
   /v1/payments/require:
     post:
@@ -94,16 +242,16 @@ paths:
       parameters:
         - in: header
           name: PAYMENT-SIGNATURE
-          required: true
+          required: false
           schema: { type: string }
+          description: Optional x402-shaped practice. The command bus is the JSON body. Omit is not malformed.
       responses:
         "200":
           description: Settled
           headers:
             PAYMENT-RESPONSE:
               schema: { type: string }
-        "409": { description: Nonce reuse }
-        "422": { description: Policy deny }
+        "422": { description: Policy deny. Nonce reuse is idempotency.nonce, not HTTP 409. }
   /v1/approvals/{id}/resolve:
     post:
       operationId: approvalResolve
@@ -136,11 +284,575 @@ paths:
       responses:
         "200": { description: One receipt. Same command as MCP aether_receipt_get. System speaker. Writes POLICY_DECISION. Not ops-human. }
         "422": { description: receipt.known for a missing receipt. }
+  /v1/demo/sprint-procurement:
+    post:
+      operationId: demoSprintProcurement
+      responses:
+        "200": { description: Sprint Procurement TAP report. Conformance, not a storefront. }
+        "500": { description: Assertions failed }
+  /v1/demo/night-watch:
+    post:
+      operationId: demoNightWatch
+      responses:
+        "200": { description: Night Watch TAP report. Standing mandate, KYA, circuit breaker. }
+        "500": { description: Assertions failed }
   /v1/demo/sub-hire:
     post:
       operationId: demoSubHire
       responses:
         "200": { description: Nested-slip TAP report }
+        "500": { description: Assertions failed }
+  /v1/demo/clearing:
+    post:
+      operationId: demoClearingWindow
+      responses:
+        "200": { description: Clearing-window TAP report. Bilateral credit, settlement photo, not a second payment. }
+        "500": { description: Assertions failed }
+  /v1/demo/refund:
+    post:
+      operationId: demoRefundUnwind
+      responses:
+        "200": { description: Refund TAP report. Unwind funded escrow; quote stays spent; circuit stays sticky. }
+        "500": { description: Assertions failed }
+  /v1/demo/replay:
+    post:
+      operationId: demoReplayOnce
+      responses:
+        "200": { description: Replay TAP report. A retry of an allow is not a second spend. }
+        "500": { description: Assertions failed }
+  /v1/demo/nonce:
+    post:
+      operationId: demoEnvelopeNonce
+      responses:
+        "200": { description: Envelope-nonce TAP report. A payment nonce is one-shot; a leftover nonce on a transfer is not. }
+        "500": { description: Assertions failed }
+  /v1/demo/deny:
+    post:
+      operationId: demoDenyCache
+      responses:
+        "200": { description: Deny-cache TAP report. A deny is never a cached success. }
+        "500": { description: Assertions failed }
+  /v1/demo/recurrence:
+    post:
+      operationId: demoRecurrence
+      responses:
+        "200": { description: Recurrence TAP report. A one-slot cadence is not an open checkbook. }
+        "500": { description: Assertions failed }
+  /v1/demo/calendar:
+    post:
+      operationId: demoCalendar
+      responses:
+        "200": { description: Calendar TAP report. A closed calendar is not a freeze on funded work. }
+        "500": { description: Assertions failed }
+  /v1/demo/slot:
+    post:
+      operationId: demoSlot
+      responses:
+        "200": { description: Slot TAP report. A refund does not restore a cadence slot. }
+        "500": { description: Assertions failed }
+  /v1/demo/daily:
+    post:
+      operationId: demoDaily
+      responses:
+        "200": { description: Daily TAP report. A cadence is a gap, not a burst. }
+        "500": { description: Assertions failed }
+  /v1/demo/cart:
+    post:
+      operationId: demoCart
+      responses:
+        "200": { description: Cart occupancy TAP report. Occupancy is a bind, not a field on fund. }
+        "500": { description: Assertions failed }
+  /v1/demo/velocity:
+    post:
+      operationId: demoVelocity
+      responses:
+        "200": { description: Velocity TAP report. A hot hour is not a freeze on funded work. }
+        "500": { description: Assertions failed }
+  /v1/demo/door:
+    post:
+      operationId: demoDoor
+      responses:
+        "200": { description: Operator-door TAP report. The public kernel is not a hosted checkout. PROTOCOL.hosted stays false. }
+        "500": { description: Assertions failed }
+  /v1/demo/match:
+    post:
+      operationId: demoMatch
+      responses:
+        "200": { description: Cart-match TAP report. A cheaper cart is not a discount. Escrow moves the hire price. }
+        "500": { description: Assertions failed }
+  /v1/demo/room:
+    post:
+      operationId: demoRoom
+      responses:
+        "200": { description: Closed-room TAP report. A named guest list is a closed RFQ, not a bulletin board. }
+        "500": { description: Assertions failed }
+  /v1/demo/conversion:
+    post:
+      operationId: demoConversion
+      responses:
+        "200": { description: Conversion TAP report. An FX window is not a hire. Settle it. }
+        "500": { description: Assertions failed }
+  /v1/demo/pair:
+    post:
+      operationId: demoPair
+      responses:
+        "200": { description: Unique-live TAP report. A second live hop is not a tighter grant. }
+        "500": { description: Assertions failed }
+  /v1/demo/band:
+    post:
+      operationId: demoBand
+      responses:
+        "200": { description: Spread TAP report. A 200bps band is not decoration. }
+        "500": { description: Assertions failed }
+  /v1/demo/nest:
+    post:
+      operationId: demoNest
+      responses:
+        "200": { description: Nest TAP report. A nested hop does not outlive its parent. }
+        "500": { description: Assertions failed }
+  /v1/demo/heir:
+    post:
+      operationId: demoHeir
+      responses:
+        "200": { description: Heir TAP report. A dead parent is not a parent. }
+        "500": { description: Assertions failed }
+  /v1/demo/stock:
+    post:
+      operationId: demoStock
+      responses:
+        "200": { description: Stock TAP report. Empty MM USDC is not a missing maker. }
+        "500": { description: Assertions failed }
+  /v1/demo/purse:
+    post:
+      operationId: demoPurse
+      responses:
+        "200": { description: Purse TAP report. A budget is not an item cap. }
+        "500": { description: Assertions failed }
+  /v1/demo/seat:
+    post:
+      operationId: demoSeat
+      responses:
+        "200": { description: Seat TAP report. One subscriber is one row. }
+        "500": { description: Assertions failed }
+  /v1/demo/cover:
+    post:
+      operationId: demoCover
+      responses:
+        "200": { description: Cover TAP report. A parent envelope is not a child's leftover. }
+        "500": { description: Assertions failed }
+  /v1/demo/mint:
+    post:
+      operationId: demoMint
+      responses:
+        "200": { description: Mint TAP report. A transfer is not a mint. }
+        "500": { description: Assertions failed }
+  /v1/demo/payee:
+    post:
+      operationId: demoPayee
+      responses:
+        "200": { description: Payee TAP report. A listed payee is not any registered vendor. }
+        "500": { description: Assertions failed }
+  /v1/demo/climb:
+    post:
+      operationId: demoClimb
+      responses:
+        "200": { description: Climb TAP report. A climb is not a wider handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/born:
+    post:
+      operationId: demoBorn
+      responses:
+        "200": { description: Born TAP report. An FX window cannot be born dead. }
+        "500": { description: Assertions failed }
+  /v1/demo/reach:
+    post:
+      operationId: demoReach
+      responses:
+        "200": { description: Reach TAP report. A window that opens after the slip dies is not a window. }
+        "500": { description: Assertions failed }
+  /v1/demo/year:
+    post:
+      operationId: demoYear
+      responses:
+        "200": { description: Year TAP report. A handshake cannot outlive one year. }
+        "500": { description: Assertions failed }
+  /v1/demo/fuse:
+    post:
+      operationId: demoFuse
+      responses:
+        "200": { description: Fuse TAP report. A daily fuse is not a freeze on funded work. }
+        "500": { description: Assertions failed }
+  /v1/demo/sku:
+    post:
+      operationId: demoSku
+      responses:
+        "200": { description: SKU TAP report. A listed SKU is not any catalog good. }
+        "500": { description: Assertions failed }
+  /v1/demo/priced:
+    post:
+      operationId: demoPriced
+      responses:
+        "200": { description: Priced TAP report. A listed SKU is only priced in a currency the catalog names. }
+        "500": { description: Assertions failed }
+  /v1/demo/party:
+    post:
+      operationId: demoParty
+      responses:
+        "200": { description: Party TAP report. The other side of the table is not a party. }
+        "500": { description: Assertions failed }
+  /v1/demo/cash:
+    post:
+      operationId: demoCash
+      responses:
+        "200": { description: Cash TAP report. Empty cash is not a negative book. }
+        "500": { description: Assertions failed }
+  /v1/demo/stale:
+    post:
+      operationId: demoStale
+      responses:
+        "200": { description: Stale TAP report. A stale quote is not a hire. }
+        "500": { description: Assertions failed }
+  /v1/demo/chain:
+    post:
+      operationId: demoChain
+      responses:
+        "200": { description: Chain TAP report. A dead cart is not a check. }
+        "500": { description: Assertions failed }
+  /v1/demo/arrow:
+    post:
+      operationId: demoArrow
+      responses:
+        "200": { description: Arrow TAP report. Unfinished work is not a payout. }
+        "500": { description: Assertions failed }
+  /v1/demo/wallet:
+    post:
+      operationId: demoWallet
+      responses:
+        "200": { description: Wallet TAP report. A vendor's USD cash is not a USDC wallet. }
+        "500": { description: Assertions failed }
+  /v1/demo/name:
+    post:
+      operationId: demoName
+      responses:
+        "200": { description: Name TAP report. Someone else's name is not a handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/pane:
+    post:
+      operationId: demoPane
+      responses:
+        "200": { description: Pane TAP report. An FX SKU is a window, not a good. }
+        "500": { description: Assertions failed }
+  /v1/demo/subject:
+    post:
+      operationId: demoSubject
+      responses:
+        "200": { description: Subject TAP report. This slip is not yours to spend. }
+        "500": { description: Assertions failed }
+  /v1/demo/paper:
+    post:
+      operationId: demoPaper
+      responses:
+        "200": { description: Paper TAP report. A research quote is not a conversion window. }
+        "500": { description: Assertions failed }
+  /v1/demo/mix:
+    post:
+      operationId: demoMix
+      responses:
+        "200": { description: Mix TAP report. A mixed journal is not a conversion. }
+        "500": { description: Assertions failed }
+  /v1/demo/rung:
+    post:
+      operationId: demoRung
+      responses:
+        "200": { description: Rung TAP report. A skipped rung is not a promotion. }
+        "500": { description: Assertions failed }
+  /v1/demo/grade:
+    post:
+      operationId: demoGrade
+      responses:
+        "200": { description: Grade TAP report. A junior desk is not a nested-slip mint. }
+        "500": { description: Assertions failed }
+  /v1/demo/cradle:
+    post:
+      operationId: demoCradle
+      responses:
+        "200": { description: Cradle TAP report. L5 is not a birthright. }
+        "500": { description: Assertions failed }
+  /v1/demo/ceiling:
+    post:
+      operationId: demoCeiling
+      responses:
+        "200": { description: Ceiling TAP report. A climb is not a wider slip. }
+        "500": { description: Assertions failed }
+  /v1/demo/lapse:
+    post:
+      operationId: demoLapse
+      responses:
+        "200": { description: Lapse TAP report. An expired hop is not a freeze on funded work. }
+        "500": { description: Assertions failed }
+  /v1/demo/pause:
+    post:
+      operationId: demoPause
+      responses:
+        "200": { description: Pause TAP report. A dead pause is not a late yes. }
+        "500": { description: Assertions failed }
+  /v1/demo/mirror:
+    post:
+      operationId: demoMirror
+      responses:
+        "200": { description: Mirror TAP report. A handshake is not a mirror. }
+        "500": { description: Assertions failed }
+  /v1/demo/warrant:
+    post:
+      operationId: demoWarrant
+      responses:
+        "200": { description: Warrant TAP report. An agent-issued slip is not host authority. }
+        "500": { description: Assertions failed }
+  /v1/demo/vacant:
+    post:
+      operationId: demoVacant
+      responses:
+        "200": { description: Vacant TAP report. A cadence with no slots is not a cadence. }
+        "500": { description: Assertions failed }
+  /v1/demo/badge:
+    post:
+      operationId: demoBadge
+      responses:
+        "200": { description: Badge TAP report. A badge is not a shopping pass. }
+        "500": { description: Assertions failed }
+  /v1/demo/lid:
+    post:
+      operationId: demoLid
+      responses:
+        "200": { description: Lid TAP report. An item cap is not an envelope. }
+        "500": { description: Assertions failed }
+  /v1/demo/bare:
+    post:
+      operationId: demoBare
+      responses:
+        "200": { description: Bare TAP report. Unfunded work is not a delivery. }
+        "500": { description: Assertions failed }
+  /v1/demo/shelf:
+    post:
+      operationId: demoShelf
+      responses:
+        "200": { description: Shelf TAP report. A ghost SKU is not a catalog good. }
+        "500": { description: Assertions failed }
+  /v1/demo/hall:
+    post:
+      operationId: demoHall
+      responses:
+        "200": { description: Hall TAP report. A missing room is not a missing SKU. }
+        "500": { description: Assertions failed }
+  /v1/demo/writ:
+    post:
+      operationId: demoWrit
+      responses:
+        "200": { description: Writ TAP report. A missing slip is not a missing handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/crate:
+    post:
+      operationId: demoCrate
+      responses:
+        "200": { description: Crate TAP report. A missing cart is not a broken payment chain. }
+        "500": { description: Assertions failed }
+  /v1/demo/pact:
+    post:
+      operationId: demoPact
+      responses:
+        "200": { description: Pact TAP report. A missing contract is not a broken mandate chain. }
+        "500": { description: Assertions failed }
+  /v1/demo/root:
+    post:
+      operationId: demoRoot
+      responses:
+        "200": { description: Root TAP report. A missing parent is not a tighter child. }
+        "500": { description: Assertions failed }
+  /v1/demo/docket:
+    post:
+      operationId: demoDocket
+      responses:
+        "200": { description: Docket TAP report. A missing ticket is not a late yes. }
+        "500": { description: Assertions failed }
+  /v1/demo/graft:
+    post:
+      operationId: demoGraft
+      responses:
+        "200": { description: Graft TAP report. A missing hop parent is not a nested handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/seal:
+    post:
+      operationId: demoSeal
+      responses:
+        "200": { description: Seal TAP report. A missing handshake is not a silent tombstone. }
+        "500": { description: Assertions failed }
+  /v1/demo/guest:
+    post:
+      operationId: demoGuest
+      responses:
+        "200": { description: Guest TAP report. A missing invitee is not a closed room. }
+        "500": { description: Assertions failed }
+  /v1/demo/dust:
+    post:
+      operationId: demoDust
+      responses:
+        "200": { description: Dust TAP report. A stale unpaid cart is not a late check. }
+        "500": { description: Assertions failed }
+  /v1/demo/thaw:
+    post:
+      operationId: demoThaw
+      responses:
+        "200": { description: Thaw TAP report. A no-op thaw is not a kill-switch test. }
+        "500": { description: Assertions failed }
+  /v1/demo/twin:
+    post:
+      operationId: demoTwin
+      responses:
+        "200": { description: Twin TAP report. A taken alias is not a second agent. }
+        "500": { description: Assertions failed }
+  /v1/demo/fence:
+    post:
+      operationId: demoFence
+      responses:
+        "200": { description: Fence TAP report. System is not a treasurer. }
+        "500": { description: Assertions failed }
+  /v1/demo/mute:
+    post:
+      operationId: demoMute
+      responses:
+        "200": { description: Mute TAP report. A missing speaker is not a 500. }
+        "500": { description: Assertions failed }
+  /v1/demo/nil:
+    post:
+      operationId: demoNil
+      responses:
+        "200": { description: Nil TAP report. A missing receipt is not an empty success. }
+        "500": { description: Assertions failed }
+  /v1/demo/spark:
+    post:
+      operationId: demoSpark
+      responses:
+        "200": { description: Spark TAP report. A handshake cannot be born dead. }
+        "500": { description: Assertions failed }
+  /v1/demo/wilt:
+    post:
+      operationId: demoWilt
+      responses:
+        "200": { description: Wilt TAP report. A permission slip cannot be born with a closed calendar. }
+        "500": { description: Assertions failed }
+  /v1/demo/maker:
+    post:
+      operationId: demoMaker
+      responses:
+        "200": { description: Maker TAP report. A window is not a journal against nobody. }
+        "500": { description: Assertions failed }
+  /v1/demo/ink:
+    post:
+      operationId: demoInk
+      responses:
+        "200": { description: Ink TAP report. A cart label is not the hire's money. }
+        "500": { description: Assertions failed }
+  /v1/demo/brim:
+    post:
+      operationId: demoBrim
+      responses:
+        "200": { description: Brim TAP report. IEEE rounding is not a mint. }
+        "500": { description: Assertions failed }
+  /v1/demo/swap:
+    post:
+      operationId: demoSwap
+      responses:
+        "200": { description: Swap TAP report. A swapped pair is not a silent journal of the books this rail actually posts. }
+        "500": { description: Assertions failed }
+  /v1/demo/sour:
+    post:
+      operationId: demoSour
+      responses:
+        "200": { description: Sour TAP report. A grown-up yes is not a late hire. }
+        "500": { description: Assertions failed }
+  /v1/demo/cut:
+    post:
+      operationId: demoCut
+      responses:
+        "200": { description: Cut TAP report. A revoke is not an expiry. }
+        "500": { description: Assertions failed }
+  /v1/demo/ice:
+    post:
+      operationId: demoIce
+      responses:
+        "200": { description: Ice TAP report. A frozen principal is not a frozen desk. }
+        "500": { description: Assertions failed }
+  /v1/demo/rail:
+    post:
+      operationId: demoRail
+      responses:
+        "200": { description: Rail TAP report. A listed rail is not decoration. }
+        "500": { description: Assertions failed }
+  /v1/demo/pen:
+    post:
+      operationId: demoPen
+      responses:
+        "200": { description: Pen TAP report. A junior signature is not a grown-up pause. }
+        "500": { description: Assertions failed }
+  /v1/demo/well:
+    post:
+      operationId: demoWell
+      responses:
+        "200": { description: Well TAP report. A fourth hop is not a nested parent. }
+        "500": { description: Assertions failed }
+  /v1/demo/cite:
+    post:
+      operationId: demoCite
+      responses:
+        "200": { description: Cite TAP report. A listed reference is not decoration once a check exists. }
+        "500": { description: Assertions failed }
+  /v1/demo/lock:
+    post:
+      operationId: demoLock
+      responses:
+        "200": { description: Lock TAP report. Someone else's key is not yours to turn. }
+        "500": { description: Assertions failed }
+  /v1/demo/void:
+    post:
+      operationId: demoVoid
+      responses:
+        "200": { description: Void TAP report. A void is not a refund. }
+        "500": { description: Assertions failed }
+  /v1/demo/fold:
+    post:
+      operationId: demoFold
+      responses:
+        "200": { description: Fold TAP report. Someone else's bid is not yours to pull. }
+        "500": { description: Assertions failed }
+  /v1/demo/rip:
+    post:
+      operationId: demoRip
+      responses:
+        "200": { description: Rip TAP report. Someone else's unused slip is not yours to tear. }
+        "500": { description: Assertions failed }
+  /v1/demo/shut:
+    post:
+      operationId: demoShut
+      responses:
+        "200": { description: Shut TAP report. Someone else's room is not yours to close. }
+        "500": { description: Assertions failed }
+  /v1/demo/dump:
+    post:
+      operationId: demoDump
+      responses:
+        "200": { description: Dump TAP report. Someone else's unused checkout is not yours to dump. }
+        "500": { description: Assertions failed }
+  /v1/demo/spike:
+    post:
+      operationId: demoSpike
+      responses:
+        "200": { description: Spike TAP report. Someone else's unused payment is not yours to spike. }
+        "500": { description: Assertions failed }
+  /v1/demo/week:
+    post:
+      operationId: demoWeek
+      responses:
+        "200": { description: Week TAP report. A week is not a cadence on a seven-day slip. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:
@@ -152,6 +864,11 @@ paths:
       operationId: wellKnownHostCard
       responses:
         "200": { description: Same pin as GET /v1/protocol. Machine discovery. }
+  /.well-known/agent-card.json:
+    get:
+      operationId: discoveryCard
+      responses:
+        "200": { description: This runtime's discovery card. Not an A2A JSON-RPC server. }
   /v1/host/card:
     post:
       operationId: hostCard
@@ -195,18 +912,36 @@ paths:
     get:
       operationId: commandSchemas
       responses:
-        "200": { description: JSON Schema for every CommandType body }
+        "200": { description: JSON Schema for every CommandType body. Not a dispatcher. }
+    post:
+      operationId: commandDispatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type: { type: string, description: "A CommandType. Unknown or omitted is command.malformed (400)." }
+                actor: { type: string }
+      responses:
+        "200": { description: Command allowed. Same bus as MCP. }
+        "202": { description: Escalated to a grown-up. }
+        "400": { description: command.malformed (unknown type, or a body the kernel will not read). }
+        "402": { description: envelope.require }
+        "422": { description: Policy deny }
   /v1/objects/{id}:
     get:
       operationId: inspect
       responses:
-        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. Funded wins. }
+        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. A hire includes derived live | expired | funded. An offered hire whose slip died is expired. Funded wins. A host subscription includes derived live | expired. A row whose slip died is expired, not live enrollment. An iss_ issuer is a genesis catalog row (adapter shape, live false). A dlg_ hop pins that issuer and includes derived live | expired | revoked. }
         "404": { description: Unknown id }
   /v1/hires/{id}:
     get:
       operationId: hireGet
       responses:
-        "200": { description: Hire contract }
+        "200": { description: Hire contract. Includes derived live | expired | funded. The store stays raw (state only). }
         "404": { description: Unknown hire }
   /v1/clearing/windows:
     post:
@@ -217,7 +952,7 @@ paths:
     get:
       operationId: snapshot
       responses:
-        "200": { description: Runtime snapshot }
+        "200": { description: Runtime snapshot. Host subscriptions include derived live | expired. }
   /v1/audit/verify:
     get:
       operationId: auditVerifyGet
@@ -228,11 +963,16 @@ paths:
       responses:
         "200": { description: Chain ok or first failure. Same command as GET. Auditor, treasury, human_operator, and system may verify. }
         "422": { description: actor.role_capability for a vendor. }
+  /openapi.yaml:
+    get:
+      operationId: openapiYaml
+      responses:
+        "200": { description: This OpenAPI document as YAML. Not a local filesystem path. }
   /openapi.json:
     get:
       operationId: openapi
       responses:
-        "200": { description: This document }
+        "200": { description: Same YAML document in { format: yaml, document }. Not a path on the operator laptop. }
 components:
   schemas:
     RegisterAgent:

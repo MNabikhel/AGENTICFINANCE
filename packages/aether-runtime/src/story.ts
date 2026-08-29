@@ -28,6 +28,282 @@ export const NIGHT_WATCH_TLDR =
 export const SUBHIRE_TLDR =
   "A desk agent at L4 handed a smaller permission slip to a scout. The scout hired a vendor for $800. A $2,500 hire was refused because the child slip was tighter than the parent. Revoking the desk→scout handshake stopped the scout without deleting it. Agents hiring agents is the economy; nested slips are how authority stays bounded.";
 
+export const CLEARING_TLDR =
+  "A desk hired a vendor for $800. A second $400 hire was refused — that pair’s open gross would have blown a $1,000 bilateral credit line. Closing a settlement window photographed the $800 and cleared the open book. Money did not move again. After the photo, the $400 hire went through. Credit is a window, not a second payment.";
+
+export const REFUND_TLDR =
+  "A desk funded an $800 research hire. Refund returned escrow, restored the mandate budget, and reverse-recorded the pair in the clearing book. The quote stayed spent. An over-cap hire had already blown the daily fuse; refund did not untrip it. After a treasury reset, refund of delivered work was hire.state. Unwind is not a new quote and not a circuit reset.";
+
+export const REPLAY_TLDR =
+  "A desk funded an $800 research hire. Retrying the same fund did not move cash again — the allow replayed. Retrying the same hire.create returned the same contract. A new key on that spent quote was hire.quote_unspent. A retry is not a second spend.";
+
+export const NONCE_TLDR =
+  "A desk released an $800 hire with an envelope nonce. Reusing that nonce on a second hire was idempotency.nonce — the second escrow did not release. A leftover nonce on a cash transfer was not that deny. A payment nonce is one-shot, and it is not a field on a transfer.";
+
+export const DENY_CACHE_TLDR =
+  "A frozen desk tried to hire and was refused. Retrying the same hire.create was a new decision — the deny was not cached. After unfreeze, that same command went through. A deny is not a leftover no.";
+
+export const RECURRENCE_TLDR =
+  "A founder wrote a one-slot slip. The desk hired once and released. Completing that funded work was not a second slot. A second hire.create was payment.recurrence. A cadence is not an open checkbook.";
+
+export const CALENDAR_TLDR =
+  "A founder wrote a same-day calendar. Hiring before it opened was payment.execution_date. Inside the window the desk funded an $800 hire. After the calendar closed, that funded work still released. A new hire was payment.execution_date. A closed calendar is not a freeze on funded work.";
+
+export const SLOT_TLDR =
+  "A founder wrote a one-slot slip. The desk funded an $800 hire, then unwound it. Cash and mandate spend came back. The cadence slot did not. A second hire.create was payment.recurrence. A refund is not a new slot.";
+
+export const DAILY_TLDR =
+  "A founder wrote a daily cadence. The desk hired once and released. A same-day second hire.create was payment.recurrence. After 24 hours that command went through. A cadence is a gap, not a burst.";
+
+export const CART_TLDR =
+  "A desk accepted an $800 hire. Funding with a loose cartId was hire.bound_cart. Binding a cart occupied the hire; a second cart was hire.unique_cart. A second payment on that cart was mandate.unique_payment. The same fund command then went through — occupancy is a bind, not a field on fund.";
+
+export const VELOCITY_TLDR =
+  "A desk funded an $800 hire. The settle hour ran hot. That funded work still released. A new hire.create was velocity.window — paused for a grown-up, not refused. A hot hour is not a freeze on funded work.";
+
+export const DOOR_TLDR =
+  "The public kernel refused subscribe as host.not_hosted. A hosted operator refused an unsigned speaker (401) and an unpaid month (402). After an invoice the same command went through. Subscribe recorded a row; spend was not gated on it. PROTOCOL.hosted stays false.";
+
+export const MATCH_TLDR =
+  "A desk accepted an $800 hire. A $0.01 cart was hire.cart_matches — a cheaper cart is not a discount. The matching cart occupied the hire. Funding moved $800, not a penny. Match is not occupancy.";
+
+export const ROOM_TLDR =
+  "A desk opened a closed RFQ for one vendor. An outsider’s quote was market.invited_seller — no quote was written. The invited vendor quoted and the hire went through. An empty invite list let the outsider quote. A closed room is not a bulletin board.";
+
+export const CONVERSION_TLDR =
+  "A desk tried to hire an FX window. That was hire.not_fx — no hire, window unspent. The vendor then settled it. A spent window is hire.quote_unspent. An FX window is not a good.";
+
+export const PAIR_TLDR =
+  "A founder shook hands with a desk. A tighter second hop was kya.unique_live — one live handshake per pair. A hop to a different agent went through. Revoke, then attest again. A second live hop is not a tighter grant.";
+
+export const BAND_TLDR =
+  "A market maker quoted a conversion at half price. That was mm.spread_bound — no window written. An in-band quote went through and settled. A decoy top-level rate is not the nested band. The 200bps band is not decoration.";
+
+export const NEST_TLDR =
+  "A founder nested a scout under a desk hop. The scout hired while the parent lived. After the parent hop died, a new hire was kya.parent_fresh — no hire written. That funded work still released. A nested hop does not outlive its parent.";
+
+export const HEIR_TLDR =
+  "A founder handed a tighter child slip to a desk. The desk hired while the parent lived. After the parent slip died, a new hire was mandate.parent_fresh — no hire written. That funded work still released. A dead parent is not a parent.";
+
+export const STOCK_TLDR =
+  "A market maker quoted a conversion against a thin USDC book. That was mm.inventory — the window stayed unspent. A smaller window on a different RFQ converted. Empty MM USDC is not a missing maker, not a vendor overdraft, and not the 200bps band.";
+
+export const PURSE_TLDR =
+  "A founder wrote a $1,000 envelope with a $5,000 per-item cap. The desk funded an $800 hire. A $400 second hire was payment.budget — the item cap still allowed. That funded work still released. A budget is not an item cap.";
+
+export const SEAT_TLDR =
+  "A hosted operator recorded one subscribe row. The desk funded an $800 hire — spend is not gated on the row. A second subscribe was host.unique_subscriber — no second row. A different agent took its own seat. That funded work still released. One subscriber, one row.";
+
+export const COVER_TLDR =
+  "A founder wrote a $1,000 parent envelope. The desk funded an $800 hire against the parent. A $400 scout hire on a tighter child was payment.parent_budget — the child's own envelope still allowed. That funded work still released. A parent envelope is not a child's leftover.";
+
+export const MINT_TLDR =
+  "Treasury tried to pull from equity. That was ledger.operating_book — not a mint. The desk funded an $800 hire. Pulling that escrow was ledger.operating_book — not an allocation. That funded work still released. A transfer moves operating cash.";
+
+export const PAYEE_TLDR =
+  "A founder listed one research vendor. The desk funded an $800 hire to that name. A registered outsider quoted and hire.create was payment.allowed_payees — the room still wrote the quote. That funded work still released. A listed payee is not any registered vendor.";
+
+export const CLIMB_TLDR =
+  "A founder shook hands with a desk at a ceiling of L3. The desk funded an $800 hire. After a climb to L4, a new hire was kya.capability_subset — the slip ceiling still allowed. That funded work still released. A climb is not a wider handshake.";
+
+export const BORN_TLDR =
+  "A market maker quoted a conversion that had already closed. That was market.fx_fresh — no window written. An open window went through and settled. A later lapse is still market.not_expired. An FX window cannot be born dead.";
+
+export const REACH_TLDR =
+  "A founder funded an $800 hire on a live slip. A calendar that only opened after that slip would die was mandate.window_reach — no second slip written. A future window that still opens while the slip lives still minted. That funded work still released. A window that opens after the slip dies is not a window.";
+
+export const YEAR_TLDR =
+  "A founder funded an $800 hire under a one-year handshake. A hop that outlived one year was kya.mint_window — no handshake written. A one-year hop still minted. That funded work still released. Year 9999 is not standing identity.";
+
+export const FUSE_TLDR =
+  "A founder funded an $800 hire against a $1,000 daily fuse. A $400 second hire was circuit.daily — the envelope and the item cap still allowed. That funded work still released. A daily fuse is not a freeze on funded work.";
+
+export const SKU_TLDR =
+  "A founder listed research.brief. The desk funded an $800 hire of that good. A catalog deep-research quote was payment.allowed_skus — the room still wrote the quote. That funded work still released. A listed SKU is not any catalog good.";
+
+export const PRICED_TLDR =
+  "A vendor quoted research.brief in USDC. That was market.sku_currency — no quote written. A USD quote went through and the $800 hire released. Convert with market.fx_settle. A listed SKU is only priced in a currency the catalog names.";
+
+export const PARTY_TLDR =
+  "A founder funded an $800 hire. A different vendor’s deliver was hire.party — the hire stayed funded. The seller who quoted still delivered and that work still released. The other side of the table is not a party.";
+
+export const CASH_TLDR =
+  "A founder funded an $800 hire that emptied the desk. A $400 second fund was ledger.sufficient — same currency, operating cash, legal hire arrow. That funded work still released. Empty cash is not a negative book.";
+
+export const STALE_TLDR =
+  "A founder funded an $800 hire on a live quote. After that quote’s hour lapsed, hire.create was market.not_expired — known SKU, known room, unspent promise. A fresh quote on that still-live room still hired. That funded work still released. A stale quote is not a hire.";
+
+export const CHAIN_TLDR =
+  "A founder funded an $800 hire on a live cart. After that cart’s day, a second fund was mandate.chain_integrity — occupancy still bound, cash still there, hire still accepted. That funded work still released. A dead cart is not a check.";
+
+export const ARROW_TLDR =
+  "A founder funded an $800 hire. Release before deliver was hire.state — the hire stayed funded, escrow did not pay the vendor. After deliver that work still released. Unfinished work is not a payout.";
+
+export const WALLET_TLDR =
+  "A founder funded an $800 hire. A compute vendor’s settle was ledger.known_account — USD cash, live window, maker still there. A research vendor with a USDC book still converted. That funded work still released. A vendor’s USD cash is not a USDC wallet.";
+
+export const NAME_TLDR =
+  "A founder funded an $800 hire. An L4 scout minting a handshake in the founder’s name was kya.party — not a second hop, not a climb above the grant. The founder still minted that pair. That funded work still released. Someone else’s name is not a handshake.";
+
+export const PANE_TLDR =
+  "A founder funded an $800 hire. A market maker quoted an FX SKU with no window. That was market.fx_window — known SKU, known room, pair still allows. A real window still quoted and converted. That funded work still released. An FX SKU is a window, not a good.";
+
+export const SUBJECT_TLDR =
+  "A founder issued a slip to desk A. Desk B’s fund was mandate.subject_is_actor — the chain still verified, cash still there, hire still accepted. Desk A still funded. That work still released. This slip is not yours to spend.";
+
+export const PAPER_TLDR =
+  "A founder funded an $800 hire. Settling a research quote as FX was market.fx_quote — pair, maker, and dest book still allow. A real window still converted. That funded work still released. A research quote is not a conversion window.";
+
+export const MIX_TLDR =
+  "A founder funded an $800 hire. Treasury posting USD into a USDC book was ledger.same_currency — the dest book, operating cash, and source still allow. A real window still converted. That funded work still released. A mixed journal is not a conversion.";
+
+export const RUNG_TLDR =
+  "A founder funded an $800 hire. Skipping L2→L4 on a scout was ladder.legal — the scout still exists, the founder may still set rungs. A one-rung climb still went through. That funded work still released. A skipped rung is not a promotion.";
+
+export const GRADE_TLDR =
+  "A founder funded an $800 hire. An L3 scout minting a nested slip was ladder.min_level — the parent still exists, the child is still tighter, the handshake ceiling still allows. An L4 desk still minted that child. That funded work still released. A junior desk is not a nested-slip mint.";
+
+export const CRADLE_TLDR =
+  "A founder funded an $800 hire. Minting a sentinel at L5 was ladder.birth_rung — the alias is still free, the founder may still register, a skip is not this deny. An L4 register still went through. That funded work still released. L5 is not a birthright.";
+
+export const CEILING_TLDR =
+  "A founder funded an $800 hire under an L3 slip. After a climb to L4, a new hire was ladder.max_autonomy_constraint — the handshake ceiling still allows. That funded work still released. A climb is not a wider slip.";
+
+export const LAPSE_TLDR =
+  "A founder funded an $800 hire under a noon handshake. After that hop died, a new hire was kya.attestation_fresh — the chain still verifies, a nested parent is not this deny. That funded work still released. An expired hop is not a freeze on funded work.";
+
+export const PAUSE_TLDR =
+  "A founder funded an $800 hire under the auto-approve line. A $6,400 hire paused for a grown-up. After that ticket died, a late yes was approval.pending — the ticket still exists, a stale command is not this deny. That funded work still released. A dead pause is not a late yes.";
+
+export const MIRROR_TLDR =
+  "A founder funded an $800 hire. Attesting themselves was kya.not_self — not someone else's name, not a second hop, not a corpse mint. The founder still minted a real pair. That funded work still released. A handshake is not a mirror.";
+
+export const WARRANT_TLDR =
+  "A founder funded an $800 hire. Subscribe on an agent-issued slip was host.human_authority — not a missing seat, not the public kernel. A human-issued slip still seated. That funded work still released. An agent-issued slip is not host authority.";
+
+export const VACANT_TLDR =
+  "A founder funded an $800 hire. Minting a cadence with no slots was mandate.occurrence_fresh — not a spent slot, not a closed calendar, not a nested child. A one-slot slip still minted. That funded work still released. A cadence with no slots is not a cadence.";
+
+export const BADGE_TLDR =
+  "A founder funded an $800 hire. An auditor’s hire.create was actor.role_capability — not a freeze, not a missing speaker, not a spent quote. The auditor still verified the notary. That funded work still released. A badge is not a shopping pass.";
+
+export const LID_TLDR =
+  "A founder wrote a $1,000 item cap with a $5,000 envelope. The desk funded an $800 hire. A $1,500 second hire was payment.amount_range — the envelope and the fuse still allowed. That funded work still released. An item cap is not an envelope.";
+
+export const BARE_TLDR =
+  "A founder funded an $800 hire. Deliver on an accepted hire was hire.escrow_required — the seller is still the party, the hire is still known. That funded work still released. Unfunded work is not a delivery.";
+
+export const SHELF_TLDR =
+  "A founder funded an $800 hire of a catalog good. An RFQ for a ghost SKU was market.known_sku — the slip list still allows, a listed SKU is not this deny. That funded work still released. A ghost SKU is not a catalog good.";
+
+export const HALL_TLDR =
+  "A founder funded an $800 hire. A quote on a ghost RFQ was market.known_rfq — a missing SKU is not this deny, a closed guest list is not this deny. That funded work still released. A missing room is not a missing SKU.";
+
+export const WRIT_TLDR =
+  "A founder funded an $800 hire. A hire against a ghost slip was mandate.known_intent — a missing handshake is not this deny, a dead parent is not this deny. That funded work still released. A missing slip is not a missing handshake.";
+
+export const CRATE_TLDR =
+  "A founder funded an $800 hire. A payment on a ghost cart was mandate.known_cart — occupancy is not this deny, a dead cart at fund is not this deny. That funded work still released. A missing cart is not a broken payment chain.";
+
+export const PACT_TLDR =
+  "A founder funded an $800 hire. Deliver on a ghost hire was hire.known — a stranger’s deliver is not this deny, unfunded work is not this deny. That funded work still released. A missing contract is not a broken mandate chain.";
+
+export const ROOT_TLDR =
+  "A founder funded an $800 hire. A child of a ghost parent was mandate.known_parent — a tighter child is not this deny, a dead parent is not this deny. That funded work still released. A missing parent is not a tighter child.";
+
+export const DOCKET_TLDR =
+  "A founder funded an $800 hire. Resolve of a ghost ticket was approval.known — a dead pause is not this deny, a stale command is not this deny. That funded work still released. A missing ticket is not a late yes.";
+
+export const GRAFT_TLDR =
+  "A founder funded an $800 hire. A nested hop under a ghost parent was kya.known_parent — a dead hop is not this deny, a missing slip parent is not this deny. That funded work still released. A missing hop parent is not a nested handshake.";
+
+export const SEAL_TLDR =
+  "A founder funded an $800 hire and shook hands with the desk. Revoke of a ghost handshake was kya.known_attestation — a missing hop parent is not this deny, someone else’s name is not this deny. The live handshake still lived. That funded work still released. A missing handshake is not a silent tombstone.";
+
+export const GUEST_TLDR =
+  "A founder funded an $800 hire. An RFQ that invited a missing seller was identity.known — a closed guest list is not this deny, a missing SKU is not this deny. No room was written. That funded work still released. A missing invitee is not a closed room.";
+
+export const DUST_TLDR =
+  "A founder funded an $800 hire. A first payment on a stale unpaid cart was mandate.not_expired — occupancy is not this deny, a dead cart at fund is not this deny. No payment was written. That funded work still released. A stale unpaid cart is not a late check.";
+
+export const THAW_TLDR =
+  "A founder funded an $800 hire. Unfreeze of a live unfrozen auditor was identity.freeze_state — a missing agent is not this deny, a frozen speaker is not this deny. No UNFREEZE line was written. That funded work still released. The auditor still verified. A no-op thaw is not a kill-switch test.";
+
+export const TWIN_TLDR =
+  "A founder funded an $800 hire. Registering a second desk on the taken alias was identity.unique_key — L5 at birth is not this deny, system minting a second agent is not this deny. No agent was written. That funded work still released. A taken alias is not a second agent.";
+
+export const FENCE_TLDR =
+  "A founder funded an $800 hire. System minting a second agent was actor.system_scope — a taken alias is not this deny, L5 at birth is not this deny. No agent was written. System still read the catalog. That funded work still released. System is not a treasurer.";
+
+export const MUTE_TLDR =
+  "A founder funded an $800 hire. A missing speaker reading the books was actor.known — a missing named target is not this deny, a frozen speaker is not this deny, system spending is not this deny. No books were written. The live desk still read. That funded work still released. A missing speaker is not a 500.";
+
+export const NIL_TLDR =
+  "A founder funded an $800 hire. Fetching a missing receipt was receipt.known — a missing speaker is not this deny, a missing named target is not this deny. No receipt was written. The live receipt still fetched. That funded work still released. A missing receipt is not an empty success.";
+
+export const SPARK_TLDR =
+  "A founder funded an $800 hire. A handshake born expired was kya.mint_fresh — a century mint is not this deny, a second live hop is not this deny. No handshake was written. A one-year hop still minted. That funded work still released. A handshake cannot be born dead.";
+
+export const WILT_TLDR =
+  "A founder funded an $800 hire. A slip born with a closed calendar was mandate.window_fresh — a window that opens after the slip dies is not this deny, a hire-time calendar is not this deny. No slip was written. A live slip still minted. That funded work still released. A permission slip cannot be born with a closed calendar.";
+
+export const MAKER_TLDR =
+  "A founder funded an $800 hire. Settling a live FX window with no market maker was mm.known — empty inventory is not this deny, a missing dest book is not this deny. No journal was written. The same window still converted after a maker sat down. That funded work still released. A window is not a journal against nobody.";
+
+export const INK_TLDR =
+  "A founder funded an $800 hire. Funding a second hire with a USDC cart was payment.currency_match — a mixed journal is not this deny, a USDC quote is not this deny, a loose USD pointer is not this deny. No escrow moved. A USD cart still bound and funded. That first funded work still released. A cart label is not the hire's money.";
+
+export const BRIM_TLDR =
+  "A founder funded an $800 hire. Treasury posting one more cent into a book already at the integer ceiling was ledger.safe_balance — empty cash is not this deny, a missing dest is not this deny, a mixed journal is not this deny, a mint is not this deny. No journal posted. A penny still posted to a book that can hold it. That funded work still released. IEEE rounding is not a mint.";
+
+export const SWAP_TLDR =
+  "A founder funded an $800 hire. A market maker quoted an FX SKU with a swapped pair. That was market.fx_pair — a missing window is not this deny, a corpse mint is not this deny, hiring the window is not this deny, a research quote is not this deny. No quote written. A real window still quoted and converted. That funded work still released. A swapped pair is not a silent journal of the books this rail actually posts.";
+
+export const SOUR_TLDR =
+  "A founder funded an $800 hire under the auto-approve line. A $6,400 hire paused for a grown-up. After that quote died, a yes was approval.replay — a missing ticket is not this deny, a dead ticket is not this deny. The quote stayed held. A grown-up no still freed it. That funded work still released. A grown-up yes is not a late hire.";
+
+export const CUT_TLDR =
+  "A founder funded an $800 hire under a live handshake. After that hop was revoked, a new hire was kya.chain_intact — an expired hop is not this deny, a nested parent is not this deny, a frozen speaker is not this deny, a ghost revoke is not this deny. No hire written. A new handshake still unlocked the lock. That funded work still released. A revoke is not an expiry.";
+
+export const ICE_TLDR =
+  "A founder funded an $800 hire under a live handshake. After the money's owner was frozen, a new hire was kya.principal_not_frozen — a frozen speaker is not this deny, a revoked hop is not this deny, a no-op thaw is not this deny. No hire written. An unfreeze still unlocked the lock. That funded work still released. A frozen principal is not a frozen desk.";
+
+export const RAIL_TLDR =
+  "A founder funded an $800 hire under a slip that listed this kernel's sim ledger. A second slip that listed a ghost rail was payment.allowed_payment_instruments — a listed payee is not this deny, a live-rail type is not this deny. No hire written. That funded work still released. A listed rail is not decoration.";
+
+export const PEN_TLDR =
+  "A junior desk funded an $800 hire with grown-up pauses. Submitting that envelope was human.signature_present — the role still allows, the subject still allows, the rung only pauses. No ticket was minted. Treasury still released. A junior signature is not a grown-up pause.";
+
+export const WELL_TLDR =
+  "A founder funded an $800 hire under a three-hop handshake. A four-hop desk was kya.delegation_depth — a missing path is not this deny, a dead parent hop is not this deny, a climb is not this deny. No hire written. That funded work still released. A fourth hop is not a nested parent.";
+
+export const CITE_TLDR =
+  "A founder funded an $800 hire. A second slip that cited a ghost checkout was payment.reference — a listed payee is not this deny, a listed rail is not this deny. No hire written. A citation of that funded check still hired. That funded work still released. A listed reference is not decoration once a check exists.";
+
+export const LOCK_TLDR =
+  "A founder funded an $800 hire. A vendor turning the desk's lock was identity.party — a missing agent is not this deny, a frozen speaker is not this deny. No IDENTITY_ROTATE line was written. The desk still turned its own lock. That funded work still released. Someone else's key is not yours to turn.";
+
+export const VOID_TLDR =
+  "A founder funded an $800 hire. Voiding that funded hire was hire.state — the party still allowed; a missing hire is not this deny. No void line was written. An unfunded offer still voided. That quote stayed spent. That funded work still released. A void is not a refund.";
+
+export const FOLD_TLDR =
+  "A founder funded an $800 hire. A second vendor folding the research desk's live bid was market.party — a missing quote is not this deny, an expired window is not this deny. No QUOTE_WITHDRAW line was written. The seller still folded its own bid. Hiring that folded quote was market.not_expired. That funded work still released. Someone else's bid is not yours to pull.";
+
+export const RIP_TLDR =
+  "A founder funded an $800 hire. A desk ripping the founder's unused slip was mandate.party — a missing slip is not this deny, an expired window is not this deny. No MANDATE_REVOKE line was written. The founder still tore its own unused slip. Hiring that ripped slip was mandate.not_expired. That funded work still released. Someone else's unused slip is not yours to tear.";
+
+export const SHUT_TLDR =
+  "A founder funded an $800 hire. A second desk shutting the research desk's live room was market.rfq_party — a missing room is not this deny, an expired window is not this deny. No RFQ_CLOSE line was written. The buyer still shut its own room. Hiring that shut room's quote was market.not_expired. That funded work still released. Someone else's room is not yours to close.";
+
+export const DUMP_TLDR =
+  "A founder funded an $800 hire. A second desk dumping the research desk's unused checkout was mandate.cart_party — a missing cart is not this deny, an expired window is not this deny. mandate.party still allows. No CART_REVOKE line was written. The buyer still dumped its own unused cart. Paying that dumped cart was mandate.not_expired. Occupancy freed. That funded work still released. Someone else's unused checkout is not yours to dump.";
+
+export const SPIKE_TLDR =
+  "A founder funded an $800 hire. A second desk spiking the research desk's unused check was mandate.payment_party — a missing payment is not this deny, an expired window is not this deny. mandate.cart_party still allows. No PAYMENT_REVOKE line was written. The buyer still spiked its own unused payment. Funding that spiked payment was mandate.not_expired. Occupancy freed. That funded work still released. Someone else's unused payment is not yours to spike.";
+
+export const WEEK_TLDR =
+  "A founder funded an $800 hire. Minting WEEKLY or MONTHLY that cannot admit a second hire before the seven-day exp was mandate.cadence_reach — not a vacant slot, not a closed calendar, not hire-time recurrence. A one-shot WEEKLY still minted. DAILY still minted. That funded work still released. A week is not a cadence on a seven-day slip.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -61,6 +337,26 @@ export function autoBeat(input: {
         at: input.at,
         headline: "system is not a treasurer",
         body: "System may bootstrap the first human and read the catalog, the host card, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (rule?.ruleId === "actor.known") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: "a missing speaker is not a 500",
+        body: "That actorId is not a registered agent. HTTP/MCP unknown alias is this string, not silent system. Named targets stay identity.known. Completing funded work after that is legal.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (rule?.ruleId === "receipt.known") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: "a missing receipt is not an empty success",
+        body: "That receiptId is not in this world. Policy denies; mutate does not return nothing after an allow. Completing funded work after that is legal.",
         tone: "deny",
         commandType: cmd.type,
       };
@@ -123,10 +419,81 @@ export function autoBeat(input: {
     }
     return undefined;
   }
-  if (cmd.type === "mandate.issue_cart" || cmd.type === "mandate.issue_payment") return undefined;
+  if (cmd.type === "mandate.issue_cart") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "hire.cart_matches") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not bind a cheaper cart`,
+          body: "The cart must equal the hire. Escrow moves the quoted price. A cheaper cart is not a discount.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "hire.unique_cart") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not bind a second cart`,
+          body: "A hire takes one cart. A second cart is not a pointer swap.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+    }
+    return undefined;
+  }
+  if (cmd.type === "mandate.issue_payment") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "mandate.known_cart") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} named a cart that is not here`,
+          body: "A missing cart is not a broken payment chain. Issue the cart first. Completing funded work after that is legal. Occupancy is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.unique_payment") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not mint a second payment`,
+          body: "A cart takes one payment. A second payment is not a second check.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.not_expired") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not mint a check on a stale cart`,
+          body: "A stale unpaid cart is not a late check. Occupancy is a different object. A dead cart at fund is a different object. Issue a live cart.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+    }
+    return undefined;
+  }
   if (cmd.type === "hire.accept" || cmd.type === "hire.deliver" || cmd.type === "envelope.require") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "hire.escrow_required") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot deliver unfunded work`,
+          body: "Escrow must be funded before the vendor delivers. Offered or accepted is not funded. Completing funded work after that is legal; unfunded work is not a delivery.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "hire.state") {
         return {
           seq: input.seq,
@@ -143,6 +510,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} named a hire that is not here`,
           body: "That hire is not in this world. A missing contract is not a broken mandate chain.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "hire.party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} is not the seller on that hire`,
+          body: "Accept, deliver, and payment-required belong to the vendor who quoted. Completing funded work after that is legal; a stranger’s deliver is not.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -224,6 +601,26 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a cadence with no slots`,
           body: "A permission slip cannot be born with max_occurrences already exhausted. Name at least one slot, or omit the cap. Hire still checks cadence when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.cadence_reach") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a week on a seven-day slip`,
+          body: "A permission slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY, or omit recurrence. Hire still checks cadence when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "ladder.min_level") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a nested slip below L4`,
+          body: "Issuing a sub-intent is L4. A junior desk cannot hand down a child mandate. A grown-up ticket does not waive that verb. Climb, then issue. Completing funded work is still legal.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -338,6 +735,16 @@ export function autoBeat(input: {
   if (cmd.type === "market.rfq") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "market.known_sku") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} asked the market for a SKU that is not in the catalog`,
+          body: "This is not a storefront. Only catalog SKUs can be hired. A listed SKU not on the slip is a different object. Completing funded work after that is legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "identity.known") {
         return {
           seq: input.seq,
@@ -384,7 +791,7 @@ export function autoBeat(input: {
           seq: input.seq,
           at: input.at,
           headline: `${who} quoted a room that does not exist`,
-          body: "A missing RFQ is not a missing SKU. Issue the request first, then quote it.",
+          body: "A missing RFQ is not a missing SKU. Issue the request first, then quote it. Completing funded work after that is legal. A closed guest list is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -395,6 +802,46 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} quoted a conversion window that was already closed`,
           body: "An FX window cannot be born dead. Name a validUntil after now. Settle of a window that later lapses is still market.not_expired.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.fx_window") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted an FX SKU without a window`,
+          body: "An FX SKU is a conversion window, not a hireable good. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. A missing window is not a quote.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.fx_pair") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion window that is not this rail's pair`,
+          body: "This rail journals USD_SIM to USDC_SIM with the price in from. A swapped pair, a price in to, or an FX object on a research SKU is not a silent journal of those books. A missing window is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mm.spread_bound") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted outside the 200bps band`,
+          body: "The nested rate is what is stored and what settle uses. A top-level rateE6 is not the band. Re-quote inside 980000–1020000.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.sku_currency") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a listed SKU in a currency the catalog does not name`,
+          body: "Research is USD_SIM. Convert with market.fx_settle. A deny does not write a quote. Ghost SKU stays market.known_sku.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -425,25 +872,45 @@ export function autoBeat(input: {
       const ruleId = rule?.ruleId ?? "unknown";
       let body = `The referee (policy kernel) said no. Rule: ${ruleId}. ${rule?.message ?? ""}`;
       if (ruleId === "payment.amount_range") {
-        body += " Hard constraints cannot be waved through by a manager — someone has to issue a new permission slip.";
+        body = "This permission slip’s per-item cap is the lid. The envelope is a different object. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.budget") {
+        body = "This permission slip’s envelope is spent. The per-item cap is a different object. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.parent_budget") {
+        body = "The parent permission slip’s envelope is spent. The child’s own leftover is not a new parent envelope. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.allowed_payees") {
+        body = "That seller is not on this permission slip’s payee list. A registered vendor is not a listed payee. A closed room is a guest list on the RFQ; this is the slip. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.allowed_payment_instruments") {
+        body = "That payment rail is not on this permission slip’s instrument list. The sim ledger this kernel stamps is not a ghost id. Live rails stay instrument.sim_only. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.reference") {
+        body = "That citation is not a funded check. Cite a funded payment's transaction_id (the cart hash), or omit the constraint until a check exists. A listed payee, a listed rail, and a listed SKU are different objects. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.allowed_skus") {
+        body = "That good is not on this permission slip’s SKU list. A catalog SKU is not a listed SKU. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {
-        body = "The daily fuse blew. Standing permission does not mean unlimited. Until a human resets the circuit, even a tiny hire is refused.";
+        body = "The daily fuse blew. Standing permission does not mean unlimited. Completing funded work after that is legal; a new hire is not. Until a human resets the circuit, even a tiny hire is refused.";
       } else if (ruleId === "kya.principal_not_frozen") {
-        body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move.";
+        body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move. A frozen speaker is not this deny. Completing funded work after expiry is legal; freeze and revoke still bind. Unfreeze the principal to unlock the lock.";
       } else if (ruleId === "kya.chain_intact") {
-        body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists.";
+        body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists. An expired hop is not this deny. Completing funded work after expiry is legal; freeze and revoke still bind. Attest again to unlock the lock.";
+      } else if (ruleId === "kya.delegation_depth") {
+        body = "This handshake chain is longer than three hops. A fourth hop is not a nested parent. A missing path is not this deny. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "actor.role_capability") {
+        body = "This role cannot hire. An auditor who can spend is not an auditor. Completing funded work after that is legal; a new hire by this speaker is not.";
       } else if (ruleId === "actor.not_frozen") {
         body = "This agent is frozen. Freeze is a kill switch: autonomy drops to L0 and spend is denied.";
       } else if (ruleId === "market.invited_seller") {
         body = "That seller was not on the RFQ. A named invite list is a closed room.";
       } else if (ruleId === "market.known_rfq") {
         body = "That quote or RFQ is not in this world. A missing room is not a missing SKU.";
+      } else if (ruleId === "market.not_expired") {
+        body = "That quote or RFQ has expired. A price promise is one hour; a room is one day. Completing funded work after that is legal; a new hire on a dead price is not. A corpse FX window at mint stays market.fx_fresh.";
       } else if (ruleId === "hire.quote_unspent") {
         body = "That quote already produced a hire, an FX settle, or is held by an open approval. A price promise is used once. A deny does not consume it; a void does not restore it.";
       } else if (ruleId === "mandate.known_intent") {
         body = "That permission slip is not in this world. A missing slip is not a missing handshake.";
       } else if (ruleId === "payment.recurrence") {
         body = "This permission slip’s cadence is spent. Wait out the gap, or write a new slip if the occurrence cap is exhausted. A refund does not restore a slot.";
+      } else if (ruleId === "payment.execution_date") {
+        body = "This permission slip’s calendar is closed. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "mandate.parent_fresh") {
         body = "The parent permission slip has expired. A dead parent is not a parent. Completing a funded hire after that is legal; a new hire is not.";
       } else if (ruleId === "kya.parent_fresh") {
@@ -454,11 +921,22 @@ export function autoBeat(input: {
         body = "This agent sits above the handshake ceiling. Completing a funded hire after a climb is legal; a new hire is not.";
       } else if (ruleId === "ladder.max_autonomy_constraint") {
         body = "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not.";
+      } else if (ruleId === "hire.not_fx") {
+        body = "An FX window is a conversion, not a good. Settle it. A deny does not consume or reserve the window.";
+      } else if (ruleId === "clearing.bilateral_limit") {
+        body = "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (the photo, not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.";
       }
       return {
         seq: input.seq,
         at: input.at,
-        headline: `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+        headline:
+          ruleId === "mandate.known_intent"
+            ? `${who} hired against a slip that does not exist`
+            : ruleId === "kya.delegation_depth"
+              ? `${who} hired down a chain that is too long`
+              : ruleId === "payment.reference"
+                ? `${who} hired against a citation that is not a check`
+                : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
         body,
         tone: "deny",
         commandType: cmd.type,
@@ -499,8 +977,20 @@ export function autoBeat(input: {
             ? "That approval is not in this world. A missing ticket is not a late yes."
             : rule?.ruleId === "approval.pending"
               ? "That ticket is expired or already resolved. Resolving it is a refuse, not a late yes."
+              : rule?.ruleId === "approval.replay"
+                ? "That ticket is still live, but the paused command is no longer legal. A grown-up yes is not a late hire. Reject the ticket to free the quote. A dead ticket stays approval.pending. A missing ticket stays approval.known."
               : (rule?.message ?? "The referee refused this ticket."),
         tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if ((cmd.body as { decision?: string }).decision === "rejected") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} rejected the pause`,
+        body: "The reserved quote is free again. A grown-up no is not a late hire. Completing funded work is legal.",
+        tone: "neutral",
         commandType: cmd.type,
       };
     }
@@ -531,6 +1021,12 @@ export function autoBeat(input: {
                   ? "The buyer’s cash does not cover this hire. Escrow cannot lock on an overdraft. Allocate first."
                   : rule?.ruleId === "hire.bound_cart"
                     ? "That hire has not bound a cart. Issue the cart with hireId, then the payment. Passing cartId on fund is not a pointer."
+                  : rule?.ruleId === "payment.currency_match"
+                    ? "The cart or payment is not this hire’s currency. A USDC sticker is not a USD hire. Convert with market.fx_settle. A mixed journal stays ledger.same_currency. A USDC quote stays market.sku_currency. A loose USD pointer stays hire.bound_cart. A cheaper cart stays hire.cart_matches."
+                  : rule?.ruleId === "mandate.chain_integrity"
+                    ? "The cart or payment window has closed. Completing funded work after that is legal; a new fund is not. Occupancy is a bind, not this refuse."
+                  : rule?.ruleId === "mandate.subject_is_actor"
+                    ? "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Completing funded work by the named subject is legal; a stranger’s fund is not."
                   : rule?.ruleId === "ledger.safe_balance"
                     ? "The escrow (or the buyer’s remaining cash) cannot hold this many cents. IEEE rounding is not a mint."
                   : rule?.ruleId === "kya.parent_fresh"
@@ -597,6 +1093,204 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "hire.void") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not tear up that offer`,
+        body:
+          rule?.ruleId === "hire.state"
+            ? "A void is offered or accepted, before escrow moves. Funded work refunds. A void is not a refund."
+            : rule?.ruleId === "hire.party"
+              ? "The other side of the table does not tear up this offer. Buyer, seller, or treasury may void an unfunded hire."
+              : rule?.ruleId === "hire.known"
+                ? "That hire is not in this world. A missing hire is not a torn-up offer."
+                : "A void is not a refund. Offered or accepted, before escrow moves.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} tore up an unfunded offer`,
+      body: "The hire is void. Escrow never moved. The quote stays spent. A void is not a refund.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "market.withdraw") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not fold that bid`,
+        body:
+          rule?.ruleId === "market.party"
+            ? "Someone else's bid is not yours to pull. The seller, a human, or treasury may fold a live quote."
+            : rule?.ruleId === "market.known_rfq"
+              ? "That quote is not in this world. A missing bid is not a folded bid."
+              : rule?.ruleId === "hire.quote_unspent"
+                ? "A spent quote stays spent. Folding does not unwind a hire."
+                : rule?.ruleId === "market.not_expired"
+                  ? "That window is already closed. A folded bid is not a second fold."
+                  : "A live bid can be folded. That is not a spent quote.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} folded a live bid`,
+      body: "The quote is off the table. Hire.create of a folded bid is market.not_expired. Spent is when hire.create consumed it.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "market.close") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not shut that room`,
+        body:
+          rule?.ruleId === "market.rfq_party"
+            ? "Someone else's room is not yours to close. The buyer, a human, or treasury may shut a live RFQ."
+            : rule?.ruleId === "market.known_rfq"
+              ? "That room is not in this world. A missing RFQ is not a shut room."
+              : rule?.ruleId === "market.not_expired"
+                ? "That window is already closed. A shut room is not a second close."
+                : "A live room can be shut. That is not an expired window.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} shut a live room`,
+      body: "The RFQ is off the table. Hire.create of a quote on a shut room is market.not_expired. Expired is when the day dies. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "mandate.revoke") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not rip that slip`,
+        body:
+          rule?.ruleId === "mandate.party"
+            ? "Someone else's unused slip is not yours to tear. The issuer, a human, or treasury may rip a live intent."
+            : rule?.ruleId === "mandate.known_intent"
+              ? "That slip is not in this world. A missing intent is not a ripped intent."
+              : rule?.ruleId === "mandate.not_expired"
+                ? "That window is already closed. A ripped slip is not a second rip."
+                : "A live unused slip can be torn up. That is not a void and not firing a handshake.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} tore up an unused slip`,
+      body: "The intent is off the table. Hire.create of a ripped unused slip is mandate.not_expired. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "mandate.revoke_cart") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not dump that checkout`,
+        body:
+          rule?.ruleId === "mandate.cart_party"
+            ? "Someone else's unused checkout is not yours to dump. The merchant, the hire's buyer, a human, or treasury may dump a live unused cart."
+            : rule?.ruleId === "mandate.known_cart"
+              ? "That cart is not in this world. A missing checkout is not a dumped checkout."
+              : rule?.ruleId === "mandate.not_expired"
+                ? "That window is already closed. Bound is when a payment occupies it. A dumped cart is not a second dump."
+                : "A checkout can be torn up. That is not a refund.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} dumped an unused checkout`,
+      body: "The cart is off the table. Issue_payment of a dumped unused cart is mandate.not_expired. Bound is when a payment occupies it. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "mandate.revoke_payment") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not spike that check`,
+        body:
+          rule?.ruleId === "mandate.payment_party"
+            ? "Someone else's unused payment is not yours to spike. The signer, the payee, the hire's buyer, a human, or treasury may spike a live unused payment."
+            : rule?.ruleId === "mandate.known_payment"
+              ? "That payment is not in this world. A missing check is not a spiked check."
+              : rule?.ruleId === "mandate.not_expired"
+                ? "That window is already closed. Funded is when escrow occupies it. A spiked payment is not a second spike."
+                : "A check can be torn up. That is not a refund.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} spiked an unused check`,
+      body: "The payment is off the table. Hire.fund of a spiked unused payment is mandate.not_expired. Funded is when escrow occupies it. Completing funded work is legal.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "hire.release") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not release escrow${amt ? ` (${amt})` : ""}`,
+        body:
+          rule?.ruleId === "hire.state"
+            ? "Escrow releases only after the vendor has delivered. Funded is not released. An illegal arrow is a refuse, not a 409 after yes."
+            : rule?.ruleId === "hire.party"
+              ? "Release belongs to the buyer or treasury. Completing funded work after that is legal; a stranger’s payout is not."
+              : rule?.ruleId === "hire.known"
+                ? "That hire is not in this world. A missing contract is not a broken mandate chain."
+                : "Release is the buyer or treasury, and only after deliver. Unfinished work is not a payout.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `Escrow released${amt ? ` (${amt})` : ""}. A receipt was written.`,
+      body: "The vendor is paid. The receipt’s reference is the hash of the payment mandate, so anyone can prove which permission this settlement fulfilled.",
+      tone: "settle",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "envelope.submit") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -611,6 +1305,10 @@ export function autoBeat(input: {
               ? "That hire has not bound a cart. Issue the cart with hireId. A loose cart on the command is not this hire’s check."
             : rule?.ruleId === "ledger.safe_balance"
               ? "The vendor’s book cannot hold these cents. IEEE rounding is not a mint."
+            : rule?.ruleId === "human.signature_present"
+              ? "L0/L1 payment needs a human signature. A grown-up pause does not wink a junior envelope. Completing funded work is legal."
+            : rule?.ruleId === "mandate.subject_is_actor"
+              ? "This permission slip names a different subject. A vendor pull is not the buyer’s check."
             : `Role ${actor.role} is not allowed to move money. Rule: ${rule?.ruleId ?? "actor.role_capability"}. An auditor who can spend is not an auditor.`,
         tone: "deny",
         commandType: cmd.type,
@@ -641,6 +1339,8 @@ export function autoBeat(input: {
               ? "The vendor’s USD book does not cover this window. An FX settle is not an overdraft. The market maker’s USDC inventory is a different rule."
               : rule?.ruleId === "mm.known"
                 ? "There is no market maker in this world. Register one before settling FX. A window is not a journal against missing books."
+                : rule?.ruleId === "mm.inventory"
+                  ? "The market maker’s USDC book does not cover this payout. Empty inventory is not a missing maker, not a vendor overdraft, and not the 200bps band. A smaller window still converts."
                 : rule?.ruleId === "ledger.safe_balance"
                   ? "A book on this window cannot hold the resulting cents. IEEE rounding is not a mint. The market maker’s USDC inventory is a different rule."
               : (rule?.message ?? "The referee refused the FX settle."),
@@ -697,6 +1397,37 @@ export function autoBeat(input: {
       headline: `${who} pulled the freeze`,
       body: "The target drops to L0 and cannot spend. Anyone they had shaken hands with also cannot spend in their name.",
       tone: "deny",
+      commandType: cmd.type,
+    };
+  }
+  if (cmd.type === "identity.rotate") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "identity.known") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not turn a lock`,
+          body: "That agent is not in this world. A missing agent is not a key rotation.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not turn someone else's lock`,
+        body: "Someone else's key is not yours to turn. Rotate your own, or ask a human or treasury.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} turned the lock`,
+      body: "The current key signs new slips. Old signatures still verify against the retired keyring. Rotation is not a new identity.",
+      tone: "allow",
       commandType: cmd.type,
     };
   }
@@ -769,7 +1500,7 @@ export function autoBeat(input: {
           seq: input.seq,
           at: input.at,
           headline: `${who} cannot shake hands in someone else’s name`,
-          body: "You can only mint a handshake for which you are the principal. A human or treasury may attest any pair. An L4 desk cannot write a founder’s handshake by filling in the ids.",
+          body: "You can only mint a handshake for which you are the principal. A human or treasury may attest any pair. An L4 scout cannot write a founder’s handshake by filling in the ids. Someone else’s name is not a handshake.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -854,7 +1585,7 @@ export function autoBeat(input: {
       at: input.at,
       headline: `${who} revoked the handshake`,
       body: "The agent still exists. Its keys still work. It still cannot spend — implicit supervisor grants die with the tombstone. Revoke cascades to anyone it had hired underneath.",
-      tone: "deny",
+      tone: "allow",
       commandType: cmd.type,
     };
   }
@@ -933,6 +1664,14 @@ export function analog(): Analog {
       "If yes, money sits in escrow until the work is done, then a receipt is written that points back at the slip.",
       "A notary (the audit log) writes every decision in ink that smudges if you try to rewrite yesterday.",
       "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
+      "An agent can change the lock on its key without becoming someone else. Someone else's key is not yours to turn.",
+      "An unfunded offer can be torn up. That is not a refund. A refund is cash coming back after escrow moved.",
+      "A live bid can be folded. That is not a spent quote. Spent is when hire.create consumed it. Someone else's bid is not yours to pull.",
+      "A permission slip can be torn up. That is not a void and not firing a handshake. Someone else's unused slip is not yours to tear.",
+      "A live room can be shut. That is not an expired window. Expired is when the day dies. Someone else's room is not yours to close.",
+      "A checkout can be torn up. That is not a refund. Bound is when a payment occupies it. Someone else's unused checkout is not yours to dump.",
+      "A check can be torn up. That is not a refund. Funded is when escrow occupies it. Someone else's unused payment is not yours to spike.",
+      "A week is not a cadence on a seven-day slip. Daily is 24 hours. A vacant cap is no slots. A one-shot WEEKLY still mints.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

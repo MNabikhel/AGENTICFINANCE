@@ -1,0 +1,23 @@
+{
+  "id": "attestation-fresh",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000053",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "hop": { "maxAutonomy": 3, "expiresAt": "2026-08-28T12:00:00.000Z" },
+  "afterHop": "2026-08-28T18:00:00.000Z",
+  "intent": {
+    "task": "An expired hop is not a freeze on funded work. Completing funded work is legal. A nested parent is a different object. A hop minted past one year is a different object. A climb above the grant is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "sneak": { "amount": 40000, "currency": "USD_SIM" }
+  }
+}

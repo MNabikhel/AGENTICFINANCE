@@ -28,7 +28,7 @@ export const RECEIPT_ISSUER = "did:aether:runtime" as const;
  */
 export const PROTOCOL = {
   spec: "aether.protocol.1",
-  version: "0.95.0",
+  version: "0.96.0",
   rail: SIM_RAIL_ID,
   liveMoney: false,
   /** `evaluate()` is deterministic. An LLM does not sit in the referee. */
@@ -111,6 +111,7 @@ export type JournalId = `jnl_${Ulid}`;
 export type RfqId = `rfq_${Ulid}`;
 export type QuoteId = `qte_${Ulid}`;
 export type DelegationId = `dlg_${Ulid}`;
+export type IssuerId = `iss_${Ulid}`;
 export type SubscriptionId = `hsb_${Ulid}`;
 export type Did = `did:aether:${string}`;
 
@@ -185,6 +186,14 @@ export interface PaymentInstrument {
   type: "sim_ledger";
   description: string;
 }
+
+/** The only instrument `mutPayment` stamps. A listed constraint that omits this id cannot spend. */
+export const SIM_LEDGER_INSTRUMENT_ID = "sim-ledger";
+export const SIM_INSTRUMENT: PaymentInstrument = {
+  id: SIM_LEDGER_INSTRUMENT_ID,
+  type: "sim_ledger",
+  description: "Aether simulated double-entry ledger",
+};
 
 export interface LineItem {
   sku: string;
@@ -291,9 +300,10 @@ export interface IntentMandate {
  * later refund/release) wins over expired. Expired includes the slip `exp` and a
  * dead parent intent, even when this child's own window still lives. A child
  * hire does not occupy the parent. Recurrence `spentByIntent` is not occupancy.
- * The store stays raw (`exp` only).
+ * The store stays raw (`exp` only). Revoked (torn by mandate.revoke) wins over
+ * expired. Funded wins over revoked and expired.
  */
-export type IntentStatus = "live" | "expired" | "funded";
+export type IntentStatus = "live" | "expired" | "funded" | "revoked";
 
 export interface CartMandate {
   vct: "aether.mandate.cart.1";
@@ -308,20 +318,23 @@ export interface CartMandate {
 }
 
 /**
- * Inspect / snapshot view. Bound (unique_payment occupies) wins over expired.
+ * Inspect / snapshot view. Bound (unique_payment occupies) wins over revoked
+ * and expired. Revoked (torn by mandate.revoke_cart) wins over expired.
  * A hire that points at this cart is not bound — that occupancy lives on the hire.
- * The store stays raw.
+ * The store stays raw (`expiresAt` only).
  */
-export type CartStatus = "live" | "expired" | "bound";
+export type CartStatus = "live" | "expired" | "bound" | "revoked";
 
 /**
  * Inspect / snapshot view. Funded (escrow moved, including later refund/release)
  * wins over expired. Expired includes the payment `exp` and a dead parent cart
  * (`expiresAt`), even when this check's own window still lives. A cart that this
  * payment occupies is not funded — that occupancy lives on the cart
- * (`mandate.unique_payment` / bound). The store stays raw (`exp` only).
+ * (`mandate.unique_payment` / bound). Revoked (torn by mandate.revoke_payment)
+ * wins over expired. Funded wins over revoked and expired. The store stays raw
+ * (`exp` only).
  */
-export type PaymentStatus = "live" | "expired" | "funded";
+export type PaymentStatus = "live" | "expired" | "funded" | "revoked";
 
 export interface PaymentMandate {
   vct: "aether.mandate.payment.1" | "aether.mandate.payment.open.1";
@@ -438,6 +451,7 @@ export const HIRE_COMMAND_TARGET = {
   "hire.deliver": "delivered",
   "hire.refund": "refunded",
   "hire.release": "released",
+  "hire.void": "void",
   "envelope.submit": "released",
 } as const satisfies Record<string, HireState>;
 
@@ -445,6 +459,15 @@ export const HIRE_COMMAND_TARGET = {
 export const HIRE_COMMAND_REQUIRED_STATE = {
   "envelope.require": "delivered",
 } as const satisfies Record<string, HireState>;
+
+/**
+ * Inspect / snapshot view. Funded (escrow moved, including later refund/release/deliver)
+ * wins over expired. Expired includes a dead intent and a dead parent intent even when
+ * this child's `exp` still lives. `void` is not a live offer. The store stays raw
+ * (`state` only). Fund of an unpaid expired offer still names `mandate.not_expired`
+ * or `mandate.parent_fresh`. Completing a funded hire after that window is legal.
+ */
+export type HireStatus = "live" | "expired" | "funded";
 
 export interface HireContract {
   id: HireId;
@@ -475,9 +498,10 @@ export interface Rfq {
 
 /**
  * Inspect / snapshot view. A room past `expiresAt` is `expired`, not `live`.
- * The store stays raw (`expiresAt` only). Quoting or hiring still names `market.not_expired`.
+ * Closed (torn by market.close) wins over expired. The store stays raw
+ * (`expiresAt` only). Quoting or hiring a shut room still names `market.not_expired`.
  */
-export type RfqStatus = "live" | "expired";
+export type RfqStatus = "live" | "expired" | "closed";
 
 export interface Quote {
   id: QuoteId;
@@ -495,12 +519,12 @@ export interface Quote {
 }
 
 /**
- * Inspect / snapshot view. Spent and held win over expired. Expired includes the
- * quote envelope, a lapsed FX `validUntil`, and (for a hire quote) a dead parent RFQ.
- * An FX quote is a window on the quote, not the room — RFQ death does not expire it.
- * The store stays raw.
+ * Inspect / snapshot view. Spent and held win over withdrawn and expired.
+ * Withdrawn wins over expired. Expired includes the quote envelope, a lapsed FX
+ * `validUntil`, and (for a hire quote) a dead parent RFQ. An FX quote is a window
+ * on the quote, not the room — RFQ death does not expire it. The store stays raw.
  */
-export type QuoteStatus = "live" | "expired" | "spent" | "held";
+export type QuoteStatus = "live" | "expired" | "spent" | "held" | "withdrawn";
 
 // ---------------------------------------------------------------------------
 // Ledger
@@ -575,7 +599,12 @@ export interface ApprovalTicket {
   reason: string;
   ruleIds: string[];
   requiredApproverRoles: AgentRole[];
-  status: "pending" | "approved" | "rejected" | "expired";
+  /**
+   * Store is pending | approved | rejected | expired.
+   * Inspect/snapshot may overlay `expired` (clock) or `stale` (paused command
+   * would not allow). Stale is never written to the store.
+   */
+  status: "pending" | "approved" | "rejected" | "expired" | "stale";
   resolvedBy?: AgentId;
   resolvedAt?: Instant;
 }
@@ -608,12 +637,28 @@ export interface SettlementWindow {
 
 export type KyaIssuerKind = "aether.self" | "tap.http-sig" | "skyfire.kya" | "erc8004.agent";
 
+/**
+ * Shape-only issuer the kernel stores. Not a live TAP/Skyfire/chain call.
+ * Credentials never enter `evaluate()`. `live` stays false on this pin.
+ */
+export interface KyaIssuer {
+  id: IssuerId;
+  vct: "aether.kya.issuer.1";
+  kind: KyaIssuerKind;
+  label: string;
+  adapter: "shape";
+  live: false;
+  createdAt: Instant;
+}
+
 export const KYA_MAX_DEPTH = 3;
 
 export interface DelegationAttestation {
   id: DelegationId;
   vct: "aether.kya.delegation.1";
   issuerKind: KyaIssuerKind;
+  /** Genesis issuer object this hop pins. Optional so 0.96 worlds without the catalog still boot. */
+  issuerId?: IssuerId;
   /** Money owner at the root of this chain. */
   principalId: AgentId;
   /** Who signed this hop. */
@@ -762,11 +807,12 @@ export interface PolicyContext {
    */
   fxMintFresh?: boolean;
   /**
-   * False when `hire.create` would reuse a quote that already produced a hire, an FX settle,
-   * or is held by an open approval ticket.
-   * Absent = not a hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * False when `hire.create` or `market.withdraw` would reuse a quote that already
+   * produced a hire, an FX settle, or is held by an open approval ticket.
+   * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).
    * A deny does not consume the quote. An escalate *reserves* it until
-   * the ticket is approved, rejected, or expired. A void/refund does not restore it.
+   * the ticket is approved, rejected, or expired. A void/refund/withdraw of a spent
+   * quote does not restore it. A folded live quote is `market.not_expired`, not this flag.
    */
   quoteUnspent?: boolean;
   /**
@@ -775,16 +821,21 @@ export interface PolicyContext {
    */
   hireKnown?: boolean;
   /**
-   * False when hire.create, issue_cart, or hosted `host.subscribe` points at an
-   * intent that is not in this world. Absent = command does not require a live intent.
+   * False when hire.create, issue_cart, mandate.revoke, or hosted `host.subscribe`
+   * points at an intent that is not in this world. Absent = command does not require a live intent.
    * Public-kernel subscribe does not set this — that deny is `host.not_hosted`.
    */
   intentKnown?: boolean;
   /**
-   * False when issue_payment points at a cart that is not in this world.
+   * False when issue_payment or mandate.revoke_cart points at a cart that is not in this world.
    * Absent = command does not require a live cart.
    */
   cartKnown?: boolean;
+  /**
+   * False when mandate.revoke_payment points at a payment that is not in this world.
+   * Absent = command does not require a live payment.
+   */
+  paymentKnown?: boolean;
   /**
    * False when approval.resolve points at a ticket that is not in this world.
    * Absent = not an approval.resolve.
@@ -865,6 +916,72 @@ export interface PolicyContext {
    * or tombstone a founder’s handshake by filling in the ids.
    */
   kyaPartyOk?: boolean;
+  /**
+   * False when identity.rotate names an agent that is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a rotate.
+   * Omitted agentId is the speaker. A vendor cannot turn a desk's lock.
+   */
+  identityPartyOk?: boolean;
+  /**
+   * False when market.withdraw names a quote whose seller is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a withdraw, or the
+   * quote is unknown (`rfqKnown` handles that). A vendor cannot fold someone else's bid.
+   */
+  marketPartyOk?: boolean;
+  /**
+   * False when market.close names an RFQ whose buyer is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a close, or the
+   * room is unknown (`rfqKnown` handles that). A desk cannot shut someone else's room.
+   */
+  rfqPartyOk?: boolean;
+  /**
+   * False when mandate.revoke_cart names a cart whose merchant, hire buyer, or
+   * intent subject is not the speaker, and the speaker is not a human or treasury.
+   * Absent = not a dump, or the cart is unknown (`cartKnown` handles that).
+   * A desk cannot dump someone else's checkout. Do not reuse `mandate.party` —
+   * that flag is the named issuer of an intent.
+   */
+  cartPartyOk?: boolean;
+  /**
+   * False when mandate.revoke_payment names a payment whose signer, payee, hire
+   * buyer, or intent subject is not the speaker, and the speaker is not a human
+   * or treasury. Absent = not a spike, or the payment is unknown (`paymentKnown`
+   * handles that). A desk cannot spike someone else's check. Do not reuse
+   * `mandate.cart_party` — that flag is the named merchant of a cart.
+   */
+  paymentPartyOk?: boolean;
+  /**
+   * False when mandate.revoke names an intent whose issuer is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a revoke, or the
+   * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.
+   */
+  mandatePartyOk?: boolean;
+  /**
+   * False when hire.create / hire.fund / issue_cart / host.subscribe / mandate.revoke
+   * would use an intent that mandate.revoke already tore up.
+   * Absent = not those commands, or the intent is unknown (`intentKnown` handles that).
+   * Completing funded work after that is legal (`mandate.not_expired` allows complete-after-fund).
+   * A ripped unused slip is `mandate.not_expired` on a new hire, not occupancy.
+   */
+  intentWindowLive?: boolean;
+  /**
+   * False when issue_payment / hire.fund / mandate.revoke_cart would use a cart
+   * that mandate.revoke_cart already tore up, or when mandate.revoke_cart names a
+   * cart a payment already occupies. Absent = not those commands, or the cart is
+   * unknown (`cartKnown` handles that). Completing funded work after that is legal.
+   * A dumped unused cart is `mandate.not_expired` on a new payment, not occupancy.
+   * Bound is when a payment occupies it — dump of a bound cart is not a refund.
+   */
+  cartWindowLive?: boolean;
+  /**
+   * False when hire.fund / mandate.revoke_payment would use a payment that
+   * mandate.revoke_payment already tore up, or when mandate.revoke_payment names a
+   * payment escrow already occupies. Absent = not those commands, or the payment is
+   * unknown (`paymentKnown` handles that). Completing funded work after that is legal.
+   * A spiked unused payment is `mandate.not_expired` on fund, not occupancy.
+   * Funded is when escrow occupies it — spike of a funded payment is not a refund.
+   */
+  paymentWindowLive?: boolean;
   /**
    * False when identity.register would reuse a runtime alias or its operating book
    * (USD cash, and USDC for data_vendor / market_maker).
@@ -977,9 +1094,18 @@ export interface PolicyContext {
    * Absent = not issue_intent, or the slip has no agent_recurrence constraint.
    * Omit max_occurrences is unlimited and still mints. Hire/fund still names
    * `payment.recurrence`. Ghost subject, missing parent, and a wider child
-   * keep first deny.
+   * keep first deny. A week that cannot admit a second hire is `mandate.cadence_reach`.
    */
   occurrenceMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write a recurrence whose next slot
+   * opens at or after the slip's seven-day exp (`WEEKLY` / `MONTHLY` with the
+   * cap omitted or greater than one). Absent = not issue_intent, or no
+   * agent_recurrence constraint. A vacant cap stays `mandate.occurrence_fresh`.
+   * A one-shot WEEKLY (`max_occurrences` 1) still mints. DAILY still mints.
+   * Hire/fund still names `payment.recurrence`.
+   */
+  cadenceReachOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
@@ -996,9 +1122,10 @@ export interface PolicyContext {
   cartUnbound?: boolean;
   /**
    * False when issue_payment points at a cart that already has a payment mandate
-   * (same cart hash / transaction_id).
+   * (same cart hash / transaction_id) that is not revoked.
    * Absent = not issue_payment, or the cart is unknown (`mandate.known_cart` handles that).
-   * A cart takes one payment. A second payment is not a second check.
+   * A cart takes one occupying payment. A second payment is not a second check.
+   * A spiked unused payment frees occupancy.
    */
   paymentUnbound?: boolean;
   /**
@@ -1041,6 +1168,15 @@ export interface PolicyContext {
    * Absent = not a hosted subscribe with a known intent. One subscriber, one row.
    */
   subscribeUnique?: boolean;
+  /**
+   * False when hire.create / hire.fund cites a `payment.reference` whose
+   * `conditional_transaction_id` is not a funded payment's `transaction_id`
+   * (cart hash) in this world, after at least one funded payment exists.
+   * Absent = not a spend-start, no `payment.reference` constraint, or no
+   * funded payment yet (AP2-shaped catalog surface until a prior payment exists).
+   * Completing funded work does not set this flag.
+   */
+  referenceOk?: boolean;
 }
 
 /**
@@ -1055,6 +1191,13 @@ export interface HostSubscription {
 }
 
 /**
+ * Inspect / snapshot view. Expired includes a dead intent and a dead parent
+ * intent. Unique_subscriber still occupies. Spend is not gated on the row.
+ * The store stays raw (`intentId` / `createdAt` only).
+ */
+export type SubscriptionStatus = "live" | "expired";
+
+/**
  * Off-band monthly payment for a hosted operator. Not a Command. Not a spend gate.
  * Humans pay the operator (invoice or Stripe). The public kernel has no invoices.
  */
@@ -1067,6 +1210,13 @@ export interface OperatorInvoice {
   actorId: AgentId;
   reference?: string;
 }
+
+/**
+ * Inspect / snapshot view. Current is inside the 31-day door window.
+ * Lapsed is not a current invoice. The store stays raw (`at` only).
+ * Spend is not gated on a row; the door asks whether *any* invoice is current.
+ */
+export type InvoiceStatus = "current" | "lapsed";
 
 export const DEFAULT_APPROVAL_THRESHOLDS: Record<AgentRole, number> = {
   procurement: 500_000,
@@ -1113,8 +1263,13 @@ export type AuditAction =
   | "IDENTITY_REGISTER"
   | "LADDER_SET"
   | "MANDATE_ISSUE"
+  | "MANDATE_REVOKE"
+  | "CART_REVOKE"
+  | "PAYMENT_REVOKE"
   | "RFQ_CREATE"
+  | "RFQ_CLOSE"
   | "QUOTE_SUBMIT"
+  | "QUOTE_WITHDRAW"
   | "HIRE_TRANSITION"
   | "POLICY_DECISION"
   | "APPROVAL_RESOLVE"
@@ -1124,6 +1279,7 @@ export type AuditAction =
   | "RECEIPT_ISSUE"
   | "FREEZE"
   | "UNFREEZE"
+  | "IDENTITY_ROTATE"
   | "KYA_ATTEST"
   | "KYA_REVOKE"
   | "CIRCUIT_RESET"
@@ -1172,14 +1328,20 @@ export type CommandType =
   | "identity.register"
   | "identity.freeze"
   | "identity.unfreeze"
+  | "identity.rotate"
   | "kya.attest"
   | "kya.revoke"
   | "circuit.reset"
   | "mandate.issue_intent"
+  | "mandate.revoke"
+  | "mandate.revoke_cart"
+  | "mandate.revoke_payment"
   | "mandate.issue_cart"
   | "mandate.issue_payment"
   | "market.rfq"
+  | "market.close"
   | "market.quote"
+  | "market.withdraw"
   | "market.fx_settle"
   | "market.catalog"
   | "hire.create"
@@ -1188,6 +1350,7 @@ export type CommandType =
   | "hire.deliver"
   | "hire.release"
   | "hire.refund"
+  | "hire.void"
   | "envelope.require"
   | "envelope.submit"
   | "approval.resolve"
@@ -1259,19 +1422,26 @@ export const ROLE_CAPABILITY: Record<
     "identity.register",
     "identity.freeze",
     "identity.unfreeze",
+    "identity.rotate",
     "kya.attest",
     "kya.revoke",
     "circuit.reset",
     "mandate.issue_intent",
+    "mandate.revoke",
+    "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
+    "market.close",
     "market.fx_settle",
+    "market.withdraw",
     "hire.create",
     "hire.accept",
     "hire.fund",
     "hire.release",
     "hire.refund",
+    "hire.void",
     "envelope.require",
     "envelope.submit",
     "approval.resolve",
@@ -1287,17 +1457,23 @@ export const ROLE_CAPABILITY: Record<
     "host.subscribe",
   ],
   procurement: [
+    "identity.rotate",
     "mandate.issue_intent",
+    "mandate.revoke",
+    "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "kya.attest",
     "kya.revoke",
     "mandate.issue_cart",
     "mandate.issue_payment",
     "market.rfq",
+    "market.close",
     "hire.create",
     "hire.accept",
     "hire.fund",
     "hire.release",
     "hire.refund",
+    "hire.void",
     "envelope.require",
     "envelope.submit",
     "ledger.balances",
@@ -1308,9 +1484,14 @@ export const ROLE_CAPABILITY: Record<
     "host.subscribe",
   ],
   data_vendor: [
+    "identity.rotate",
+    "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "market.quote",
+    "market.withdraw",
     "market.fx_settle",
     "hire.accept",
+    "hire.void",
     "hire.deliver",
     "envelope.require",
     "envelope.submit",
@@ -1321,9 +1502,14 @@ export const ROLE_CAPABILITY: Record<
     "host.card",
   ],
   compute_vendor: [
+    "identity.rotate",
+    "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "market.quote",
+    "market.withdraw",
     "market.fx_settle",
     "hire.accept",
+    "hire.void",
     "hire.deliver",
     "envelope.require",
     "envelope.submit",
@@ -1334,7 +1520,9 @@ export const ROLE_CAPABILITY: Record<
     "host.card",
   ],
   market_maker: [
+    "identity.rotate",
     "market.quote",
+    "market.withdraw",
     "market.fx_settle",
     "envelope.require",
     "envelope.submit",
@@ -1344,15 +1532,21 @@ export const ROLE_CAPABILITY: Record<
     "receipt.get",
     "host.card",
   ],
-  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "ledger.balances", "receipt.get", "market.catalog", "host.card"],
+  auditor: ["audit.verify", "audit.query", "identity.freeze", "identity.unfreeze", "identity.rotate", "ledger.balances", "receipt.get", "market.catalog", "host.card"],
   human_operator: [
     "identity.register",
     "identity.freeze",
     "identity.unfreeze",
+    "identity.rotate",
+    "market.withdraw",
+    "market.close",
     "kya.attest",
     "kya.revoke",
     "circuit.reset",
     "mandate.issue_intent",
+    "mandate.revoke",
+    "mandate.revoke_cart",
+    "mandate.revoke_payment",
     "approval.resolve",
     "ladder.set",
     "audit.verify",

@@ -1,0 +1,22 @@
+{
+  "id": "kya-window",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000034",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "grant": { "maxAutonomy": 3 },
+  "farExpiresAt": "2099-01-01T00:00:00.000Z",
+  "intent": {
+    "task": "A handshake cannot outlive one year. Year 9999 is not standing identity. Funded work still finishes.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "once": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

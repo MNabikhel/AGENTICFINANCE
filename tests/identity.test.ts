@@ -78,6 +78,43 @@ describe("known agent", () => {
     expect(rt.clock.now()).not.toBe(clockBefore);
   });
 
+  it("refuses to rotate a missing agent as identity.known, not a stolen lock", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const r = rt.dispatch(cmd("identity.rotate", founder.id, { agentId: GHOST }));
+    deniedKnown(r);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("allow");
+  });
+
+  it("refuses a vendor turning the desk's lock as identity.party", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const before = rt.identity.require(desk.id).keys[0]?.kid;
+    const r = rt.dispatch(cmd("identity.rotate", vendor.id, { agentId: desk.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.not_frozen")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(rt.identity.require(desk.id).keys[0]?.kid).toBe(before);
+    expect(rt.audit.all().some((e) => e.action === "IDENTITY_ROTATE")).toBe(false);
+  });
+
+  it("lets a desk turn its own lock", () => {
+    const rt = boot();
+    const { desk } = economy(rt);
+    const before = rt.identity.require(desk.id).keys[0]?.kid;
+    const r = rt.dispatch(cmd("identity.rotate", desk.id, {}));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const after = rt.identity.require(desk.id);
+    expect(after.keys[0]?.kid).not.toBe(before);
+    expect(after.keys[1]?.kid).toBe(before);
+    expect(rt.audit.all().some((e) => e.action === "IDENTITY_ROTATE")).toBe(true);
+  });
+
   it("refuses to unfreeze a missing agent as identity.known", () => {
     const rt = boot();
     const { founder } = economy(rt);

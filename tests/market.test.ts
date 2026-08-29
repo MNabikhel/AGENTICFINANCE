@@ -284,6 +284,131 @@ describe("known RFQ", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
   });
+
+  it("refuses to fold a missing quote as known_rfq, not a stolen bid", () => {
+    const rt = boot();
+    const { vendor } = economy(rt);
+    const r = rt.dispatch(cmd("market.withdraw", vendor.id, { quoteId: "qte_01J6AETHERGHOSTQTE00000001" }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(rt.audit.all().some((e) => e.action === "QUOTE_WITHDRAW")).toBe(false);
+  });
+
+  it("refuses a second vendor folding a live bid as market.party", () => {
+    const rt = boot();
+    const { desk, vendor, other } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "live bid",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const r = rt.dispatch(cmd("market.withdraw", other.id, { quoteId: invited.quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(rt.quoteView(rt.quotes.get(invited.quoteId)!).status).toBe("live");
+    expect(rt.audit.all().some((e) => e.action === "QUOTE_WITHDRAW")).toBe(false);
+  });
+
+  it("lets a seller fold its own live bid; hiring it is not_expired", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "fold me",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const folded = must(rt.dispatch(cmd("market.withdraw", vendor.id, { quoteId: invited.quoteId })), "fold");
+    expect((folded.data as { id: string }).id).toBe(invited.quoteId);
+    expect(rt.quoteView(rt.quotes.get(invited.quoteId)!).status).toBe("withdrawn");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+    expect(rt.audit.all().some((e) => e.action === "QUOTE_WITHDRAW")).toBe(true);
+    const hire = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(hire.ok).toBe(false);
+    if (hire.ok) return;
+    expect(hire.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+    expect(hire.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+  });
+});
+
+describe("rfq close", () => {
+  it("refuses to shut a missing room as known_rfq, not a stolen close", () => {
+    const rt = boot();
+    const { desk } = economy(rt);
+    const r = rt.dispatch(cmd("market.close", desk.id, { rfqId: "rfq_01J6AETHERGHOSTRFQ00000001" }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(rt.audit.all().some((e) => e.action === "RFQ_CLOSE")).toBe(false);
+  });
+
+  it("refuses a second desk shutting a live room as market.rfq_party", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    const otherDesk = rt.alias("other-desk");
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "live room",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    const r = rt.dispatch(cmd("market.close", otherDesk.id, { rfqId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.rfq_party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(rt.rfqView(rt.rfqs.get(rfqId)!).status).toBe("live");
+    expect(rt.audit.all().some((e) => e.action === "RFQ_CLOSE")).toBe(false);
+  });
+
+  it("lets a buyer shut its own live room; hiring a quote on it is not_expired", () => {
+    const rt = boot();
+    const { desk, vendor, intentId } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "shut me",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const rfqId = (invited.rfq.data as { id: string }).id;
+    const shut = must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "shut");
+    expect((shut.data as { id: string }).id).toBe(rfqId);
+    expect(rt.rfqView(rt.rfqs.get(rfqId)!).status).toBe("closed");
+    expect("status" in (rt.rfqs.get(rfqId) ?? {})).toBe(false);
+    expect(rt.quoteView(rt.quotes.get(invited.quoteId)!).status).toBe("expired");
+    expect(rt.audit.all().some((e) => e.action === "RFQ_CLOSE")).toBe(true);
+    const hire = rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId }));
+    expect(hire.ok).toBe(false);
+    if (hire.ok) return;
+    expect(hire.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+    expect(hire.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+  });
 });
 
 describe("command schema", () => {

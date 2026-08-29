@@ -1,0 +1,21 @@
+{
+  "id": "parent-fresh",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000023",
+  "opening": {
+    "scout:cash": { "amount": 1500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "parentHop": { "expiresAt": "2026-08-28T12:00:00.000Z" },
+  "afterParent": "2026-08-28T18:00:00.000Z",
+  "intent": {
+    "task": "A nested hop does not outlive its parent. New spend is kya.parent_fresh. Funded work still finishes.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "once": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

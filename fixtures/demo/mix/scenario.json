@@ -1,0 +1,29 @@
+{
+  "id": "same-currency",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000048",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" },
+    "research-vendor:cash": { "amount": 200000, "currency": "USD_SIM" },
+    "market_maker:cash_usdc": { "amount": 1000000, "currency": "USDC_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneak": { "amount": 1000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "A mixed journal is not a conversion. Completing funded work is legal. A missing dest book is a different object. Empty cash is a different object. A transfer from equity is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" },
+    "fx": {
+      "amount": 80000,
+      "currency": "USD_SIM",
+      "rateE6": 998000,
+      "validUntil": "2026-08-29T00:00:00.000Z"
+    }
+  }
+}

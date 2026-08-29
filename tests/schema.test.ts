@@ -46,6 +46,31 @@ describe("command shape enums and integer ranges", () => {
     expect(commandShapeError("identity.freeze", { agentId: 1 })).toBe("invalid type: agentId");
   });
 
+  it("rejects a numeric agentId as a type miss, not a rotate after yes", () => {
+    expect(commandShapeError("identity.rotate", { agentId: 1 })).toBe("invalid type: agentId");
+  });
+
+  it("rejects a numeric hireId as a type miss, not a void after yes", () => {
+    expect(commandShapeError("hire.void", { hireId: 1 })).toBe("invalid type: hireId");
+  });
+
+  it("rejects a numeric quoteId as a type miss, not a fold after yes", () => {
+    expect(commandShapeError("market.withdraw", { quoteId: 1 })).toBe("invalid type: quoteId");
+  });
+
+  it("rejects a numeric intentId as a type miss, not a rip after yes", () => {
+    expect(commandShapeError("mandate.revoke", { intentId: 1 })).toBe("invalid type: intentId");
+  });
+
+  it("rejects a numeric rfqId as a type miss, not a shut after yes", () => {
+    expect(commandShapeError("market.close", { rfqId: 1 })).toBe("invalid type: rfqId");
+  });
+
+  it("rejects a numeric cartId as a type miss, not a dump after yes", () => {
+    expect(commandShapeError("mandate.revoke_cart", { cartId: 1 })).toBe("invalid type: cartId");
+    expect(commandShapeError("mandate.revoke_payment", { paymentId: 1 })).toBe("invalid type: paymentId");
+  });
+
   it("rejects a string where an invite list belongs", () => {
     expect(commandShapeError("market.rfq", { sku: "research.brief", spec: "x", invitedSellerIds: "aid_x" })).toBe(
       "invalid type: invitedSellerIds",

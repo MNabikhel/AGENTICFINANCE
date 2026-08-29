@@ -1,0 +1,32 @@
+{
+  "id": "parent-budget",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000028",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "parent": {
+    "task": "A parent envelope is not a child's leftover. Desk spend against the parent still occupies it.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 100000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 4 }
+    ]
+  },
+  "child": {
+    "task": "Scout may buy research. Child envelope still has room; the parent does not.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 400000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 100000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "sneak": { "amount": 40000, "currency": "USD_SIM" }
+  }
+}

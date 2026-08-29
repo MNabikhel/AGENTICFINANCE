@@ -10,6 +10,98 @@ import { Runtime, admitInvoice, admitSpeaker, cmd, parseHostedMonthly, speakerKe
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
+import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
+import { loadRefund, runRefund } from "@aether/refund";
+import { loadReplay, runReplay } from "@aether/replay";
+import { loadNonce, runNonce } from "@aether/envelope-nonce";
+import { loadDenyCache, runDenyCache } from "@aether/deny-cache";
+import { loadRecurrence, runRecurrence } from "@aether/recurrence-cadence";
+import { loadCalendar, runCalendar } from "@aether/execution-window";
+import { loadSlot, runSlot } from "@aether/cadence-slot";
+import { loadDaily, runDaily } from "@aether/daily-gap";
+import { loadCartOccupancy, runCartOccupancy } from "@aether/cart-occupancy";
+import { loadVelocity, runVelocity } from "@aether/hot-hour";
+import { loadDoor, runDoor } from "@aether/operator-door";
+import { loadCartMatch, runCartMatch } from "@aether/cart-match";
+import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
+import { loadConversion, runConversion } from "@aether/fx-not-hire";
+import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
+import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
+import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
+import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
+import { loadMmInventory, runMmInventory } from "@aether/mm-inventory";
+import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
+import { loadHostUnique, runHostUnique } from "@aether/host-unique";
+import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
+import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
+import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
+import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
+import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
+import { loadWindowReach, runWindowReach } from "@aether/window-reach";
+import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
+import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
+import { loadPaymentSkus, runPaymentSkus } from "@aether/payment-skus";
+import { loadSkuCurrency, runSkuCurrency } from "@aether/sku-currency";
+import { loadHireParty, runHireParty } from "@aether/hire-party";
+import { loadLedgerSufficient, runLedgerSufficient } from "@aether/ledger-sufficient";
+import { loadNotExpired, runNotExpired } from "@aether/not-expired";
+import { loadChainIntegrity, runChainIntegrity } from "@aether/chain-integrity";
+import { loadHireState, runHireState } from "@aether/hire-state";
+import { loadLedgerKnown, runLedgerKnown } from "@aether/ledger-known";
+import { loadKyaParty, runKyaParty } from "@aether/kya-party";
+import { loadFxWindow, runFxWindow } from "@aether/fx-window";
+import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
+import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
+import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
+import { loadLadderLegal, runLadderLegal } from "@aether/ladder-legal";
+import { loadMinLevel, runMinLevel } from "@aether/min-level";
+import { loadBirthRung, runBirthRung } from "@aether/birth-rung";
+import { loadMaxAutonomy, runMaxAutonomy } from "@aether/max-autonomy";
+import { loadAttestationFresh, runAttestationFresh } from "@aether/attestation-fresh";
+import { loadApprovalPending, runApprovalPending } from "@aether/approval-pending";
+import { loadKyaNotSelf, runKyaNotSelf } from "@aether/kya-not-self";
+import { loadHostAuthority, runHostAuthority } from "@aether/host-authority";
+import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fresh";
+import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
+import { loadAmountRange, runAmountRange } from "@aether/amount-range";
+import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
+import { loadKnownSku, runKnownSku } from "@aether/known-sku";
+import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
+import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
+import { loadKnownCart, runKnownCart } from "@aether/known-cart";
+import { loadKnownHire, runKnownHire } from "@aether/known-hire";
+import { loadKnownParent, runKnownParent } from "@aether/known-parent";
+import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
+import { loadKyaKnownParent, runKyaKnownParent } from "@aether/kya-known-parent";
+import { loadKnownAttestation, runKnownAttestation } from "@aether/known-attestation";
+import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
+import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
+import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
+import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
+import { loadSystemScope, runSystemScope } from "@aether/system-scope";
+import { loadActorKnown, runActorKnown } from "@aether/actor-known";
+import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
+import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
+import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
+import { loadMmKnown, runMmKnown } from "@aether/mm-known";
+import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
+import { loadSafeBalance, runSafeBalance } from "@aether/safe-balance";
+import { loadFxPair, runFxPair } from "@aether/fx-pair";
+import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
+import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
+import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
+import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
+import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
+import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
+import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
+import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
+import { loadHireVoid, runHireVoid } from "@aether/hire-void";
+import { loadMarketParty, runMarketParty } from "@aether/market-party";
+import { loadMandateParty, runMandateParty } from "@aether/mandate-party";
+import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
+import { loadCartParty, runCartParty } from "@aether/cart-party";
+import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
+import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -54,7 +146,103 @@ const COMMAND_BY_TOOL = new Map(
   catalog.tools.filter((t) => t.commandType && !t.commandType.startsWith("demo.")).map((t) => [t.name, t.commandType as CommandType]),
 );
 
-const DEMO_TOOLS = new Set(["aether_demo_sprint", "aether_demo_night_watch", "aether_demo_sub_hire"]);
+const DEMO_TOOLS = new Set([
+  "aether_demo_sprint",
+  "aether_demo_night_watch",
+  "aether_demo_sub_hire",
+  "aether_demo_clearing",
+  "aether_demo_refund",
+  "aether_demo_replay",
+  "aether_demo_nonce",
+  "aether_demo_deny",
+  "aether_demo_recurrence",
+  "aether_demo_calendar",
+  "aether_demo_slot",
+  "aether_demo_daily",
+  "aether_demo_cart",
+  "aether_demo_velocity",
+  "aether_demo_door",
+  "aether_demo_match",
+  "aether_demo_room",
+  "aether_demo_conversion",
+  "aether_demo_pair",
+  "aether_demo_band",
+  "aether_demo_nest",
+  "aether_demo_heir",
+  "aether_demo_stock",
+  "aether_demo_purse",
+  "aether_demo_seat",
+  "aether_demo_cover",
+  "aether_demo_mint",
+  "aether_demo_payee",
+  "aether_demo_climb",
+  "aether_demo_born",
+  "aether_demo_reach",
+  "aether_demo_year",
+  "aether_demo_fuse",
+  "aether_demo_sku",
+  "aether_demo_priced",
+  "aether_demo_party",
+  "aether_demo_cash",
+  "aether_demo_stale",
+  "aether_demo_chain",
+  "aether_demo_arrow",
+  "aether_demo_wallet",
+  "aether_demo_name",
+  "aether_demo_pane",
+  "aether_demo_subject",
+  "aether_demo_paper",
+  "aether_demo_mix",
+  "aether_demo_rung",
+  "aether_demo_grade",
+  "aether_demo_cradle",
+  "aether_demo_ceiling",
+  "aether_demo_lapse",
+  "aether_demo_pause",
+  "aether_demo_mirror",
+  "aether_demo_warrant",
+  "aether_demo_vacant",
+  "aether_demo_badge",
+  "aether_demo_lid",
+  "aether_demo_bare",
+  "aether_demo_shelf",
+  "aether_demo_hall",
+  "aether_demo_writ",
+  "aether_demo_crate",
+  "aether_demo_pact",
+  "aether_demo_root",
+  "aether_demo_docket",
+  "aether_demo_graft",
+  "aether_demo_seal",
+  "aether_demo_guest",
+  "aether_demo_dust",
+  "aether_demo_thaw",
+  "aether_demo_twin",
+  "aether_demo_fence",
+  "aether_demo_mute",
+  "aether_demo_nil",
+  "aether_demo_spark",
+  "aether_demo_wilt",
+  "aether_demo_maker",
+  "aether_demo_ink",
+  "aether_demo_brim",
+  "aether_demo_swap",
+  "aether_demo_sour",
+  "aether_demo_cut",
+  "aether_demo_ice",
+  "aether_demo_rail",
+  "aether_demo_pen",
+  "aether_demo_well",
+  "aether_demo_cite",
+  "aether_demo_lock",
+  "aether_demo_void",
+  "aether_demo_fold",
+  "aether_demo_rip",
+  "aether_demo_shut",
+  "aether_demo_dump",
+  "aether_demo_spike",
+  "aether_demo_week",
+]);
 
 const ACTOR_PROPERTIES = {
   actor: { type: "string", description: "Runtime alias after register (ops-human, desk, scout), aid_, or system. Unknown names are missing speakers, not system. Omit to bootstrap. On a hosted operator a named speaker must also pass speakerProof." },
@@ -191,12 +379,12 @@ export class AetherMcp {
           })),
           {
             name: "aether_snapshot",
-            description: "Read-only runtime snapshot: agents, mandates, carts, payments, hires, KYA, clearing, audit head. Intents include derived live | expired | funded (a child whose parent died is expired). Carts include derived live | expired | bound. Payments include derived live | expired | funded (a payment whose parent cart died is expired). RFQs include derived live | expired. Quotes include derived live | expired | spent | held (a hire quote in a dead room is expired).",
+            description: "Read-only runtime snapshot: agents, mandates, carts, payments, hires, KYA, clearing, audit head. Intents include derived live | expired | funded (a child whose parent died is expired). Carts include derived live | expired | bound. Payments include derived live | expired | funded | revoked (a payment whose parent cart died is expired). Hires include derived live | expired | funded (an offered hire whose slip died is expired). RFQs include derived live | expired. Quotes include derived live | expired | spent | held (a hire quote in a dead room is expired). Host subscriptions include derived live | expired (a row whose slip died is expired).",
             inputSchema: { type: "object", properties: {} },
           },
           {
             name: "aether_get",
-            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, acct_, or cash account name). A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ. An FX quote is a window on the quote, not the room. A rfq_ room includes derived status (live | expired). A mid_ intent includes derived status (live | expired | funded). Funded is escrow-moved occupancy against this slip and wins over expired. Expired includes a dead parent intent even when this child's exp still lives. A child hire does not occupy the parent. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A mid_ payment includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. Expired includes a dead parent cart even when this check's exp still lives. A dlg_ hop includes derived status (live | expired | revoked).",
+            description: "Fetch one object by id or alias (hid_, mid_, aid_, rid_, apd_, rfq_, qte_, dlg_, iss_, hsb_, acct_, inv_, or cash account name). A hid_ hire includes derived status (live | expired | funded). Funded is escrow-moved occupancy and wins over expired. Expired includes a dead intent and a dead parent intent even when the child's exp still lives. An apd_ ticket includes derived pending | expired | stale. Stale is a pause whose held command would not allow; approve is still approval.replay; reject still releases the quote. Time-expired wins. The store stays pending. A qte_ quote includes derived status (live | expired | spent | held). Expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ. An FX quote is a window on the quote, not the room. A rfq_ room includes derived status (live | expired). A mid_ intent includes derived status (live | expired | funded). Funded is escrow-moved occupancy against this slip and wins over expired. Expired includes a dead parent intent even when this child's exp still lives. A child hire does not occupy the parent. A mid_ cart includes derived status (live | expired | bound). Bound is unique_payment occupancy and wins over expired. A mid_ payment includes derived status (live | expired | funded | revoked). Funded is escrow-moved occupancy and wins over revoked and expired. Revoked wins over expired. Expired includes a dead parent cart even when this check's exp still lives. A dlg_ hop includes derived status (live | expired | revoked) and pins an iss_ issuer object. An iss_ issuer is shape-only (adapter shape, live false). Credentials never enter evaluate(). An hsb_ host subscription includes derived status (live | expired). Expired includes a dead intent and a dead parent intent. Unique_subscriber still occupies. Spend is not gated on the row. An inv_ invoice includes derived status (current | lapsed).",
             inputSchema: {
               type: "object",
               properties: { id: { type: "string" } },
@@ -274,12 +462,7 @@ export class AetherMcp {
             {
               uri,
               mimeType: "application/json",
-              text: JSON.stringify({
-                protocolVersion: PROTOCOL.version,
-                name: "Aether Economic Runtime",
-                description: "Policy, mandate, hire, escrow, settlement, KYA, audit. Rail sim:aether-1.",
-                skills: catalog.tools.map((t) => ({ id: t.name, description: t.description })),
-              }),
+              text: JSON.stringify(this.runtime.discoveryCard()),
             },
           ],
         };
@@ -287,7 +470,9 @@ export class AetherMcp {
       if (uri === "aether://commands") {
         return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(commandBodies) }] };
       }
-      const objectUri = uri?.match(/^aether:\/\/(?:object|hire|intent|receipt|approval|agent)\/(.+)$/);
+      const objectUri = uri?.match(
+        /^aether:\/\/(?:object|hire|intent|receipt|approval|agent|quote|rfq|delegation|subscription|invoice|cart|payment)\/(.+)$/,
+      );
       if (objectUri?.[1]) {
         const found = this.runtime.inspect(decodeURIComponent(objectUri[1]));
         if (!found) throw new Error(`unknown object ${objectUri[1]}`);
@@ -334,6 +519,466 @@ export class AetherMcp {
     }
     if (name === "aether_demo_sub_hire") {
       const report = runSubHire(loadSubHire("fixtures/demo/sub-hire/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_clearing") {
+      const report = runClearingWindow(loadClearingWindow("fixtures/demo/clearing-window/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_refund") {
+      const report = runRefund(loadRefund("fixtures/demo/refund/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_replay") {
+      const report = runReplay(loadReplay("fixtures/demo/replay/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_nonce") {
+      const report = runNonce(loadNonce("fixtures/demo/nonce/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_deny") {
+      const report = runDenyCache(loadDenyCache("fixtures/demo/deny-cache/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_recurrence") {
+      const report = runRecurrence(loadRecurrence("fixtures/demo/recurrence/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_calendar") {
+      const report = runCalendar(loadCalendar("fixtures/demo/calendar/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_slot") {
+      const report = runSlot(loadSlot("fixtures/demo/slot/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_daily") {
+      const report = runDaily(loadDaily("fixtures/demo/daily/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cart") {
+      const report = runCartOccupancy(loadCartOccupancy("fixtures/demo/cart/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_velocity") {
+      const report = runVelocity(loadVelocity("fixtures/demo/velocity/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_door") {
+      const report = runDoor(loadDoor("fixtures/demo/door/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_match") {
+      const report = runCartMatch(loadCartMatch("fixtures/demo/match/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_room") {
+      const report = runClosedRoom(loadClosedRoom("fixtures/demo/room/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_conversion") {
+      const report = runConversion(loadConversion("fixtures/demo/conversion/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pair") {
+      const report = runUniqueLive(loadUniqueLive("fixtures/demo/pair/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_band") {
+      const report = runSpreadBound(loadSpreadBound("fixtures/demo/band/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_nest") {
+      const report = runParentFresh(loadParentFresh("fixtures/demo/nest/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_heir") {
+      const report = runMandateParent(loadMandateParent("fixtures/demo/heir/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_stock") {
+      const report = runMmInventory(loadMmInventory("fixtures/demo/stock/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_purse") {
+      const report = runPaymentBudget(loadPaymentBudget("fixtures/demo/purse/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_seat") {
+      const report = runHostUnique(loadHostUnique("fixtures/demo/seat/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cover") {
+      const report = runParentBudget(loadParentBudget("fixtures/demo/cover/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_mint") {
+      const report = runOperatingBook(loadOperatingBook("fixtures/demo/mint/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_payee") {
+      const report = runPaymentPayees(loadPaymentPayees("fixtures/demo/payee/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_climb") {
+      const report = runCapabilitySubset(loadCapabilitySubset("fixtures/demo/climb/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_born") {
+      const report = runFxFresh(loadFxFresh("fixtures/demo/born/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_reach") {
+      const report = runWindowReach(loadWindowReach("fixtures/demo/reach/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_year") {
+      const report = runKyaWindow(loadKyaWindow("fixtures/demo/year/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_fuse") {
+      const report = runCircuitDaily(loadCircuitDaily("fixtures/demo/fuse/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_sku") {
+      const report = runPaymentSkus(loadPaymentSkus("fixtures/demo/sku/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_priced") {
+      const report = runSkuCurrency(loadSkuCurrency("fixtures/demo/priced/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_party") {
+      const report = runHireParty(loadHireParty("fixtures/demo/party/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cash") {
+      const report = runLedgerSufficient(loadLedgerSufficient("fixtures/demo/cash/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_stale") {
+      const report = runNotExpired(loadNotExpired("fixtures/demo/stale/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_chain") {
+      const report = runChainIntegrity(loadChainIntegrity("fixtures/demo/chain/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_arrow") {
+      const report = runHireState(loadHireState("fixtures/demo/arrow/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_wallet") {
+      const report = runLedgerKnown(loadLedgerKnown("fixtures/demo/wallet/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_name") {
+      const report = runKyaParty(loadKyaParty("fixtures/demo/name/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pane") {
+      const report = runFxWindow(loadFxWindow("fixtures/demo/pane/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_subject") {
+      const report = runIntentSubject(loadIntentSubject("fixtures/demo/subject/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_paper") {
+      const report = runFxQuote(loadFxQuote("fixtures/demo/paper/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_mix") {
+      const report = runSameCurrency(loadSameCurrency("fixtures/demo/mix/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_rung") {
+      const report = runLadderLegal(loadLadderLegal("fixtures/demo/rung/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_grade") {
+      const report = runMinLevel(loadMinLevel("fixtures/demo/grade/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cradle") {
+      const report = runBirthRung(loadBirthRung("fixtures/demo/cradle/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_ceiling") {
+      const report = runMaxAutonomy(loadMaxAutonomy("fixtures/demo/ceiling/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_lapse") {
+      const report = runAttestationFresh(loadAttestationFresh("fixtures/demo/lapse/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pause") {
+      const report = runApprovalPending(loadApprovalPending("fixtures/demo/pause/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_mirror") {
+      const report = runKyaNotSelf(loadKyaNotSelf("fixtures/demo/mirror/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_warrant") {
+      const report = runHostAuthority(loadHostAuthority("fixtures/demo/warrant/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_vacant") {
+      const report = runOccurrenceFresh(loadOccurrenceFresh("fixtures/demo/vacant/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_badge") {
+      const report = runRoleCapability(loadRoleCapability("fixtures/demo/badge/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_lid") {
+      const report = runAmountRange(loadAmountRange("fixtures/demo/lid/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_bare") {
+      const report = runEscrowRequired(loadEscrowRequired("fixtures/demo/bare/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_shelf") {
+      const report = runKnownSku(loadKnownSku("fixtures/demo/shelf/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_hall") {
+      const report = runKnownRfq(loadKnownRfq("fixtures/demo/hall/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_writ") {
+      const report = runKnownIntent(loadKnownIntent("fixtures/demo/writ/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_crate") {
+      const report = runKnownCart(loadKnownCart("fixtures/demo/crate/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pact") {
+      const report = runKnownHire(loadKnownHire("fixtures/demo/pact/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_root") {
+      const report = runKnownParent(loadKnownParent("fixtures/demo/root/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_docket") {
+      const report = runKnownApproval(loadKnownApproval("fixtures/demo/docket/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_graft") {
+      const report = runKyaKnownParent(loadKyaKnownParent("fixtures/demo/graft/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_seal") {
+      const report = runKnownAttestation(loadKnownAttestation("fixtures/demo/seal/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_guest") {
+      const report = runKnownInvitee(loadKnownInvitee("fixtures/demo/guest/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_dust") {
+      const report = runCartFresh(loadCartFresh("fixtures/demo/dust/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_thaw") {
+      const report = runFreezeState(loadFreezeState("fixtures/demo/thaw/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_twin") {
+      const report = runUniqueKey(loadUniqueKey("fixtures/demo/twin/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_fence") {
+      const report = runSystemScope(loadSystemScope("fixtures/demo/fence/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_mute") {
+      const report = runActorKnown(loadActorKnown("fixtures/demo/mute/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_nil") {
+      const report = runReceiptKnown(loadReceiptKnown("fixtures/demo/nil/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_spark") {
+      const report = runKyaMintFresh(loadKyaMintFresh("fixtures/demo/spark/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_wilt") {
+      const report = runWindowFresh(loadWindowFresh("fixtures/demo/wilt/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_maker") {
+      const report = runMmKnown(loadMmKnown("fixtures/demo/maker/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_ink") {
+      const report = runCurrencyMatch(loadCurrencyMatch("fixtures/demo/ink/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_brim") {
+      const report = runSafeBalance(loadSafeBalance("fixtures/demo/brim/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_swap") {
+      const report = runFxPair(loadFxPair("fixtures/demo/swap/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_sour") {
+      const report = runApprovalReplay(loadApprovalReplay("fixtures/demo/sour/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cut") {
+      const report = runChainIntact(loadChainIntact("fixtures/demo/cut/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_ice") {
+      const report = runPrincipalNotFrozen(loadPrincipalNotFrozen("fixtures/demo/ice/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_rail") {
+      const report = runAllowedInstruments(loadAllowedInstruments("fixtures/demo/rail/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pen") {
+      const report = runHumanSignature(loadHumanSignature("fixtures/demo/pen/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_well") {
+      const report = runDelegationDepth(loadDelegationDepth("fixtures/demo/well/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cite") {
+      const report = runPaymentReference(loadPaymentReference("fixtures/demo/cite/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_lock") {
+      const report = runIdentityParty(loadIdentityParty("fixtures/demo/lock/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_void") {
+      const report = runHireVoid(loadHireVoid("fixtures/demo/void/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_fold") {
+      const report = runMarketParty(loadMarketParty("fixtures/demo/fold/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_rip") {
+      const report = runMandateParty(loadMandateParty("fixtures/demo/rip/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_shut") {
+      const report = runRfqParty(loadRfqParty("fixtures/demo/shut/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_dump") {
+      const report = runCartParty(loadCartParty("fixtures/demo/dump/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_spike") {
+      const report = runPaymentParty(loadPaymentParty("fixtures/demo/spike/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_week") {
+      const report = runCadenceReach(loadCadenceReach("fixtures/demo/week/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

@@ -1,5 +1,5 @@
 {
-  "description": "MCP tool surface. Each tool is a CommandType. inputSchema mirrors /schemas.",
+  "description": "MCP tool surface. Command tools are 1:1 with CommandType. Demo tools are TAP runners. inputSchema mirrors /schemas.",
   "tools": [
     {
       "name": "aether_identity_register",
@@ -17,9 +17,29 @@
       "description": "Lift a freeze. Counts as a kill-switch test required before L5."
     },
     {
+      "name": "aether_identity_rotate",
+      "commandType": "identity.rotate",
+      "description": "Rotate an agent's signing key. Omit agentId to rotate the speaker. Someone else's key is identity.party unless you are a human or treasury. A missing agent is identity.known. Retired keys still verify."
+    },
+    {
       "name": "aether_mandate_issue_intent",
       "commandType": "mandate.issue_intent",
-      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused. A child of an expired parent is refused. Inspect of the slip labels live | expired | funded."
+      "description": "Issue a signed open or closed intent mandate with constraints. An execution_date window that has already closed, or that opens after the slip dies, is refused. A recurrence cap that cannot admit a first hire is refused. A child of an expired parent is refused. Inspect of the slip labels live | expired | funded | revoked."
+    },
+    {
+      "name": "aether_mandate_revoke",
+      "commandType": "mandate.revoke",
+      "description": "Tear up a live unused intent. Issuer, human, or treasury. Ghost slip stays mandate.known_intent. Stranger stays mandate.party. A ripped unused slip is mandate.not_expired on hire.create. Completing funded work is legal. Someone else's unused slip is not yours to tear."
+    },
+    {
+      "name": "aether_mandate_revoke_cart",
+      "commandType": "mandate.revoke_cart",
+      "description": "Tear up a live unused cart. Merchant, hire buyer, intent subject, human, or treasury. Ghost cart stays mandate.known_cart. Stranger stays mandate.cart_party. A dumped unused cart is mandate.not_expired on a new payment. Bound is when a payment occupies it. Completing funded work is legal. Someone else's unused checkout is not yours to dump."
+    },
+    {
+      "name": "aether_mandate_revoke_payment",
+      "commandType": "mandate.revoke_payment",
+      "description": "Tear up a live unused payment. Signer, payee, hire buyer, intent subject, human, or treasury. Ghost payment stays mandate.known_payment. Stranger stays mandate.payment_party. A spiked unused payment is mandate.not_expired on fund. Funded is when escrow occupies it. Completing funded work is legal. Someone else's unused payment is not yours to spike."
     },
     {
       "name": "aether_mandate_issue_cart",
@@ -29,7 +49,7 @@
     {
       "name": "aether_mandate_issue_payment",
       "commandType": "mandate.issue_payment",
-      "description": "Issue a payment mandate whose transaction_id is sha256(cart). A cart takes one payment; inspect of that cart then labels bound. Inspect of the payment labels live | expired | funded."
+      "description": "Issue a payment mandate whose transaction_id is sha256(cart). A cart takes one payment; inspect of that cart then labels bound. Inspect of the payment labels live | expired | funded | revoked."
     },
     {
       "name": "aether_market_rfq",
@@ -37,19 +57,34 @@
       "description": "Create an RFQ. Non-empty invitedSellerIds is a closed room of live agents; empty/omitted is open. A missing guest is identity.known."
     },
     {
+      "name": "aether_market_close",
+      "commandType": "market.close",
+      "description": "Shut a live RFQ. Buyer, human, or treasury. Ghost room stays market.known_rfq. Stranger stays market.rfq_party. A shut room is market.not_expired on quote or hire.create. Completing funded work is legal. Someone else's room is not yours to close."
+    },
+    {
       "name": "aether_market_quote",
       "commandType": "market.quote",
       "description": "Submit a quote or FX rate. MM rates must stay inside 200bps. An FX validUntil already past or unparseable is refused."
     },
     {
+      "name": "aether_market_withdraw",
+      "commandType": "market.withdraw",
+      "description": "Pull a live unspent quote off the table. Seller, human, or treasury. Ghost quote stays market.known_rfq. Stranger stays market.party. Spent stays hire.quote_unspent. A folded quote is market.not_expired on hire.create. Someone else's bid is not yours to pull."
+    },
+    {
+      "name": "aether_market_fx_settle",
+      "commandType": "market.fx_settle",
+      "description": "Settle a one-shot FX window. Same command as POST /v1/fx/settle. Not a hire. Completing after a hot settle hour is legal; a new settle is not."
+    },
+    {
       "name": "aether_hire_create",
       "commandType": "hire.create",
-      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire. A hot settle hour pauses a new hire for a grown-up. Completing funded work after that is legal."
+      "description": "Offer a hire contract with an escrow account. Requires L3+ against an existing intent. Inspect of the hire labels live | expired | funded. A nested hop whose parent handshake has expired is refused. An expired handshake, a climb above the handshake ceiling, or a climb above the slip ceiling is refused on a new hire. A hot settle hour pauses a new hire for a grown-up. Completing funded work after that is legal."
     },
     {
       "name": "aether_hire_accept",
       "commandType": "hire.accept",
-      "description": "Seller accepts a hire. Escrow must already exist. Accept is not a spend; a hot settle hour does not pause it."
+      "description": "Seller accepts a hire. Escrow must already exist. Accept is not a spend; a hot settle hour does not pause it. A child hire whose parent slip died is refused."
     },
     {
       "name": "aether_hire_fund",
@@ -65,6 +100,11 @@
       "name": "aether_hire_refund",
       "commandType": "hire.refund",
       "description": "Unwind funded escrow to the buyer. Restores mandate spend. Circuit stays sticky. Not after deliver/release. Completing after the cart, handshake, grant, or a hot settle hour is legal; freeze and revoke still bind."
+    },
+    {
+      "name": "aether_hire_void",
+      "commandType": "hire.void",
+      "description": "Cancel an unfunded hire (offered or accepted). Escrow never moved. The quote stays spent. Funded work refunds. A void is not a refund. Ghost hire stays hire.known. Stranger stays hire.party."
     },
     {
       "name": "aether_hire_release",
@@ -89,7 +129,7 @@
     {
       "name": "aether_kya_attest",
       "commandType": "kya.attest",
-      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped. expiresAt must be after now and at most one year; omit for one year. A nested hop under an expired or revoked parent is refused."
+      "description": "Issue a Know-Your-Agent handshake: principal → delegate, revocable, depth-capped. Pins a genesis iss_ issuer object for issuerKind (aether.self, tap.http-sig, skyfire.kya, erc8004.agent). Shape-only; credentials never enter evaluate(). expiresAt must be after now and at most one year; omit for one year. A nested hop under an expired or revoked parent is refused."
     },
     {
       "name": "aether_kya_revoke",
@@ -110,6 +150,11 @@
       "name": "aether_clearing_settle_window",
       "commandType": "clearing.settle_window",
       "description": "Close a settlement window: archive net exposure for a currency. Money already moved at escrow."
+    },
+    {
+      "name": "aether_ledger_transfer",
+      "commandType": "ledger.transfer",
+      "description": "Treasury book transfer. Same command as POST /v1/ledger/transfers. Operating cash only. Not a mint, not an overdraft, not escrow."
     },
     {
       "name": "aether_ledger_balances",
@@ -160,6 +205,466 @@
       "name": "aether_demo_sub_hire",
       "commandType": "demo.sub-hire",
       "description": "Run the L4 sub-intent TAP demo: nested slips, parent budget, revoke child handshake."
+    },
+    {
+      "name": "aether_demo_clearing",
+      "commandType": "demo.clearing",
+      "description": "Run the clearing-window TAP: bilateral credit limit, settlement photo, not a second payment."
+    },
+    {
+      "name": "aether_demo_refund",
+      "commandType": "demo.refund",
+      "description": "Run the refund TAP: unwind funded escrow, restore spend, reverse clearing; quote stays spent; circuit stays sticky."
+    },
+    {
+      "name": "aether_demo_replay",
+      "commandType": "demo.replay",
+      "description": "Run the replay TAP: a retry of an allow is not a second spend."
+    },
+    {
+      "name": "aether_demo_nonce",
+      "commandType": "demo.nonce",
+      "description": "Run the envelope-nonce TAP: a payment nonce is one-shot; a leftover nonce on a transfer is not."
+    },
+    {
+      "name": "aether_demo_deny",
+      "commandType": "demo.deny",
+      "description": "Run the deny-cache TAP: a deny is never a cached success. Unfreeze, then the same hire.create may proceed."
+    },
+    {
+      "name": "aether_demo_recurrence",
+      "commandType": "demo.recurrence",
+      "description": "Run the recurrence TAP: a one-slot cadence is not an open checkbook. Completing funded work is not a second slot."
+    },
+    {
+      "name": "aether_demo_calendar",
+      "commandType": "demo.calendar",
+      "description": "Run the calendar TAP: a closed calendar is not a freeze on funded work. Completing funded work after not_after is legal; a new hire is not."
+    },
+    {
+      "name": "aether_demo_slot",
+      "commandType": "demo.slot",
+      "description": "Run the slot TAP: a refund returns cash and spend. It does not restore a cadence slot."
+    },
+    {
+      "name": "aether_demo_daily",
+      "commandType": "demo.daily",
+      "description": "Run the daily TAP: a cadence is a gap, not a burst. Same-day hire.create is payment.recurrence; after 24 hours it may proceed."
+    },
+    {
+      "name": "aether_demo_cart",
+      "commandType": "demo.cart",
+      "description": "Run the cart occupancy TAP: a hire takes one cart; a cart takes one payment; passing cartId on fund is not a pointer."
+    },
+    {
+      "name": "aether_demo_velocity",
+      "commandType": "demo.velocity",
+      "description": "Run the velocity TAP: a hot settle hour is not a freeze on funded work. Completing funded work after that is legal; a new hire.create is velocity.window."
+    },
+    {
+      "name": "aether_demo_door",
+      "commandType": "demo.door",
+      "description": "Run the operator-door TAP: the public kernel is not a hosted checkout. Unsigned is 401; unpaid is 402; subscribe is not a spend gate. PROTOCOL.hosted stays false."
+    },
+    {
+      "name": "aether_demo_match",
+      "commandType": "demo.match",
+      "description": "Run the cart-match TAP: a cheaper cart is not a discount. Cheap issue_cart is hire.cart_matches; matching occupies; fund moves the hire price."
+    },
+    {
+      "name": "aether_demo_room",
+      "commandType": "demo.room",
+      "description": "Run the closed-room TAP: a named guest list is a closed RFQ. Uninvited quote is market.invited_seller; empty invite list is open."
+    },
+    {
+      "name": "aether_demo_conversion",
+      "commandType": "demo.conversion",
+      "description": "Run the conversion TAP: an FX window is not a hire. hire.create is hire.not_fx and does not consume the window; settle then converts."
+    },
+    {
+      "name": "aether_demo_pair",
+      "commandType": "demo.pair",
+      "description": "Run the unique-live TAP: a second live hop is not a tighter grant. kya.unique_live occupies the pair until revoke."
+    },
+    {
+      "name": "aether_demo_band",
+      "commandType": "demo.band",
+      "description": "Run the spread TAP: a 200bps band is not decoration. Off-band nested rate is mm.spread_bound; a decoy top-level rate is not the band."
+    },
+    {
+      "name": "aether_demo_nest",
+      "commandType": "demo.nest",
+      "description": "Run the nest TAP: a nested hop does not outlive its parent. New hire.create is kya.parent_fresh; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_heir",
+      "commandType": "demo.heir",
+      "description": "Run the heir TAP: a dead parent is not a parent. New hire.create is mandate.parent_fresh; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_stock",
+      "commandType": "demo.stock",
+      "description": "Run the stock TAP: empty MM USDC is not a missing maker. Thin inventory is mm.inventory; a smaller window still converts."
+    },
+    {
+      "name": "aether_demo_purse",
+      "commandType": "demo.purse",
+      "description": "Run the purse TAP: a budget is not an item cap. Second hire.create is payment.budget; the item cap still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_seat",
+      "commandType": "demo.seat",
+      "description": "Run the seat TAP: one subscriber is one row. Second host.subscribe is host.unique_subscriber; a different agent takes its own seat; spend is not gated on the row."
+    },
+    {
+      "name": "aether_demo_cover",
+      "commandType": "demo.cover",
+      "description": "Run the cover TAP: a parent envelope is not a child's leftover. Scout hire.create is payment.parent_budget; the child's own envelope still allows; funded parent work still finishes."
+    },
+    {
+      "name": "aether_demo_mint",
+      "commandType": "demo.mint",
+      "description": "Run the mint TAP: a transfer is not a mint. Equity and escrow transfers are ledger.operating_book; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_payee",
+      "commandType": "demo.payee",
+      "description": "Run the payee TAP: a listed payee is not any registered vendor. Unlisted hire.create is payment.allowed_payees; the quote is still written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_climb",
+      "commandType": "demo.climb",
+      "description": "Run the climb TAP: a climb is not a wider handshake. New hire.create after L3→L4 is kya.capability_subset; the slip ceiling still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_born",
+      "commandType": "demo.born",
+      "description": "Run the born TAP: an FX window cannot be born dead. A quote with validUntil already past is market.fx_fresh; no window written; an open window still settles."
+    },
+    {
+      "name": "aether_demo_reach",
+      "commandType": "demo.reach",
+      "description": "Run the reach TAP: a window that opens after the slip dies is not a window. issue_intent is mandate.window_reach; a reachable future still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_year",
+      "commandType": "demo.year",
+      "description": "Run the year TAP: a handshake cannot outlive one year. kya.attest with expiresAt after now+1y is kya.mint_window; a one-year hop still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_fuse",
+      "commandType": "demo.fuse",
+      "description": "Run the fuse TAP: a daily fuse is not a freeze on funded work. A second hire.create after the daily cap is circuit.daily; the envelope and item cap still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_sku",
+      "commandType": "demo.sku",
+      "description": "Run the sku TAP: a listed SKU is not any catalog good. hire.create of a catalog good not on the slip is payment.allowed_skus; the quote is still written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_priced",
+      "commandType": "demo.priced",
+      "description": "Run the priced TAP: a listed SKU is only priced in a currency the catalog names. market.quote of research.brief in USDC_SIM is market.sku_currency; no quote is written; a USD quote still hires."
+    },
+    {
+      "name": "aether_demo_party",
+      "commandType": "demo.party",
+      "description": "Run the party TAP: the other side of the table is not a party. A stranger's hire.deliver is hire.party; the hire stays funded; the seller who quoted still finishes."
+    },
+    {
+      "name": "aether_demo_cash",
+      "commandType": "demo.cash",
+      "description": "Run the cash TAP: empty cash is not a negative book. hire.fund against an empty operating book is ledger.sufficient; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_stale",
+      "commandType": "demo.stale",
+      "description": "Run the stale TAP: a stale quote is not a hire. hire.create against a lapsed quote is market.not_expired; the quote stays unspent; a fresh quote on that still-live room still hires; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_chain",
+      "commandType": "demo.chain",
+      "description": "Run the chain TAP: a dead cart is not a check. hire.fund after the cart window is mandate.chain_integrity; occupancy and cash still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_arrow",
+      "commandType": "demo.arrow",
+      "description": "Run the arrow TAP: unfinished work is not a payout. hire.release before deliver is hire.state; the hire stays funded; funded work still finishes after deliver."
+    },
+    {
+      "name": "aether_demo_wallet",
+      "commandType": "demo.wallet",
+      "description": "Run the wallet TAP: a vendor's USD cash is not a USDC wallet. market.fx_settle without a USDC book is ledger.known_account; the window stays unspent; a vendor with a USDC book still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_name",
+      "commandType": "demo.name",
+      "description": "Run the name TAP: someone else's name is not a handshake. An L4 scout kya.attest in the founder's name is kya.party; unique-live and capability-subset still allow; no hop is written; the founder still mints that pair; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pane",
+      "commandType": "demo.pane",
+      "description": "Run the pane TAP: an FX SKU is a window, not a good. market.quote of an FX SKU without an fx window is market.fx_window; known SKU, known room, and pair still allow; a real window still quotes and converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_subject",
+      "commandType": "demo.subject",
+      "description": "Run the subject TAP: this slip is not yours to spend. A second desk's hire.fund is mandate.subject_is_actor; known hire, legal arrow, bound cart, cash, and intact chain still allow; no escrow lock; the named subject still funds; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_paper",
+      "commandType": "demo.paper",
+      "description": "Run the paper TAP: a research quote is not a conversion window. market.fx_settle of a research quote is market.fx_quote; pair, maker, and dest book still allow; the quote stays unspent; a real window still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_mix",
+      "commandType": "demo.mix",
+      "description": "Run the mix TAP: a mixed journal is not a conversion. ledger.transfer of USD into a USDC book is ledger.same_currency; known books, operating cash, and source still allow; no journal posted; a real window still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_rung",
+      "commandType": "demo.rung",
+      "description": "Run the rung TAP: a skipped rung is not a promotion. ladder.set L2→L4 is ladder.legal; the scout still exists; a one-rung climb still goes through; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_grade",
+      "commandType": "demo.grade",
+      "description": "Run the grade TAP: a junior desk is not a nested-slip mint. mandate.issue_intent by an L3 scout is ladder.min_level; the parent still exists; the child is still tighter; an L4 desk still mints that child; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_cradle",
+      "commandType": "demo.cradle",
+      "description": "Run the cradle TAP: L5 is not a birthright. identity.register at L5 is ladder.birth_rung; the alias is still free; an L4 register still goes through; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ceiling",
+      "commandType": "demo.ceiling",
+      "description": "Run the ceiling TAP: a climb is not a wider slip. hire.create after a climb above aether.max_autonomy is ladder.max_autonomy_constraint; the handshake ceiling still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_lapse",
+      "commandType": "demo.lapse",
+      "description": "Run the lapse TAP: an expired hop is not a freeze on funded work. hire.create after the handshake dies is kya.attestation_fresh; the pair still occupies; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pause",
+      "commandType": "demo.pause",
+      "description": "Run the pause TAP: a dead pause is not a late yes. approval.resolve after the ticket dies is approval.pending; the ticket still exists; a stale command is not this deny; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_mirror",
+      "commandType": "demo.mirror",
+      "description": "Run the mirror TAP: a handshake is not a mirror. kya.attest of yourself is kya.not_self; someone else's name, a second hop, and a corpse mint still allow; a real pair still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_warrant",
+      "commandType": "demo.warrant",
+      "description": "Run the warrant TAP: an agent-issued slip is not host authority. host.subscribe on an agent-issued intent is host.human_authority; a missing seat and the public kernel still allow; a human-issued slip still seats; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_vacant",
+      "commandType": "demo.vacant",
+      "description": "Run the vacant TAP: a cadence with no slots is not a cadence. mandate.issue_intent with max_occurrences 0 is mandate.occurrence_fresh; a spent slot, a closed calendar, and a nested child still allow; a one-slot slip still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_badge",
+      "commandType": "demo.badge",
+      "description": "Run the badge TAP: a badge is not a shopping pass. hire.create by an auditor is actor.role_capability; a freeze, a missing speaker, and a spent quote still allow; the auditor still verifies; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_lid",
+      "commandType": "demo.lid",
+      "description": "Run the lid TAP: an item cap is not an envelope. hire.create over the per-item cap is payment.amount_range; the envelope and the fuse still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_bare",
+      "commandType": "demo.bare",
+      "description": "Run the bare TAP: unfunded work is not a delivery. hire.deliver on an accepted hire is hire.escrow_required; the seller is still the party; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_shelf",
+      "commandType": "demo.shelf",
+      "description": "Run the shelf TAP: a ghost SKU is not a catalog good. market.rfq of a SKU not in the catalog is market.known_sku; the slip list still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_hall",
+      "commandType": "demo.hall",
+      "description": "Run the hall TAP: a missing room is not a missing SKU. market.quote on a ghost RFQ is market.known_rfq; a missing SKU and a closed guest list still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_writ",
+      "commandType": "demo.writ",
+      "description": "Run the writ TAP: a missing slip is not a missing handshake. hire.create on a ghost intent is mandate.known_intent; a missing handshake and a dead parent still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_crate",
+      "commandType": "demo.crate",
+      "description": "Run the crate TAP: a missing cart is not a broken payment chain. mandate.issue_payment on a ghost cart is mandate.known_cart; occupancy and a dead cart at fund still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pact",
+      "commandType": "demo.pact",
+      "description": "Run the pact TAP: a missing contract is not a broken mandate chain. hire.deliver on a ghost hire is hire.known; a stranger’s deliver and unfunded work still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_root",
+      "commandType": "demo.root",
+      "description": "Run the root TAP: a missing parent is not a tighter child. mandate.issue_intent on a ghost parent is mandate.known_parent; a tighter child and a dead parent still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_docket",
+      "commandType": "demo.docket",
+      "description": "Run the docket TAP: a missing ticket is not a late yes. approval.resolve on a ghost ticket is approval.known; a dead pause and a stale command still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_graft",
+      "commandType": "demo.graft",
+      "description": "Run the graft TAP: a missing hop parent is not a nested handshake. kya.attest under a ghost parent hop is kya.known_parent; a dead hop and a missing slip parent still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_seal",
+      "commandType": "demo.seal",
+      "description": "Run the seal TAP: a missing handshake is not a silent tombstone. kya.revoke of a ghost handshake is kya.known_attestation; a missing hop parent and someone else’s name still allow; the live handshake still lives; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_guest",
+      "commandType": "demo.guest",
+      "description": "Run the guest TAP: a missing invitee is not a closed room. market.rfq that invites a missing seller is identity.known; a closed guest list and a missing SKU still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_dust",
+      "commandType": "demo.dust",
+      "description": "Run the dust TAP: a stale unpaid cart is not a late check. mandate.issue_payment on a stale unpaid cart is mandate.not_expired; occupancy and a dead cart at fund still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_thaw",
+      "commandType": "demo.thaw",
+      "description": "Run the thaw TAP: a no-op thaw is not a kill-switch test. identity.unfreeze of a live unfrozen auditor is identity.freeze_state; a missing agent and a frozen speaker still allow; no UNFREEZE line is written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_twin",
+      "commandType": "demo.twin",
+      "description": "Run the twin TAP: a taken alias is not a second agent. identity.register on a taken desk alias is identity.unique_key; L5 at birth and system minting a second agent still allow; no agent is written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_fence",
+      "commandType": "demo.fence",
+      "description": "Run the fence TAP: system is not a treasurer. identity.register as system after the first human is actor.system_scope; a taken alias and L5 at birth still allow; no agent is written; the catalog still reads; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_mute",
+      "commandType": "demo.mute",
+      "description": "Run the mute TAP: a missing speaker is not a 500. ledger.balances from a missing actorId is actor.known; a missing named target, a frozen speaker, and system spending still allow; no books are written; the live desk still reads; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_nil",
+      "commandType": "demo.nil",
+      "description": "Run the nil TAP: a missing receipt is not an empty success. receipt.get of a missing receiptId is receipt.known; a missing speaker and a missing named target still allow; no receipt is written; the live receipt still fetches; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_spark",
+      "commandType": "demo.spark",
+      "description": "Run the spark TAP: a handshake cannot be born dead. kya.attest with expiresAt already past is kya.mint_fresh; a century mint and a second live hop still allow; no handshake is written; a one-year hop still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_wilt",
+      "commandType": "demo.wilt",
+      "description": "Run the wilt TAP: a permission slip cannot be born with a closed calendar. mandate.issue_intent with not_after already past is mandate.window_fresh; a window that opens after the slip dies and a hire-time calendar still allow; no slip is written; a live slip still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_maker",
+      "commandType": "demo.maker",
+      "description": "Run the maker TAP: a window is not a journal against nobody. market.fx_settle of a live FX quote with no market maker is mm.known; empty inventory and a missing dest book still allow; the window stays unspent; a maker still sits and the same window still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ink",
+      "commandType": "demo.ink",
+      "description": "Run the ink TAP: a cart label is not the hire's money. hire.fund of a USD hire with a loose USDC cart is payment.currency_match; a mixed journal, a USDC quote, and a loose USD pointer still allow; no escrow moves; a USD cart still binds and funds; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_brim",
+      "commandType": "demo.brim",
+      "description": "Run the brim TAP: IEEE rounding is not a mint. ledger.transfer of one more cent into a book already at the integer ceiling is ledger.safe_balance; empty cash, a missing dest, a mixed journal, and a mint still allow; no journal posted; a penny still posts to a book that can hold it; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_swap",
+      "commandType": "demo.swap",
+      "description": "Run the swap TAP: a swapped pair is not a silent journal of the books this rail actually posts. market.quote of an FX SKU with swapped from/to is market.fx_pair; a missing window, a corpse mint, hiring the window, and a research quote still allow; no quote is written; a real window still quotes and converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_sour",
+      "commandType": "demo.sour",
+      "description": "Run the sour TAP: a grown-up yes is not a late hire. approval.resolve approved of a live ticket whose paused quote has died is approval.replay; a missing ticket and a dead ticket still allow; the quote stays held; a grown-up no still frees it; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_cut",
+      "commandType": "demo.cut",
+      "description": "Run the cut TAP: a revoke is not an expiry. hire.create after a live hop is revoked is kya.chain_intact; an expired hop, a nested parent, a frozen speaker, and a ghost revoke still allow; no hire is written; a new handshake still unlocks the lock; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ice",
+      "commandType": "demo.ice",
+      "description": "Run the ice TAP: a frozen principal is not a frozen desk. hire.create after the founder is frozen is kya.principal_not_frozen; a frozen speaker, a revoked hop, and a no-op thaw still allow; no hire is written; an unfreeze still unlocks the lock; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_rail",
+      "commandType": "demo.rail",
+      "description": "Run the rail TAP: a listed rail is not decoration. hire.create against a slip that lists a ghost instrument is payment.allowed_payment_instruments; a listed payee and a live-rail type still allow; no hire is written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pen",
+      "commandType": "demo.pen",
+      "description": "Run the pen TAP: a junior signature is not a grown-up pause. envelope.submit by an L1 desk is human.signature_present; role, subject, and party still allow; the rung only pauses; no ticket is minted; treasury still releases funded work."
+    },
+    {
+      "name": "aether_demo_well",
+      "commandType": "demo.well",
+      "description": "Run the well TAP: a fourth hop is not a nested parent. hire.create down a four-hop handshake is kya.delegation_depth; a missing path, a dead parent hop, and a climb still allow; no hire is written; funded three-hop work still finishes."
+    },
+    {
+      "name": "aether_demo_cite",
+      "commandType": "demo.cite",
+      "description": "Run the cite TAP: a listed reference is not decoration once a check exists. hire.create against a slip that cites a ghost checkout after a funded payment exists is payment.reference; a listed payee, a listed rail, and a listed SKU still allow; no hire is written; a citation of that funded check still hires; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_lock",
+      "commandType": "demo.lock",
+      "description": "Run the lock TAP: someone else's key is not yours to turn. identity.rotate of a desk by a vendor is identity.party; a missing agent and a frozen speaker still allow; no IDENTITY_ROTATE line; the desk still turns its own lock; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_void",
+      "commandType": "demo.void",
+      "description": "Run the void TAP: a void is not a refund. hire.void of a funded hire is hire.state; the party still allows; a missing hire is not this deny; no void line; an unfunded offer still voids without restoring the quote; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_fold",
+      "commandType": "demo.fold",
+      "description": "Run the fold TAP: someone else's bid is not yours to pull. market.withdraw of a live quote by a second vendor is market.party; a missing quote and an expired window still allow; no QUOTE_WITHDRAW line; the seller still folds its own bid; hire.create of that folded quote is market.not_expired; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_rip",
+      "commandType": "demo.rip",
+      "description": "Run the rip TAP: someone else's unused slip is not yours to tear. mandate.revoke of a live unused intent by a desk is mandate.party; a missing slip and an expired window still allow; no MANDATE_REVOKE line; the founder still rips its own unused slip; hire.create of that ripped slip is mandate.not_expired; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_shut",
+      "commandType": "demo.shut",
+      "description": "Run the shut TAP: someone else's room is not yours to close. market.close of a live RFQ by a second desk is market.rfq_party; a missing room and an expired window still allow; market.party still allows; no RFQ_CLOSE line; the buyer still shuts its own room; hire.create of that shut room's quote is market.not_expired; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_dump",
+      "commandType": "demo.dump",
+      "description": "Run the dump TAP: someone else's unused checkout is not yours to dump. mandate.revoke_cart of a live unused cart by a second desk is mandate.cart_party; a missing cart and an expired window still allow; mandate.party still allows; no CART_REVOKE line; the buyer still dumps its own unused cart; issue_payment of that dumped cart is mandate.not_expired; occupancy frees; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_spike",
+      "commandType": "demo.spike",
+      "description": "Run the spike TAP: someone else's unused payment is not yours to spike. mandate.revoke_payment of a live unused payment by a second desk is mandate.payment_party; a missing payment and an expired window still allow; mandate.cart_party still allows; no PAYMENT_REVOKE line; the buyer still spikes its own unused payment; hire.fund of that spiked payment is mandate.not_expired; occupancy frees; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_week",
+      "commandType": "demo.week",
+      "description": "Run the week TAP: a week is not a cadence on a seven-day slip. mandate.issue_intent with WEEKLY or MONTHLY that cannot admit a second hire is mandate.cadence_reach; a vacant slot, a closed calendar, and hire-time recurrence still allow; a one-shot WEEKLY still mints; DAILY still mints; funded work still finishes."
     }
   ]
 }

@@ -25,7 +25,110 @@ import { DelegationGraph, hopStatus, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
 import { SIM_RAIL, settlementFail } from "@aether/settlement";
 import { commandShapeError } from "./command-schema.js";
-import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
+import { HOST_INVOICE_WINDOW_MS } from "./host-door.js";
+import {
+  analog,
+  autoBeat,
+  IDLE_TLDR,
+  SPRINT_TLDR,
+  NIGHT_WATCH_TLDR,
+  SUBHIRE_TLDR,
+  CLEARING_TLDR,
+  REFUND_TLDR,
+  REPLAY_TLDR,
+  NONCE_TLDR,
+  DENY_CACHE_TLDR,
+  RECURRENCE_TLDR,
+  CALENDAR_TLDR,
+  SLOT_TLDR,
+  DAILY_TLDR,
+  CART_TLDR,
+  VELOCITY_TLDR,
+  DOOR_TLDR,
+  MATCH_TLDR,
+  ROOM_TLDR,
+  CONVERSION_TLDR,
+  PAIR_TLDR,
+  BAND_TLDR,
+  NEST_TLDR,
+  HEIR_TLDR,
+  STOCK_TLDR,
+  PURSE_TLDR,
+  SEAT_TLDR,
+  COVER_TLDR,
+  MINT_TLDR,
+  PAYEE_TLDR,
+  CLIMB_TLDR,
+  BORN_TLDR,
+  REACH_TLDR,
+  YEAR_TLDR,
+  FUSE_TLDR,
+  SKU_TLDR,
+  PRICED_TLDR,
+  PARTY_TLDR,
+  CASH_TLDR,
+  STALE_TLDR,
+  CHAIN_TLDR,
+  ARROW_TLDR,
+  WALLET_TLDR,
+  NAME_TLDR,
+  PANE_TLDR,
+  SUBJECT_TLDR,
+  PAPER_TLDR,
+  MIX_TLDR,
+  RUNG_TLDR,
+  GRADE_TLDR,
+  CRADLE_TLDR,
+  CEILING_TLDR,
+  LAPSE_TLDR,
+  PAUSE_TLDR,
+  MIRROR_TLDR,
+  WARRANT_TLDR,
+  VACANT_TLDR,
+  BADGE_TLDR,
+  LID_TLDR,
+  BARE_TLDR,
+  SHELF_TLDR,
+  HALL_TLDR,
+  WRIT_TLDR,
+  CRATE_TLDR,
+  PACT_TLDR,
+  ROOT_TLDR,
+  DOCKET_TLDR,
+  GRAFT_TLDR,
+  SEAL_TLDR,
+  GUEST_TLDR,
+  DUST_TLDR,
+  THAW_TLDR,
+  TWIN_TLDR,
+  FENCE_TLDR,
+  MUTE_TLDR,
+  NIL_TLDR,
+  SPARK_TLDR,
+  WILT_TLDR,
+  MAKER_TLDR,
+  INK_TLDR,
+  BRIM_TLDR,
+  SWAP_TLDR,
+  SOUR_TLDR,
+  CUT_TLDR,
+  ICE_TLDR,
+  RAIL_TLDR,
+  PEN_TLDR,
+  WELL_TLDR,
+  CITE_TLDR,
+  LOCK_TLDR,
+  VOID_TLDR,
+  FOLD_TLDR,
+  RIP_TLDR,
+  SHUT_TLDR,
+  DUMP_TLDR,
+  SPIKE_TLDR,
+  WEEK_TLDR,
+  nightWatchAnalog,
+  type Analog,
+  type StoryBeat,
+} from "./story.js";
 import { WORLD_VERSION, type WorldState } from "./world.js";
 import type {
   Account,
@@ -47,18 +150,22 @@ import type {
   DelegationId,
   HireContract,
   HireId,
+  HireStatus,
   HostSubscription,
   OperatorInvoice,
   Instant,
   IntentMandate,
   IntentStatus,
+  InvoiceStatus,
   JournalEntry,
   KyaIssuerKind,
   KyaHopStatus,
+  IssuerId,
   LadderExtraGate,
   LineItem,
   MandateConstraint,
   MandateId,
+  RecurrenceFrequency,
   Merchant,
   Money,
   PaymentMandate,
@@ -72,9 +179,10 @@ import type {
   RfqStatus,
   Signed,
   SubscriptionId,
+  SubscriptionStatus,
   WindowId,
 } from "@aether/types";
-import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, INTENT_TTL_SEC, KYA_TTL_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
+import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, INTENT_TTL_MS, INTENT_TTL_SEC, KYA_TTL_MS, PROTOCOL, RECURRENCE_GAP_MS, ROLE_CAPABILITY, SIM_INSTRUMENT, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
   kind: "allow" | "escalated";
@@ -95,6 +203,7 @@ export type DispatchResult = Result<DispatchOk, DispatchFail>;
 /** Same body, same actor: replay. Denies are not cached so a fix can be retried. */
 const AUTO_IDEMPOTENT = new Set<CommandType>([
   "identity.register",
+  "identity.rotate",
   "hire.create",
   "hire.fund",
   "hire.release",
@@ -109,6 +218,7 @@ const HIRE_LIVE_COMMANDS = new Set<CommandType>([
   "hire.deliver",
   "hire.release",
   "hire.refund",
+  "hire.void",
   "envelope.require",
   "envelope.submit",
 ]);
@@ -161,6 +271,20 @@ function recurrenceMintable(c: { max_occurrences?: unknown }): boolean {
   return c.max_occurrences > 0;
 }
 
+/**
+ * A frequency whose next slot opens at or after the seven-day exp cannot admit
+ * hire 2. Vacant caps stay occurrence_fresh. One-shot WEEKLY still mints.
+ */
+function cadenceReachable(c: { frequency?: unknown; max_occurrences?: unknown }): boolean {
+  if (!recurrenceMintable(c)) return true;
+  if (typeof c.frequency !== "string") return false;
+  if (!(c.frequency in RECURRENCE_GAP_MS)) return false;
+  const gap = RECURRENCE_GAP_MS[c.frequency as RecurrenceFrequency];
+  if (gap === 0) return true;
+  if (c.max_occurrences === 1) return true;
+  return gap < INTENT_TTL_MS;
+}
+
 /** Closed when validUntil ≤ now (same exclusive end as quote expiresAt). Unparseable is not a window. */
 function fxWindowMintable(fx: { validUntil?: unknown }, nowIso: Instant): boolean {
   if (typeof fx.validUntil !== "string") return false;
@@ -174,6 +298,16 @@ const KYA_NESTED_SPEND: ReadonlySet<CommandType> = new Set([
   "mandate.issue_intent",
   "hire.create",
   "hire.fund",
+]);
+
+/**
+ * Pair gross is reserved at offer and recorded at fund. Completing funded work
+ * (deliver / submit / release) is not a second leg. FX settle records both books.
+ */
+const CLEARING_SPEND: ReadonlySet<CommandType> = new Set([
+  "hire.create",
+  "hire.fund",
+  "market.fx_settle",
 ]);
 
 /** Undefined = no nested hop on the path. False = a parent hop is expired or revoked. */
@@ -191,12 +325,6 @@ function nestedKyaParentsLive(
   }
   return saw ? true : undefined;
 }
-
-const SIM_INSTRUMENT = {
-  id: "sim-ledger",
-  type: "sim_ledger" as const,
-  description: "Aether simulated double-entry ledger",
-};
 
 export class Runtime {
   readonly clock: ManualClock;
@@ -219,6 +347,11 @@ export class Runtime {
   readonly occurrences = new Map<MandateId, number>();
   readonly lastOccurrence = new Map<MandateId, Instant>();
   readonly consumedQuotes = new Set<string>();
+  readonly withdrawnQuotes = new Set<string>();
+  readonly closedRfqs = new Set<string>();
+  readonly revokedIntents = new Set<MandateId>();
+  readonly revokedCarts = new Set<MandateId>();
+  readonly revokedPayments = new Set<MandateId>();
   readonly reservedQuotes = new Map<string, ApprovalId>();
   readonly settleEvents: { at: string; volume: number }[] = [];
   dailySpend = 0;
@@ -255,6 +388,11 @@ export class Runtime {
      * Public kernel card stays `hostedMonthly: null`. Env: `AETHER_HOSTED_MONTHLY`.
      */
     hostedMonthly?: number;
+    /**
+     * Pairwise gross credit cap in integer minor units. Default is 50_000_000 ($500,000).
+     * A TAP may lower it. Not a Command. Not durable. Public kernel default stays 50_000_000.
+     */
+    bilateralLimit?: number;
   }) {
     const worldPath = opts.dataDir ? join(opts.dataDir, "world.json") : undefined;
     const existing =
@@ -276,6 +414,13 @@ export class Runtime {
     this.audit = new AuditLog(opts.dataDir ? join(opts.dataDir, "audit.jsonl") : opts.auditPath);
     this.ledger = new Ledger(opts.dataDir ? undefined : opts.ledgerPath);
     this.dailyLimit = existing?.dailyLimit ?? opts.dailyLimit ?? 10_000_000;
+    if (
+      typeof opts.bilateralLimit === "number" &&
+      Number.isSafeInteger(opts.bilateralLimit) &&
+      opts.bilateralLimit > 0
+    ) {
+      this.clearing.defaultBilateralLimit = opts.bilateralLimit;
+    }
     if (existing) {
       if (existing.auditLength !== this.audit.length) {
         throw new Error(
@@ -315,6 +460,13 @@ export class Runtime {
     const k = this.identity.keys.get(id);
     if (!k) throw new Error(`no key for ${id}`);
     return k;
+  }
+
+  /** Current signing key, then retired keys. Rotation is not a broken chain. */
+  private keyByKid(id: AgentId, kid: string): Ed25519Keypair | undefined {
+    const current = this.identity.keys.get(id);
+    if (current?.kid === kid) return current;
+    return (this.identity.retired.get(id) ?? []).find((k) => k.kid === kid);
   }
 
   alias(key: string): Agent {
@@ -464,13 +616,13 @@ export class Runtime {
       spentByIntent: Object.fromEntries(this.spentByIntent),
       carts: [...this.carts.values()].map((c) => this.cartView(c)),
       payments: [...this.payments.values()].map((p) => this.paymentView(p)),
-      hires: [...this.hires.values()],
+      hires: [...this.hires.values()].map((h) => this.hireView(h)),
       rfqs: [...this.rfqs.values()].map((r) => this.rfqView(r)),
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
-      subscriptions: [...this.subscriptions.values()],
-      invoices: [...this.invoices.values()],
+      subscriptions: [...this.subscriptions.values()].map((s) => this.subscriptionView(s)),
+      invoices: [...this.invoices.values()].map((i) => this.invoiceView(i)),
       story: this.story,
       analog: this.analogDoc,
       tldr: this.tldr,
@@ -493,13 +645,29 @@ export class Runtime {
 
   /**
    * Pause view for other agents. A ticket past expiresAt is `expired`, not `pending`.
-   * The store may still say pending until the next dispatch sweeps it.
+   * A ticket still inside the clock window whose paused command would not allow
+   * is `stale`, not `pending`. Approve of that pause is `approval.replay`.
+   * Reject still releases the quote. The store may still say pending.
    */
   ticketView(ticket: ApprovalTicket): ApprovalTicket {
-    if (ticket.status === "pending" && Date.parse(ticket.expiresAt) <= Date.parse(this.clock.now())) {
+    if (ticket.status !== "pending") return ticket;
+    if (Date.parse(ticket.expiresAt) <= Date.parse(this.clock.now())) {
       return { ...ticket, status: "expired" };
     }
+    if (!this.ticketReplayable(ticket)) {
+      return { ...ticket, status: "stale" };
+    }
     return ticket;
+  }
+
+  /** Same check as approve: waived replay of the held command is still an allow. */
+  private ticketReplayable(ticket: ApprovalTicket): boolean {
+    const pending = this.pending.get(ticket.id);
+    if (!pending) return false;
+    const pendingActor =
+      pending.actorId === "system" ? this.systemActor() : this.identity.get(pending.actorId as AgentId);
+    if (!pendingActor) return false;
+    return evaluate(this.snapshot(pending, pendingActor, true)).verdict === "allow";
   }
 
   /**
@@ -512,9 +680,11 @@ export class Runtime {
 
   /**
    * Quote view for other agents. Spent (consumed) and held (live reserved ticket)
-   * win over expired. Expired includes the quote envelope, a lapsed FX validUntil,
-   * and (for a hire quote) a dead parent RFQ. An FX quote is a window on the quote,
-   * not the room. A reservation whose ticket is past expiresAt is not held.
+   * win over withdrawn and expired. Withdrawn (folded by market.withdraw) wins over
+   * expired. Expired includes the quote envelope, a lapsed FX validUntil,
+   * and (for a hire quote) a dead or shut parent RFQ. An FX quote is a window on the quote,
+   * not the room. Closing the room does not kill an already-minted FX window.
+   * A reservation whose ticket is past expiresAt is not held.
    * The store stays raw (expiresAt / validUntil only).
    */
   quoteView(quote: Quote): Quote & { status: QuoteStatus } {
@@ -530,6 +700,7 @@ export class Runtime {
         return { ...quote, status: "held" };
       }
     }
+    if (this.withdrawnQuotes.has(quote.id)) return { ...quote, status: "withdrawn" };
     const now = Date.parse(this.clock.now());
     if (Date.parse(quote.expiresAt) <= now) {
       return { ...quote, status: "expired" };
@@ -541,7 +712,7 @@ export class Runtime {
       }
     } else {
       const rfq = this.rfqs.get(quote.rfqId);
-      if (!rfq || Date.parse(rfq.expiresAt) <= now) {
+      if (!rfq || Date.parse(rfq.expiresAt) <= now || this.closedRfqs.has(rfq.id)) {
         return { ...quote, status: "expired" };
       }
     }
@@ -549,10 +720,12 @@ export class Runtime {
   }
 
   /**
-   * RFQ view for other agents. A room past expiresAt is `expired`, not `live`.
-   * The store stays raw (expiresAt only). Quoting or hiring still names `market.not_expired`.
+   * RFQ view for other agents. A shut room is `closed`, not `live`. Closed wins
+   * over expired. A room past expiresAt is `expired`, not `live`. The store stays
+   * raw (expiresAt only). Quoting or hiring a shut room still names `market.not_expired`.
    */
   rfqView(rfq: Rfq): Rfq & { status: RfqStatus } {
+    if (this.closedRfqs.has(rfq.id)) return { ...rfq, status: "closed" };
     if (Date.parse(rfq.expiresAt) <= Date.parse(this.clock.now())) {
       return { ...rfq, status: "expired" };
     }
@@ -561,12 +734,14 @@ export class Runtime {
 
   /**
    * Cart view for other agents. A cart whose unique_payment occupies is `bound`,
-   * not `live`. Bound wins over expired. A hire that points at this cart is not
+   * not `live`. Bound wins over revoked and expired. Revoked (torn by
+   * mandate.revoke_cart) wins over expired. A hire that points at this cart is not
    * bound — that occupancy lives on the hire (`hire.unique_cart`).
-   * The store stays raw (expiresAt only).
+   * The store stays raw (`expiresAt` only).
    */
   cartView(cart: Signed<CartMandate>): Signed<CartMandate> & { status: CartStatus } {
-    if (this.paymentMatchingCart(cart)) return { ...cart, status: "bound" };
+    if (this.occupyingPayment(cart)) return { ...cart, status: "bound" };
+    if (this.revokedCarts.has(cart.payload.id)) return { ...cart, status: "revoked" };
     if (Date.parse(cart.payload.expiresAt) <= Date.parse(this.clock.now())) {
       return { ...cart, status: "expired" };
     }
@@ -575,14 +750,16 @@ export class Runtime {
 
   /**
    * Payment view for other agents. A payment whose hire has moved escrow is
-   * `funded`, not `live`. Funded wins over expired (refunded and released still
-   * funded — the mandate was drawn). Expired includes the payment `exp` and a
-   * dead parent cart, even when this check's own window still lives. A cart this
-   * payment occupies is not funded — that occupancy lives on the cart (`bound`).
-   * The store stays raw (`exp` only).
+   * `funded`, not `live`. Funded wins over revoked and expired (refunded and
+   * released still funded — the mandate was drawn). Revoked (torn by
+   * mandate.revoke_payment) wins over expired. Expired includes the payment
+   * `exp` and a dead parent cart, even when this check's own window still lives.
+   * A cart this payment occupies is not funded — that occupancy lives on the
+   * cart (`bound`). The store stays raw (`exp` only).
    */
   paymentView(payment: Signed<PaymentMandate>): Signed<PaymentMandate> & { status: PaymentStatus } {
     if (this.hireDrawnPayment(payment)) return { ...payment, status: "funded" };
+    if (this.revokedPayments.has(payment.payload.id)) return { ...payment, status: "revoked" };
     if (payment.payload.exp <= unixSeconds(this.clock.now())) {
       return { ...payment, status: "expired" };
     }
@@ -595,24 +772,603 @@ export class Runtime {
 
   /**
    * Intent view for other agents. A slip whose hire has moved escrow is
-   * `funded`, not `live`. Funded wins over expired (refunded and released still
-   * funded — the slip was drawn). Expired includes the slip `exp` and a dead
-   * parent intent, even when this child's own window still lives. A child hire
-   * does not occupy the parent. Recurrence spend is not occupancy. The store
-   * stays raw (`exp` only).
+   * `funded`, not `live`. Funded wins over revoked and expired (refunded and
+   * released still funded — the slip was drawn). Revoked (torn by mandate.revoke)
+   * wins over expired. Expired includes the slip `exp` and a dead parent intent,
+   * even when this child's own window still lives. A child hire does not occupy
+   * the parent. Recurrence spend is not occupancy. The store stays raw (`exp` only).
    */
   intentView(intent: Signed<IntentMandate>): Signed<IntentMandate> & { status: IntentStatus } {
     if (this.hireDrawnIntent(intent)) return { ...intent, status: "funded" };
+    if (this.revokedIntents.has(intent.payload.id)) return { ...intent, status: "revoked" };
     if (intent.payload.exp <= unixSeconds(this.clock.now())) {
       return { ...intent, status: "expired" };
     }
     if (intent.payload.parentId) {
       const parent = this.intents.get(intent.payload.parentId);
-      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now()) || this.revokedIntents.has(parent.payload.id)) {
         return { ...intent, status: "expired" };
       }
     }
     return { ...intent, status: "live" };
+  }
+
+  /**
+   * Hire view for other agents. Funded (escrow moved, including later
+   * refund/release/deliver) wins over expired. Expired includes a dead intent
+   * and a dead parent intent even when this child's `exp` still lives. `void`
+   * is not a live offer. The store stays raw (`state` only).
+   */
+  hireView(hire: HireContract): HireContract & { status: HireStatus } {
+    if (
+      hire.state === "funded" ||
+      hire.state === "delivered" ||
+      hire.state === "released" ||
+      hire.state === "refunded"
+    ) {
+      return { ...hire, status: "funded" };
+    }
+    if (hire.state === "void") return { ...hire, status: "expired" };
+    if (this.intentSlipLive(this.intents.get(hire.intentId))) return { ...hire, status: "live" };
+    return { ...hire, status: "expired" };
+  }
+
+  /**
+   * Subscription view for other agents. A row whose slip died is `expired`,
+   * not live enrollment. Unique_subscriber still occupies. Spend is not gated
+   * on the row. The store stays raw.
+   */
+  subscriptionView(row: HostSubscription): HostSubscription & { status: SubscriptionStatus } {
+    if (this.intentSlipLive(this.intents.get(row.intentId))) return { ...row, status: "live" };
+    return { ...row, status: "expired" };
+  }
+
+  /** Intent still in its own window, not torn, and parent (if any) still in its window. */
+  private intentSlipLive(intent: Signed<IntentMandate> | undefined): boolean {
+    if (!intent) return false;
+    if (this.revokedIntents.has(intent.payload.id)) return false;
+    if (intent.payload.exp <= unixSeconds(this.clock.now())) return false;
+    if (intent.payload.parentId) {
+      const parent = this.intents.get(intent.payload.parentId);
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now()) || this.revokedIntents.has(parent.payload.id)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Invoice view for other agents. Current is inside the 31-day door window.
+   * The store stays raw (`at` only). The door asks whether any invoice is current.
+   */
+  invoiceView(row: OperatorInvoice): OperatorInvoice & { status: InvoiceStatus } {
+    const age = Date.parse(this.clock.now()) - Date.parse(row.at);
+    if (!Number.isFinite(age) || age > HOST_INVOICE_WINDOW_MS) {
+      return { ...row, status: "lapsed" };
+    }
+    return { ...row, status: "current" };
+  }
+
+  /**
+   * How another agent finds this runtime. Not an A2A JSON-RPC server.
+   * HTTP well-known and MCP `aether://agent-card` share this object.
+   */
+  discoveryCard(baseUrl?: string) {
+    const pin = this.protocolCard();
+    return {
+      spec: PROTOCOL.spec,
+      protocolVersion: PROTOCOL.version,
+      name: "Aether Economic Runtime",
+      description:
+        "Policy, mandate, hire, escrow, settlement, and audit for software agents. Simulated rail sim:aether-1. Not a storefront.",
+      ...(baseUrl && baseUrl.length > 0 ? { url: baseUrl } : {}),
+      version: PROTOCOL.version,
+      capabilities: {
+        streaming: false,
+        pushNotifications: false,
+        liveMoney: pin.liveMoney,
+        evaluateLlm: pin.evaluateLlm,
+        hosted: pin.hosted,
+      },
+      skills: [
+        {
+          id: "protocol",
+          name: "Host card",
+          description:
+            "GET /v1/protocol and GET /.well-known/aether.json — pin aether.protocol.1. liveMoney false. evaluateLlm false. Public kernel hosted false.",
+        },
+        {
+          id: "commands",
+          name: "Command bus",
+          description:
+            "GET /v1/commands — JSON Schema for every CommandType. POST /v1/commands — every CommandType on the same bus as MCP. REST aliases are convenience.",
+        },
+        {
+          id: "inspect",
+          name: "Fetch one object",
+          description:
+            "aether_get / GET /v1/objects/:id. An offered hire whose slip died is expired, not live. An hsb_ row whose slip died is expired, not live enrollment.",
+        },
+        {
+          id: "sprint-procurement",
+          name: "Sprint Procurement TAP",
+          description: "POST /v1/demo/sprint-procurement — conformance, not a storefront",
+        },
+        {
+          id: "night-watch",
+          name: "Night Watch TAP",
+          description: "POST /v1/demo/night-watch — standing mandate, KYA, circuit breaker",
+        },
+        {
+          id: "sub-hire",
+          name: "Sub-hire TAP",
+          description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake",
+        },
+        {
+          id: "clearing-window",
+          name: "Clearing window TAP",
+          description: "POST /v1/demo/clearing — bilateral credit, settlement photo, not a second payment",
+        },
+        {
+          id: "refund-unwind",
+          name: "Refund TAP",
+          description: "POST /v1/demo/refund — unwind funded escrow; quote stays spent; circuit stays sticky",
+        },
+        {
+          id: "replay-once",
+          name: "Replay TAP",
+          description: "POST /v1/demo/replay — a retry of an allow is not a second spend",
+        },
+        {
+          id: "envelope-nonce",
+          name: "Envelope nonce TAP",
+          description: "POST /v1/demo/nonce — a payment nonce is one-shot; a leftover nonce on a transfer is not",
+        },
+        {
+          id: "deny-cache",
+          name: "Deny-cache TAP",
+          description: "POST /v1/demo/deny — a deny is never a cached success",
+        },
+        {
+          id: "recurrence-cadence",
+          name: "Recurrence TAP",
+          description: "POST /v1/demo/recurrence — a one-slot cadence is not an open checkbook",
+        },
+        {
+          id: "execution-window",
+          name: "Calendar TAP",
+          description: "POST /v1/demo/calendar — a closed calendar is not a freeze on funded work",
+        },
+        {
+          id: "cadence-slot",
+          name: "Slot TAP",
+          description: "POST /v1/demo/slot — a refund does not restore a cadence slot",
+        },
+        {
+          id: "daily-gap",
+          name: "Daily TAP",
+          description: "POST /v1/demo/daily — a cadence is a gap, not a burst",
+        },
+        {
+          id: "cart-occupancy",
+          name: "Cart occupancy TAP",
+          description: "POST /v1/demo/cart — occupancy is a bind, not a field on fund",
+        },
+        {
+          id: "hot-hour",
+          name: "Velocity TAP",
+          description: "POST /v1/demo/velocity — a hot hour is not a freeze on funded work",
+        },
+        {
+          id: "operator-door",
+          name: "Operator door TAP",
+          description: "POST /v1/demo/door — the public kernel is not a hosted checkout",
+        },
+        {
+          id: "cart-match",
+          name: "Cart match TAP",
+          description: "POST /v1/demo/match — a cheaper cart is not a discount",
+        },
+        {
+          id: "closed-room",
+          name: "Closed room TAP",
+          description: "POST /v1/demo/room — a closed room is not a bulletin board",
+        },
+        {
+          id: "fx-not-hire",
+          name: "Conversion TAP",
+          description: "POST /v1/demo/conversion — an FX window is not a hire",
+        },
+        {
+          id: "unique-live",
+          name: "Unique-live TAP",
+          description: "POST /v1/demo/pair — a second live hop is not a tighter grant",
+        },
+        {
+          id: "spread-bound",
+          name: "Spread TAP",
+          description: "POST /v1/demo/band — a 200bps band is not decoration",
+        },
+        {
+          id: "parent-fresh",
+          name: "Nest TAP",
+          description: "POST /v1/demo/nest — a nested hop does not outlive its parent",
+        },
+        {
+          id: "mandate-parent",
+          name: "Heir TAP",
+          description: "POST /v1/demo/heir — a dead parent is not a parent",
+        },
+        {
+          id: "mm-inventory",
+          name: "Stock TAP",
+          description: "POST /v1/demo/stock — empty MM USDC is not a missing maker",
+        },
+        {
+          id: "payment-budget",
+          name: "Purse TAP",
+          description: "POST /v1/demo/purse — a budget is not an item cap",
+        },
+        {
+          id: "unique-subscriber",
+          name: "Seat TAP",
+          description: "POST /v1/demo/seat — one subscriber is one row",
+        },
+        {
+          id: "parent-budget",
+          name: "Cover TAP",
+          description: "POST /v1/demo/cover — a parent envelope is not a child's leftover",
+        },
+        {
+          id: "operating-book",
+          name: "Mint TAP",
+          description: "POST /v1/demo/mint — a transfer is not a mint",
+        },
+        {
+          id: "allowed-payees",
+          name: "Payee TAP",
+          description: "POST /v1/demo/payee — a listed payee is not any registered vendor",
+        },
+        {
+          id: "capability-subset",
+          name: "Climb TAP",
+          description: "POST /v1/demo/climb — a climb is not a wider handshake",
+        },
+        {
+          id: "fx-fresh",
+          name: "Born TAP",
+          description: "POST /v1/demo/born — an FX window cannot be born dead",
+        },
+        {
+          id: "window-reach",
+          name: "Reach TAP",
+          description: "POST /v1/demo/reach — a window that opens after the slip dies is not a window",
+        },
+        {
+          id: "kya-window",
+          name: "Year TAP",
+          description: "POST /v1/demo/year — a handshake cannot outlive one year",
+        },
+        {
+          id: "circuit-daily",
+          name: "Fuse TAP",
+          description: "POST /v1/demo/fuse — a daily fuse is not a freeze on funded work",
+        },
+        {
+          id: "allowed-skus",
+          name: "SKU TAP",
+          description: "POST /v1/demo/sku — a listed SKU is not any catalog good",
+        },
+        {
+          id: "sku-currency",
+          name: "Priced TAP",
+          description: "POST /v1/demo/priced — a listed SKU is only priced in a currency the catalog names",
+        },
+        {
+          id: "hire-party",
+          name: "Party TAP",
+          description: "POST /v1/demo/party — the other side of the table is not a party",
+        },
+        {
+          id: "ledger-sufficient",
+          name: "Cash TAP",
+          description: "POST /v1/demo/cash — empty cash is not a negative book",
+        },
+        {
+          id: "not-expired",
+          name: "Stale TAP",
+          description: "POST /v1/demo/stale — a stale quote is not a hire",
+        },
+        {
+          id: "chain-integrity",
+          name: "Chain TAP",
+          description: "POST /v1/demo/chain — a dead cart is not a check",
+        },
+        {
+          id: "hire-state",
+          name: "Arrow TAP",
+          description: "POST /v1/demo/arrow — unfinished work is not a payout",
+        },
+        {
+          id: "ledger-known",
+          name: "Wallet TAP",
+          description: "POST /v1/demo/wallet — a vendor's USD cash is not a USDC wallet",
+        },
+        {
+          id: "kya-party",
+          name: "Name TAP",
+          description: "POST /v1/demo/name — someone else's name is not a handshake",
+        },
+        {
+          id: "fx-window",
+          name: "Pane TAP",
+          description: "POST /v1/demo/pane — an FX SKU is a window, not a good",
+        },
+        {
+          id: "intent-subject",
+          name: "Subject TAP",
+          description: "POST /v1/demo/subject — this slip is not yours to spend",
+        },
+        {
+          id: "fx-quote",
+          name: "Paper TAP",
+          description: "POST /v1/demo/paper — a research quote is not a conversion window",
+        },
+        {
+          id: "same-currency",
+          name: "Mix TAP",
+          description: "POST /v1/demo/mix — a mixed journal is not a conversion",
+        },
+        {
+          id: "ladder-legal",
+          name: "Rung TAP",
+          description: "POST /v1/demo/rung — a skipped rung is not a promotion",
+        },
+        {
+          id: "min-level",
+          name: "Grade TAP",
+          description: "POST /v1/demo/grade — a junior desk is not a nested-slip mint",
+        },
+        {
+          id: "birth-rung",
+          name: "Cradle TAP",
+          description: "POST /v1/demo/cradle — L5 is not a birthright",
+        },
+        {
+          id: "max-autonomy",
+          name: "Ceiling TAP",
+          description: "POST /v1/demo/ceiling — a climb is not a wider slip",
+        },
+        {
+          id: "attestation-fresh",
+          name: "Lapse TAP",
+          description: "POST /v1/demo/lapse — an expired hop is not a freeze on funded work",
+        },
+        {
+          id: "approval-pending",
+          name: "Pause TAP",
+          description: "POST /v1/demo/pause — a dead pause is not a late yes",
+        },
+        {
+          id: "not-self",
+          name: "Mirror TAP",
+          description: "POST /v1/demo/mirror — a handshake is not a mirror",
+        },
+        {
+          id: "human-authority",
+          name: "Warrant TAP",
+          description: "POST /v1/demo/warrant — an agent-issued slip is not host authority",
+        },
+        {
+          id: "occurrence-fresh",
+          name: "Vacant TAP",
+          description: "POST /v1/demo/vacant — a cadence with no slots is not a cadence",
+        },
+        {
+          id: "role-capability",
+          name: "Badge TAP",
+          description: "POST /v1/demo/badge — a badge is not a shopping pass",
+        },
+        {
+          id: "amount-range",
+          name: "Lid TAP",
+          description: "POST /v1/demo/lid — an item cap is not an envelope",
+        },
+        {
+          id: "escrow-required",
+          name: "Bare TAP",
+          description: "POST /v1/demo/bare — unfunded work is not a delivery",
+        },
+        {
+          id: "known-sku",
+          name: "Shelf TAP",
+          description: "POST /v1/demo/shelf — a ghost SKU is not a catalog good",
+        },
+        {
+          id: "known-rfq",
+          name: "Hall TAP",
+          description: "POST /v1/demo/hall — a missing room is not a missing SKU",
+        },
+        {
+          id: "known-intent",
+          name: "Writ TAP",
+          description: "POST /v1/demo/writ — a missing slip is not a missing handshake",
+        },
+        {
+          id: "known-cart",
+          name: "Crate TAP",
+          description: "POST /v1/demo/crate — a missing cart is not a broken payment chain",
+        },
+        {
+          id: "known-hire",
+          name: "Pact TAP",
+          description: "POST /v1/demo/pact — a missing contract is not a broken mandate chain",
+        },
+        {
+          id: "known-parent",
+          name: "Root TAP",
+          description: "POST /v1/demo/root — a missing parent is not a tighter child",
+        },
+        {
+          id: "known-approval",
+          name: "Docket TAP",
+          description: "POST /v1/demo/docket — a missing ticket is not a late yes",
+        },
+        {
+          id: "kya-known-parent",
+          name: "Graft TAP",
+          description: "POST /v1/demo/graft — a missing hop parent is not a nested handshake",
+        },
+        {
+          id: "known-attestation",
+          name: "Seal TAP",
+          description: "POST /v1/demo/seal — a missing handshake is not a silent tombstone",
+        },
+        {
+          id: "known-invitee",
+          name: "Guest TAP",
+          description: "POST /v1/demo/guest — a missing invitee is not a closed room",
+        },
+        {
+          id: "cart-fresh",
+          name: "Dust TAP",
+          description: "POST /v1/demo/dust — a stale unpaid cart is not a late check",
+        },
+        {
+          id: "freeze-state",
+          name: "Thaw TAP",
+          description: "POST /v1/demo/thaw — a no-op thaw is not a kill-switch test",
+        },
+        {
+          id: "unique-key",
+          name: "Twin TAP",
+          description: "POST /v1/demo/twin — a taken alias is not a second agent",
+        },
+        {
+          id: "system-scope",
+          name: "Fence TAP",
+          description: "POST /v1/demo/fence — system is not a treasurer",
+        },
+        {
+          id: "actor-known",
+          name: "Mute TAP",
+          description: "POST /v1/demo/mute — a missing speaker is not a 500",
+        },
+        {
+          id: "receipt-known",
+          name: "Nil TAP",
+          description: "POST /v1/demo/nil — a missing receipt is not an empty success",
+        },
+        {
+          id: "kya-mint-fresh",
+          name: "Spark TAP",
+          description: "POST /v1/demo/spark — a handshake cannot be born dead",
+        },
+        {
+          id: "window-fresh",
+          name: "Wilt TAP",
+          description: "POST /v1/demo/wilt — a permission slip cannot be born with a closed calendar",
+        },
+        {
+          id: "mm-known",
+          name: "Maker TAP",
+          description: "POST /v1/demo/maker — a window is not a journal against nobody",
+        },
+        {
+          id: "currency-match",
+          name: "Ink TAP",
+          description: "POST /v1/demo/ink — a cart label is not the hire's money",
+        },
+        {
+          id: "safe-balance",
+          name: "Brim TAP",
+          description: "POST /v1/demo/brim — IEEE rounding is not a mint",
+        },
+        {
+          id: "fx-pair",
+          name: "Swap TAP",
+          description: "POST /v1/demo/swap — a swapped pair is not a silent journal of the books this rail actually posts",
+        },
+        {
+          id: "approval-replay",
+          name: "Sour TAP",
+          description: "POST /v1/demo/sour — a grown-up yes is not a late hire",
+        },
+        {
+          id: "chain-intact",
+          name: "Cut TAP",
+          description: "POST /v1/demo/cut — a revoke is not an expiry",
+        },
+        {
+          id: "principal-not-frozen",
+          name: "Ice TAP",
+          description: "POST /v1/demo/ice — a frozen principal is not a frozen desk",
+        },
+        {
+          id: "allowed-instruments",
+          name: "Rail TAP",
+          description: "POST /v1/demo/rail — a listed rail is not decoration",
+        },
+        {
+          id: "human-signature",
+          name: "Pen TAP",
+          description: "POST /v1/demo/pen — a junior signature is not a grown-up pause",
+        },
+        {
+          id: "delegation-depth",
+          name: "Well TAP",
+          description: "POST /v1/demo/well — a fourth hop is not a nested parent",
+        },
+        {
+          id: "payment-reference",
+          name: "Cite TAP",
+          description: "POST /v1/demo/cite — a listed reference is not decoration once a check exists",
+        },
+        {
+          id: "identity-party",
+          name: "Lock TAP",
+          description: "POST /v1/demo/lock — someone else's key is not yours to turn",
+        },
+        {
+          id: "hire-void",
+          name: "Void TAP",
+          description: "POST /v1/demo/void — a void is not a refund",
+        },
+        {
+          id: "market-party",
+          name: "Fold TAP",
+          description: "POST /v1/demo/fold — someone else's bid is not yours to pull",
+        },
+        {
+          id: "mandate-party",
+          name: "Rip TAP",
+          description: "POST /v1/demo/rip — someone else's unused slip is not yours to tear",
+        },
+        {
+          id: "rfq-party",
+          name: "Shut TAP",
+          description: "POST /v1/demo/shut — someone else's room is not yours to close",
+        },
+        {
+          id: "cart-party",
+          name: "Dump TAP",
+          description: "POST /v1/demo/dump — someone else's unused checkout is not yours to dump",
+        },
+        {
+          id: "payment-party",
+          name: "Spike TAP",
+          description: "POST /v1/demo/spike — someone else's unused payment is not yours to spike",
+        },
+        {
+          id: "cadence-reach",
+          name: "Week TAP",
+          description: "POST /v1/demo/week — a week is not a cadence on a seven-day slip",
+        },
+      ],
+      defaultInputModes: ["application/json"],
+      defaultOutputModes: ["application/json"],
+      pin,
+    };
   }
 
   protocolCard() {
@@ -653,19 +1409,29 @@ export class Runtime {
 
   /**
    * Fetch one object by id (or alias). Prefix selects the table:
-   * aid_ agent, hid_ hire, mid_ mandate (intents include derived live | expired | funded;
-   * funded is escrow-moved occupancy against this slip and wins over expired;
-   * expired includes a dead parent intent even when this child's `exp` still lives;
-   * a child hire does not occupy the parent;
-   * carts include derived live | expired | bound;
-   * bound is unique_payment occupancy and wins over expired; payments include derived
-   * live | expired | funded; funded is escrow-moved occupancy and wins over expired;
+   * aid_ agent, hid_ hire (derived live | expired | funded; funded is escrow-moved
+   * occupancy and wins over expired; expired includes a dead intent and a dead parent
+   * intent even when the child's exp still lives), mid_ mandate (intents include
+   * derived live | expired | funded | revoked; funded is escrow-moved occupancy against this
+   * slip and wins over revoked and expired; revoked wins over expired; expired includes a dead parent intent even when this
+   * child's `exp` still lives; a child hire does not occupy the parent;
+   * carts include derived live | expired | bound | revoked;
+   * bound is unique_payment occupancy and wins over revoked and expired;
+   * revoked wins over expired; payments include derived
+   * live | expired | funded | revoked; funded is escrow-moved occupancy and wins
+   * over revoked and expired; revoked wins over expired;
    * expired includes a dead parent cart even when the payment `exp` still lives),
-   * rid_ receipt, apd_ approval, rfq_ / qte_ market (rfq_ includes derived live | expired;
-   * qte_ includes derived live | expired | spent | held;
-   * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
-   * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
-   * hsb_ host subscription (raw; spend is not gated on the row).
+   * rid_ receipt, apd_ approval (pending | expired | stale; stale is a pause whose
+   * held command would not allow; the store stays pending; time-expired wins),
+     * rfq_ / qte_ market (rfq_ includes derived live | expired;
+     * qte_ includes derived live | expired | spent | held | withdrawn;
+     * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
+     * spent and held win over withdrawn and expired; withdrawn wins over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked; pins an iss_ issuer object),
+   * iss_ KYA issuer (shape-only catalog; adapter shape; live false; credentials never stored),
+   * hsb_ host subscription (derived live | expired; expired includes a dead intent
+   * and a dead parent intent; unique_subscriber still occupies; spend is not gated
+   * on the row; the store stays raw),
+   * inv_ operator invoice (derived current | lapsed; the store stays raw).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
     const alias = this.aliases.get(id);
@@ -676,7 +1442,7 @@ export class Runtime {
     }
     if (id.startsWith("hid_")) {
       const hire = this.hires.get(id as HireId);
-      return hire ? { type: "hire", id: hire.id, value: hire } : undefined;
+      return hire ? { type: "hire", id: hire.id, value: this.hireView(hire) } : undefined;
     }
     if (id.startsWith("mid_")) {
       const intent = this.intents.get(id as MandateId);
@@ -707,9 +1473,17 @@ export class Runtime {
       const att = this.kya.attestations.get(id as DelegationId);
       return att ? { type: "delegation", id: att.id, value: this.hopView(att) } : undefined;
     }
+    if (id.startsWith("iss_")) {
+      const issuer = this.kya.issuers.get(id as IssuerId);
+      return issuer ? { type: "issuer", id: issuer.id, value: issuer } : undefined;
+    }
     if (id.startsWith("hsb_")) {
       const sub = this.subscriptions.get(id as SubscriptionId);
-      return sub ? { type: "subscription", id: sub.id, value: sub } : undefined;
+      return sub ? { type: "subscription", id: sub.id, value: this.subscriptionView(sub) } : undefined;
+    }
+    if (id.startsWith("inv_")) {
+      const invoice = this.invoices.get(id);
+      return invoice ? { type: "invoice", id: invoice.id, value: this.invoiceView(invoice) } : undefined;
     }
     if (id.startsWith("acct_")) {
       const account = [...this.ledger.accounts.values()].find((a) => a.id === id);
@@ -746,7 +1520,10 @@ export class Runtime {
   }
 
   captureWorld(): WorldState {
-    const keys = [...this.identity.keys.entries()].map(([, kp]) => exportKeypair(kp));
+    const keys = [
+      ...[...this.identity.keys.values()].map((kp) => exportKeypair(kp)),
+      ...[...this.identity.retired.values()].flat().map((kp) => exportKeypair(kp)),
+    ];
     return {
       v: WORLD_VERSION,
       spec: "aether.protocol.1",
@@ -779,13 +1556,18 @@ export class Runtime {
       occurrences: [...this.occurrences.entries()],
       lastOccurrence: [...this.lastOccurrence.entries()],
       consumedQuotes: [...this.consumedQuotes],
+      withdrawnQuotes: [...this.withdrawnQuotes],
+      closedRfqs: [...this.closedRfqs],
+      revokedIntents: [...this.revokedIntents],
+      revokedCarts: [...this.revokedCarts],
+      revokedPayments: [...this.revokedPayments],
       reservedQuotes: [...this.reservedQuotes.entries()],
       settledFxQuotes: [...this.consumedQuotes],
       settleEvents: [...this.settleEvents],
       decisions: [...this.decisions],
       story: [...this.story],
-      kya: { attestations: [...this.kya.attestations.values()], blocked: [...this.kya.blocked] },
-      clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.windows },
+      kya: { attestations: [...this.kya.attestations.values()], blocked: [...this.kya.blocked], issuers: [...this.kya.issuers.values()] },
+      clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.snapshot().windows },
       killSwitchTested: [...this.killSwitchTested],
       idempotency: [...this.idempotency.entries()],
       hosted: this.hosted,
@@ -866,12 +1648,20 @@ export class Runtime {
     this.identity.agents.clear();
     this.identity.byDid.clear();
     this.identity.keys.clear();
+    this.identity.retired.clear();
     const keyByKid = new Map(world.keys.map((k) => [k.kid, k]));
     for (const agent of world.agents) {
       const kid = agent.keys[0]?.kid;
       const exported = kid ? keyByKid.get(kid) : undefined;
       if (!exported) throw new Error(`missing key for ${agent.id}`);
       this.identity.register(agent, importKeypair(exported));
+      const rest: Ed25519Keypair[] = [];
+      for (const ref of agent.keys.slice(1)) {
+        const raw = keyByKid.get(ref.kid);
+        if (!raw) throw new Error(`missing retired key ${ref.kid}`);
+        rest.push(importKeypair(raw));
+      }
+      if (rest.length > 0) this.identity.retired.set(agent.id, rest);
     }
     this.aliases.clear();
     for (const [k, v] of Object.entries(world.aliases)) this.aliases.set(k, v);
@@ -904,6 +1694,16 @@ export class Runtime {
     this.consumedQuotes.clear();
     for (const id of world.consumedQuotes ?? []) this.consumedQuotes.add(id);
     for (const id of world.settledFxQuotes ?? []) this.consumedQuotes.add(id);
+    this.withdrawnQuotes.clear();
+    for (const id of world.withdrawnQuotes ?? []) this.withdrawnQuotes.add(id);
+    this.closedRfqs.clear();
+    for (const id of world.closedRfqs ?? []) this.closedRfqs.add(id);
+    this.revokedIntents.clear();
+    for (const id of world.revokedIntents ?? []) this.revokedIntents.add(id);
+    this.revokedCarts.clear();
+    for (const id of world.revokedCarts ?? []) this.revokedCarts.add(id);
+    this.revokedPayments.clear();
+    for (const id of world.revokedPayments ?? []) this.revokedPayments.add(id);
     this.reservedQuotes.clear();
     for (const [quoteId, ticketId] of world.reservedQuotes ?? []) {
       this.reservedQuotes.set(quoteId, ticketId as ApprovalId);
@@ -1069,34 +1869,14 @@ export class Runtime {
     const mustChain = cmd.type === "envelope.submit" || cmd.type === "hire.fund";
     if (mustChain && intent && cart && payment) {
       const checkExp = cmd.type === "hire.fund";
-      const chain = verifyChain({
-        intent,
-        cart,
-        payment,
-        intentKey: this.keypair(intent.payload.issuerId),
-        cartKey: this.keypair(cart.payload.merchant.id),
-        paymentKey: this.keypair(actor.id),
-        nowIso: this.clock.now(),
-        checkExp,
-      });
-      // Payment may be signed by actor or a human supervisor — try both.
-      chainOk = chain.ok;
-      if (!chain.ok) {
-        const human = counterparties.find((a) => a.role === "human_operator");
-        if (human) {
-          const retry = verifyChain({
-            intent,
-            cart,
-            payment,
-            intentKey: this.keypair(intent.payload.issuerId),
-            cartKey: this.keypair(cart.payload.merchant.id),
-            paymentKey: this.keypair(human.id),
-            nowIso: this.clock.now(),
-            checkExp,
-          });
-          chainOk = retry.ok;
-        }
-      }
+      // Chain integrity is the mandate signatures, not who is speaking.
+      // A stranger fund still verifies a buyer-signed payment; subject_is_actor names the speaker.
+      const paymentSignerIds: AgentId[] = [actor.id];
+      if (hire?.buyerId) paymentSignerIds.push(hire.buyerId);
+      paymentSignerIds.push(intent.payload.subjectId);
+      const human = counterparties.find((a) => a.role === "human_operator");
+      if (human) paymentSignerIds.push(human.id);
+      chainOk = this.paymentChainOk(intent, cart, payment, paymentSignerIds, checkExp);
     }
     const velocityWindow = this.velocity();
     const audit = this.audit.verify();
@@ -1147,6 +1927,17 @@ export class Runtime {
       const last = this.lastOccurrence.get(intent.payload.id);
       if (last) ctx.lastOccurrenceAt = last;
     }
+    if ((cmd.type === "hire.create" || cmd.type === "hire.fund") && intent) {
+      const ref = intent.payload.constraints.find(
+        (c): c is Extract<MandateConstraint, { type: "payment.reference" }> => c.type === "payment.reference",
+      );
+      if (ref) {
+        const funded = [...this.payments.values()].filter((p) => this.hireDrawnPayment(p));
+        if (funded.length > 0) {
+          ctx.referenceOk = funded.some((p) => p.payload.transaction_id === ref.conditional_transaction_id);
+        }
+      }
+    }
     if (cart) ctx.cart = cart;
     if (payment) ctx.payment = payment;
     if (hire) ctx.hire = hire;
@@ -1156,7 +1947,7 @@ export class Runtime {
     ) {
       ctx.hireKnown = Boolean(hire && hire.id !== "hid_draft");
     }
-    if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart") {
+    if (cmd.type === "hire.create" || cmd.type === "mandate.issue_cart" || cmd.type === "mandate.revoke") {
       ctx.intentKnown = Boolean(intent);
     }
     if (cmd.type === "host.subscribe") {
@@ -1172,9 +1963,12 @@ export class Runtime {
         }
       }
     }
-    if (cmd.type === "mandate.issue_payment") {
+    if (cmd.type === "mandate.issue_payment" || cmd.type === "mandate.revoke_cart") {
       ctx.cartKnown = Boolean(cart);
-      if (cart) ctx.paymentUnbound = this.paymentMatchingCart(cart) === undefined;
+      if (cmd.type === "mandate.issue_payment" && cart) ctx.paymentUnbound = this.occupyingPayment(cart) === undefined;
+    }
+    if (cmd.type === "mandate.revoke_payment") {
+      ctx.paymentKnown = Boolean(payment);
     }
     if (cmd.type === "approval.resolve") {
       const ticket =
@@ -1204,6 +1998,9 @@ export class Runtime {
         ctx.hirePartyOk = hire.sellerId === actor.id;
       } else if (cmd.type === "hire.refund" || cmd.type === "hire.release") {
         ctx.hirePartyOk = hire.buyerId === actor.id || actor.role === "treasury";
+      } else if (cmd.type === "hire.void") {
+        ctx.hirePartyOk =
+          hire.buyerId === actor.id || hire.sellerId === actor.id || actor.role === "treasury";
       }
     }
     if (amount) ctx.amount = amount;
@@ -1213,7 +2010,7 @@ export class Runtime {
     if (mmInventoryOk !== undefined) ctx.mmInventoryOk = mmInventoryOk;
     if (chainOk !== undefined) ctx.chainOk = chainOk;
     if (thresholdWaived) ctx.thresholdWaived = true;
-    if (payeeId && amount) {
+    if (payeeId && amount && CLEARING_SPEND.has(cmd.type)) {
       ctx.projectedExposure = this.clearing.projected(actor.id, payeeId, amount.currency, amount.amount);
       ctx.exposureLimit = this.clearing.defaultBilateralLimit;
     }
@@ -1232,9 +2029,12 @@ export class Runtime {
       if (
         cmd.type === "mandate.issue_intent" ||
         cmd.type === "hire.create" ||
+        cmd.type === "hire.accept" ||
         cmd.type === "hire.fund"
       ) {
-        ctx.parentFresh = parentIntent.payload.exp > unixSeconds(this.clock.now());
+        ctx.parentFresh =
+          parentIntent.payload.exp > unixSeconds(this.clock.now()) &&
+          !this.revokedIntents.has(parentIntent.payload.id);
       }
     }
     if (cmd.type === "mandate.issue_intent" && Array.isArray(body.constraints)) {
@@ -1245,18 +2045,27 @@ export class Runtime {
         ctx.windowReachOk = executionWindowReachable(win, this.clock.now());
       }
       const rec = ctx.proposedConstraints.find((c) => c.type === "payment.agent_recurrence");
-      if (rec) ctx.occurrenceMintOk = recurrenceMintable(rec);
+      if (rec) {
+        ctx.occurrenceMintOk = recurrenceMintable(rec);
+        ctx.cadenceReachOk = cadenceReachable(rec);
+      }
     }
     const namedIds = this.namedAgentIds(cmd, body);
     if (namedIds.length > 0) {
       ctx.targetKnown = namedIds.every((id) => Boolean(this.identity.get(id)));
     }
     if (
-      (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze") &&
+      (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate") &&
       ctx.targetKnown === true
     ) {
-      const target = this.identity.get(body.agentId as AgentId);
-      if (target) ctx.freezeStateOk = cmd.type === "identity.freeze" ? !target.frozen : target.frozen;
+      const target = this.identity.get(body.agentId as AgentId) ?? (cmd.type === "identity.rotate" ? actor : undefined);
+      if (target && (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze")) {
+        ctx.freezeStateOk = cmd.type === "identity.freeze" ? !target.frozen : target.frozen;
+      }
+      if (cmd.type === "identity.rotate" && target) {
+        ctx.identityPartyOk =
+          actor.role === "human_operator" || actor.role === "treasury" || actor.id === target.id;
+      }
     }
     if (cmd.type === "kya.attest" && typeof body.delegateId === "string") {
       const delegate = this.identity.get(body.delegateId as AgentId);
@@ -1385,6 +2194,74 @@ export class Runtime {
     if (market.hireNotFx !== undefined) ctx.hireNotFx = market.hireNotFx;
     if (market.fxWindowOk !== undefined) ctx.fxWindowOk = market.fxWindowOk;
     if (market.fxMintFresh !== undefined) ctx.fxMintFresh = market.fxMintFresh;
+    if (cmd.type === "market.withdraw") {
+      const quoted = this.quoteOf(body);
+      if (quoted) {
+        ctx.marketPartyOk =
+          actor.role === "human_operator" || actor.role === "treasury" || actor.id === quoted.sellerId;
+      }
+    }
+    if (cmd.type === "market.close") {
+      const room =
+        typeof body.rfqId === "string" ? this.rfqs.get(String(body.rfqId)) : undefined;
+      if (room) {
+        ctx.rfqPartyOk =
+          actor.role === "human_operator" || actor.role === "treasury" || actor.id === room.buyerId;
+      }
+    }
+    if (cmd.type === "mandate.revoke" && intent) {
+      ctx.mandatePartyOk =
+        actor.role === "human_operator" || actor.role === "treasury" || actor.id === intent.payload.issuerId;
+    }
+    if (cmd.type === "mandate.revoke_cart" && cart) {
+      const occupying = this.hireOccupyingCart(cart.payload.id);
+      const slip = this.intents.get(cart.payload.intentId);
+      ctx.cartPartyOk =
+        actor.role === "human_operator" ||
+        actor.role === "treasury" ||
+        actor.id === cart.payload.merchant.id ||
+        (occupying !== undefined && actor.id === occupying.buyerId) ||
+        (slip !== undefined && actor.id === slip.payload.subjectId);
+    }
+    if (cmd.type === "mandate.revoke_payment" && payment) {
+      const signer = this.agentByDid(payment.issuer);
+      const parentCart = this.cartMatchingPayment(payment);
+      const occupying = parentCart ? this.hireOccupyingCart(parentCart.payload.id) : undefined;
+      const slip = parentCart ? this.intents.get(parentCart.payload.intentId) : undefined;
+      ctx.paymentPartyOk =
+        actor.role === "human_operator" ||
+        actor.role === "treasury" ||
+        (signer !== undefined && actor.id === signer.id) ||
+        actor.id === payment.payload.payee.id ||
+        (occupying !== undefined && actor.id === occupying.buyerId) ||
+        (slip !== undefined && actor.id === slip.payload.subjectId);
+    }
+    if (cart && (cmd.type === "mandate.revoke_cart" || cmd.type === "mandate.issue_payment" || cmd.type === "hire.fund")) {
+      const revoked = this.revokedCarts.has(cart.payload.id);
+      if (cmd.type === "mandate.revoke_cart") {
+        ctx.cartWindowLive = !revoked && this.occupyingPayment(cart) === undefined;
+      } else {
+        ctx.cartWindowLive = !revoked;
+      }
+    }
+    if (payment && (cmd.type === "mandate.revoke_payment" || cmd.type === "hire.fund")) {
+      const revoked = this.revokedPayments.has(payment.payload.id);
+      if (cmd.type === "mandate.revoke_payment") {
+        ctx.paymentWindowLive = !revoked && !this.hireDrawnPayment(payment);
+      } else {
+        ctx.paymentWindowLive = !revoked;
+      }
+    }
+    if (
+      intent &&
+      (cmd.type === "hire.create" ||
+        cmd.type === "hire.fund" ||
+        cmd.type === "mandate.issue_cart" ||
+        cmd.type === "mandate.revoke" ||
+        cmd.type === "host.subscribe")
+    ) {
+      ctx.intentWindowLive = !this.revokedIntents.has(intent.payload.id);
+    }
     const cartMatch = this.cartFlags(cmd, body, hire, cart);
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
@@ -1546,7 +2423,7 @@ export class Runtime {
       }
       if (rfq) {
         out.skuListed = typeof sku === "string" && isCatalogSku(sku);
-        out.marketFresh = Date.parse(rfq.expiresAt) > now;
+        out.marketFresh = !this.closedRfqs.has(rfq.id) && Date.parse(rfq.expiresAt) > now;
         const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
         out.sellerInvited = invited.length === 0 || invited.includes(actor.id);
         if (out.skuListed) {
@@ -1567,7 +2444,11 @@ export class Runtime {
       out.rfqKnown = Boolean(quote && rfq);
       if (quote && rfq) {
         out.skuListed = typeof sku === "string" && isCatalogSku(sku);
-        out.marketFresh = Date.parse(quote.expiresAt) > now && Date.parse(rfq.expiresAt) > now;
+        out.marketFresh =
+          !this.withdrawnQuotes.has(quote.id) &&
+          !this.closedRfqs.has(rfq.id) &&
+          Date.parse(quote.expiresAt) > now &&
+          Date.parse(rfq.expiresAt) > now;
         const invited = Array.isArray(rfq.invitedSellerIds) ? rfq.invitedSellerIds : [];
         out.sellerInvited = invited.length === 0 || invited.includes(quote.sellerId);
         const consumed = this.consumedQuotes.has(quote.id);
@@ -1578,12 +2459,46 @@ export class Runtime {
       }
       return out;
     }
+    if (cmd.type === "market.withdraw") {
+      out.rfqKnown = Boolean(quote);
+      if (quote) {
+        const rfqOfQuote = this.rfqs.get(quote.rfqId);
+        out.rfqKnown = Boolean(rfqOfQuote);
+        const consumed = this.consumedQuotes.has(quote.id);
+        const reserved = this.reservedQuotes.has(quote.id);
+        out.quoteUnspent = !consumed && !reserved;
+        const envelopeLive = Date.parse(quote.expiresAt) > now;
+        if (quote.fx) {
+          const until = Date.parse(quote.fx.validUntil);
+          out.marketFresh =
+            !this.withdrawnQuotes.has(quote.id) &&
+            envelopeLive &&
+            Number.isFinite(until) &&
+            until > now;
+        } else if (rfqOfQuote) {
+          out.marketFresh =
+            !this.withdrawnQuotes.has(quote.id) &&
+            !this.closedRfqs.has(rfqOfQuote.id) &&
+            envelopeLive &&
+            Date.parse(rfqOfQuote.expiresAt) > now;
+        }
+      }
+      return out;
+    }
+    if (cmd.type === "market.close") {
+      out.rfqKnown = Boolean(rfq);
+      if (rfq) {
+        out.marketFresh = !this.closedRfqs.has(rfq.id) && Date.parse(rfq.expiresAt) > now;
+      }
+      return out;
+    }
     if (cmd.type === "market.fx_settle") {
       const live =
         Boolean(quote?.fx) &&
         quote !== undefined &&
         !this.consumedQuotes.has(quote.id) &&
-        !this.reservedQuotes.has(quote.id);
+        !this.reservedQuotes.has(quote.id) &&
+        !this.withdrawnQuotes.has(quote.id);
       out.fxQuoteLive = live;
       if (quote?.fx && live) {
         const fxOk = Date.parse(quote.fx.validUntil) > now;
@@ -1668,6 +2583,9 @@ export class Runtime {
     if (cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "ladder.set") {
       add(body.agentId);
     }
+    if (cmd.type === "identity.rotate") {
+      add(typeof body.agentId === "string" ? body.agentId : cmd.actorId === "system" ? undefined : cmd.actorId);
+    }
     if (cmd.type === "kya.attest") {
       add(body.delegateId);
       add(body.principalId);
@@ -1724,11 +2642,12 @@ export class Runtime {
   }
 
   private lookupPayment(body: Record<string, unknown>, hire?: HireContract): Signed<PaymentMandate> | undefined {
+    if (typeof body.paymentId === "string") return this.payments.get(body.paymentId as MandateId);
     const id = body.paymentMandateId as MandateId | undefined;
     if (id) return this.payments.get(id);
     if (hire?.cartId) {
       const bound = this.carts.get(hire.cartId);
-      if (bound) return this.paymentMatchingCart(bound);
+      if (bound) return this.anyPaymentMatchingCart(bound);
     }
     return undefined;
   }
@@ -1739,7 +2658,7 @@ export class Runtime {
     hire?: HireContract,
     payment?: Signed<PaymentMandate>,
   ): Money | undefined {
-    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
+    if (cmd.type === "hire.deliver" || cmd.type === "hire.accept" || cmd.type === "hire.refund" || cmd.type === "hire.void" || cmd.type === "envelope.require" || cmd.type === "audit.verify" || cmd.type === "audit.query" || cmd.type === "market.catalog" || cmd.type === "market.withdraw" || cmd.type === "market.close" || cmd.type === "mandate.revoke" || cmd.type === "mandate.revoke_cart" || cmd.type === "mandate.revoke_payment" || cmd.type === "ledger.balances" || cmd.type === "receipt.get" || cmd.type === "host.card" || cmd.type === "host.subscribe" || cmd.type === "approval.resolve" || cmd.type === "kya.attest" || cmd.type === "kya.revoke" || cmd.type === "identity.freeze" || cmd.type === "identity.unfreeze" || cmd.type === "identity.rotate" || cmd.type === "circuit.reset" || cmd.type === "ladder.set") {
       return undefined;
     }
     if (hire) return hire.price;
@@ -1792,6 +2711,8 @@ export class Runtime {
         return this.mutFreeze(body, actor);
       case "identity.unfreeze":
         return this.mutUnfreeze(body, actor);
+      case "identity.rotate":
+        return this.mutRotate(body, actor);
       case "kya.attest":
         return this.mutKyaAttest(body, actor);
       case "kya.revoke":
@@ -1802,14 +2723,24 @@ export class Runtime {
         return this.mutLadder(body, actor);
       case "mandate.issue_intent":
         return this.mutIntent(body, actor);
+      case "mandate.revoke":
+        return this.mutIntentRevoke(body, actor);
+      case "mandate.revoke_cart":
+        return this.mutCartRevoke(body, actor);
+      case "mandate.revoke_payment":
+        return this.mutPaymentRevoke(body, actor);
       case "mandate.issue_cart":
         return this.mutCart(body, actor);
       case "mandate.issue_payment":
         return this.mutPayment(body, actor);
       case "market.rfq":
         return this.mutRfq(body, actor);
+      case "market.close":
+        return this.mutRfqClose(body, actor);
       case "market.quote":
         return this.mutQuote(body, actor);
+      case "market.withdraw":
+        return this.mutQuoteWithdraw(body, actor);
       case "market.fx_settle":
         return this.mutFx(body, actor);
       case "hire.create":
@@ -1820,6 +2751,8 @@ export class Runtime {
         return this.mutHireFund(body, actor);
       case "hire.refund":
         return this.mutHireRefund(body, actor);
+      case "hire.void":
+        return this.mutHireVoid(body, actor);
       case "hire.deliver":
         return this.mutHireDeliver(body, actor);
       case "hire.release":
@@ -1960,6 +2893,20 @@ export class Runtime {
     return agent;
   }
 
+  private mutRotate(body: Record<string, unknown>, actor: Agent) {
+    const targetId = (typeof body.agentId === "string" ? body.agentId : actor.id) as AgentId;
+    const next = this.identity.mintKey(this.ids.next("kid"));
+    const agent = this.identity.rotate(targetId, next);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "IDENTITY_ROTATE",
+      subjects: [{ type: "agent", id: agent.id }],
+      payload: { id: agent.id, kid: next.kid },
+    });
+    return agent;
+  }
+
   private mutKyaAttest(body: Record<string, unknown>, actor: Agent) {
     const delegateId = body.delegateId as AgentId;
     this.identity.require(delegateId);
@@ -1968,10 +2915,13 @@ export class Runtime {
     if (actor.role !== "human_operator" && actor.role !== "treasury" && principalId !== actor.id) {
       throw new Error("kya party");
     }
+    const kind = (body.issuerKind as KyaIssuerKind | undefined) ?? "aether.self";
+    const issuer = this.kya.issuerOfKind(kind);
     const att: DelegationAttestation = {
       id: this.ids.next("dlg") as DelegationId,
       vct: "aether.kya.delegation.1",
-      issuerKind: (body.issuerKind as KyaIssuerKind | undefined) ?? "aether.self",
+      issuerKind: kind,
+      issuerId: issuer.id,
       principalId,
       grantorId: actor.id,
       delegateId,
@@ -2001,7 +2951,7 @@ export class Runtime {
         { type: "delegation", id: att.id },
         { type: "delegate", id: delegateId },
       ],
-      payload: { id: att.id, principalId, delegateId, maxAutonomy: att.maxAutonomy, issuerKind: att.issuerKind },
+      payload: { id: att.id, principalId, delegateId, maxAutonomy: att.maxAutonomy, issuerKind: att.issuerKind, issuerId: att.issuerId },
     });
     return att;
   }
@@ -2077,6 +3027,9 @@ export class Runtime {
     if (rec && !recurrenceMintable(rec)) {
       throw new Error("intent recurrence already exhausted");
     }
+    if (rec && !cadenceReachable(rec)) {
+      throw new Error("intent cadence unreachable");
+    }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",
       id: this.ids.next("mid") as MandateId,
@@ -2091,6 +3044,7 @@ export class Runtime {
       const parent = this.intents.get(body.parentId as MandateId);
       if (!parent) throw new Error("unknown parent intent");
       if (parent.payload.exp <= unixSeconds(this.clock.now())) throw new Error("parent intent expired");
+      if (this.revokedIntents.has(parent.payload.id)) throw new Error("parent intent revoked");
       this.assertKyaNestedParentsLive(actor, parent);
       payload.parentId = body.parentId as MandateId;
     }
@@ -2106,12 +3060,73 @@ export class Runtime {
     return signed;
   }
 
+  private mutIntentRevoke(body: Record<string, unknown>, actor: Agent) {
+    const intent = this.intents.get(body.intentId as MandateId);
+    if (!intent) throw new Error("unknown intent");
+    if (this.revokedIntents.has(intent.payload.id)) throw new Error("intent already revoked");
+    this.revokedIntents.add(intent.payload.id);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "MANDATE_REVOKE",
+      subjects: [{ type: "intent", id: intent.payload.id }],
+      payload: { id: intent.payload.id, issuerId: intent.payload.issuerId },
+    });
+    return intent;
+  }
+
+  private hireOccupyingCart(cartId: MandateId): HireContract | undefined {
+    for (const hire of this.hires.values()) {
+      if (hire.cartId === cartId) return hire;
+    }
+    return undefined;
+  }
+
+  private mutCartRevoke(body: Record<string, unknown>, actor: Agent) {
+    const cart = this.carts.get(body.cartId as MandateId);
+    if (!cart) throw new Error("unknown cart");
+    if (this.occupyingPayment(cart)) throw new Error("cart bound");
+    if (this.revokedCarts.has(cart.payload.id)) throw new Error("cart already revoked");
+    this.revokedCarts.add(cart.payload.id);
+    const occupying = this.hireOccupyingCart(cart.payload.id);
+    if (occupying) {
+      const next: HireContract = { ...occupying };
+      delete next.cartId;
+      this.hires.set(occupying.id, next);
+    }
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "CART_REVOKE",
+      subjects: [{ type: "cart", id: cart.payload.id }],
+      payload: { id: cart.payload.id, merchantId: cart.payload.merchant.id },
+    });
+    return cart;
+  }
+
+  private mutPaymentRevoke(body: Record<string, unknown>, actor: Agent) {
+    const payment = this.payments.get(body.paymentId as MandateId);
+    if (!payment) throw new Error("unknown payment");
+    if (this.hireDrawnPayment(payment)) throw new Error("payment funded");
+    if (this.revokedPayments.has(payment.payload.id)) throw new Error("payment already revoked");
+    this.revokedPayments.add(payment.payload.id);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "PAYMENT_REVOKE",
+      subjects: [{ type: "payment", id: payment.payload.id }],
+      payload: { id: payment.payload.id, payeeId: payment.payload.payee.id },
+    });
+    return payment;
+  }
+
   private mutCart(body: Record<string, unknown>, actor: Agent) {
     const boundHire =
       typeof body.hireId === "string" ? this.hires.get(body.hireId as HireId) : undefined;
     if (boundHire?.cartId) throw new Error("hire already has a cart");
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
+    if (this.revokedIntents.has(intent.payload.id)) throw new Error("intent revoked");
     const merchantAgent = this.identity.require(body.merchantId as AgentId);
     const lineItems = body.line_items as CartMandate["line_items"];
     if (!lineItems[0]?.unitAmount || typeof lineItems[0].quantity !== "number") {
@@ -2157,7 +3172,8 @@ export class Runtime {
   private mutPayment(body: Record<string, unknown>, actor: Agent) {
     const cart = this.carts.get(body.cartId as MandateId);
     if (!cart) throw new Error("unknown cart");
-    if (this.paymentMatchingCart(cart)) throw new Error("cart already has a payment");
+    if (this.revokedCarts.has(cart.payload.id)) throw new Error("cart revoked");
+    if (this.occupyingPayment(cart)) throw new Error("cart already has a payment");
     const payload: PaymentMandate = {
       vct: "aether.mandate.payment.1",
       id: this.ids.next("mid") as MandateId,
@@ -2205,9 +3221,25 @@ export class Runtime {
     return rfq;
   }
 
+  private mutRfqClose(body: Record<string, unknown>, actor: Agent) {
+    const rfq = this.rfqs.get(String(body.rfqId));
+    if (!rfq) throw new Error("unknown rfq");
+    if (this.closedRfqs.has(rfq.id)) throw new Error("rfq already closed");
+    this.closedRfqs.add(rfq.id);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "RFQ_CLOSE",
+      subjects: [{ type: "rfq", id: rfq.id }],
+      payload: { id: rfq.id, buyerId: rfq.buyerId },
+    });
+    return rfq;
+  }
+
   private mutQuote(body: Record<string, unknown>, actor: Agent) {
     const rfq = this.rfqs.get(String(body.rfqId));
     if (!rfq) throw new Error("unknown rfq");
+    if (this.closedRfqs.has(rfq.id)) throw new Error("rfq closed");
     const price = body.price as Money;
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, price.currency)) {
       throw new Error("sku currency");
@@ -2243,20 +3275,41 @@ export class Runtime {
     return quote;
   }
 
+  private mutQuoteWithdraw(body: Record<string, unknown>, actor: Agent) {
+    const quote = this.quotes.get(String(body.quoteId));
+    if (!quote) throw new Error("unknown quote");
+    if (this.consumedQuotes.has(quote.id) || this.reservedQuotes.has(quote.id)) {
+      throw new Error("quote already used");
+    }
+    if (this.withdrawnQuotes.has(quote.id)) throw new Error("quote already withdrawn");
+    this.withdrawnQuotes.add(quote.id);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "QUOTE_WITHDRAW",
+      subjects: [{ type: "quote", id: quote.id }],
+      payload: { id: quote.id, sellerId: quote.sellerId },
+    });
+    return quote;
+  }
+
   private mutHireCreate(body: Record<string, unknown>, actor: Agent) {
     const quote = this.quotes.get(String(body.quoteId));
     const rfq = quote ? this.rfqs.get(quote.rfqId) : undefined;
     if (!quote || !rfq) throw new Error("unknown quote");
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
+    if (this.revokedIntents.has(intent.payload.id)) throw new Error("intent revoked");
     if (intent.payload.parentId) {
       const parent = this.intents.get(intent.payload.parentId);
-      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now()) || this.revokedIntents.has(parent.payload.id)) {
         throw new Error("parent intent expired");
       }
     }
     this.assertKyaNestedParentsLive(actor, intent);
     if (this.consumedQuotes.has(quote.id)) throw new Error("quote already used");
+    if (this.withdrawnQuotes.has(quote.id)) throw new Error("quote withdrawn");
+    if (this.closedRfqs.has(rfq.id)) throw new Error("rfq closed");
     if (isCatalogSku(rfq.sku) && !skuAllowsCurrency(rfq.sku, quote.price.currency)) {
       throw new Error("sku currency");
     }
@@ -2300,6 +3353,20 @@ export class Runtime {
     const hire = this.requireHire(body.hireId as HireId);
     if (hire.sellerId !== actor.id) throw new Error("only seller may accept");
     const next = transitionHire(hire, "accepted");
+    this.hires.set(next.id, next);
+    this.audit.append({
+      clock: this.clock,
+      actorId: actor.id,
+      action: "HIRE_TRANSITION",
+      subjects: [{ type: "hire", id: hire.id }],
+      payload: { id: hire.id, state: next.state },
+    });
+    return next;
+  }
+
+  private mutHireVoid(body: Record<string, unknown>, actor: Agent) {
+    const hire = this.requireHire(body.hireId as HireId);
+    const next = transitionHire(hire, "void");
     this.hires.set(next.id, next);
     this.audit.append({
       clock: this.clock,
@@ -2517,7 +3584,7 @@ export class Runtime {
     if (!rfq || !fxPairSettles(rfq.sku, quote.price, quote.fx)) {
       throw new Error("fx pair");
     }
-    if (this.consumedQuotes.has(quote.id) || this.reservedQuotes.has(quote.id)) {
+    if (this.consumedQuotes.has(quote.id) || this.reservedQuotes.has(quote.id) || this.withdrawnQuotes.has(quote.id)) {
       throw new Error("fx quote already settled");
     }
     const mm = [...this.identity.all()].find((a) => a.role === "market_maker");
@@ -2736,10 +3803,31 @@ export class Runtime {
     });
   }
 
-  private paymentMatchingCart(cart: Signed<CartMandate>): Signed<PaymentMandate> | undefined {
+  private occupyingPayment(cart: Signed<CartMandate>): Signed<PaymentMandate> | undefined {
+    return this.paymentMatchingCart(cart, false);
+  }
+
+  private anyPaymentMatchingCart(cart: Signed<CartMandate>): Signed<PaymentMandate> | undefined {
+    return this.paymentMatchingCart(cart, true);
+  }
+
+  private paymentMatchingCart(cart: Signed<CartMandate>, includeRevoked = false): Signed<PaymentMandate> | undefined {
     const hash = cartHash(cart.payload);
+    let revoked: Signed<PaymentMandate> | undefined;
     for (const p of this.payments.values()) {
-      if (p.payload.transaction_id === hash) return p;
+      if (p.payload.transaction_id !== hash) continue;
+      if (this.revokedPayments.has(p.payload.id)) {
+        revoked = p;
+        continue;
+      }
+      return p;
+    }
+    return includeRevoked ? revoked : undefined;
+  }
+
+  private agentByDid(did: string): Agent | undefined {
+    for (const a of this.identity.all()) {
+      if (a.did === did) return a;
     }
     return undefined;
   }
@@ -2781,8 +3869,43 @@ export class Runtime {
       if (!hire.cartId) continue;
       const cart = this.carts.get(hire.cartId);
       if (!cart) continue;
-      const bound = this.paymentMatchingCart(cart);
+      const bound = this.occupyingPayment(cart);
       if (bound?.payload.id === payment.payload.id) return true;
+    }
+    return false;
+  }
+
+  /**
+   * verifyChain against the first payment key that actually signed the check.
+   * Speaker, buyer, intent subject, and a human supervisor are candidates.
+   * Who may spend is mandate.subject_is_actor, not a broken chain.
+   */
+  private paymentChainOk(
+    intent: Signed<IntentMandate>,
+    cart: Signed<CartMandate>,
+    payment: Signed<PaymentMandate>,
+    paymentSignerIds: AgentId[],
+    checkExp: boolean,
+  ): boolean {
+    const seen = new Set<string>();
+    for (const signerId of paymentSignerIds) {
+      if (seen.has(signerId)) continue;
+      seen.add(signerId);
+      const intentKey = this.keyByKid(intent.payload.issuerId, intent.kid);
+      const cartKey = this.keyByKid(cart.payload.merchant.id, cart.kid);
+      const paymentKey = this.keyByKid(signerId, payment.kid) ?? this.identity.keys.get(signerId);
+      if (!intentKey || !cartKey || !paymentKey) continue;
+      const chain = verifyChain({
+        intent,
+        cart,
+        payment,
+        intentKey,
+        cartKey,
+        paymentKey,
+        nowIso: this.clock.now(),
+        checkExp,
+      });
+      if (chain.ok) return true;
     }
     return false;
   }
@@ -2792,14 +3915,14 @@ export class Runtime {
     if (!hire.cartId) return false;
     const cart = this.carts.get(hire.cartId);
     if (!cart) return false;
-    return this.paymentMatchingCart(cart) !== undefined;
+    return this.anyPaymentMatchingCart(cart) !== undefined;
   }
 
   private paymentForHire(hire: HireContract): Signed<PaymentMandate> {
     if (!hire.cartId) throw new Error("hire has no cart");
     const cart = this.carts.get(hire.cartId);
     if (!cart) throw new Error("missing cart");
-    const payment = this.paymentMatchingCart(cart);
+    const payment = this.occupyingPayment(cart);
     if (!payment) throw new Error("missing payment mandate for hire");
     return payment;
   }
@@ -2988,7 +4111,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };
