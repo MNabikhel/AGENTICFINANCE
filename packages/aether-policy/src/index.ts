@@ -1338,7 +1338,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.principal_not_frozen": {
     kind: "unfreeze_principal",
     commandType: "identity.unfreeze",
-    hint: "The money’s owner is frozen. Unfreeze the principal, not only the delegate.",
+    hint: "The money’s owner is frozen. Unfreeze the principal, not only the delegate. A frozen speaker stays actor.not_frozen. A revoked hop stays kya.chain_intact. A no-op thaw stays identity.freeze_state. Completing funded work after expiry is legal; freeze and revoke still bind.",
   },
   "kya.attestation_fresh": {
     kind: "attest_kya",

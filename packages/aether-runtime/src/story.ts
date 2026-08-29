@@ -265,6 +265,9 @@ export const SOUR_TLDR =
 export const CUT_TLDR =
   "A founder funded an $800 hire under a live handshake. After that hop was revoked, a new hire was kya.chain_intact — an expired hop is not this deny, a nested parent is not this deny, a frozen speaker is not this deny, a ghost revoke is not this deny. No hire written. A new handshake still unlocked the lock. That funded work still released. A revoke is not an expiry.";
 
+export const ICE_TLDR =
+  "A founder funded an $800 hire under a live handshake. After the money's owner was frozen, a new hire was kya.principal_not_frozen — a frozen speaker is not this deny, a revoked hop is not this deny, a no-op thaw is not this deny. No hire written. An unfreeze still unlocked the lock. That funded work still released. A frozen principal is not a frozen desk.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -835,7 +838,7 @@ export function autoBeat(input: {
       } else if (ruleId === "circuit.daily") {
         body = "The daily fuse blew. Standing permission does not mean unlimited. Completing funded work after that is legal; a new hire is not. Until a human resets the circuit, even a tiny hire is refused.";
       } else if (ruleId === "kya.principal_not_frozen") {
-        body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move.";
+        body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move. A frozen speaker is not this deny. Completing funded work after expiry is legal; freeze and revoke still bind. Unfreeze the principal to unlock the lock.";
       } else if (ruleId === "kya.chain_intact") {
         body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists. An expired hop is not this deny. Completing funded work after expiry is legal; freeze and revoke still bind. Attest again to unlock the lock.";
       } else if (ruleId === "actor.role_capability") {

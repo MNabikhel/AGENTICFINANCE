@@ -685,6 +685,12 @@ paths:
       responses:
         "200": { description: Cut TAP report. A revoke is not an expiry. }
         "500": { description: Assertions failed }
+  /v1/demo/ice:
+    post:
+      operationId: demoIce
+      responses:
+        "200": { description: Ice TAP report. A frozen principal is not a frozen desk. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

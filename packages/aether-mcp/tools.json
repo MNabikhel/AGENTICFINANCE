@@ -565,6 +565,11 @@
       "name": "aether_demo_cut",
       "commandType": "demo.cut",
       "description": "Run the cut TAP: a revoke is not an expiry. hire.create after a live hop is revoked is kya.chain_intact; an expired hop, a nested parent, a frozen speaker, and a ghost revoke still allow; no hire is written; a new handshake still unlocks the lock; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ice",
+      "commandType": "demo.ice",
+      "description": "Run the ice TAP: a frozen principal is not a frozen desk. hire.create after the founder is frozen is kya.principal_not_frozen; a frozen speaker, a revoked hop, and a no-op thaw still allow; no hire is written; an unfreeze still unlocks the lock; funded work still finishes."
     }
   ]
 }

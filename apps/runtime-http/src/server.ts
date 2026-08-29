@@ -94,6 +94,7 @@ import { loadSafeBalance, runSafeBalance } from "@aether/safe-balance";
 import { loadFxPair, runFxPair } from "@aether/fx-pair";
 import { loadApprovalReplay, runApprovalReplay } from "@aether/approval-replay";
 import { loadChainIntact, runChainIntact } from "@aether/chain-intact";
+import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal-not-frozen";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -180,6 +181,7 @@ const brimFixture = join(process.cwd(), "fixtures/demo/brim/scenario.json");
 const swapFixture = join(process.cwd(), "fixtures/demo/swap/scenario.json");
 const sourFixture = join(process.cwd(), "fixtures/demo/sour/scenario.json");
 const cutFixture = join(process.cwd(), "fixtures/demo/cut/scenario.json");
+const iceFixture = join(process.cwd(), "fixtures/demo/ice/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1003,6 +1005,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runChainIntact(loadChainIntact(cutFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "cut" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/ice") {
+        const report = runPrincipalNotFrozen(loadPrincipalNotFrozen(iceFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "ice" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

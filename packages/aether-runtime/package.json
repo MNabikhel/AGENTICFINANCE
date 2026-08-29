@@ -85,7 +85,8 @@
     "./safe-balance": "./src/safe-balance.ts",
     "./fx-pair": "./src/fx-pair.ts",
     "./approval-replay": "./src/approval-replay.ts",
-    "./chain-intact": "./src/chain-intact.ts"
+    "./chain-intact": "./src/chain-intact.ts",
+    "./principal-not-frozen": "./src/principal-not-frozen.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
