@@ -122,8 +122,8 @@ export class ExposureBook {
 
   snapshot() {
     return {
-      legs: this.legs,
-      windows: this.windows,
+      legs: [...this.legs],
+      windows: [...this.windows],
       bilateralLimit: this.defaultBilateralLimit,
       usd: {
         positions: this.positions("USD_SIM"),

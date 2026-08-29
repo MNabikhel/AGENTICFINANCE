@@ -26,7 +26,18 @@ import { evaluate, remediationFor } from "@aether/policy";
 import { SIM_RAIL, settlementFail } from "@aether/settlement";
 import { commandShapeError } from "./command-schema.js";
 import { HOST_INVOICE_WINDOW_MS } from "./host-door.js";
-import { analog, autoBeat, IDLE_TLDR, SPRINT_TLDR, type Analog, type StoryBeat } from "./story.js";
+import {
+  analog,
+  autoBeat,
+  IDLE_TLDR,
+  SPRINT_TLDR,
+  NIGHT_WATCH_TLDR,
+  SUBHIRE_TLDR,
+  CLEARING_TLDR,
+  nightWatchAnalog,
+  type Analog,
+  type StoryBeat,
+} from "./story.js";
 import { WORLD_VERSION, type WorldState } from "./world.js";
 import type {
   Account,
@@ -178,6 +189,16 @@ const KYA_NESTED_SPEND: ReadonlySet<CommandType> = new Set([
   "mandate.issue_intent",
   "hire.create",
   "hire.fund",
+]);
+
+/**
+ * Pair gross is reserved at offer and recorded at fund. Completing funded work
+ * (deliver / submit / release) is not a second leg. FX settle records both books.
+ */
+const CLEARING_SPEND: ReadonlySet<CommandType> = new Set([
+  "hire.create",
+  "hire.fund",
+  "market.fx_settle",
 ]);
 
 /** Undefined = no nested hop on the path. False = a parent hop is expired or revoked. */
@@ -948,7 +969,7 @@ export class Runtime {
       decisions: [...this.decisions],
       story: [...this.story],
       kya: { attestations: [...this.kya.attestations.values()], blocked: [...this.kya.blocked] },
-      clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.windows },
+      clearing: { legs: this.clearing.snapshot().legs, windows: this.clearing.snapshot().windows },
       killSwitchTested: [...this.killSwitchTested],
       idempotency: [...this.idempotency.entries()],
       hosted: this.hosted,
@@ -1376,7 +1397,7 @@ export class Runtime {
     if (mmInventoryOk !== undefined) ctx.mmInventoryOk = mmInventoryOk;
     if (chainOk !== undefined) ctx.chainOk = chainOk;
     if (thresholdWaived) ctx.thresholdWaived = true;
-    if (payeeId && amount) {
+    if (payeeId && amount && CLEARING_SPEND.has(cmd.type)) {
       ctx.projectedExposure = this.clearing.projected(actor.id, payeeId, amount.currency, amount.amount);
       ctx.exposureLimit = this.clearing.defaultBilateralLimit;
     }

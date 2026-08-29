@@ -27,6 +27,7 @@ export default defineConfig({
       "@aether/sprint": path.resolve(__dirname, "packages/aether-runtime/src/sprint-procurement.ts"),
       "@aether/night-watch": path.resolve(__dirname, "packages/aether-runtime/src/night-watch.ts"),
       "@aether/sub-hire": path.resolve(__dirname, "packages/aether-runtime/src/sub-hire.ts"),
+      "@aether/clearing-window": path.resolve(__dirname, "packages/aether-runtime/src/clearing-window.ts"),
     },
   },
 });

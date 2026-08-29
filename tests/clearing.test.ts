@@ -50,4 +50,13 @@ describe("clearing book", () => {
     expect(tight.wouldExceed("aid_A", "aid_B", "USD_SIM", 40000)).toBe(true);
     expect(tight.wouldExceed("aid_A", "aid_B", "USD_SIM", 20000)).toBe(false);
   });
+
+  it("snapshot is a photo, not a live view of the open book", () => {
+    const book = new ExposureBook();
+    book.record("aid_A", "aid_B", 80000, "USD_SIM");
+    const snap = book.snapshot();
+    book.record("aid_A", "aid_B", 40000, "USD_SIM");
+    expect(snap.legs).toHaveLength(1);
+    expect(book.snapshot().legs).toHaveLength(2);
+  });
 });
