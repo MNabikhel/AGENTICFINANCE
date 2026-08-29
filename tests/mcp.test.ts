@@ -23,6 +23,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_sub_hire");
     expect(names).toContain("aether_demo_clearing");
     expect(names).toContain("aether_demo_refund");
+    expect(names).toContain("aether_demo_replay");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_market_fx_settle");
     expect(names).toContain("aether_ledger_transfer");
@@ -105,6 +106,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("Refund returned escrow");
+  });
+
+  it("runs the replay demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_replay", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("Retrying the same fund did not move cash again");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

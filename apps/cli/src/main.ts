@@ -5,6 +5,7 @@ import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
 import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
 import { loadRefund, runRefund } from "@aether/refund";
+import { loadReplay, runReplay } from "@aether/replay";
 
 const [, , command, name] = process.argv;
 
@@ -60,6 +61,12 @@ if (command === "demo" && (name === "refund" || name === "refund-unwind")) {
   process.exit(0);
 }
 
+if (command === "demo" && (name === "replay" || name === "replay-once")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/replay/scenario.json");
+  printReport(runReplay(loadReplay(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -71,5 +78,6 @@ usage:
   pnpm demo sub-hire
   pnpm demo clearing
   pnpm demo refund
+  pnpm demo replay
   pnpm mcp`);
 process.exit(command ? 1 : 0);

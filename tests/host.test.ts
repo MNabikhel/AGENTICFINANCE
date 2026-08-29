@@ -96,6 +96,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "clearing-window")?.description).toContain("POST /v1/demo/clearing");
     expect(card.skills.some((s) => s.id === "refund-unwind")).toBe(true);
     expect(card.skills.find((s) => s.id === "refund-unwind")?.description).toContain("POST /v1/demo/refund");
+    expect(card.skills.some((s) => s.id === "replay-once")).toBe(true);
+    expect(card.skills.find((s) => s.id === "replay-once")?.description).toContain("POST /v1/demo/replay");
   });
 
   it("lets a registered desk read the same card", () => {

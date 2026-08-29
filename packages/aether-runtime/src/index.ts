@@ -35,6 +35,7 @@ import {
   SUBHIRE_TLDR,
   CLEARING_TLDR,
   REFUND_TLDR,
+  REPLAY_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -787,6 +788,11 @@ export class Runtime {
           id: "refund-unwind",
           name: "Refund TAP",
           description: "POST /v1/demo/refund — unwind funded escrow; quote stays spent; circuit stays sticky",
+        },
+        {
+          id: "replay-once",
+          name: "Replay TAP",
+          description: "POST /v1/demo/replay — a retry of an allow is not a second spend",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3188,7 +3194,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

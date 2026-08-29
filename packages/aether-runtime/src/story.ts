@@ -34,6 +34,9 @@ export const CLEARING_TLDR =
 export const REFUND_TLDR =
   "A desk funded an $800 research hire. Refund returned escrow, restored the mandate budget, and reverse-recorded the pair in the clearing book. The quote stayed spent. An over-cap hire had already blown the daily fuse; refund did not untrip it. After a treasury reset, refund of delivered work was hire.state. Unwind is not a new quote and not a circuit reset.";
 
+export const REPLAY_TLDR =
+  "A desk funded an $800 research hire. Retrying the same fund did not move cash again — the allow replayed. Retrying the same hire.create returned the same contract. A new key on that spent quote was hire.quote_unspent. A retry is not a second spend.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

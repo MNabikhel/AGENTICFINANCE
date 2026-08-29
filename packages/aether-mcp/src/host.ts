@@ -12,6 +12,7 @@ import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
 import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
 import { loadRefund, runRefund } from "@aether/refund";
+import { loadReplay, runReplay } from "@aether/replay";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -62,6 +63,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_sub_hire",
   "aether_demo_clearing",
   "aether_demo_refund",
+  "aether_demo_replay",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -349,6 +351,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_refund") {
       const report = runRefund(loadRefund("fixtures/demo/refund/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_replay") {
+      const report = runReplay(loadReplay("fixtures/demo/replay/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

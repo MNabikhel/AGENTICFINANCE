@@ -29,6 +29,7 @@ export default defineConfig({
       "@aether/sub-hire": path.resolve(__dirname, "packages/aether-runtime/src/sub-hire.ts"),
       "@aether/clearing-window": path.resolve(__dirname, "packages/aether-runtime/src/clearing-window.ts"),
       "@aether/refund": path.resolve(__dirname, "packages/aether-runtime/src/refund.ts"),
+      "@aether/replay": path.resolve(__dirname, "packages/aether-runtime/src/replay.ts"),
     },
   },
 });

@@ -17,6 +17,7 @@ import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
 import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
 import { loadRefund, runRefund } from "@aether/refund";
+import { loadReplay, runReplay } from "@aether/replay";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,7 @@ const nightWatchFixture = join(process.cwd(), "fixtures/demo/night-watch/scenari
 const subHireFixture = join(process.cwd(), "fixtures/demo/sub-hire/scenario.json");
 const clearingFixture = join(process.cwd(), "fixtures/demo/clearing-window/scenario.json");
 const refundFixture = join(process.cwd(), "fixtures/demo/refund/scenario.json");
+const replayFixture = join(process.cwd(), "fixtures/demo/replay/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -310,6 +312,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runRefund(loadRefund(refundFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "refund" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/replay") {
+        const report = runReplay(loadReplay(replayFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "replay" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

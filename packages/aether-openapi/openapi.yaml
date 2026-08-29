@@ -223,6 +223,12 @@ paths:
       responses:
         "200": { description: Refund TAP report. Unwind funded escrow; quote stays spent; circuit stays sticky. }
         "500": { description: Assertions failed }
+  /v1/demo/replay:
+    post:
+      operationId: demoReplayOnce
+      responses:
+        "200": { description: Replay TAP report. A retry of an allow is not a second spend. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

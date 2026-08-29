@@ -180,6 +180,11 @@
       "name": "aether_demo_refund",
       "commandType": "demo.refund",
       "description": "Run the refund TAP: unwind funded escrow, restore spend, reverse clearing; quote stays spent; circuit stays sticky."
+    },
+    {
+      "name": "aether_demo_replay",
+      "commandType": "demo.replay",
+      "description": "Run the replay TAP: a retry of an allow is not a second spend."
     }
   ]
 }

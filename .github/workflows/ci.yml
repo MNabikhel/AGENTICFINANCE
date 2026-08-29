@@ -20,3 +20,4 @@ jobs:
       - run: pnpm demo:sub-hire
       - run: pnpm demo:clearing
       - run: pnpm demo:refund
+      - run: pnpm demo:replay
