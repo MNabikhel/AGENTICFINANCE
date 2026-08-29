@@ -96,6 +96,7 @@ pnpm demo ink             # a cart label is not the hire's money
 pnpm demo brim            # IEEE rounding is not a mint
 pnpm demo swap            # a swapped pair is not a silent journal of the books this rail actually posts
 pnpm demo sour            # a grown-up yes is not a late hire
+pnpm demo cut             # a revoke is not an expiry
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

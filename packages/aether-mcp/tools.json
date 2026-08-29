@@ -560,6 +560,11 @@
       "name": "aether_demo_sour",
       "commandType": "demo.sour",
       "description": "Run the sour TAP: a grown-up yes is not a late hire. approval.resolve approved of a live ticket whose paused quote has died is approval.replay; a missing ticket and a dead ticket still allow; the quote stays held; a grown-up no still frees it; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_cut",
+      "commandType": "demo.cut",
+      "description": "Run the cut TAP: a revoke is not an expiry. hire.create after a live hop is revoked is kya.chain_intact; an expired hop, a nested parent, a frozen speaker, and a ghost revoke still allow; no hire is written; a new handshake still unlocks the lock; funded work still finishes."
     }
   ]
 }

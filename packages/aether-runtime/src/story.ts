@@ -262,6 +262,9 @@ export const SWAP_TLDR =
 export const SOUR_TLDR =
   "A founder funded an $800 hire under the auto-approve line. A $6,400 hire paused for a grown-up. After that quote died, a yes was approval.replay — a missing ticket is not this deny, a dead ticket is not this deny. The quote stayed held. A grown-up no still freed it. That funded work still released. A grown-up yes is not a late hire.";
 
+export const CUT_TLDR =
+  "A founder funded an $800 hire under a live handshake. After that hop was revoked, a new hire was kya.chain_intact — an expired hop is not this deny, a nested parent is not this deny, a frozen speaker is not this deny, a ghost revoke is not this deny. No hire written. A new handshake still unlocked the lock. That funded work still released. A revoke is not an expiry.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -834,7 +837,7 @@ export function autoBeat(input: {
       } else if (ruleId === "kya.principal_not_frozen") {
         body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move.";
       } else if (ruleId === "kya.chain_intact") {
-        body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists.";
+        body = "No live handshake from the money’s owner. Registration-time supervision is not enough once a revoke tombstone exists. An expired hop is not this deny. Completing funded work after expiry is legal; freeze and revoke still bind. Attest again to unlock the lock.";
       } else if (ruleId === "actor.role_capability") {
         body = "This role cannot hire. An auditor who can spend is not an auditor. Completing funded work after that is legal; a new hire by this speaker is not.";
       } else if (ruleId === "actor.not_frozen") {
@@ -1318,7 +1321,7 @@ export function autoBeat(input: {
       at: input.at,
       headline: `${who} revoked the handshake`,
       body: "The agent still exists. Its keys still work. It still cannot spend — implicit supervisor grants die with the tombstone. Revoke cascades to anyone it had hired underneath.",
-      tone: "deny",
+      tone: "allow",
       commandType: cmd.type,
     };
   }

@@ -84,7 +84,8 @@
     "./currency-match": "./src/currency-match.ts",
     "./safe-balance": "./src/safe-balance.ts",
     "./fx-pair": "./src/fx-pair.ts",
-    "./approval-replay": "./src/approval-replay.ts"
+    "./approval-replay": "./src/approval-replay.ts",
+    "./chain-intact": "./src/chain-intact.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -1333,7 +1333,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.chain_intact": {
     kind: "attest_kya",
     commandType: "kya.attest",
-    hint: "No live handshake from the principal. Attest, or stop. Revoke is a tombstone.",
+    hint: "No live handshake from the principal. Attest, or stop. Revoke is a tombstone. An expired hop stays kya.attestation_fresh. A nested parent stays kya.parent_fresh. A frozen speaker stays actor.not_frozen. A frozen principal stays kya.principal_not_frozen. A ghost revoke stays kya.known_attestation. Completing funded work after expiry is legal; freeze and revoke still bind.",
   },
   "kya.principal_not_frozen": {
     kind: "unfreeze_principal",
