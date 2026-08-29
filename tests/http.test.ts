@@ -222,3 +222,86 @@ describe("HTTP ledger.balances and receipt.get", () => {
     expect(String(r.body.url)).toContain("127.0.0.1");
   });
 });
+
+describe("HTTP command bus", () => {
+  it("POST /v1/commands dispatches every CommandType", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "host.card", actor: "system" }),
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.kind).toBe("allow");
+    const card = r.body.data as { hosted: boolean; evaluateLlm: boolean };
+    expect(card.hosted).toBe(false);
+    expect(card.evaluateLlm).toBe(false);
+  });
+
+  it("POST /v1/commands names command.malformed for an unknown type", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "not.a.command", actor: "system" }),
+    });
+    expect(r.status).toBe(400);
+    expect(r.body.type).toBe("https://aether.dev/errors/command.malformed");
+    expect(String(r.body.detail)).toContain("unknown command type");
+  });
+
+  it("POST /v1/hires/{id}/deliver is hire.deliver on the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/hires/hid_01J6AETHERGHOSTHIRE0000001/deliver", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system" }),
+    });
+    expect(r.status).toBe(422);
+    const decision = r.body.decision as { remediation?: { ruleId: string } };
+    expect(decision.remediation?.ruleId).toBe("actor.role_capability");
+  });
+
+  it("POST /v1/fx/settle and POST /v1/ledger/transfers are the command bus", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const fx = await json("/v1/fx/settle", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ actor: "system", quoteId: "qte_01J6AETHERGHOSTQUOTE00001" }),
+    });
+    expect(fx.status).toBe(422);
+    expect((fx.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("market.fx_quote");
+    const xfer = await json("/v1/ledger/transfers", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actor: "system",
+        fromAccount: "system:equity",
+        toAccount: "system:equity",
+        amount: { amount: 1, currency: "USD_SIM" },
+      }),
+    });
+    expect(xfer.status).toBe(422);
+    expect((xfer.body.decision as { remediation?: { ruleId: string } }).remediation?.ruleId).toBe("ledger.sufficient");
+  });
+
+  it("GET /openapi.yaml is the document, not a laptop path", async () => {
+    const res = await fetch(`${base}/openapi.yaml`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("yaml");
+    const text = await res.text();
+    expect(text).toContain("openapi: 3.1.0");
+    expect(text).toContain("operationId: commandDispatch");
+    expect(text).not.toMatch(/"201":/);
+  });
+
+  it("GET /openapi.json carries the YAML document, not a filesystem note", async () => {
+    const r = await json("/openapi.json");
+    expect(r.status).toBe(200);
+    expect(r.body.format).toBe("yaml");
+    expect(String(r.body.document)).toContain("openapi: 3.1.0");
+    expect(r.body.path).toBeUndefined();
+    expect(r.body.note).toBeUndefined();
+  });
+});
+

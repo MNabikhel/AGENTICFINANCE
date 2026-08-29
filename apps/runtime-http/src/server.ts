@@ -46,6 +46,15 @@ function boot(): Runtime {
   });
 }
 
+const commandSchemaPath = join(process.cwd(), "schemas/commands.schema.json");
+const commandBodies = (
+  JSON.parse(readFileSync(commandSchemaPath, "utf8")) as { commands: Record<string, unknown> }
+).commands;
+
+function isCommandType(v: unknown): v is CommandType {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(commandBodies, v);
+}
+
 function json(res: ServerResponse, status: number, body: unknown, headers?: Record<string, string>) {
   const payload = JSON.stringify(body, null, 2);
   res.writeHead(status, {
@@ -72,7 +81,7 @@ function proofOf(req: IncomingMessage, body: Record<string, unknown>): string | 
 }
 
 function dispatchJson(type: CommandType, reqBody: Record<string, unknown>, actorId: AgentId | "system"): DispatchResult {
-  const { actorId: _a, actor: _b, idempotencyKey, speakerProof: _p, ...body } = reqBody;
+  const { actorId: _a, actor: _b, idempotencyKey, speakerProof: _p, type: _t, ...body } = reqBody;
   const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
   return runtime.dispatch(cmd(type, actorId, body, key));
 }
@@ -85,6 +94,20 @@ function attachSpeakerKey(type: CommandType, result: DispatchResult): DispatchRe
   return { ok: true, value: { ...result.value, data: { ...data, speakerKey } } };
 }
 
+function paymentHeaders(type: CommandType): (r: DispatchResult) => Record<string, string> | undefined {
+  return (r) => {
+    if (!r.ok) return undefined;
+    if (type === "envelope.require") {
+      return { "PAYMENT-REQUIRED": encodeRequired(r.value.data as never) };
+    }
+    if (type === "envelope.submit") {
+      const settlement = (r.value.data as { settlement?: Parameters<typeof encodeResponse>[0] }).settlement;
+      return settlement ? { "PAYMENT-RESPONSE": encodeResponse(settlement) } : undefined;
+    }
+    return undefined;
+  };
+}
+
 function handleDispatch(
   req: IncomingMessage,
   res: ServerResponse,
@@ -92,7 +115,7 @@ function handleDispatch(
   reqBody: Record<string, unknown>,
   extra?: (r: DispatchResult) => Record<string, string> | undefined,
 ) {
-  const { actorId: _a, actor: _b, idempotencyKey, speakerProof: _p, ...body } = reqBody;
+  const { actorId: _a, actor: _b, idempotencyKey, speakerProof: _p, type: _t, ...body } = reqBody;
   const key = typeof idempotencyKey === "string" && idempotencyKey.length > 0 ? idempotencyKey : undefined;
   const admitted = admitSpeaker(runtime, {
     type,
@@ -189,8 +212,7 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         return;
       }
       if (req.method === "GET" && path === "/v1/commands") {
-        const spec = join(process.cwd(), "schemas/commands.schema.json");
-        json(res, 200, JSON.parse(readFileSync(spec, "utf8")));
+        json(res, 200, JSON.parse(readFileSync(commandSchemaPath, "utf8")));
         return;
       }
       const objectGet = path.match(/^\/v1\/objects\/([^/]+)$/);
@@ -279,9 +301,18 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, 200, { ok: true });
         return;
       }
-      if (req.method === "GET" && path === "/openapi.json") {
-        const spec = join(process.cwd(), "packages/aether-openapi/openapi.yaml");
-        json(res, 200, { format: "yaml", path: spec, note: "see packages/aether-openapi/openapi.yaml" });
+      if (req.method === "GET" && (path === "/openapi.yaml" || path === "/openapi.json")) {
+        const specPath = join(process.cwd(), "packages/aether-openapi/openapi.yaml");
+        const document = readFileSync(specPath, "utf8");
+        if (path === "/openapi.yaml") {
+          res.writeHead(200, {
+            "content-type": "application/yaml; charset=utf-8",
+            "access-control-allow-origin": "*",
+          });
+          res.end(document);
+          return;
+        }
+        json(res, 200, { format: "yaml", document });
         return;
       }
 
@@ -313,6 +344,21 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         return;
       }
 
+      if (req.method === "POST" && path === "/v1/commands") {
+        if (!isCommandType(body.type)) {
+          json(res, 400, {
+            type: "https://aether.dev/errors/command.malformed",
+            title: "Malformed command",
+            status: 400,
+            detail: typeof body.type === "string" ? `unknown command type ${body.type}` : "missing command type",
+            instance: "command.malformed",
+          });
+          return;
+        }
+        handleDispatch(req, res, body.type, body, paymentHeaders(body.type));
+        return;
+      }
+
       const routes: Record<string, CommandType> = {
         "/v1/identities": "identity.register",
         "/v1/kya/attest": "kya.attest",
@@ -332,21 +378,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         "/v1/host/card": "host.card",
         "/v1/host/subscribe": "host.subscribe",
         "/v1/clearing/windows": "clearing.settle_window",
+        "/v1/fx/settle": "market.fx_settle",
+        "/v1/ledger/transfers": "ledger.transfer",
       };
 
       if (req.method === "POST" && routes[path]) {
         const type = routes[path]!;
-        handleDispatch(req, res, type, body, (r) => {
-          if (!r.ok) return undefined;
-          if (type === "envelope.require") {
-            return { "PAYMENT-REQUIRED": encodeRequired(r.value.data as never) };
-          }
-          if (type === "envelope.submit") {
-            const settlement = (r.value.data as { settlement?: Parameters<typeof encodeResponse>[0] }).settlement;
-            return settlement ? { "PAYMENT-RESPONSE": encodeResponse(settlement) } : undefined;
-          }
-          return undefined;
-        });
+        handleDispatch(req, res, type, body, paymentHeaders(type));
         return;
       }
 
@@ -358,6 +396,16 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const hireFund = path.match(/^\/v1\/hires\/([^/]+)\/fund$/);
       if (req.method === "POST" && hireFund) {
         handleDispatch(req, res, "hire.fund", { ...body, hireId: hireFund[1] });
+        return;
+      }
+      const hireDeliver = path.match(/^\/v1\/hires\/([^/]+)\/deliver$/);
+      if (req.method === "POST" && hireDeliver) {
+        handleDispatch(req, res, "hire.deliver", { ...body, hireId: hireDeliver[1] });
+        return;
+      }
+      const hireRelease = path.match(/^\/v1\/hires\/([^/]+)\/release$/);
+      if (req.method === "POST" && hireRelease) {
+        handleDispatch(req, res, "hire.release", { ...body, hireId: hireRelease[1] });
         return;
       }
       const hireRefund = path.match(/^\/v1\/hires\/([^/]+)\/refund$/);

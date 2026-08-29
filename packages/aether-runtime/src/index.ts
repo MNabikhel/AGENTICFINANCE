@@ -75,6 +75,7 @@ import type {
   RfqStatus,
   Signed,
   SubscriptionId,
+  SubscriptionStatus,
   WindowId,
 } from "@aether/types";
 import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, INTENT_TTL_SEC, KYA_TTL_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
@@ -472,7 +473,7 @@ export class Runtime {
       quotes: [...this.quotes.values()].map((q) => this.quoteView(q)),
       receipts: [...this.receipts.values()],
       approvals: [...this.approvals.values()].map((t) => this.ticketView(t)),
-      subscriptions: [...this.subscriptions.values()],
+      subscriptions: [...this.subscriptions.values()].map((s) => this.subscriptionView(s)),
       invoices: [...this.invoices.values()].map((i) => this.invoiceView(i)),
       story: this.story,
       analog: this.analogDoc,
@@ -650,17 +651,29 @@ export class Runtime {
       return { ...hire, status: "funded" };
     }
     if (hire.state === "void") return { ...hire, status: "expired" };
-    const intent = this.intents.get(hire.intentId);
-    if (!intent || intent.payload.exp <= unixSeconds(this.clock.now())) {
-      return { ...hire, status: "expired" };
-    }
+    if (this.intentSlipLive(this.intents.get(hire.intentId))) return { ...hire, status: "live" };
+    return { ...hire, status: "expired" };
+  }
+
+  /**
+   * Subscription view for other agents. A row whose slip died is `expired`,
+   * not live enrollment. Unique_subscriber still occupies. Spend is not gated
+   * on the row. The store stays raw.
+   */
+  subscriptionView(row: HostSubscription): HostSubscription & { status: SubscriptionStatus } {
+    if (this.intentSlipLive(this.intents.get(row.intentId))) return { ...row, status: "live" };
+    return { ...row, status: "expired" };
+  }
+
+  /** Intent still in its own window, and parent (if any) still in its window. */
+  private intentSlipLive(intent: Signed<IntentMandate> | undefined): boolean {
+    if (!intent) return false;
+    if (intent.payload.exp <= unixSeconds(this.clock.now())) return false;
     if (intent.payload.parentId) {
       const parent = this.intents.get(intent.payload.parentId);
-      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) {
-        return { ...hire, status: "expired" };
-      }
+      if (!parent || parent.payload.exp <= unixSeconds(this.clock.now())) return false;
     }
-    return { ...hire, status: "live" };
+    return true;
   }
 
   /**
@@ -706,13 +719,14 @@ export class Runtime {
         {
           id: "commands",
           name: "Command bus",
-          description: "GET /v1/commands — JSON Schema for every CommandType. Same commands as MCP.",
+          description:
+            "GET /v1/commands — JSON Schema for every CommandType. POST /v1/commands — every CommandType on the same bus as MCP. REST aliases are convenience.",
         },
         {
           id: "inspect",
           name: "Fetch one object",
           description:
-            "aether_get / GET /v1/objects/:id. An offered hire whose slip died is expired, not live.",
+            "aether_get / GET /v1/objects/:id. An offered hire whose slip died is expired, not live. An hsb_ row whose slip died is expired, not live enrollment.",
         },
         {
           id: "sprint-procurement",
@@ -790,7 +804,9 @@ export class Runtime {
    * qte_ includes derived live | expired | spent | held;
    * expired includes a lapsed FX validUntil and, for a hire quote, a dead parent RFQ;
    * spent and held win over expired), acct_ / name account, dlg_ KYA hop (derived live | expired | revoked),
-   * hsb_ host subscription (raw; spend is not gated on the row),
+   * hsb_ host subscription (derived live | expired; expired includes a dead intent
+   * and a dead parent intent; unique_subscriber still occupies; spend is not gated
+   * on the row; the store stays raw),
    * inv_ operator invoice (derived current | lapsed; the store stays raw).
    */
   inspect(id: string): { type: string; id: string; value: unknown } | undefined {
@@ -835,7 +851,7 @@ export class Runtime {
     }
     if (id.startsWith("hsb_")) {
       const sub = this.subscriptions.get(id as SubscriptionId);
-      return sub ? { type: "subscription", id: sub.id, value: sub } : undefined;
+      return sub ? { type: "subscription", id: sub.id, value: this.subscriptionView(sub) } : undefined;
     }
     if (id.startsWith("inv_")) {
       const invoice = this.invoices.get(id);

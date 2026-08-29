@@ -1311,13 +1311,16 @@ describe("MCP command schemas", () => {
   it("lists real body fields so agents do not guess additionalProperties", () => {
     const mcp = new AetherMcp();
     const listed = mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
-    const tools = (listed as { result: { tools: { name: string; inputSchema: { properties: Record<string, unknown> } }[] } })
+    const tools = (listed as { result: { tools: { name: string; description?: string; inputSchema: { properties: Record<string, unknown> } }[] } })
       .result.tools;
     const hire = tools.find((t) => t.name === "aether_hire_create");
     expect(hire?.inputSchema.properties.quoteId).toBeTruthy();
     expect(hire?.inputSchema.properties.intentId).toBeTruthy();
     expect(hire?.inputSchema.properties.actor).toBeTruthy();
     expect(tools.some((t) => t.name === "aether_get")).toBe(true);
+    const get = tools.find((t) => t.name === "aether_get");
+    expect(get?.description).toContain("hsb_");
+    expect(get?.description).toContain("live | expired");
 
     mcp.callTool("aether_identity_register", {
       actor: "system",

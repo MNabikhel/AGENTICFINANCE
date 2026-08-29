@@ -91,6 +91,7 @@ describe("host card", () => {
     expect(card.pin.version).toBe("0.96.0");
     expect(card.url).toBe("http://127.0.0.1:8787");
     expect(card.skills.some((s) => s.id === "inspect")).toBe(true);
+    expect(card.skills.find((s) => s.id === "commands")?.description).toContain("POST /v1/commands");
   });
 
   it("lets a registered desk read the same card", () => {
@@ -219,10 +220,41 @@ describe("host subscribe", () => {
     const got = rt.inspect(row.id);
     expect(got?.type).toBe("subscription");
     expect((got?.value as HostSubscription).subscriberId).toBe(desk.id);
-    const snap = rt.snapshotState() as { subscriptions: HostSubscription[] };
+    expect((got?.value as { status: string }).status).toBe("live");
+    const snap = rt.snapshotState() as { subscriptions: (HostSubscription & { status: string })[] };
     expect(snap.subscriptions).toHaveLength(1);
     expect(snap.subscriptions[0]?.id).toBe(row.id);
+    expect(snap.subscriptions[0]?.status).toBe("live");
+    expect("status" in (rt.subscriptions.get(row.id) ?? {})).toBe(false);
     expect(rt.story.some((b) => b.headline.includes("subscribed to this host"))).toBe(true);
+  });
+
+  it("labels a subscription expired when the slip dies, and unique_subscriber still occupies", () => {
+    const rt = boot(true);
+    const { founder, desk, intentId } = deskWorld(rt);
+    const row = must(rt.dispatch(cmd("host.subscribe", desk.id, { intentId })), "subscribe").data as HostSubscription;
+    expect((rt.inspect(row.id)?.value as { status: string }).status).toBe("live");
+    rt.clock.set("2026-09-05T00:00:00.000Z");
+    expect((rt.inspect(row.id)?.value as { status: string }).status).toBe("expired");
+    expect(rt.snapshotState().subscriptions.find((s) => s.id === row.id)?.status).toBe("expired");
+    expect("status" in (rt.subscriptions.get(row.id) ?? {})).toBe(false);
+    const other = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "fresh slip after the first died",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200 }],
+        }),
+      ),
+      "fresh slip",
+    );
+    const again = rt.dispatch(
+      cmd("host.subscribe", desk.id, { intentId: (other.data as { payload: { id: MandateId } }).payload.id }),
+    );
+    expect(again.ok).toBe(false);
+    if (again.ok) return;
+    expect(again.error.decision?.remediation?.ruleId).toBe("host.unique_subscriber");
+    expect(rt.subscriptions.size).toBe(1);
   });
 
   it("names mandate.known_intent when hosted subscribe names a ghost slip", () => {
@@ -385,6 +417,8 @@ describe("hosted subscribe durability", () => {
       expect(b.hosted).toBe(true);
       expect(b.protocolCard().hosted).toBe(true);
       expect(b.inspect(row.id)?.type).toBe("subscription");
+      expect((b.inspect(row.id)?.value as { status: string }).status).toBe("live");
+      expect("status" in (b.subscriptions.get(row.id) ?? {})).toBe(false);
       expect(b.subscriptions.size).toBe(1);
       const again = b.dispatch(cmd("host.subscribe", desk.id, { intentId }));
       expect(again.ok).toBe(false);

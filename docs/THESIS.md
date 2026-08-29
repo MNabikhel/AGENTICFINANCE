@@ -56,7 +56,7 @@ It looks like **procurement agents buying data and compute from vendor agents**,
 
 Sprint Procurement in this repo is that picture, shrunk to a TAP test. Night Watch is the same loop with the human off the click path: a KYA handshake, standing permission, a sticky daily fuse, freeze that cascades through the graph, and revoke.
 
-Next revisions: rail adapters (x402 facilitator, MPP challenge, AP2 SD-JWT, TAP HTTP signatures) hanging off these objects, bilateral credit limits that actually net and settle a window, and importing Skyfire/TAP/ERC-8004 as *issuers* on the KYA graph that already exists.
+Next revisions are sequenced in [`docs/FOUNDATION.md`](FOUNDATION.md): HTTP as a complete command bus, an OpenAPI document that is the bus, a clearing-window TAP, then adapter-shaped KYA issuers. Rail adapters stay off `evaluate()`. `liveMoney` stays false.
 
 ## 5. Sources (starting points)
 

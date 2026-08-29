@@ -19,44 +19,56 @@ paths:
             schema:
               $ref: "#/components/schemas/RegisterAgent"
       responses:
-        "201": { description: Agent created }
+        "200": { description: Agent created. Command bus allow, not HTTP 201 Created. }
   /v1/mandates/intent:
     post:
       operationId: mandateIssueIntent
       responses:
-        "201": { description: Signed intent }
+        "200": { description: Signed intent. Command bus allow, not HTTP 201 Created. }
         "422": { description: Policy deny }
   /v1/mandates/cart:
     post:
       operationId: mandateIssueCart
       responses:
-        "201": { description: Signed cart }
+        "200": { description: Signed cart. Command bus allow, not HTTP 201 Created. }
   /v1/mandates/payment:
     post:
       operationId: mandateIssuePayment
       responses:
-        "201": { description: Signed payment mandate }
+        "200": { description: Signed payment mandate. Command bus allow, not HTTP 201 Created. }
   /v1/rfqs:
     post:
       operationId: marketRfq
       responses:
-        "201": { description: RFQ created }
+        "200": { description: RFQ created. Command bus allow, not HTTP 201 Created. }
   /v1/quotes:
     post:
       operationId: marketQuote
       responses:
-        "201": { description: Quote created }
+        "200": { description: Quote created. Command bus allow, not HTTP 201 Created. }
   /v1/hires:
     post:
       operationId: hireCreate
       responses:
-        "201": { description: Hire offered }
+        "200": { description: Hire offered. Command bus allow, not HTTP 201 Created. }
         "422": { description: Policy deny }
   /v1/hires/{id}/accept:
     post:
       operationId: hireAccept
       responses:
         "200": { description: Hire accepted }
+  /v1/hires/{id}/deliver:
+    post:
+      operationId: hireDeliver
+      responses:
+        "200": { description: Work marked delivered }
+        "422": { description: Policy deny }
+  /v1/hires/{id}/release:
+    post:
+      operationId: hireRelease
+      responses:
+        "200": { description: Escrow released to the seller }
+        "422": { description: Policy deny }
   /v1/hires/{id}/fund:
     post:
       operationId: hireFund
@@ -76,7 +88,18 @@ paths:
                 idempotencyKey: { type: string }
       responses:
         "200": { description: Escrow returned to buyer. Mandate spend restored. Circuit stays sticky. }
-        "409": { description: Illegal hire transition (already delivered/released) }
+        "422": { description: Policy deny. Illegal hire transition is hire.state, not HTTP 409. }
+  /v1/fx/settle:
+    post:
+      operationId: marketFxSettle
+      responses:
+        "200": { description: FX window settled }
+        "422": { description: Policy deny }
+  /v1/ledger/transfers:
+    post:
+      operationId: ledgerTransfer
+      responses:
+        "200": { description: Treasury book transfer }
         "422": { description: Policy deny }
   /v1/payments/require:
     post:
@@ -102,8 +125,7 @@ paths:
           headers:
             PAYMENT-RESPONSE:
               schema: { type: string }
-        "409": { description: Nonce reuse }
-        "422": { description: Policy deny }
+        "422": { description: Policy deny. Nonce reuse is idempotency.nonce, not HTTP 409. }
   /v1/approvals/{id}/resolve:
     post:
       operationId: approvalResolve
@@ -195,12 +217,30 @@ paths:
     get:
       operationId: commandSchemas
       responses:
-        "200": { description: JSON Schema for every CommandType body }
+        "200": { description: JSON Schema for every CommandType body. Not a dispatcher. }
+    post:
+      operationId: commandDispatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type: { type: string, description: "A CommandType. Unknown or omitted is command.malformed (400)." }
+                actor: { type: string }
+      responses:
+        "200": { description: Command allowed. Same bus as MCP. }
+        "202": { description: Escalated to a grown-up. }
+        "400": { description: command.malformed (unknown type, or a body the kernel will not read). }
+        "402": { description: envelope.require }
+        "422": { description: Policy deny }
   /v1/objects/{id}:
     get:
       operationId: inspect
       responses:
-        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. A hire includes derived live | expired | funded. An offered hire whose slip died is expired. Funded wins. }
+        "200": { description: One object by id or alias. An intent includes derived live | expired | funded. A child whose parent died is expired even if its own exp still lives. A cart includes derived live | expired | bound. A payment includes derived live | expired | funded. A payment whose parent cart died is expired even if its own exp still lives. A hire includes derived live | expired | funded. An offered hire whose slip died is expired. Funded wins. A host subscription includes derived live | expired. A row whose slip died is expired, not live enrollment. }
         "404": { description: Unknown id }
   /v1/hires/{id}:
     get:
@@ -217,7 +257,7 @@ paths:
     get:
       operationId: snapshot
       responses:
-        "200": { description: Runtime snapshot }
+        "200": { description: Runtime snapshot. Host subscriptions include derived live | expired. }
   /v1/audit/verify:
     get:
       operationId: auditVerifyGet
@@ -228,11 +268,16 @@ paths:
       responses:
         "200": { description: Chain ok or first failure. Same command as GET. Auditor, treasury, human_operator, and system may verify. }
         "422": { description: actor.role_capability for a vendor. }
+  /openapi.yaml:
+    get:
+      operationId: openapiYaml
+      responses:
+        "200": { description: This OpenAPI document as YAML. Not a local filesystem path. }
   /openapi.json:
     get:
       operationId: openapi
       responses:
-        "200": { description: This document }
+        "200": { description: Same YAML document in { format: yaml, document }. Not a path on the operator laptop. }
 components:
   schemas:
     RegisterAgent:

@@ -1069,6 +1069,13 @@ export interface HostSubscription {
 }
 
 /**
+ * Inspect / snapshot view. Expired includes a dead intent and a dead parent
+ * intent. Unique_subscriber still occupies. Spend is not gated on the row.
+ * The store stays raw (`intentId` / `createdAt` only).
+ */
+export type SubscriptionStatus = "live" | "expired";
+
+/**
  * Off-band monthly payment for a hosted operator. Not a Command. Not a spend gate.
  * Humans pay the operator (invoice or Stripe). The public kernel has no invoices.
  */
