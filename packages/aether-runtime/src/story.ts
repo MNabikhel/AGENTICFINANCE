@@ -241,6 +241,9 @@ export const MUTE_TLDR =
 export const NIL_TLDR =
   "A founder funded an $800 hire. Fetching a missing receipt was receipt.known — a missing speaker is not this deny, a missing named target is not this deny. No receipt was written. The live receipt still fetched. That funded work still released. A missing receipt is not an empty success.";
 
+export const SPARK_TLDR =
+  "A founder funded an $800 hire. A handshake born expired was kya.mint_fresh — a century mint is not this deny, a second live hop is not this deny. No handshake was written. A one-year hop still minted. That funded work still released. A handshake cannot be born dead.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

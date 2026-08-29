@@ -525,6 +525,11 @@
       "name": "aether_demo_nil",
       "commandType": "demo.nil",
       "description": "Run the nil TAP: a missing receipt is not an empty success. receipt.get of a missing receiptId is receipt.known; a missing speaker and a missing named target still allow; no receipt is written; the live receipt still fetches; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_spark",
+      "commandType": "demo.spark",
+      "description": "Run the spark TAP: a handshake cannot be born dead. kya.attest with expiresAt already past is kya.mint_fresh; a century mint and a second live hop still allow; no handshake is written; a one-year hop still mints; funded work still finishes."
     }
   ]
 }

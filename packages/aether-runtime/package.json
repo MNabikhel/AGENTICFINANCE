@@ -77,7 +77,8 @@
     "./unique-key": "./src/unique-key.ts",
     "./system-scope": "./src/system-scope.ts",
     "./actor-known": "./src/actor-known.ts",
-    "./receipt-known": "./src/receipt-known.ts"
+    "./receipt-known": "./src/receipt-known.ts",
+    "./kya-mint-fresh": "./src/kya-mint-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

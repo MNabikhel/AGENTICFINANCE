@@ -91,7 +91,8 @@
       "@aether/unique-key": ["packages/aether-runtime/src/unique-key.ts"],
       "@aether/system-scope": ["packages/aether-runtime/src/system-scope.ts"],
       "@aether/actor-known": ["packages/aether-runtime/src/actor-known.ts"],
-      "@aether/receipt-known": ["packages/aether-runtime/src/receipt-known.ts"]
+      "@aether/receipt-known": ["packages/aether-runtime/src/receipt-known.ts"],
+      "@aether/kya-mint-fresh": ["packages/aether-runtime/src/kya-mint-fresh.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

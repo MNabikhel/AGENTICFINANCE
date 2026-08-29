@@ -82,6 +82,7 @@
     "demo:fence": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo fence",
     "demo:mute": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mute",
     "demo:nil": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo nil",
+    "demo:spark": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo spark",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

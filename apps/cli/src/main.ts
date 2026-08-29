@@ -74,6 +74,7 @@ import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
 import { loadSystemScope, runSystemScope } from "@aether/system-scope";
 import { loadActorKnown, runActorKnown } from "@aether/actor-known";
 import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
+import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
 
 const [, , command, name] = process.argv;
 
@@ -543,6 +544,12 @@ if (command === "demo" && (name === "nil" || name === "gone" || name === "lost")
   process.exit(0);
 }
 
+if (command === "demo" && (name === "spark" || name === "kindle" || name === "wick")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/spark/scenario.json");
+  printReport(runKyaMintFresh(loadKyaMintFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -623,5 +630,6 @@ usage:
   pnpm demo fence
   pnpm demo mute
   pnpm demo nil
+  pnpm demo spark
   pnpm mcp`);
 process.exit(command ? 1 : 0);

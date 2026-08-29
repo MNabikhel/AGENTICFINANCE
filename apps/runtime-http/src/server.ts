@@ -86,6 +86,7 @@ import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
 import { loadSystemScope, runSystemScope } from "@aether/system-scope";
 import { loadActorKnown, runActorKnown } from "@aether/actor-known";
 import { loadReceiptKnown, runReceiptKnown } from "@aether/receipt-known";
+import { loadKyaMintFresh, runKyaMintFresh } from "@aether/kya-mint-fresh";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -164,6 +165,7 @@ const twinFixture = join(process.cwd(), "fixtures/demo/twin/scenario.json");
 const fenceFixture = join(process.cwd(), "fixtures/demo/fence/scenario.json");
 const muteFixture = join(process.cwd(), "fixtures/demo/mute/scenario.json");
 const nilFixture = join(process.cwd(), "fixtures/demo/nil/scenario.json");
+const sparkFixture = join(process.cwd(), "fixtures/demo/spark/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -931,6 +933,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runReceiptKnown(loadReceiptKnown(nilFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "nil" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/spark") {
+        const report = runKyaMintFresh(loadKyaMintFresh(sparkFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "spark" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

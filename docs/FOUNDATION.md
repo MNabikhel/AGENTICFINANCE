@@ -390,7 +390,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 57. A handshake cannot outlive one year
 
-`kya.mint_window` already binds `kya.attest` when `expiresAt` is after now + one year. Completing funded work is legal. Pair TAP is `kya.unique_live`. A corpse mint stays `kya.mint_fresh`. Omit `expiresAt` is the one-year ceiling.
+`kya.mint_window` already binds `kya.attest` when `expiresAt` is after now + one year. Completing funded work is legal. Pair TAP is `kya.unique_live`. Spark TAP is a corpse mint (`kya.mint_fresh`). Omit `expiresAt` is the one-year ceiling.
 
 - [x] A TAP (`pnpm demo year`) funds an $800 hire under a one-year handshake, refuses `kya.attest` that outlives one year as `kya.mint_window` without writing a hop (born-dead and unique-live still allow), then a one-year hop still mints and that funded work still releases.
 - [x] No new policy rule unless a current allow is standing identity past one year, or a current deny traps funded work.
@@ -941,7 +941,20 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list mute
 - [x] A TAP (`pnpm demo nil`) funds an $800 hire, refuses `receipt.get` of a missing receiptId as `receipt.known` without writing a receipt (a missing speaker still allows; a missing named target is not this deny; the live receipt still fetches), then that funded work still releases.
 - [x] No new policy rule unless a current allow is an empty success from a missing receipt, or a current deny traps funded work.
 
-### 142. Next: only if the pin would lie
+### 142. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list nil. No lying allow.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through nil. No inspect-overlay grind.
+
+### 143. A handshake cannot be born dead
+
+`kya.mint_fresh` already binds `kya.attest` when `expiresAt` is already past (or unparseable). Completing funded work is legal. Year TAP is a hop past one year (`kya.mint_window`). Pair TAP is a second live hop (`kya.unique_live`). Mirror TAP is a handshake with yourself (`kya.not_self`). Unparseable `expiresAt` is the same first deny.
+
+- [x] A TAP (`pnpm demo spark`) funds an $800 hire, refuses `kya.attest` with `expiresAt` already past as `kya.mint_fresh` without writing a hop (a century mint still allows; a second live hop is not this deny), then a one-year hop still mints and that funded work still releases.
+- [x] No new policy rule unless a current allow is a written corpse handshake, or a current deny traps funded work.
+
+### 144. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -949,4 +962,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket` + `pnpm demo graft` + `pnpm demo seal` + `pnpm demo guest` + `pnpm demo dust` + `pnpm demo thaw` + `pnpm demo twin` + `pnpm demo fence` + `pnpm demo mute` + `pnpm demo nil`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket` + `pnpm demo graft` + `pnpm demo seal` + `pnpm demo guest` + `pnpm demo dust` + `pnpm demo thaw` + `pnpm demo twin` + `pnpm demo fence` + `pnpm demo mute` + `pnpm demo nil` + `pnpm demo spark`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

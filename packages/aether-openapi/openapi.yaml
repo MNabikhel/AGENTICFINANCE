@@ -637,6 +637,12 @@ paths:
       responses:
         "200": { description: Nil TAP report. A missing receipt is not an empty success. }
         "500": { description: Assertions failed }
+  /v1/demo/spark:
+    post:
+      operationId: demoSpark
+      responses:
+        "200": { description: Spark TAP report. A handshake cannot be born dead. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
