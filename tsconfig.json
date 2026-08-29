@@ -62,7 +62,8 @@
       "@aether/kya-party": ["packages/aether-runtime/src/kya-party.ts"],
       "@aether/fx-window": ["packages/aether-runtime/src/fx-window.ts"],
       "@aether/intent-subject": ["packages/aether-runtime/src/intent-subject.ts"],
-      "@aether/fx-quote": ["packages/aether-runtime/src/fx-quote.ts"]
+      "@aether/fx-quote": ["packages/aether-runtime/src/fx-quote.ts"],
+      "@aether/same-currency": ["packages/aether-runtime/src/same-currency.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

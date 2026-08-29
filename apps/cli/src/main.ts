@@ -45,6 +45,7 @@ import { loadKyaParty, runKyaParty } from "@aether/kya-party";
 import { loadFxWindow, runFxWindow } from "@aether/fx-window";
 import { loadIntentSubject, runIntentSubject } from "@aether/intent-subject";
 import { loadFxQuote, runFxQuote } from "@aether/fx-quote";
+import { loadSameCurrency, runSameCurrency } from "@aether/same-currency";
 
 const [, , command, name] = process.argv;
 
@@ -340,6 +341,12 @@ if (command === "demo" && (name === "paper" || name === "fx-quote" || name === "
   process.exit(0);
 }
 
+if (command === "demo" && (name === "mix" || name === "same-currency" || name === "mixed-journal")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/mix/scenario.json");
+  printReport(runSameCurrency(loadSameCurrency(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -391,5 +398,6 @@ usage:
   pnpm demo pane
   pnpm demo subject
   pnpm demo paper
+  pnpm demo mix
   pnpm mcp`);
 process.exit(command ? 1 : 0);

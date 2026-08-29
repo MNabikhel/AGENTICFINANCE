@@ -48,7 +48,8 @@
     "./kya-party": "./src/kya-party.ts",
     "./fx-window": "./src/fx-window.ts",
     "./intent-subject": "./src/intent-subject.ts",
-    "./fx-quote": "./src/fx-quote.ts"
+    "./fx-quote": "./src/fx-quote.ts",
+    "./same-currency": "./src/same-currency.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

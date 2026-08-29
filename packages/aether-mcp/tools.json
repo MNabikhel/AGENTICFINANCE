@@ -380,6 +380,11 @@
       "name": "aether_demo_paper",
       "commandType": "demo.paper",
       "description": "Run the paper TAP: a research quote is not a conversion window. market.fx_settle of a research quote is market.fx_quote; pair, maker, and dest book still allow; the quote stays unspent; a real window still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_mix",
+      "commandType": "demo.mix",
+      "description": "Run the mix TAP: a mixed journal is not a conversion. ledger.transfer of USD into a USDC book is ledger.same_currency; known books, operating cash, and source still allow; no journal posted; a real window still converts; funded work still finishes."
     }
   ]
 }

@@ -122,6 +122,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not yours to spend");
     expect(spec).toContain("/v1/demo/paper:");
     expect(spec).toContain("not a conversion window");
+    expect(spec).toContain("/v1/demo/mix:");
+    expect(spec).toContain("not a conversion");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

@@ -154,6 +154,9 @@ export const SUBJECT_TLDR =
 export const PAPER_TLDR =
   "A founder funded an $800 hire. Settling a research quote as FX was market.fx_quote — pair, maker, and dest book still allow. A real window still converted. That funded work still released. A research quote is not a conversion window.";
 
+export const MIX_TLDR =
+  "A founder funded an $800 hire. Treasury posting USD into a USDC book was ledger.same_currency — the dest book, operating cash, and source still allow. A real window still converted. That funded work still released. A mixed journal is not a conversion.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

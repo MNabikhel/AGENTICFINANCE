@@ -568,8 +568,21 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
+- [x] CommandType stays 1:1 with MCP. OpenAPI lists command aliases and the TAP demos the discovery card names. GET `/v1/agents/{id}` and GET `/v1/approvals/{id}` are inspect, not command faces — do not grind them. A mixed-currency transfer trapping funded work was policy, not a TAP.
+
+### 85. A mixed journal is not a conversion
+
+`ledger.same_currency` already binds `ledger.transfer` when USD cash would post into a USDC book. Completing funded work is legal. Wallet TAP is a missing dest book (`ledger.known_account`). Cash TAP is empty operating cash (`ledger.sufficient`). Mint TAP is a transfer from equity (`ledger.operating_book`). Priced TAP is catalog currency (`market.sku_currency`). Paper TAP is settling a research quote as FX (`market.fx_quote`).
+
+- [x] A TAP (`pnpm demo mix`) funds an $800 hire, refuses `ledger.transfer` of USD into a USDC book as `ledger.same_currency` without posting a journal (known books, operating cash, and source still allow), then a real window still converts and that funded work still releases.
+- [x] No new policy rule unless a current allow is a mixed journal, or a current deny traps funded work.
+
+### 86. Next: only if the pin would lie
+
+If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
+
 - [ ] Next turn: if a listed face is missing from the bus, or a current allow is a lie, patch it. If not, take a missing demonstrated economic object rather than a website.
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
