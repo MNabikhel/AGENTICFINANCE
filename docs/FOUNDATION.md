@@ -71,11 +71,17 @@ Money-moving allows are replayed by key so a retry cannot double-spend. Denies a
 
 ### 8. Envelope nonce is a demonstrated one-shot
 
-`idempotency.nonce` binds `envelope.submit`. A leftover `nonce` on a transfer is not a settled payment. The TAP demos submit once; they never show reuse.
+`idempotency.nonce` binds `envelope.submit`. A leftover `nonce` on a transfer is not a settled payment.
 
-- [ ] A TAP (`pnpm demo nonce`) completes a funded hire’s envelope, retries the same nonce, and shows `idempotency.nonce`. A leftover nonce on `ledger.transfer` is not that deny.
-- [ ] No new policy rule unless a current allow is a second release.
+- [x] A TAP (`pnpm demo nonce`) completes a funded hire’s envelope, retries the same nonce, and shows `idempotency.nonce`. A leftover nonce on `ledger.transfer` is not that deny.
+- [x] No new policy rule unless a current allow is a second release.
+
+### 9. Honesty if the pin would lie
+
+Not a grind of inspect overlays. If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie.
+
+- [ ] Next turn: if a listed face is missing from the bus, or a current allow is a lie, patch it. If not, take a missing demonstrated economic object (a deny that is never a cached success) rather than a website.
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

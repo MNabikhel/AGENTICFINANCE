@@ -6,6 +6,7 @@ import { loadSubHire, runSubHire } from "@aether/sub-hire";
 import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
 import { loadRefund, runRefund } from "@aether/refund";
 import { loadReplay, runReplay } from "@aether/replay";
+import { loadNonce, runNonce } from "@aether/envelope-nonce";
 
 const [, , command, name] = process.argv;
 
@@ -67,6 +68,12 @@ if (command === "demo" && (name === "replay" || name === "replay-once")) {
   process.exit(0);
 }
 
+if (command === "demo" && (name === "nonce" || name === "envelope-nonce")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/nonce/scenario.json");
+  printReport(runNonce(loadNonce(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -79,5 +86,6 @@ usage:
   pnpm demo clearing
   pnpm demo refund
   pnpm demo replay
+  pnpm demo nonce
   pnpm mcp`);
 process.exit(command ? 1 : 0);

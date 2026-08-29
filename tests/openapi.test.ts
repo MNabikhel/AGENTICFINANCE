@@ -44,6 +44,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("quote stays spent");
     expect(spec).toContain("/v1/demo/replay:");
     expect(spec).toContain("not a second spend");
+    expect(spec).toContain("/v1/demo/nonce:");
+    expect(spec).toContain("payment nonce is one-shot");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

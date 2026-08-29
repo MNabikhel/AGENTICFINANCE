@@ -37,6 +37,9 @@ export const REFUND_TLDR =
 export const REPLAY_TLDR =
   "A desk funded an $800 research hire. Retrying the same fund did not move cash again — the allow replayed. Retrying the same hire.create returned the same contract. A new key on that spent quote was hire.quote_unspent. A retry is not a second spend.";
 
+export const NONCE_TLDR =
+  "A desk released an $800 hire with an envelope nonce. Reusing that nonce on a second hire was idempotency.nonce — the second escrow did not release. A leftover nonce on a cash transfer was not that deny. A payment nonce is one-shot, and it is not a field on a transfer.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

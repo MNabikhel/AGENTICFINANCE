@@ -98,6 +98,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "refund-unwind")?.description).toContain("POST /v1/demo/refund");
     expect(card.skills.some((s) => s.id === "replay-once")).toBe(true);
     expect(card.skills.find((s) => s.id === "replay-once")?.description).toContain("POST /v1/demo/replay");
+    expect(card.skills.some((s) => s.id === "envelope-nonce")).toBe(true);
+    expect(card.skills.find((s) => s.id === "envelope-nonce")?.description).toContain("POST /v1/demo/nonce");
   });
 
   it("lets a registered desk read the same card", () => {

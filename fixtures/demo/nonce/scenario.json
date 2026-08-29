@@ -1,0 +1,23 @@
+{
+  "id": "envelope-nonce",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000008",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "Desk may buy research. Max $800 per hire, $2,000 total. An envelope nonce is one-shot. A leftover nonce on a transfer is not a settled payment.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 80000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 200000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "second": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

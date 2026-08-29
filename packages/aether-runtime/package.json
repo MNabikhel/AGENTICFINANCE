@@ -9,7 +9,8 @@
     "./sub-hire": "./src/sub-hire.ts",
     "./clearing-window": "./src/clearing-window.ts",
     "./refund": "./src/refund.ts",
-    "./replay": "./src/replay.ts"
+    "./replay": "./src/replay.ts",
+    "./envelope-nonce": "./src/envelope-nonce.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

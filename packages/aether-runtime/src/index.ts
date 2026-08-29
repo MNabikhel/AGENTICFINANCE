@@ -36,6 +36,7 @@ import {
   CLEARING_TLDR,
   REFUND_TLDR,
   REPLAY_TLDR,
+  NONCE_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -793,6 +794,11 @@ export class Runtime {
           id: "replay-once",
           name: "Replay TAP",
           description: "POST /v1/demo/replay — a retry of an allow is not a second spend",
+        },
+        {
+          id: "envelope-nonce",
+          name: "Envelope nonce TAP",
+          description: "POST /v1/demo/nonce — a payment nonce is one-shot; a leftover nonce on a transfer is not",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3194,7 +3200,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

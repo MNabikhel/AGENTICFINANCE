@@ -23,7 +23,8 @@
       "@aether/sub-hire": ["packages/aether-runtime/src/sub-hire.ts"],
       "@aether/clearing-window": ["packages/aether-runtime/src/clearing-window.ts"],
       "@aether/refund": ["packages/aether-runtime/src/refund.ts"],
-      "@aether/replay": ["packages/aether-runtime/src/replay.ts"]
+      "@aether/replay": ["packages/aether-runtime/src/replay.ts"],
+      "@aether/envelope-nonce": ["packages/aether-runtime/src/envelope-nonce.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

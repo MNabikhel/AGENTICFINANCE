@@ -21,3 +21,4 @@ jobs:
       - run: pnpm demo:clearing
       - run: pnpm demo:refund
       - run: pnpm demo:replay
+      - run: pnpm demo:nonce
