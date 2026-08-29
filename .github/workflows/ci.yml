@@ -86,3 +86,4 @@ jobs:
       - run: pnpm demo:dust
       - run: pnpm demo:thaw
       - run: pnpm demo:twin
+      - run: pnpm demo:fence

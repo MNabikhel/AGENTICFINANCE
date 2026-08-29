@@ -510,6 +510,11 @@
       "name": "aether_demo_twin",
       "commandType": "demo.twin",
       "description": "Run the twin TAP: a taken alias is not a second agent. identity.register on a taken desk alias is identity.unique_key; L5 at birth and system minting a second agent still allow; no agent is written; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_fence",
+      "commandType": "demo.fence",
+      "description": "Run the fence TAP: system is not a treasurer. identity.register as system after the first human is actor.system_scope; a taken alias and L5 at birth still allow; no agent is written; the catalog still reads; funded work still finishes."
     }
   ]
 }

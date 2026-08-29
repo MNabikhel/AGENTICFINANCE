@@ -71,6 +71,7 @@ import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
 import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
 import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
+import { loadSystemScope, runSystemScope } from "@aether/system-scope";
 
 const [, , command, name] = process.argv;
 
@@ -522,6 +523,12 @@ if (command === "demo" && (name === "twin" || name === "clone" || name === "dopp
   process.exit(0);
 }
 
+if (command === "demo" && (name === "fence" || name === "scope" || name === "staff")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/fence/scenario.json");
+  printReport(runSystemScope(loadSystemScope(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -599,5 +606,6 @@ usage:
   pnpm demo dust
   pnpm demo thaw
   pnpm demo twin
+  pnpm demo fence
   pnpm mcp`);
 process.exit(command ? 1 : 0);

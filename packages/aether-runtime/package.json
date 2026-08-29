@@ -74,7 +74,8 @@
     "./known-invitee": "./src/known-invitee.ts",
     "./cart-fresh": "./src/cart-fresh.ts",
     "./freeze-state": "./src/freeze-state.ts",
-    "./unique-key": "./src/unique-key.ts"
+    "./unique-key": "./src/unique-key.ts",
+    "./system-scope": "./src/system-scope.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

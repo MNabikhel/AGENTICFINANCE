@@ -232,6 +232,9 @@ export const THAW_TLDR =
 export const TWIN_TLDR =
   "A founder funded an $800 hire. Registering a second desk on the taken alias was identity.unique_key — L5 at birth is not this deny, system minting a second agent is not this deny. No agent was written. That funded work still released. A taken alias is not a second agent.";
 
+export const FENCE_TLDR =
+  "A founder funded an $800 hire. System minting a second agent was actor.system_scope — a taken alias is not this deny, L5 at birth is not this deny. No agent was written. System still read the catalog. That funded work still released. System is not a treasurer.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

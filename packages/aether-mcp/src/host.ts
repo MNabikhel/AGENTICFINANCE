@@ -78,6 +78,7 @@ import { loadKnownInvitee, runKnownInvitee } from "@aether/known-invitee";
 import { loadCartFresh, runCartFresh } from "@aether/cart-fresh";
 import { loadFreezeState, runFreezeState } from "@aether/freeze-state";
 import { loadUniqueKey, runUniqueKey } from "@aether/unique-key";
+import { loadSystemScope, runSystemScope } from "@aether/system-scope";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -194,6 +195,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_dust",
   "aether_demo_thaw",
   "aether_demo_twin",
+  "aether_demo_fence",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -811,6 +813,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_twin") {
       const report = runUniqueKey(loadUniqueKey("fixtures/demo/twin/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_fence") {
+      const report = runSystemScope(loadSystemScope("fixtures/demo/fence/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

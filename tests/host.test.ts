@@ -228,6 +228,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "freeze-state")?.description).toContain("POST /v1/demo/thaw");
     expect(card.skills.some((s) => s.id === "unique-key")).toBe(true);
     expect(card.skills.find((s) => s.id === "unique-key")?.description).toContain("POST /v1/demo/twin");
+    expect(card.skills.some((s) => s.id === "system-scope")).toBe(true);
+    expect(card.skills.find((s) => s.id === "system-scope")?.description).toContain("POST /v1/demo/fence");
   });
 
   it("lets a registered desk read the same card", () => {
