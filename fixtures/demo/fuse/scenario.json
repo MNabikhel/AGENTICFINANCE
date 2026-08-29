@@ -1,0 +1,23 @@
+{
+  "id": "circuit-daily",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000035",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 100000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "A daily fuse is not a freeze on funded work. Night Watch first-denies amount_range. Refund TAP is unwind plus sticky. Completing funded work after the trip is legal.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "payment.budget", "currency": "USD_SIM", "max": 200000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] },
+      { "type": "aether.max_autonomy", "max": 3 }
+    ]
+  },
+  "quotes": {
+    "once": { "amount": 80000, "currency": "USD_SIM" },
+    "sneak": { "amount": 40000, "currency": "USD_SIM" }
+  }
+}

@@ -47,3 +47,4 @@ jobs:
       - run: pnpm demo:born
       - run: pnpm demo:reach
       - run: pnpm demo:year
+      - run: pnpm demo:fuse

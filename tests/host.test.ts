@@ -150,6 +150,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "window-reach")?.description).toContain("POST /v1/demo/reach");
     expect(card.skills.some((s) => s.id === "kya-window")).toBe(true);
     expect(card.skills.find((s) => s.id === "kya-window")?.description).toContain("POST /v1/demo/year");
+    expect(card.skills.some((s) => s.id === "circuit-daily")).toBe(true);
+    expect(card.skills.find((s) => s.id === "circuit-daily")?.description).toContain("POST /v1/demo/fuse");
   });
 
   it("lets a registered desk read the same card", () => {

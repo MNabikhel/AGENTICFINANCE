@@ -115,6 +115,9 @@ export const REACH_TLDR =
 export const YEAR_TLDR =
   "A founder funded an $800 hire under a one-year handshake. A hop that outlived one year was kya.mint_window — no handshake written. A one-year hop still minted. That funded work still released. Year 9999 is not standing identity.";
 
+export const FUSE_TLDR =
+  "A founder funded an $800 hire against a $1,000 daily fuse. A $400 second hire was circuit.daily — the envelope and the item cap still allowed. That funded work still released. A daily fuse is not a freeze on funded work.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -571,7 +574,7 @@ export function autoBeat(input: {
       } else if (ruleId === "payment.allowed_payees") {
         body = "That seller is not on this permission slip’s payee list. A registered vendor is not a listed payee. A closed room is a guest list on the RFQ; this is the slip. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {
-        body = "The daily fuse blew. Standing permission does not mean unlimited. Until a human resets the circuit, even a tiny hire is refused.";
+        body = "The daily fuse blew. Standing permission does not mean unlimited. Completing funded work after that is legal; a new hire is not. Until a human resets the circuit, even a tiny hire is refused.";
       } else if (ruleId === "kya.principal_not_frozen") {
         body = "The person this agent spends for is frozen. The handshake is still on file, but the referee will not let money move.";
       } else if (ruleId === "kya.chain_intact") {

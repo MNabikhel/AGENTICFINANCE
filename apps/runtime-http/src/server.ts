@@ -44,6 +44,7 @@ import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-su
 import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
 import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
+import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -80,6 +81,7 @@ const climbFixture = join(process.cwd(), "fixtures/demo/climb/scenario.json");
 const bornFixture = join(process.cwd(), "fixtures/demo/born/scenario.json");
 const reachFixture = join(process.cwd(), "fixtures/demo/reach/scenario.json");
 const yearFixture = join(process.cwd(), "fixtures/demo/year/scenario.json");
+const fuseFixture = join(process.cwd(), "fixtures/demo/fuse/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -553,6 +555,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runKyaWindow(loadKyaWindow(yearFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "year" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/fuse") {
+        const report = runCircuitDaily(loadCircuitDaily(fuseFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "fuse" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

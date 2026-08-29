@@ -49,7 +49,8 @@
       "@aether/capability-subset": ["packages/aether-runtime/src/capability-subset.ts"],
       "@aether/fx-fresh": ["packages/aether-runtime/src/fx-fresh.ts"],
       "@aether/window-reach": ["packages/aether-runtime/src/window-reach.ts"],
-      "@aether/kya-window": ["packages/aether-runtime/src/kya-window.ts"]
+      "@aether/kya-window": ["packages/aether-runtime/src/kya-window.ts"],
+      "@aether/circuit-daily": ["packages/aether-runtime/src/circuit-daily.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

@@ -32,6 +32,7 @@ import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-su
 import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
 import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
+import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 
 const [, , command, name] = process.argv;
 
@@ -249,6 +250,12 @@ if (command === "demo" && (name === "year" || name === "century" || name === "ky
   process.exit(0);
 }
 
+if (command === "demo" && (name === "fuse" || name === "breaker" || name === "circuit-daily")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/fuse/scenario.json");
+  printReport(runCircuitDaily(loadCircuitDaily(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -287,5 +294,6 @@ usage:
   pnpm demo born
   pnpm demo reach
   pnpm demo year
+  pnpm demo fuse
   pnpm mcp`);
 process.exit(command ? 1 : 0);

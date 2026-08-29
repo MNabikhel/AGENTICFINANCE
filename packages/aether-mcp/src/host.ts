@@ -39,6 +39,7 @@ import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-su
 import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
 import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
+import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -116,6 +117,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_born",
   "aether_demo_reach",
   "aether_demo_year",
+  "aether_demo_fuse",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -538,6 +540,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_year") {
       const report = runKyaWindow(loadKyaWindow("fixtures/demo/year/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_fuse") {
+      const report = runCircuitDaily(loadCircuitDaily("fixtures/demo/fuse/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

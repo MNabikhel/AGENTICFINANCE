@@ -385,6 +385,12 @@ paths:
       responses:
         "200": { description: Year TAP report. A handshake cannot outlive one year. }
         "500": { description: Assertions failed }
+  /v1/demo/fuse:
+    post:
+      operationId: demoFuse
+      responses:
+        "200": { description: Fuse TAP report. A daily fuse is not a freeze on funded work. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
