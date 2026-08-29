@@ -109,11 +109,28 @@ export class Ledger {
     for (const entry of entries) this.apply(entry, false);
   }
 
+  /**
+   * Rebuild books from a jsonl of journals using this ledger's accounts.
+   * The file is not a second set of account opens. A bad line is not a match.
+   */
   replayEqualsMemory(path: string): boolean {
-    const other = new Ledger(path);
+    if (!existsSync(path)) return this.entries.length === 0;
+    const text = readFileSync(path, "utf8").trim();
+    let entries: JournalEntry[];
+    try {
+      entries = text.length === 0 ? [] : text.split("\n").map((line) => JSON.parse(line) as JournalEntry);
+    } catch {
+      return false;
+    }
+    const other = new Ledger();
+    try {
+      other.restore([...this.accounts.values()], entries);
+    } catch {
+      return false;
+    }
     if (other.entries.length !== this.entries.length) return false;
-    for (const [id, bal] of this.balances) {
-      if (other.balance(id) !== bal) return false;
+    for (const account of this.accounts.values()) {
+      if (other.balance(account.id) !== this.balance(account.id)) return false;
     }
     return true;
   }

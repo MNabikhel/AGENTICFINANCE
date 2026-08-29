@@ -1,3 +1,6 @@
+import { appendFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { IdFactory, ManualClock } from "@aether/kernel";
 import { Ledger, isOperatingBook } from "@aether/ledger";
@@ -139,5 +142,44 @@ describe("ledger", () => {
     expect(isOperatingBook(cash)).toBe(true);
     expect(isOperatingBook(equity)).toBe(false);
     expect(isOperatingBook(escrow)).toBe(false);
+  });
+
+  it("replays a jsonl file into the same books", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aether-ledger-replay-"));
+    const path = join(dir, "ledger.jsonl");
+    try {
+      const clock = new ManualClock("2026-08-28T00:00:00.000Z");
+      const ids = new IdFactory(clock);
+      const ledger = new Ledger(path);
+      const cash = ledger.openAccount({
+        id: ids.next("acct") as AccountId,
+        ownerId: "system",
+        name: "cash",
+        type: "asset",
+        currency: "USD_SIM",
+      });
+      const equity = ledger.openAccount({
+        id: ids.next("acct") as AccountId,
+        ownerId: "system",
+        name: "equity",
+        type: "equity",
+        currency: "USD_SIM",
+      });
+      const posted = ledger.post({
+        id: ids.next("jnl") as JournalId,
+        clock,
+        description: "open",
+        lines: [
+          { accountId: cash.id, debit: 100, credit: 0 },
+          { accountId: equity.id, debit: 0, credit: 100 },
+        ],
+      });
+      expect(posted.ok).toBe(true);
+      expect(ledger.replayEqualsMemory(path)).toBe(true);
+      appendFileSync(path, "not-a-journal\n");
+      expect(ledger.replayEqualsMemory(path)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

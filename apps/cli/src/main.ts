@@ -87,6 +87,7 @@ import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-i
 import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
 import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
+import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
 
@@ -635,7 +636,23 @@ if (command === "demo" && (name === "cite" || name === "xref" || name === "hitch
 }
 
 if (command === "audit" && process.argv[3] === "verify") {
-  fail("boot a runtime first: pnpm demo");
+  const result = cliAuditVerify(bootCliRuntime());
+  if (!result.ok) {
+    const body = result.error.decision
+      ? { ...result.error.error, decision: result.error.decision }
+      : { ...result.error.error };
+    console.error(JSON.stringify(body, null, 2));
+    process.exit(1);
+  }
+  console.log(JSON.stringify(result.value, null, 2));
+  process.exit(0);
+}
+
+if (command === "ledger" && process.argv[3] === "replay") {
+  const rt = bootCliRuntime();
+  const ok = cliLedgerReplay(rt);
+  console.log(JSON.stringify({ ok, entries: rt.ledger.entries.length }));
+  process.exit(ok ? 0 : 1);
 }
 
 console.log(`aether ${command ?? ""}
@@ -727,5 +744,7 @@ usage:
   pnpm demo pen
   pnpm demo well
   pnpm demo cite
+  aether audit verify
+  aether ledger replay
   pnpm mcp`);
 process.exit(command ? 1 : 0);

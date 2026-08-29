@@ -65,10 +65,10 @@ aether/
     aether-escrow/                     # hire lifecycle: offer → accept → fund → deliver → release/refund
     aether-market/                     # RFQ + quote. Catalog of SKUs. NOT an order book
     aether-runtime/                    # command bus: validate → policy → mutate → audit
+    aether-openapi/                    # handwritten OpenAPI 3.1 (GET /openapi.yaml)
     aether-mcp/                        # MCP server exposing Runtime commands
-    aether-openapi/                    # generated OpenAPI 3.1 from schemas + route table
   apps/
-    runtime-http/                      # Fastify. Serves OpenAPI. Same commands as MCP
+    runtime-http/                      # node:http. Serves OpenAPI. Same commands as MCP
     cli/                               # `aether demo`, `aether audit verify`, `aether ledger replay`
     fixtures/
       demo/sprint-procurement/           # human-in-the-loop shopping TAP
@@ -1572,7 +1572,8 @@ export interface AetherError {
 | Test file | Must prove |
 |---|---|
 | `audit.test.ts` | Tamper a JSONL byte → verify fails at that seq; reorder fails; genesis prevHash is zeros |
-| `ledger.test.ts` | Unbalanced journal rejected; replay file ≡ memory; FX keeps two books; a dest that would leave `Number.isSafeInteger` is refused at `post()`; operating books are asset cash, not equity or escrow |
+| `cli.test.ts` | `aether audit verify` is `audit.verify` on the command bus (kind allow, POLICY_DECISION, AUDIT_VERIFY); `aether ledger replay` is jsonl ≡ memory after a founder opening |
+| `ledger.test.ts` | Unbalanced journal rejected; replay file ≡ memory; jsonl replay restores the same books; a tampered file does not; FX keeps two books; a dest that would leave `Number.isSafeInteger` is refused at `post()`; operating books are asset cash, not equity or escrow |
 | `mandate.test.ts` | Wrong cart hash / swapped payee / amount mismatch denied; `checkExp: false` still verifies hashes on an expired cart; a ghost payment.reference still verifyChains; constraint evaluation is policy, not verifyChain |
 | `cart.test.ts` | A cart must equal the hire it pays; a line with no amount is `command.malformed`, not a throw after yes; a second cart on the same hire is `hire.unique_cart`, not a pointer swap; a second payment on the same cart is `mandate.unique_payment`, not a second check; payment `exp` is one day in unix seconds, not milliseconds; funding with a loose cartId (never bound to the hire) is `hire.bound_cart`, not a throw at release; a line whose cents overflow, or mixed USD/USDC lines, is `command.malformed`; fund after the cart window is `mandate.chain_integrity`; completing or refunding a funded hire after that window is legal |
 | `policy.test.ts` | Table-driven: each ruleId has allow + deny fixtures; `velocity.window` escalates a new hire/fund/FX settle after a hot hour and allows complete-after-fund and reads; `host.not_hosted` refuses subscribe on the public kernel and allows `host.card`; `host.human_authority` / `host.unique_subscriber` bind hosted subscribe; system may verify the notary; hire.no_self_deal is a unit deny; dispatch cannot mint a self-deal |

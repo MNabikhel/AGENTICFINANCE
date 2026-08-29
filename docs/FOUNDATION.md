@@ -1124,7 +1124,14 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list cite
 - [x] DESIGN `verifyChain` steps are JWS / hash / payee / amount / exp. Constraint evaluation is §3. A ghost `payment.reference` still verifyChains. Cite TAP is the referee.
 - [x] Self-deal is `policy.test.ts` (unit deny). `hire.test.ts` does not mint one. No role has both `hire.create` and `market.quote`. MCP command tools stay 1:1; demo tools are TAP runners.
 
-### 170. Next: only if the pin would lie
+### 170. Honesty remainder
+
+The CLI audit verify is the command bus, not a stub. A replay file is the books.
+
+- [x] `aether audit verify` dispatches `audit.verify` (system speaker). DESIGN HTTP is `node:http`, not Fastify. OpenAPI is handwritten, not generated.
+- [x] `aether ledger replay` is jsonl ≡ memory. `replayEqualsMemory` restores this ledger's accounts, then the journals. A tampered file is not a match. No inspect-overlay grind.
+
+### 171. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
