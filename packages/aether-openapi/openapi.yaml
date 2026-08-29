@@ -577,6 +577,12 @@ paths:
       responses:
         "200": { description: Root TAP report. A missing parent is not a tighter child. }
         "500": { description: Assertions failed }
+  /v1/demo/docket:
+    post:
+      operationId: demoDocket
+      responses:
+        "200": { description: Docket TAP report. A missing ticket is not a late yes. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

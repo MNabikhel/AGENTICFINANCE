@@ -475,6 +475,11 @@
       "name": "aether_demo_root",
       "commandType": "demo.root",
       "description": "Run the root TAP: a missing parent is not a tighter child. mandate.issue_intent on a ghost parent is mandate.known_parent; a tighter child and a dead parent still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_docket",
+      "commandType": "demo.docket",
+      "description": "Run the docket TAP: a missing ticket is not a late yes. approval.resolve on a ghost ticket is approval.known; a dead pause and a stale command still allow; funded work still finishes."
     }
   ]
 }

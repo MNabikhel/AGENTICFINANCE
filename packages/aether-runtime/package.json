@@ -67,7 +67,8 @@
     "./known-intent": "./src/known-intent.ts",
     "./known-cart": "./src/known-cart.ts",
     "./known-hire": "./src/known-hire.ts",
-    "./known-parent": "./src/known-parent.ts"
+    "./known-parent": "./src/known-parent.ts",
+    "./known-approval": "./src/known-approval.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

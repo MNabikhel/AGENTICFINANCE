@@ -71,6 +71,7 @@ import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
 import { loadKnownCart, runKnownCart } from "@aether/known-cart";
 import { loadKnownHire, runKnownHire } from "@aether/known-hire";
 import { loadKnownParent, runKnownParent } from "@aether/known-parent";
+import { loadKnownApproval, runKnownApproval } from "@aether/known-approval";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -180,6 +181,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_crate",
   "aether_demo_pact",
   "aether_demo_root",
+  "aether_demo_docket",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -762,6 +764,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_root") {
       const report = runKnownParent(loadKnownParent("fixtures/demo/root/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_docket") {
+      const report = runKnownApproval(loadKnownApproval("fixtures/demo/docket/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

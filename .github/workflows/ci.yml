@@ -79,3 +79,4 @@ jobs:
       - run: pnpm demo:crate
       - run: pnpm demo:pact
       - run: pnpm demo:root
+      - run: pnpm demo:docket
