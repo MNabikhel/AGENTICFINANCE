@@ -94,6 +94,7 @@ pnpm demo wilt            # a permission slip cannot be born with a closed calen
 pnpm demo maker           # a window is not a journal against nobody
 pnpm demo ink             # a cart label is not the hire's money
 pnpm demo brim            # IEEE rounding is not a mint
+pnpm demo swap            # a swapped pair is not a silent journal of the books this rail actually posts
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

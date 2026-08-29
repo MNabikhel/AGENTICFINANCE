@@ -87,6 +87,7 @@
     "demo:maker": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo maker",
     "demo:ink": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo ink",
     "demo:brim": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo brim",
+    "demo:swap": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo swap",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

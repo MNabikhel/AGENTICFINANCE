@@ -82,7 +82,8 @@
     "./window-fresh": "./src/window-fresh.ts",
     "./mm-known": "./src/mm-known.ts",
     "./currency-match": "./src/currency-match.ts",
-    "./safe-balance": "./src/safe-balance.ts"
+    "./safe-balance": "./src/safe-balance.ts",
+    "./fx-pair": "./src/fx-pair.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

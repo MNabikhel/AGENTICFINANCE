@@ -86,6 +86,7 @@ import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
 import { loadMmKnown, runMmKnown } from "@aether/mm-known";
 import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
 import { loadSafeBalance, runSafeBalance } from "@aether/safe-balance";
+import { loadFxPair, runFxPair } from "@aether/fx-pair";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -210,6 +211,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_maker",
   "aether_demo_ink",
   "aether_demo_brim",
+  "aether_demo_swap",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -867,6 +869,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_brim") {
       const report = runSafeBalance(loadSafeBalance("fixtures/demo/brim/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_swap") {
+      const report = runFxPair(loadFxPair("fixtures/demo/swap/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

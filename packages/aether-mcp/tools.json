@@ -550,6 +550,11 @@
       "name": "aether_demo_brim",
       "commandType": "demo.brim",
       "description": "Run the brim TAP: IEEE rounding is not a mint. ledger.transfer of one more cent into a book already at the integer ceiling is ledger.safe_balance; empty cash, a missing dest, a mixed journal, and a mint still allow; no journal posted; a penny still posts to a book that can hold it; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_swap",
+      "commandType": "demo.swap",
+      "description": "Run the swap TAP: a swapped pair is not a silent journal of the books this rail actually posts. market.quote of an FX SKU with swapped from/to is market.fx_pair; a missing window, a corpse mint, hiring the window, and a research quote still allow; no quote is written; a real window still quotes and converts; funded work still finishes."
     }
   ]
 }

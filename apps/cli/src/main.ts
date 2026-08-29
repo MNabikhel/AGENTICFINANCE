@@ -79,6 +79,7 @@ import { loadWindowFresh, runWindowFresh } from "@aether/window-fresh";
 import { loadMmKnown, runMmKnown } from "@aether/mm-known";
 import { loadCurrencyMatch, runCurrencyMatch } from "@aether/currency-match";
 import { loadSafeBalance, runSafeBalance } from "@aether/safe-balance";
+import { loadFxPair, runFxPair } from "@aether/fx-pair";
 
 const [, , command, name] = process.argv;
 
@@ -578,6 +579,12 @@ if (command === "demo" && (name === "brim" || name === "swell" || name === "cres
   process.exit(0);
 }
 
+if (command === "demo" && (name === "swap" || name === "flip" || name === "twist")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/swap/scenario.json");
+  printReport(runFxPair(loadFxPair(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -663,5 +670,6 @@ usage:
   pnpm demo maker
   pnpm demo ink
   pnpm demo brim
+  pnpm demo swap
   pnpm mcp`);
 process.exit(command ? 1 : 0);

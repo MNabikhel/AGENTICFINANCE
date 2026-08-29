@@ -667,6 +667,12 @@ paths:
       responses:
         "200": { description: Brim TAP report. IEEE rounding is not a mint. }
         "500": { description: Assertions failed }
+  /v1/demo/swap:
+    post:
+      operationId: demoSwap
+      responses:
+        "200": { description: Swap TAP report. A swapped pair is not a silent journal of the books this rail actually posts. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

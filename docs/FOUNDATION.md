@@ -533,7 +533,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 79. An FX SKU is a window, not a good
 
-`market.fx_window` already binds `market.quote` when a listed FX SKU has no `fx` window. Completing funded work is legal. Conversion TAP is hiring the window (`hire.not_fx`). Born TAP is a corpse mint (`market.fx_fresh`). Pair TAP is a swapped pair (`market.fx_pair`). Shelf TAP is a ghost SKU.
+`market.fx_window` already binds `market.quote` when a listed FX SKU has no `fx` window. Completing funded work is legal. Conversion TAP is hiring the window (`hire.not_fx`). Born TAP is a corpse mint (`market.fx_fresh`). Swap TAP is a swapped pair (`market.fx_pair`). Pair TAP is a second live hop (`kya.unique_live`). Shelf TAP is a ghost SKU.
 
 - [x] A TAP (`pnpm demo pane`) funds an $800 hire, refuses `market.quote` of an FX SKU without an `fx` window as `market.fx_window` without writing a quote (known SKU, known room, pair, and born-dead still allow), then a real window still quotes and converts and that funded work still releases.
 - [x] No new policy rule unless a current allow is an FX SKU quoted as a good, or a current deny traps funded work.
@@ -1006,7 +1006,20 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list ink.
 - [x] A TAP (`pnpm demo brim`) funds an $800 hire, refuses `ledger.transfer` of one more cent into a book already at the integer ceiling as `ledger.safe_balance` without posting a journal (empty cash, a missing dest, a mixed journal, and a mint still allow), then a penny still posts to a book that can hold it and that funded work still releases.
 - [x] No new policy rule unless a current allow is silent IEEE rounding, or a current deny traps funded work.
 
-### 152. Next: only if the pin would lie
+### 152. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list brim. No lying allow.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through brim. No inspect-overlay grind.
+
+### 153. A swapped pair is not a silent journal of the books this rail actually posts
+
+`market.fx_pair` already binds `market.quote` / `market.fx_settle` when the window is not USD_SIM → USDC_SIM priced in `from`. Completing funded work is legal. Pane TAP is a missing window (`market.fx_window`). Born TAP is a corpse mint (`market.fx_fresh`). Conversion TAP is hiring the window (`hire.not_fx`). Paper TAP is settling a research quote (`market.fx_quote`). Pair TAP is a second live hop (`kya.unique_live`). A research SKU wearing an FX window or a price in `to` is the same first deny.
+
+- [x] A TAP (`pnpm demo swap`) funds an $800 hire, refuses `market.quote` of an FX SKU with swapped `from`/`to` as `market.fx_pair` without writing a quote (a missing window, a corpse mint, and catalog currency still allow), then a real window still quotes and converts and that funded work still releases.
+- [x] No new policy rule unless a current allow is a silent journal of the books this rail actually posts, or a current deny traps funded work.
+
+### 154. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -1014,4 +1027,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket` + `pnpm demo graft` + `pnpm demo seal` + `pnpm demo guest` + `pnpm demo dust` + `pnpm demo thaw` + `pnpm demo twin` + `pnpm demo fence` + `pnpm demo mute` + `pnpm demo nil` + `pnpm demo spark` + `pnpm demo wilt` + `pnpm demo maker` + `pnpm demo ink` + `pnpm demo brim`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket` + `pnpm demo graft` + `pnpm demo seal` + `pnpm demo guest` + `pnpm demo dust` + `pnpm demo thaw` + `pnpm demo twin` + `pnpm demo fence` + `pnpm demo mute` + `pnpm demo nil` + `pnpm demo spark` + `pnpm demo wilt` + `pnpm demo maker` + `pnpm demo ink` + `pnpm demo brim` + `pnpm demo swap`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

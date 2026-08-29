@@ -256,6 +256,9 @@ export const INK_TLDR =
 export const BRIM_TLDR =
   "A founder funded an $800 hire. Treasury posting one more cent into a book already at the integer ceiling was ledger.safe_balance — empty cash is not this deny, a missing dest is not this deny, a mixed journal is not this deny, a mint is not this deny. No journal posted. A penny still posted to a book that can hold it. That funded work still released. IEEE rounding is not a mint.";
 
+export const SWAP_TLDR =
+  "A founder funded an $800 hire. A market maker quoted an FX SKU with a swapped pair. That was market.fx_pair — a missing window is not this deny, a corpse mint is not this deny, hiring the window is not this deny, a research quote is not this deny. No quote written. A real window still quoted and converted. That funded work still released. A swapped pair is not a silent journal of the books this rail actually posts.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -754,6 +757,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} quoted an FX SKU without a window`,
           body: "An FX SKU is a conversion window, not a hireable good. Attach fx.from/to/rateE6/validUntil. Settle with market.fx_settle. A missing window is not a quote.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.fx_pair") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion window that is not this rail's pair`,
+          body: "This rail journals USD_SIM to USDC_SIM with the price in from. A swapped pair, a price in to, or an FX object on a research SKU is not a silent journal of those books. A missing window is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
