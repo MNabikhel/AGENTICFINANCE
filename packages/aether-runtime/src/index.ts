@@ -74,7 +74,6 @@ import type {
   SubscriptionId,
   WindowId,
 } from "@aether/types";
-import { err } from "@aether/kernel";
 import { KYA_GATED_COMMANDS, KYA_MAX_DEPTH, DAY_MS, DAY_SEC, HOUR_MS, INTENT_TTL_SEC, KYA_TTL_MS, PROTOCOL, ROLE_CAPABILITY, SIM_RAIL_ID, SYSTEM_READ_COMMANDS, VELOCITY_CAPS } from "@aether/types";
 
 export type DispatchOk = {
