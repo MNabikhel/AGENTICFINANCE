@@ -283,6 +283,12 @@ paths:
       responses:
         "200": { description: Operator-door TAP report. The public kernel is not a hosted checkout. PROTOCOL.hosted stays false. }
         "500": { description: Assertions failed }
+  /v1/demo/match:
+    post:
+      operationId: demoMatch
+      responses:
+        "200": { description: Cart-match TAP report. A cheaper cart is not a discount. Escrow moves the hire price. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

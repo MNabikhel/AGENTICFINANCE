@@ -23,6 +23,7 @@
     "demo:cart": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo cart",
     "demo:velocity": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo velocity",
     "demo:door": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo door",
+    "demo:match": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo match",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

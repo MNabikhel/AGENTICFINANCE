@@ -18,7 +18,8 @@
     "./daily-gap": "./src/daily-gap.ts",
     "./cart-occupancy": "./src/cart-occupancy.ts",
     "./hot-hour": "./src/hot-hour.ts",
-    "./operator-door": "./src/operator-door.ts"
+    "./operator-door": "./src/operator-door.ts",
+    "./cart-match": "./src/cart-match.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

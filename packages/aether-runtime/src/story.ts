@@ -64,6 +64,9 @@ export const VELOCITY_TLDR =
 export const DOOR_TLDR =
   "The public kernel refused subscribe as host.not_hosted. A hosted operator refused an unsigned speaker (401) and an unpaid month (402). After an invoice the same command went through. Subscribe recorded a row; spend was not gated on it. PROTOCOL.hosted stays false.";
 
+export const MATCH_TLDR =
+  "A desk accepted an $800 hire. A $0.01 cart was hire.cart_matches — a cheaper cart is not a discount. The matching cart occupied the hire. Funding moved $800, not a penny. Match is not occupancy.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -162,6 +165,16 @@ export function autoBeat(input: {
   if (cmd.type === "mandate.issue_cart") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "hire.cart_matches") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} could not bind a cheaper cart`,
+          body: "The cart must equal the hire. Escrow moves the quoted price. A cheaper cart is not a discount.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "hire.unique_cart") {
         return {
           seq: input.seq,

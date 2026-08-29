@@ -230,6 +230,11 @@
       "name": "aether_demo_door",
       "commandType": "demo.door",
       "description": "Run the operator-door TAP: the public kernel is not a hosted checkout. Unsigned is 401; unpaid is 402; subscribe is not a spend gate. PROTOCOL.hosted stays false."
+    },
+    {
+      "name": "aether_demo_match",
+      "commandType": "demo.match",
+      "description": "Run the cart-match TAP: a cheaper cart is not a discount. Cheap issue_cart is hire.cart_matches; matching occupies; fund moves the hire price."
     }
   ]
 }
