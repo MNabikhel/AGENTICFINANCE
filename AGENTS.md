@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover` | `aether_demo_mint` | `aether_demo_payee` | `aether_demo_climb` | `aether_demo_born` | `aether_demo_reach` | `aether_demo_year` | `aether_demo_fuse`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover` | `aether_demo_mint` | `aether_demo_payee` | `aether_demo_climb` | `aether_demo_born` | `aether_demo_reach` | `aether_demo_year` | `aether_demo_fuse` | `aether_demo_sku`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -181,6 +181,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 129. A window that opens after the slip dies is not a window. `pnpm demo reach` / `aether_demo_reach` / `POST /v1/demo/reach` funds an $800 hire on a live slip, refuses `mandate.issue_intent` whose `not_before` is after the seven-day exp as `mandate.window_reach` (a closed calendar still allows; no slip written), then a reachable future still mints and that funded work still releases. Calendar TAP is `payment.execution_date` on hire. No new policy rule.
 130. A handshake cannot outlive one year. `pnpm demo year` / `aether_demo_year` / `POST /v1/demo/year` funds an $800 hire under a one-year handshake, refuses `kya.attest` with `expiresAt` after now+1y as `kya.mint_window` (born-dead and unique-live still allow; no hop written), then a one-year hop still mints and that funded work still releases. Pair TAP is `kya.unique_live`. A corpse mint stays `kya.mint_fresh`. No new policy rule.
 131. A daily fuse is not a freeze on funded work. `pnpm demo fuse` / `aether_demo_fuse` / `POST /v1/demo/fuse` funds an $800 hire against a $1,000 daily fuse, refuses a $400 second `hire.create` as `circuit.daily` (the envelope and the item cap still allow; no hire written; the fuse blows), then that funded work still releases. Night Watch first-denies `payment.amount_range`. Refund TAP is unwind plus sticky. Velocity TAP is a hot hour. No new policy rule.
+132. A listed SKU is not any catalog good. `pnpm demo sku` / `aether_demo_sku` / `POST /v1/demo/sku` funds an $800 hire of a listed `research.brief`, refuses `hire.create` of catalog `research.deep` as `payment.allowed_skus` (the quote is still written; known SKU, listed payee, and room still allow; no hire written), then that funded work still releases. Payee TAP is who. Ghost SKU stays `market.known_sku`. Conversion TAP is `hire.not_fx`. No new policy rule.
 
 ## Autonomy
 
@@ -234,4 +235,5 @@ pnpm demo born
 pnpm demo reach
 pnpm demo year
 pnpm demo fuse
+pnpm demo sku
 ```

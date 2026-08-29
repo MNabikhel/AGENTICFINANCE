@@ -320,6 +320,11 @@
       "name": "aether_demo_fuse",
       "commandType": "demo.fuse",
       "description": "Run the fuse TAP: a daily fuse is not a freeze on funded work. A second hire.create after the daily cap is circuit.daily; the envelope and item cap still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_sku",
+      "commandType": "demo.sku",
+      "description": "Run the sku TAP: a listed SKU is not any catalog good. hire.create of a catalog good not on the slip is payment.allowed_skus; the quote is still written; funded work still finishes."
     }
   ]
 }

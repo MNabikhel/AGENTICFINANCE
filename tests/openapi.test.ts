@@ -98,6 +98,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("cannot outlive one year");
     expect(spec).toContain("/v1/demo/fuse:");
     expect(spec).toContain("not a freeze on funded work");
+    expect(spec).toContain("/v1/demo/sku:");
+    expect(spec).toContain("not any catalog good");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

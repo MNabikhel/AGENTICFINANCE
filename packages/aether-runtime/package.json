@@ -36,7 +36,8 @@
     "./fx-fresh": "./src/fx-fresh.ts",
     "./window-reach": "./src/window-reach.ts",
     "./kya-window": "./src/kya-window.ts",
-    "./circuit-daily": "./src/circuit-daily.ts"
+    "./circuit-daily": "./src/circuit-daily.ts",
+    "./payment-skus": "./src/payment-skus.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

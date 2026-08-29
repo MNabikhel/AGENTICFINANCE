@@ -118,6 +118,9 @@ export const YEAR_TLDR =
 export const FUSE_TLDR =
   "A founder funded an $800 hire against a $1,000 daily fuse. A $400 second hire was circuit.daily — the envelope and the item cap still allowed. That funded work still released. A daily fuse is not a freeze on funded work.";
 
+export const SKU_TLDR =
+  "A founder listed research.brief. The desk funded an $800 hire of that good. A catalog deep-research quote was payment.allowed_skus — the room still wrote the quote. That funded work still released. A listed SKU is not any catalog good.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -573,6 +576,8 @@ export function autoBeat(input: {
         body = "The parent permission slip’s envelope is spent. The child’s own leftover is not a new parent envelope. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.allowed_payees") {
         body = "That seller is not on this permission slip’s payee list. A registered vendor is not a listed payee. A closed room is a guest list on the RFQ; this is the slip. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.allowed_skus") {
+        body = "That good is not on this permission slip’s SKU list. A catalog SKU is not a listed SKU. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {
         body = "The daily fuse blew. Standing permission does not mean unlimited. Completing funded work after that is legal; a new hire is not. Until a human resets the circuit, even a tiny hire is refused.";
       } else if (ruleId === "kya.principal_not_frozen") {

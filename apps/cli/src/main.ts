@@ -33,6 +33,7 @@ import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
 import { loadWindowReach, runWindowReach } from "@aether/window-reach";
 import { loadKyaWindow, runKyaWindow } from "@aether/kya-window";
 import { loadCircuitDaily, runCircuitDaily } from "@aether/circuit-daily";
+import { loadPaymentSkus, runPaymentSkus } from "@aether/payment-skus";
 
 const [, , command, name] = process.argv;
 
@@ -256,6 +257,12 @@ if (command === "demo" && (name === "fuse" || name === "breaker" || name === "ci
   process.exit(0);
 }
 
+if (command === "demo" && (name === "sku" || name === "goods" || name === "allowed-skus")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/sku/scenario.json");
+  printReport(runPaymentSkus(loadPaymentSkus(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -295,5 +302,6 @@ usage:
   pnpm demo reach
   pnpm demo year
   pnpm demo fuse
+  pnpm demo sku
   pnpm mcp`);
 process.exit(command ? 1 : 0);

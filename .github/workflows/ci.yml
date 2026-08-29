@@ -48,3 +48,4 @@ jobs:
       - run: pnpm demo:reach
       - run: pnpm demo:year
       - run: pnpm demo:fuse
+      - run: pnpm demo:sku

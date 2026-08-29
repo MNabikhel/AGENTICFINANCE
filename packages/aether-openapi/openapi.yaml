@@ -391,6 +391,12 @@ paths:
       responses:
         "200": { description: Fuse TAP report. A daily fuse is not a freeze on funded work. }
         "500": { description: Assertions failed }
+  /v1/demo/sku:
+    post:
+      operationId: demoSku
+      responses:
+        "200": { description: SKU TAP report. A listed SKU is not any catalog good. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

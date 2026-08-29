@@ -412,8 +412,21 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
+- [x] CommandType stays 1:1 with MCP. OpenAPI lists command aliases and the TAP demos the discovery card names. GET `/v1/agents/{id}` and GET `/v1/approvals/{id}` are inspect, not command faces — do not grind them. An unlisted catalog good was policy, not a TAP.
+
+### 61. A listed SKU is not any catalog good
+
+`payment.allowed_skus` already binds `hire.create` when the slip lists SKUs and the quote’s good is not among them. Completing funded work is legal. Payee TAP is who. Ghost SKU stays `market.known_sku`. Conversion TAP is `hire.not_fx`.
+
+- [x] A TAP (`pnpm demo sku`) funds an $800 hire of listed `research.brief`, refuses `hire.create` of catalog `research.deep` as `payment.allowed_skus` without writing a hire (known SKU, listed payee, and room still allow), then that funded work still releases.
+- [x] No new policy rule unless a current allow is an unlisted catalog hire, or a current deny traps funded work.
+
+### 62. Next: only if the pin would lie
+
+If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
+
 - [ ] Next turn: if a listed face is missing from the bus, or a current allow is a lie, patch it. If not, take a missing demonstrated economic object rather than a website.
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

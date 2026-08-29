@@ -57,6 +57,7 @@ export default defineConfig({
       "@aether/window-reach": path.resolve(__dirname, "packages/aether-runtime/src/window-reach.ts"),
       "@aether/kya-window": path.resolve(__dirname, "packages/aether-runtime/src/kya-window.ts"),
       "@aether/circuit-daily": path.resolve(__dirname, "packages/aether-runtime/src/circuit-daily.ts"),
+      "@aether/payment-skus": path.resolve(__dirname, "packages/aether-runtime/src/payment-skus.ts"),
     },
   },
 });
