@@ -341,6 +341,22 @@ export const RULES: readonly Rule[] = [
     },
   },
   {
+    id: "payment.reference",
+    evaluate: (ctx) => {
+      const c = findConstraint(ctx, "payment.reference");
+      if (!c) return v("payment.reference", "allow", "no reference constraint");
+      if (!SPEND_START_COMMANDS.has(ctx.commandType as CommandType)) {
+        return v("payment.reference", "allow", "not a spend start");
+      }
+      if (ctx.referenceOk === undefined) {
+        return v("payment.reference", "allow", "no prior funded payment");
+      }
+      return ctx.referenceOk
+        ? v("payment.reference", "allow", "citation matches a funded check")
+        : v("payment.reference", "deny", "citation is not a funded check");
+    },
+  },
+  {
     id: "payment.allowed_skus",
     evaluate: (ctx) => {
       const c = findConstraint(ctx, "aether.allowed_skus");
@@ -745,6 +761,14 @@ export const RULES: readonly Rule[] = [
           childRails.allowed.some((m) => !parentRails.allowed.some((p) => p.id === m.id)))
       ) {
         return v("mandate.child_tighter", "deny", "child instruments not a subset of parent");
+      }
+      const parentRef = listed(parent, "payment.reference");
+      const childRef = listed(child, "payment.reference");
+      if (parentRef) {
+        if (!childRef) return v("mandate.child_tighter", "deny", "child missing payment.reference");
+        if (childRef.conditional_transaction_id !== parentRef.conditional_transaction_id) {
+          return v("mandate.child_tighter", "deny", "child payment.reference does not match parent");
+        }
       }
       const parentMax = listed(parent, "aether.max_autonomy");
       const childMax = listed(child, "aether.max_autonomy");
@@ -1353,6 +1377,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mandate.child_tighter": ISSUE_INTENT,
   "payment.allowed_payees": ISSUE_INTENT,
   "payment.allowed_payment_instruments": ISSUE_INTENT,
+  "payment.reference": {
+    kind: "issue_intent",
+    commandType: "mandate.issue_intent",
+    hint: "Cite a funded check's transaction_id (the cart hash), or omit the constraint until a check exists. Completing funded work is legal. A listed payee, a listed rail, and a listed SKU are different objects. Before any funded payment, the constraint is still AP2-shaped catalog surface.",
+  },
   "payment.allowed_skus": ISSUE_INTENT,
   "ladder.max_autonomy_constraint": {
     kind: "issue_intent",

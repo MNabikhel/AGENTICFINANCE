@@ -101,3 +101,4 @@ jobs:
       - run: pnpm demo:rail
       - run: pnpm demo:pen
       - run: pnpm demo:well
+      - run: pnpm demo:cite

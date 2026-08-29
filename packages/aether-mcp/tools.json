@@ -585,6 +585,11 @@
       "name": "aether_demo_well",
       "commandType": "demo.well",
       "description": "Run the well TAP: a fourth hop is not a nested parent. hire.create down a four-hop handshake is kya.delegation_depth; a missing path, a dead parent hop, and a climb still allow; no hire is written; funded three-hop work still finishes."
+    },
+    {
+      "name": "aether_demo_cite",
+      "commandType": "demo.cite",
+      "description": "Run the cite TAP: a listed reference is not decoration once a check exists. hire.create against a slip that cites a ghost checkout after a funded payment exists is payment.reference; a listed payee, a listed rail, and a listed SKU still allow; no hire is written; a citation of that funded check still hires; funded work still finishes."
     }
   ]
 }

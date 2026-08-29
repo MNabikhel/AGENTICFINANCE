@@ -345,6 +345,8 @@ export type MandateConstraint =
       type: "payment.reference";
       conditional_transaction_id: HexSha256;
     }
+    // Binds hire.create / hire.fund to a funded payment's transaction_id once a check exists.
+    // Completing funded work is legal. Before any funded payment it is still AP2-shaped catalog surface.
   | {
       type: "aether.allowed_skus";
       allowed: string[];      // glob-ish exact SKU list. Aether extension
@@ -406,7 +408,7 @@ export interface Signed<T> {
 3. `payment.transaction_id === sha256(canonicalJson(cart.payload))`.
 4. `payment.payee.id === cart.merchant.id`.
 5. `payment.payment_amount` equals `cart.total` (amount **and** currency).
-6. Every intent constraint that has a policy rule evaluates true against the closed payment (see §3). `payment.allowed_payment_instruments` binds spend to the sim ledger this kernel stamps. `payment.reference` is AP2-shaped catalog surface until a prior payment exists to bind.
+6. Every intent constraint that has a policy rule evaluates true against the closed payment (see §3). `payment.allowed_payment_instruments` binds spend to the sim ledger this kernel stamps. `payment.reference` binds a follow-on spend to a funded payment's `transaction_id`. Before any funded payment it is still AP2-shaped catalog surface.
 7. Reject if any `exp` / `expiresAt` ≤ clock.
 
 AP2 field map (documentation only — do not import their types):
@@ -881,6 +883,7 @@ Catalog order **is** evaluation order. IDs are stable. Implement each as `Rule =
 | 86 | `host.human_authority` | hosted host.subscribe with a known intent | intent issuer is not `human_operator` or `treasury` | — | live intent issued by a human or treasury (ghost stays `mandate.known_intent`; expired stays `mandate.not_expired`; wrong subject stays `mandate.subject_is_actor`) |
 | 87 | `host.unique_subscriber` | hosted host.subscribe with a known intent | this agent already has a subscription row | — | one subscriber, one row. Spend is not gated on the row. |
 | 88 | `payment.allowed_payment_instruments` | hire.create / hire.fund if constraint present | stamped (or implied) instrument id not in the list | — | listed. This kernel stamps `sim-ledger`. Live-rail *type* stays `instrument.sim_only`. Rail TAP is a ghost id. Payee TAP is who. |
+| 89 | `payment.reference` | hire.create / hire.fund if constraint present and a funded payment exists | cited `conditional_transaction_id` is not a funded payment's `transaction_id` | — | bind. Before any funded payment the constraint is still AP2-shaped catalog surface. Cite TAP is a ghost checkout hash. Completing funded work is legal. |
 
 L5 does **not** skip `payment.*` constraints, `circuit.daily`, `actor.not_frozen`, `kya.*`, or `idempotency.nonce`. It only skips `approval.threshold` and `ladder.min_level` escalations. L5 cannot be minted at `identity.register` (`ladder.birth_rung`); that rung is a climb after a freeze that was actually tested.
 
@@ -999,499 +1002,505 @@ If any assertion fails, exit 1. This is the acceptance test for v0.
 
 **Fixture:** `fixtures/demo/clearing-window/`. Instance `bilateralLimit` 100000 ($1,000). Not a Command. Not durable. Public default stays 50_000_000.
 
-A desk hires a vendor for $800. A second $400 offer is `clearing.bilateral_limit` — projected pair gross 120000. Treasury closes a settlement window: one leg consumed, gross 80000, vendor cash unchanged. After the photo the $400 hire releases. Still 88 rules.
+A desk hires a vendor for $800. A second $400 offer is `clearing.bilateral_limit` — projected pair gross 120000. Treasury closes a settlement window: one leg consumed, gross 80000, vendor cash unchanged. After the photo the $400 hire releases. Still 89 rules.
 
 ### Refund unwind (`pnpm demo refund`)
 
 **Fixture:** `fixtures/demo/refund/`. Instance `dailyLimit` 80000 ($800) so the funded hire sits on the fuse.
 
-A desk funds an $800 hire. An over-cap offer is `circuit.daily` and blows the fuse. `hire.refund` returns escrow, restores mandate spend, and reverse-records clearing (pair net 0). The quote stays spent. A later hire is still `circuit.daily`. After treasury `circuit.reset`, reusing the quote is `hire.quote_unspent`. Refund of delivered work is `hire.state`. Still 88 rules.
+A desk funds an $800 hire. An over-cap offer is `circuit.daily` and blows the fuse. `hire.refund` returns escrow, restores mandate spend, and reverse-records clearing (pair net 0). The quote stays spent. A later hire is still `circuit.daily`. After treasury `circuit.reset`, reusing the quote is `hire.quote_unspent`. Refund of delivered work is `hire.state`. Still 89 rules.
 
 ### Replay (`pnpm demo replay`)
 
 **Fixture:** `fixtures/demo/replay/`.
 
-A desk funds an $800 hire. Retrying the same `hire.fund` replays: cash and escrow unmoved, no second journal. The same `hire.create` replays the same contract. A new key on that quote is `hire.quote_unspent`. A retry is not a second spend. Still 88 rules.
+A desk funds an $800 hire. Retrying the same `hire.fund` replays: cash and escrow unmoved, no second journal. The same `hire.create` replays the same contract. A new key on that quote is `hire.quote_unspent`. A retry is not a second spend. Still 89 rules.
 
 ### Envelope nonce (`pnpm demo nonce`)
 
 **Fixture:** `fixtures/demo/nonce/`.
 
-A desk releases an $800 hire. Reusing that envelope nonce on a second hire is `idempotency.nonce` — the second escrow does not release. A leftover nonce on a cash transfer is not that deny. Still 88 rules.
+A desk releases an $800 hire. Reusing that envelope nonce on a second hire is `idempotency.nonce` — the second escrow does not release. A leftover nonce on a cash transfer is not that deny. Still 89 rules.
 
 ### Deny cache (`pnpm demo deny`)
 
 **Fixture:** `fixtures/demo/deny-cache/`.
 
-A frozen desk’s `hire.create` is `actor.not_frozen`. Retrying that command is a new decision (audit grows). After unfreeze the same `hire.create` allows. A deny does not consume the quote. Still 88 rules.
+A frozen desk’s `hire.create` is `actor.not_frozen`. Retrying that command is a new decision (audit grows). After unfreeze the same `hire.create` allows. A deny does not consume the quote. Still 89 rules.
 
 ### Recurrence (`pnpm demo recurrence`)
 
 **Fixture:** `fixtures/demo/recurrence/`.
 
-A one-slot slip (`payment.agent_recurrence`, `ON_DEMAND`, `max_occurrences: 1`) funds and releases once. Completing that funded work is not a second slot. A second `hire.create` is `payment.recurrence`. That deny does not write a second hire or spend the quote. Still 88 rules.
+A one-slot slip (`payment.agent_recurrence`, `ON_DEMAND`, `max_occurrences: 1`) funds and releases once. Completing that funded work is not a second slot. A second `hire.create` is `payment.recurrence`. That deny does not write a second hire or spend the quote. Still 89 rules.
 
 ### Calendar (`pnpm demo calendar`)
 
 **Fixture:** `fixtures/demo/calendar/`.
 
-A same-day `payment.execution_date` window. `hire.create` before `not_before` is `payment.execution_date`. Inside the window the desk funds. After `not_after`, that funded hire still releases. A new `hire.create` is `payment.execution_date`. A closed calendar is not a freeze on funded work. Still 88 rules.
+A same-day `payment.execution_date` window. `hire.create` before `not_before` is `payment.execution_date`. Inside the window the desk funds. After `not_after`, that funded hire still releases. A new `hire.create` is `payment.execution_date`. A closed calendar is not a freeze on funded work. Still 89 rules.
 
 ### Slot (`pnpm demo slot`)
 
 **Fixture:** `fixtures/demo/slot/`.
 
-A one-slot slip funds, then `hire.refund` returns cash and mandate spend. The occurrence count stays 1. A second `hire.create` is `payment.recurrence`. A refund is not a new slot. Still 88 rules.
+A one-slot slip funds, then `hire.refund` returns cash and mandate spend. The occurrence count stays 1. A second `hire.create` is `payment.recurrence`. A refund is not a new slot. Still 89 rules.
 
 ### Daily (`pnpm demo daily`)
 
 **Fixture:** `fixtures/demo/daily/`.
 
-A `DAILY` slip (`max_occurrences: 8`) funds and releases once. A same-day second `hire.create` is `payment.recurrence`. After 24 hours that command allows. A cadence is a gap, not a burst. Still 88 rules.
+A `DAILY` slip (`max_occurrences: 8`) funds and releases once. A same-day second `hire.create` is `payment.recurrence`. After 24 hours that command allows. A cadence is a gap, not a burst. Still 89 rules.
 
 ### Cart occupancy (`pnpm demo cart`)
 
 **Fixture:** `fixtures/demo/cart/`.
 
-A hire takes one cart. A cart takes one payment. Funding with a loose `cartId` is `hire.bound_cart`. A second cart is `hire.unique_cart`. A second payment is `mandate.unique_payment`. The same fund command then allows — occupancy is a bind, not a field on fund. Crate TAP is a ghost cart. Ink TAP is a USDC cart on a USD hire. Still 88 rules.
+A hire takes one cart. A cart takes one payment. Funding with a loose `cartId` is `hire.bound_cart`. A second cart is `hire.unique_cart`. A second payment is `mandate.unique_payment`. The same fund command then allows — occupancy is a bind, not a field on fund. Crate TAP is a ghost cart. Ink TAP is a USDC cart on a USD hire. Still 89 rules.
 
 ### Velocity (`pnpm demo velocity`)
 
 **Fixture:** `fixtures/demo/velocity/`.
 
-A cool hour funds once. After the settle hour runs hot, that funded hire still releases. A new `hire.create` is `velocity.window` (escalate, not deny). The pause holds the quote; it is not a second hire. A hot hour is not a freeze on funded work. Still 88 rules.
+A cool hour funds once. After the settle hour runs hot, that funded hire still releases. A new `hire.create` is `velocity.window` (escalate, not deny). The pause holds the quote; it is not a second hire. A hot hour is not a freeze on funded work. Still 89 rules.
 
 ### Operator door (`pnpm demo door`)
 
 **Fixture:** `fixtures/demo/door/`.
 
-The public kernel refuses `host.subscribe` as `host.not_hosted`. A hosted instance (`Runtime({ hosted: true })`) refuses an unsigned named speaker (401) and an unpaid month (402). After an invoice, subscribe records a row. Spend is not gated on that row. `PROTOCOL.hosted` stays false. Still 88 rules.
+The public kernel refuses `host.subscribe` as `host.not_hosted`. A hosted instance (`Runtime({ hosted: true })`) refuses an unsigned named speaker (401) and an unpaid month (402). After an invoice, subscribe records a row. Spend is not gated on that row. `PROTOCOL.hosted` stays false. Still 89 rules.
 
 ### Cart match (`pnpm demo match`)
 
 **Fixture:** `fixtures/demo/match/`.
 
-A $0.01 cart on an $800 hire is `hire.cart_matches` and writes nothing. The matching cart occupies the hire (the deny did not take `unique_cart`). Funding moves $800, not a penny. A second matching cart is `hire.unique_cart`. A cheaper cart is not a discount. Ink TAP is a USDC cart on a USD hire. Still 88 rules.
+A $0.01 cart on an $800 hire is `hire.cart_matches` and writes nothing. The matching cart occupies the hire (the deny did not take `unique_cart`). Funding moves $800, not a penny. A second matching cart is `hire.unique_cart`. A cheaper cart is not a discount. Ink TAP is a USDC cart on a USD hire. Still 89 rules.
 
 ### Closed room (`pnpm demo room`)
 
 **Fixture:** `fixtures/demo/room/`.
 
-A closed RFQ names one vendor. An outsider’s quote is `market.invited_seller` and writes nothing. The invited vendor quotes and `hire.create` allows. An empty invite list lets the outsider quote. A closed room is not a bulletin board. Hall TAP is a ghost RFQ. Guest TAP is a missing invitee. Still 88 rules.
+A closed RFQ names one vendor. An outsider’s quote is `market.invited_seller` and writes nothing. The invited vendor quotes and `hire.create` allows. An empty invite list lets the outsider quote. A closed room is not a bulletin board. Hall TAP is a ghost RFQ. Guest TAP is a missing invitee. Still 89 rules.
 
 ### Conversion (`pnpm demo conversion`)
 
 **Fixture:** `fixtures/demo/conversion/`.
 
-`hire.create` against an FX window is `hire.not_fx` — no hire, window unspent and unreserved. `market.fx_settle` then converts. A spent window is `hire.quote_unspent`. An FX window is not a good. Still 88 rules.
+`hire.create` against an FX window is `hire.not_fx` — no hire, window unspent and unreserved. `market.fx_settle` then converts. A spent window is `hire.quote_unspent`. An FX window is not a good. Still 89 rules.
 
 ### Unique live (`pnpm demo pair`)
 
 **Fixture:** `fixtures/demo/pair/`.
 
-A founder attests a desk. A tighter second hop is `kya.unique_live` and writes nothing. A hop to a different agent allows. Revoke, then attest again. A second live hop is not a tighter grant. Still 88 rules.
+A founder attests a desk. A tighter second hop is `kya.unique_live` and writes nothing. A hop to a different agent allows. Revoke, then attest again. A second live hop is not a tighter grant. Still 89 rules.
 
 ### Spread (`pnpm demo band`)
 
 **Fixture:** `fixtures/demo/band/`.
 
-An off-band nested FX rate is `mm.spread_bound` even with an in-band top-level decoy — no window written. An in-band quote on that RFQ allows and settles. The 200bps band is not decoration. Conversion (`hire.not_fx`) is a different object. Still 88 rules.
+An off-band nested FX rate is `mm.spread_bound` even with an in-band top-level decoy — no window written. An in-band quote on that RFQ allows and settles. The 200bps band is not decoration. Conversion (`hire.not_fx`) is a different object. Still 89 rules.
 
 ### Nest (`pnpm demo nest`)
 
 **Fixture:** `fixtures/demo/nest/`.
 
-A founder nests a scout under a desk hop. The scout funds while the parent lives. After the parent hop dies, a new `hire.create` is `kya.parent_fresh` and writes nothing. That funded work still releases. A nested hop does not outlive its parent. Graft TAP is a missing hop parent. Still 88 rules.
+A founder nests a scout under a desk hop. The scout funds while the parent lives. After the parent hop dies, a new `hire.create` is `kya.parent_fresh` and writes nothing. That funded work still releases. A nested hop does not outlive its parent. Graft TAP is a missing hop parent. Still 89 rules.
 
 ### Heir (`pnpm demo heir`)
 
 **Fixture:** `fixtures/demo/heir/`.
 
-A founder hands a tighter child slip to a desk. The desk funds while the parent lives. After the parent slip dies, a new `hire.create` is `mandate.parent_fresh` and writes nothing — the child's own `exp` still lives. That funded work still releases. A dead parent is not a parent. Nest TAP is the hop. Writ TAP is a ghost slip. Still 88 rules.
+A founder hands a tighter child slip to a desk. The desk funds while the parent lives. After the parent slip dies, a new `hire.create` is `mandate.parent_fresh` and writes nothing — the child's own `exp` still lives. That funded work still releases. A dead parent is not a parent. Nest TAP is the hop. Writ TAP is a ghost slip. Still 89 rules.
 
 ### Stock (`pnpm demo stock`)
 
 **Fixture:** `fixtures/demo/stock/`.
 
-A thin MM USDC book on a large FX window is `mm.inventory` and does not consume the window. Vendor USD still covers. The 200bps band still allows. A smaller window on a different RFQ converts. Empty MM USDC is not a missing maker. Maker TAP is nobody on the window. Conversion (`hire.not_fx`) and spread (`mm.spread_bound`) are different objects. Still 88 rules.
+A thin MM USDC book on a large FX window is `mm.inventory` and does not consume the window. Vendor USD still covers. The 200bps band still allows. A smaller window on a different RFQ converts. Empty MM USDC is not a missing maker. Maker TAP is nobody on the window. Conversion (`hire.not_fx`) and spread (`mm.spread_bound`) are different objects. Still 89 rules.
 
 ### Purse (`pnpm demo purse`)
 
 **Fixture:** `fixtures/demo/purse/`.
 
-A $1,000 envelope with a $5,000 per-item cap funds an $800 hire. A $400 second `hire.create` is `payment.budget` — the item cap still allows — and writes nothing. That funded work still releases. A budget is not an item cap. Lid TAP is the item cap. Sprint hits `payment.amount_range` inside a longer story. Still 88 rules.
+A $1,000 envelope with a $5,000 per-item cap funds an $800 hire. A $400 second `hire.create` is `payment.budget` — the item cap still allows — and writes nothing. That funded work still releases. A budget is not an item cap. Lid TAP is the item cap. Sprint hits `payment.amount_range` inside a longer story. Still 89 rules.
 
 ### Seat (`pnpm demo seat`)
 
 **Fixture:** `fixtures/demo/seat/`.
 
-A hosted operator records one subscribe row. The desk funds an $800 hire — spend is not gated on the row. A second `host.subscribe` is `host.unique_subscriber` even on a fresh slip, and writes nothing. A different agent takes its own seat. That funded work still releases. One subscriber, one row. Door TAP is the 401/402 door. `PROTOCOL.hosted` stays false. Still 88 rules.
+A hosted operator records one subscribe row. The desk funds an $800 hire — spend is not gated on the row. A second `host.subscribe` is `host.unique_subscriber` even on a fresh slip, and writes nothing. A different agent takes its own seat. That funded work still releases. One subscriber, one row. Door TAP is the 401/402 door. `PROTOCOL.hosted` stays false. Still 89 rules.
 
 ### Cover (`pnpm demo cover`)
 
 **Fixture:** `fixtures/demo/cover/`.
 
-A $1,000 parent envelope funds an $800 desk hire. A $400 scout `hire.create` on a tighter child is `payment.parent_budget` — the child's own envelope still allows — and writes nothing. That funded parent work still releases. A parent envelope is not a child's leftover. Sub-hire is nested slips. Purse is the child's own envelope. Still 88 rules.
+A $1,000 parent envelope funds an $800 desk hire. A $400 scout `hire.create` on a tighter child is `payment.parent_budget` — the child's own envelope still allows — and writes nothing. That funded parent work still releases. A parent envelope is not a child's leftover. Sub-hire is nested slips. Purse is the child's own envelope. Still 89 rules.
 
 ### Mint (`pnpm demo mint`)
 
 **Fixture:** `fixtures/demo/mint/`.
 
-A transfer from equity is `ledger.operating_book` — not a mint. Operating cash still funds an $800 hire. A transfer out of that escrow is `ledger.operating_book` — not an allocation. That funded work still releases. Overdraft stays `ledger.sufficient`. Brim TAP is dest overflow. Still 88 rules.
+A transfer from equity is `ledger.operating_book` — not a mint. Operating cash still funds an $800 hire. A transfer out of that escrow is `ledger.operating_book` — not an allocation. That funded work still releases. Overdraft stays `ledger.sufficient`. Brim TAP is dest overflow. Still 89 rules.
 
 ### Payee (`pnpm demo payee`)
 
 **Fixture:** `fixtures/demo/payee/`.
 
-A listed research vendor funds an $800 hire. A registered outsider quotes; `hire.create` is `payment.allowed_payees` — amount and known counterparty still allow — and writes no hire. The quote stays unspent. That funded work still releases. A listed payee is not any registered vendor. Room TAP is the RFQ guest list. Rail TAP is the instrument list. Still 88 rules.
+A listed research vendor funds an $800 hire. A registered outsider quotes; `hire.create` is `payment.allowed_payees` — amount and known counterparty still allow — and writes no hire. The quote stays unspent. That funded work still releases. A listed payee is not any registered vendor. Room TAP is the RFQ guest list. Rail TAP is the instrument list. Still 89 rules.
 
 ### Climb (`pnpm demo climb`)
 
 **Fixture:** `fixtures/demo/climb/`.
 
-An L3 handshake funds an $800 hire. After a climb to L4, a new `hire.create` is `kya.capability_subset` — the slip ceiling still allows — and writes nothing. That funded work still releases. A climb is not a wider handshake. Night Watch climbs inside the grant. The slip ceiling stays `ladder.max_autonomy_constraint`. Still 88 rules.
+An L3 handshake funds an $800 hire. After a climb to L4, a new `hire.create` is `kya.capability_subset` — the slip ceiling still allows — and writes nothing. That funded work still releases. A climb is not a wider handshake. Night Watch climbs inside the grant. The slip ceiling stays `ladder.max_autonomy_constraint`. Still 89 rules.
 
 ### Born (`pnpm demo born`)
 
 **Fixture:** `fixtures/demo/born/`.
 
-A quote whose `validUntil` is already past is `market.fx_fresh` — not a written corpse. Pair, window shape, 200bps band, and later-lapse still allow. An open window quotes and settles. Settle of a window that lapses after mint stays `market.not_expired`. Conversion TAP is `hire.not_fx`. Spread TAP is `mm.spread_bound`. Still 88 rules.
+A quote whose `validUntil` is already past is `market.fx_fresh` — not a written corpse. Pair, window shape, 200bps band, and later-lapse still allow. An open window quotes and settles. Settle of a window that lapses after mint stays `market.not_expired`. Conversion TAP is `hire.not_fx`. Spread TAP is `mm.spread_bound`. Still 89 rules.
 
 ### Reach (`pnpm demo reach`)
 
 **Fixture:** `fixtures/demo/reach/`.
 
-A live slip funds an $800 hire. A calendar whose `not_before` is after the seven-day exp is `mandate.window_reach` — not a written corpse. A closed calendar still allows. A future window that still opens while the slip lives still mints. That funded work still releases. Calendar TAP is `payment.execution_date` on hire. Wilt TAP is a corpse calendar (`mandate.window_fresh`). Still 88 rules.
+A live slip funds an $800 hire. A calendar whose `not_before` is after the seven-day exp is `mandate.window_reach` — not a written corpse. A closed calendar still allows. A future window that still opens while the slip lives still mints. That funded work still releases. Calendar TAP is `payment.execution_date` on hire. Wilt TAP is a corpse calendar (`mandate.window_fresh`). Still 89 rules.
 
 ### Year (`pnpm demo year`)
 
 **Fixture:** `fixtures/demo/year/`.
 
-A one-year handshake funds an $800 hire. A hop whose `expiresAt` is after now + one year is `kya.mint_window` — not standing identity. Born-dead and unique-live still allow. A one-year hop still mints. That funded work still releases. Pair TAP is `kya.unique_live`. Spark TAP is a corpse mint (`kya.mint_fresh`). Still 88 rules.
+A one-year handshake funds an $800 hire. A hop whose `expiresAt` is after now + one year is `kya.mint_window` — not standing identity. Born-dead and unique-live still allow. A one-year hop still mints. That funded work still releases. Pair TAP is `kya.unique_live`. Spark TAP is a corpse mint (`kya.mint_fresh`). Still 89 rules.
 
 ### Fuse (`pnpm demo fuse`)
 
 **Fixture:** `fixtures/demo/fuse/`.
 
-An $800 hire funds against a $1,000 daily fuse. A $400 second `hire.create` is `circuit.daily` — the envelope and the item cap still allow — and writes nothing. The fuse blows. That funded work still releases. Lid TAP is the item cap. Night Watch first-denies `payment.amount_range` inside a longer story. Refund TAP is unwind plus sticky. Velocity TAP is a hot hour. Still 88 rules.
+An $800 hire funds against a $1,000 daily fuse. A $400 second `hire.create` is `circuit.daily` — the envelope and the item cap still allow — and writes nothing. The fuse blows. That funded work still releases. Lid TAP is the item cap. Night Watch first-denies `payment.amount_range` inside a longer story. Refund TAP is unwind plus sticky. Velocity TAP is a hot hour. Still 89 rules.
 
 ### SKU (`pnpm demo sku`)
 
 **Fixture:** `fixtures/demo/sku/`.
 
-A listed `research.brief` funds an $800 hire. Catalog `research.deep` quotes; `hire.create` is `payment.allowed_skus` — known SKU, listed payee, and room still allow — and writes no hire. The quote stays unspent. That funded work still releases. A listed SKU is not any catalog good. Payee TAP is who. Shelf TAP is a ghost SKU. Still 88 rules.
+A listed `research.brief` funds an $800 hire. Catalog `research.deep` quotes; `hire.create` is `payment.allowed_skus` — known SKU, listed payee, and room still allow — and writes no hire. The quote stays unspent. That funded work still releases. A listed SKU is not any catalog good. Payee TAP is who. Shelf TAP is a ghost SKU. Still 89 rules.
 
 ### Priced (`pnpm demo priced`)
 
 **Fixture:** `fixtures/demo/priced/`.
 
-A vendor quotes `research.brief` in `USDC_SIM`. That is `market.sku_currency` — known SKU, known RFQ, and FX pair still allow — and writes no quote. A USD quote still writes. That funded work still releases. Convert with `market.fx_settle`. SKU TAP is the slip list. Ink TAP is a USDC cart on a USD hire. Still 88 rules.
+A vendor quotes `research.brief` in `USDC_SIM`. That is `market.sku_currency` — known SKU, known RFQ, and FX pair still allow — and writes no quote. A USD quote still writes. That funded work still releases. Convert with `market.fx_settle`. SKU TAP is the slip list. Ink TAP is a USDC cart on a USD hire. Still 89 rules.
 
 ### Party (`pnpm demo party`)
 
 **Fixture:** `fixtures/demo/party/`.
 
-An $800 hire funds to the vendor who quoted. A different registered vendor’s `hire.deliver` is `hire.party` — the hire is still known; the funded arrow still allows — and writes no state change. The seller who quoted still delivers. That funded work still releases. Payee TAP is who may be hired. Room TAP is who may quote. Still 88 rules.
+An $800 hire funds to the vendor who quoted. A different registered vendor’s `hire.deliver` is `hire.party` — the hire is still known; the funded arrow still allows — and writes no state change. The seller who quoted still delivers. That funded work still releases. Payee TAP is who may be hired. Room TAP is who may quote. Still 89 rules.
 
 ### Cash (`pnpm demo cash`)
 
 **Fixture:** `fixtures/demo/cash/`.
 
-An $800 hire empties the desk. A $400 second `hire.fund` is `ledger.sufficient` — same currency, operating cash, and the hire arrow still allow — and locks no escrow. That funded work still releases. Mint TAP is a transfer from equity. Stock TAP is empty MM USDC. Brim TAP is dest overflow. Still 88 rules.
+An $800 hire empties the desk. A $400 second `hire.fund` is `ledger.sufficient` — same currency, operating cash, and the hire arrow still allow — and locks no escrow. That funded work still releases. Mint TAP is a transfer from equity. Stock TAP is empty MM USDC. Brim TAP is dest overflow. Still 89 rules.
 
 ### Stale (`pnpm demo stale`)
 
 **Fixture:** `fixtures/demo/stale/`.
 
-An $800 hire funds on a live quote. After that quote’s hour, `hire.create` is `market.not_expired` — known SKU, known room, unspent promise, and born-dead still allow — and writes no hire. A fresh quote on that still-live RFQ still hires. That funded work still releases. Calendar TAP is the slip calendar. Born TAP is a corpse FX window. Replay TAP is a spent quote. Still 88 rules.
+An $800 hire funds on a live quote. After that quote’s hour, `hire.create` is `market.not_expired` — known SKU, known room, unspent promise, and born-dead still allow — and writes no hire. A fresh quote on that still-live RFQ still hires. That funded work still releases. Calendar TAP is the slip calendar. Born TAP is a corpse FX window. Replay TAP is a spent quote. Still 89 rules.
 
 ### Chain (`pnpm demo chain`)
 
 **Fixture:** `fixtures/demo/chain/`.
 
-An $800 hire funds on a live cart. After that cart’s day, a second `hire.fund` is `mandate.chain_integrity` — occupancy, cash, and the hire arrow still allow — and locks no escrow. That funded work still releases. Cart TAP is occupancy. Calendar TAP is the slip calendar. Stale TAP is quote TTL. Crate TAP is a ghost cart. Dust TAP is a first payment on a stale unpaid cart. Still 88 rules.
+An $800 hire funds on a live cart. After that cart’s day, a second `hire.fund` is `mandate.chain_integrity` — occupancy, cash, and the hire arrow still allow — and locks no escrow. That funded work still releases. Cart TAP is occupancy. Calendar TAP is the slip calendar. Stale TAP is quote TTL. Crate TAP is a ghost cart. Dust TAP is a first payment on a stale unpaid cart. Still 89 rules.
 
 ### Arrow (`pnpm demo arrow`)
 
 **Fixture:** `fixtures/demo/arrow/`.
 
-An $800 hire funds. `hire.release` before deliver is `hire.state` — the hire is still known; the buyer is still the party; escrow discipline and the bound cart still allow — and pays the vendor nothing. After deliver that funded work still releases. Bare TAP is deliver before fund (`hire.escrow_required`). Refund TAP is unwind after deliver. Party TAP is who sits on the hire. Still 88 rules.
+An $800 hire funds. `hire.release` before deliver is `hire.state` — the hire is still known; the buyer is still the party; escrow discipline and the bound cart still allow — and pays the vendor nothing. After deliver that funded work still releases. Bare TAP is deliver before fund (`hire.escrow_required`). Refund TAP is unwind after deliver. Party TAP is who sits on the hire. Still 89 rules.
 
 ### Wallet (`pnpm demo wallet`)
 
 **Fixture:** `fixtures/demo/wallet/`.
 
-An $800 hire funds. A compute vendor’s `market.fx_settle` is `ledger.known_account` — the maker, inventory, live window, and USD cash still allow — and consumes nothing. A research vendor with a USDC book still converts. That funded work still releases. Mint TAP is a transfer from equity. Stock TAP is empty MM USDC. Maker TAP is nobody on the window. Brim TAP is dest overflow. Still 88 rules.
+An $800 hire funds. A compute vendor’s `market.fx_settle` is `ledger.known_account` — the maker, inventory, live window, and USD cash still allow — and consumes nothing. A research vendor with a USDC book still converts. That funded work still releases. Mint TAP is a transfer from equity. Stock TAP is empty MM USDC. Maker TAP is nobody on the window. Brim TAP is dest overflow. Still 89 rules.
 
 ### Name (`pnpm demo name`)
 
 **Fixture:** `fixtures/demo/name/`.
 
-An $800 hire funds. An L4 scout’s `kya.attest` in the founder’s name is `kya.party` — not-self, chain, unique-live, and capability-subset still allow — and writes no hop. The founder still mints that pair. That funded work still releases. Pair TAP is a second live hop. Climb TAP is a climb above the grant. Year TAP is a hop past one year. Still 88 rules.
+An $800 hire funds. An L4 scout’s `kya.attest` in the founder’s name is `kya.party` — not-self, chain, unique-live, and capability-subset still allow — and writes no hop. The founder still mints that pair. That funded work still releases. Pair TAP is a second live hop. Climb TAP is a climb above the grant. Year TAP is a hop past one year. Still 89 rules.
 
 ### Pane (`pnpm demo pane`)
 
 **Fixture:** `fixtures/demo/pane/`.
 
-An $800 hire funds. A market maker’s `market.quote` of an FX SKU with no window is `market.fx_window` — known SKU, known room, pair, and born-dead still allow — and writes no quote. A real window still quotes and converts. That funded work still releases. Conversion TAP is hiring the window. Born TAP is a corpse mint. Swap TAP is a swapped pair. Pair TAP is unique-live. Still 88 rules.
+An $800 hire funds. A market maker’s `market.quote` of an FX SKU with no window is `market.fx_window` — known SKU, known room, pair, and born-dead still allow — and writes no quote. A real window still quotes and converts. That funded work still releases. Conversion TAP is hiring the window. Born TAP is a corpse mint. Swap TAP is a swapped pair. Pair TAP is unique-live. Still 89 rules.
 
 ### Subject (`pnpm demo subject`)
 
 **Fixture:** `fixtures/demo/subject/`.
 
-Desk A binds an $800 hire on a slip that names desk A. Desk B’s `hire.fund` is `mandate.subject_is_actor` — the hire is still known; the accepted arrow, bound cart, cash, and intact chain still allow — and locks no escrow. Desk A still funds. That work still releases. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row. Still 88 rules.
+Desk A binds an $800 hire on a slip that names desk A. Desk B’s `hire.fund` is `mandate.subject_is_actor` — the hire is still known; the accepted arrow, bound cart, cash, and intact chain still allow — and locks no escrow. Desk A still funds. That work still releases. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row. Still 89 rules.
 
 ### Paper (`pnpm demo paper`)
 
 **Fixture:** `fixtures/demo/paper/`.
 
-An $800 hire funds. Settling a research quote as FX is `market.fx_quote` — pair, maker, dest book, and band still allow — and consumes nothing. A real window still converts. That funded work still releases. Conversion TAP is hiring the window. Pane TAP is quoting an FX SKU without a window. Wallet TAP is a missing dest book. Still 88 rules.
+An $800 hire funds. Settling a research quote as FX is `market.fx_quote` — pair, maker, dest book, and band still allow — and consumes nothing. A real window still converts. That funded work still releases. Conversion TAP is hiring the window. Pane TAP is quoting an FX SKU without a window. Wallet TAP is a missing dest book. Still 89 rules.
 
 ### Mix (`pnpm demo mix`)
 
 **Fixture:** `fixtures/demo/mix/`.
 
-An $800 hire funds. Treasury posting USD into a USDC book is `ledger.same_currency` — known books, operating cash, and source still allow — and posts no journal. A real window still converts. That funded work still releases. Wallet TAP is a missing dest book. Cash TAP is empty operating cash. Mint TAP is a transfer from equity. Priced TAP is catalog currency. Paper TAP is settling a research quote as FX. Ink TAP is a USDC cart on a USD hire. Brim TAP is dest overflow. Still 88 rules.
+An $800 hire funds. Treasury posting USD into a USDC book is `ledger.same_currency` — known books, operating cash, and source still allow — and posts no journal. A real window still converts. That funded work still releases. Wallet TAP is a missing dest book. Cash TAP is empty operating cash. Mint TAP is a transfer from equity. Priced TAP is catalog currency. Paper TAP is settling a research quote as FX. Ink TAP is a USDC cart on a USD hire. Brim TAP is dest overflow. Still 89 rules.
 
 ### Rung (`pnpm demo rung`)
 
 **Fixture:** `fixtures/demo/rung/`.
 
-An $800 hire funds. Skipping L2→L4 on a scout is `ladder.legal` — the scout is still known; the founder may still set rungs — and the scout stays L2. A one-rung climb still goes through. That funded work still releases. Climb TAP is a handshake ceiling. Night Watch’s premature L5 is the freeze-test gate. Still 88 rules.
+An $800 hire funds. Skipping L2→L4 on a scout is `ladder.legal` — the scout is still known; the founder may still set rungs — and the scout stays L2. A one-rung climb still goes through. That funded work still releases. Climb TAP is a handshake ceiling. Night Watch’s premature L5 is the freeze-test gate. Still 89 rules.
 
 ### Grade (`pnpm demo grade`)
 
 **Fixture:** `fixtures/demo/grade/`.
 
-An $800 hire funds. An L3 scout minting a nested slip is `ladder.min_level` — the parent still exists; the child is still tighter; the handshake ceiling still allows — and writes nothing. An L4 desk still mints that child. That funded work still releases. Climb TAP is a handshake ceiling. Rung TAP is a skipped climb. Sub-hire TAP is a wider child. Still 88 rules.
+An $800 hire funds. An L3 scout minting a nested slip is `ladder.min_level` — the parent still exists; the child is still tighter; the handshake ceiling still allows — and writes nothing. An L4 desk still mints that child. That funded work still releases. Climb TAP is a handshake ceiling. Rung TAP is a skipped climb. Sub-hire TAP is a wider child. Still 89 rules.
 
 ### Cradle (`pnpm demo cradle`)
 
 **Fixture:** `fixtures/demo/cradle/`.
 
-An $800 hire funds. Minting a sentinel at L5 is `ladder.birth_rung` — the alias is still free; the founder may still register; a skip is not this deny — and writes nothing. An L4 register still goes through. That funded work still releases. Rung TAP is a skipped climb. Night Watch’s premature L5 is the freeze-test gate. Grade TAP is a junior nested mint. Still 88 rules.
+An $800 hire funds. Minting a sentinel at L5 is `ladder.birth_rung` — the alias is still free; the founder may still register; a skip is not this deny — and writes nothing. An L4 register still goes through. That funded work still releases. Rung TAP is a skipped climb. Night Watch’s premature L5 is the freeze-test gate. Grade TAP is a junior nested mint. Still 89 rules.
 
 ### Ceiling (`pnpm demo ceiling`)
 
 **Fixture:** `fixtures/demo/ceiling/`.
 
-An $800 hire funds under an L3 slip. After a climb to L4, a new hire is `ladder.max_autonomy_constraint` — the handshake ceiling still allows; the item cap still allows — and writes nothing. That funded work still releases. Climb TAP is a handshake ceiling. Rung TAP is a skipped climb. Grade TAP is a junior nested mint. Still 88 rules.
+An $800 hire funds under an L3 slip. After a climb to L4, a new hire is `ladder.max_autonomy_constraint` — the handshake ceiling still allows; the item cap still allows — and writes nothing. That funded work still releases. Climb TAP is a handshake ceiling. Rung TAP is a skipped climb. Grade TAP is a junior nested mint. Still 89 rules.
 
 ### Lapse (`pnpm demo lapse`)
 
 **Fixture:** `fixtures/demo/lapse/`.
 
-An $800 hire funds under a noon handshake. After that hop dies, a new hire is `kya.attestation_fresh` — the chain still verifies; a nested parent is not this deny; the grant still allows — and writes nothing. The pair still occupies. That funded work still releases. Nest TAP is a nested parent. Year TAP is a hop past one year. Climb TAP is a handshake ceiling. Pair TAP is a second live hop. Stale TAP is quote TTL. Still 88 rules.
+An $800 hire funds under a noon handshake. After that hop dies, a new hire is `kya.attestation_fresh` — the chain still verifies; a nested parent is not this deny; the grant still allows — and writes nothing. The pair still occupies. That funded work still releases. Nest TAP is a nested parent. Year TAP is a hop past one year. Climb TAP is a handshake ceiling. Pair TAP is a second live hop. Stale TAP is quote TTL. Still 89 rules.
 
 ### Pause (`pnpm demo pause`)
 
 **Fixture:** `fixtures/demo/pause/`.
 
-An $800 hire funds under the auto-approve line. A $6,400 hire pauses as `approval.threshold`. After that ticket dies, `approval.resolve` is `approval.pending` — the ticket still exists; a stale command is not this deny — and writes no hire. The quote is free again. That funded work still releases. Velocity TAP is a hot hour. Deny TAP is a cached no. Sour TAP is a stale pause. Replay TAP is a retry of an allow. Docket TAP is a missing ticket. Still 88 rules.
+An $800 hire funds under the auto-approve line. A $6,400 hire pauses as `approval.threshold`. After that ticket dies, `approval.resolve` is `approval.pending` — the ticket still exists; a stale command is not this deny — and writes no hire. The quote is free again. That funded work still releases. Velocity TAP is a hot hour. Deny TAP is a cached no. Sour TAP is a stale pause. Replay TAP is a retry of an allow. Docket TAP is a missing ticket. Still 89 rules.
 
 ### Mirror (`pnpm demo mirror`)
 
 **Fixture:** `fixtures/demo/mirror/`.
 
-An $800 hire funds. Attesting the speaker is `kya.not_self` — someone else's name, a second hop, and a corpse mint still allow — and writes nothing. The founder still mints a real pair. That funded work still releases. Name TAP is whose name a handshake is in. Pair TAP is a second live hop. Year TAP is a hop past one year. Still 88 rules.
+An $800 hire funds. Attesting the speaker is `kya.not_self` — someone else's name, a second hop, and a corpse mint still allow — and writes nothing. The founder still mints a real pair. That funded work still releases. Name TAP is whose name a handshake is in. Pair TAP is a second live hop. Year TAP is a hop past one year. Still 89 rules.
 
 ### Warrant (`pnpm demo warrant`)
 
 **Fixture:** `fixtures/demo/warrant/`.
 
-An $800 hire funds. Subscribe on an agent-issued slip is `host.human_authority` — the public kernel still allows; a missing seat is not this deny — and writes no row. A human-issued slip still seats. That funded work still releases. Door TAP is the public kernel. Seat TAP is a second subscribe row. Still 88 rules.
+An $800 hire funds. Subscribe on an agent-issued slip is `host.human_authority` — the public kernel still allows; a missing seat is not this deny — and writes no row. A human-issued slip still seats. That funded work still releases. Door TAP is the public kernel. Seat TAP is a second subscribe row. Still 89 rules.
 
 ### Vacant (`pnpm demo vacant`)
 
 **Fixture:** `fixtures/demo/vacant/`.
 
-An $800 hire funds. Minting a cadence with `max_occurrences` 0 is `mandate.occurrence_fresh` — a spent slot, a closed calendar, and a nested child still allow — and writes no slip. A one-slot slip still mints. That funded work still releases. Recurrence TAP is a spent slot. Slot TAP is a refunded slot. Daily TAP is a same-day burst. Calendar TAP is `payment.execution_date`. Still 88 rules.
+An $800 hire funds. Minting a cadence with `max_occurrences` 0 is `mandate.occurrence_fresh` — a spent slot, a closed calendar, and a nested child still allow — and writes no slip. A one-slot slip still mints. That funded work still releases. Recurrence TAP is a spent slot. Slot TAP is a refunded slot. Daily TAP is a same-day burst. Calendar TAP is `payment.execution_date`. Still 89 rules.
 
 ### Badge (`pnpm demo badge`)
 
 **Fixture:** `fixtures/demo/badge/`.
 
-An $800 hire funds. An auditor's `hire.create` is `actor.role_capability` — a freeze, a missing speaker, and a spent quote still allow — and writes no hire. The quote stays unspent. The auditor still verifies the notary. That funded work still releases. Deny TAP is a freeze. Replay TAP is a spent quote. Still 88 rules.
+An $800 hire funds. An auditor's `hire.create` is `actor.role_capability` — a freeze, a missing speaker, and a spent quote still allow — and writes no hire. The quote stays unspent. The auditor still verifies the notary. That funded work still releases. Deny TAP is a freeze. Replay TAP is a spent quote. Still 89 rules.
 
 ### Lid (`pnpm demo lid`)
 
 **Fixture:** `fixtures/demo/lid/`.
 
-A $1,000 item cap with a $5,000 envelope funds an $800 hire. A $1,500 `hire.create` is `payment.amount_range` — the envelope and the fuse still allow — and writes no hire. The quote stays unspent. That funded work still releases. Purse TAP is the envelope. Fuse TAP is the daily cap. Sprint and Night Watch hit this rule inside a longer story. Still 88 rules.
+A $1,000 item cap with a $5,000 envelope funds an $800 hire. A $1,500 `hire.create` is `payment.amount_range` — the envelope and the fuse still allow — and writes no hire. The quote stays unspent. That funded work still releases. Purse TAP is the envelope. Fuse TAP is the daily cap. Sprint and Night Watch hit this rule inside a longer story. Still 89 rules.
 
 ### Bare (`pnpm demo bare`)
 
 **Fixture:** `fixtures/demo/bare/`.
 
-An $800 hire funds. `hire.deliver` on an accepted hire is `hire.escrow_required` — the hire is still known; the seller is still the party — and writes no deliverable. The sneak hire stays accepted. That funded work still releases. Arrow TAP is release before deliver (`hire.state`). Party TAP is who sits on the hire. Still 88 rules.
+An $800 hire funds. `hire.deliver` on an accepted hire is `hire.escrow_required` — the hire is still known; the seller is still the party — and writes no deliverable. The sneak hire stays accepted. That funded work still releases. Arrow TAP is release before deliver (`hire.state`). Party TAP is who sits on the hire. Still 89 rules.
 
 ### Shelf (`pnpm demo shelf`)
 
 **Fixture:** `fixtures/demo/shelf/`.
 
-An $800 hire of catalog `research.brief` funds. `market.rfq` of `lunch.tacos` is `market.known_sku` — the slip list still allows; catalog currency is not this deny — and writes no RFQ. That funded work still releases. SKU TAP is the slip list. Priced TAP is catalog currency. Hall TAP is a ghost RFQ. Guest TAP is a missing invitee. Still 88 rules.
+An $800 hire of catalog `research.brief` funds. `market.rfq` of `lunch.tacos` is `market.known_sku` — the slip list still allows; catalog currency is not this deny — and writes no RFQ. That funded work still releases. SKU TAP is the slip list. Priced TAP is catalog currency. Hall TAP is a ghost RFQ. Guest TAP is a missing invitee. Still 89 rules.
 
 ### Hall (`pnpm demo hall`)
 
 **Fixture:** `fixtures/demo/hall/`.
 
-An $800 hire funds. `market.quote` on a ghost RFQ is `market.known_rfq` — a missing SKU still allows; a closed guest list is not this deny — and writes no quote. That funded work still releases. Room TAP is a closed guest list. Shelf TAP is a ghost SKU. Guest TAP is a missing invitee. Writ TAP is a ghost slip. Still 88 rules.
+An $800 hire funds. `market.quote` on a ghost RFQ is `market.known_rfq` — a missing SKU still allows; a closed guest list is not this deny — and writes no quote. That funded work still releases. Room TAP is a closed guest list. Shelf TAP is a ghost SKU. Guest TAP is a missing invitee. Writ TAP is a ghost slip. Still 89 rules.
 
 ### Writ (`pnpm demo writ`)
 
 **Fixture:** `fixtures/demo/writ/`.
 
-An $800 hire funds. `hire.create` on a ghost intent is `mandate.known_intent` — a missing handshake still allows; a dead parent is not this deny — and writes no hire. The quote stays unspent. That funded work still releases. Hall TAP is a ghost RFQ. Heir TAP is a dead parent. Name TAP is whose name a handshake is in. Crate TAP is a ghost cart. Still 88 rules.
+An $800 hire funds. `hire.create` on a ghost intent is `mandate.known_intent` — a missing handshake still allows; a dead parent is not this deny — and writes no hire. The quote stays unspent. That funded work still releases. Hall TAP is a ghost RFQ. Heir TAP is a dead parent. Name TAP is whose name a handshake is in. Crate TAP is a ghost cart. Still 89 rules.
 
 ### Crate (`pnpm demo crate`)
 
 **Fixture:** `fixtures/demo/crate/`.
 
-An $800 hire funds. `mandate.issue_payment` on a ghost cart is `mandate.known_cart` — occupancy still allows; a dead cart at fund is not this deny — and writes no payment. That funded work still releases. Cart TAP is occupancy. Chain TAP is a dead cart at fund. Dust TAP is a first payment on a stale unpaid cart. Writ TAP is a ghost slip. Pact TAP is a ghost hire. Still 88 rules.
+An $800 hire funds. `mandate.issue_payment` on a ghost cart is `mandate.known_cart` — occupancy still allows; a dead cart at fund is not this deny — and writes no payment. That funded work still releases. Cart TAP is occupancy. Chain TAP is a dead cart at fund. Dust TAP is a first payment on a stale unpaid cart. Writ TAP is a ghost slip. Pact TAP is a ghost hire. Still 89 rules.
 
 ### Pact (`pnpm demo pact`)
 
 **Fixture:** `fixtures/demo/pact/`.
 
-An $800 hire funds. `hire.deliver` on a ghost hire is `hire.known` — a stranger’s deliver still allows; unfunded work is not this deny — and writes no deliverable. That funded work still releases. Party TAP is a stranger on a live hire. Bare TAP is deliver before fund. Arrow TAP is release before deliver. Crate TAP is a ghost cart. Root TAP is a ghost parent. Still 88 rules.
+An $800 hire funds. `hire.deliver` on a ghost hire is `hire.known` — a stranger’s deliver still allows; unfunded work is not this deny — and writes no deliverable. That funded work still releases. Party TAP is a stranger on a live hire. Bare TAP is deliver before fund. Arrow TAP is release before deliver. Crate TAP is a ghost cart. Root TAP is a ghost parent. Still 89 rules.
 
 ### Root (`pnpm demo root`)
 
 **Fixture:** `fixtures/demo/root/`.
 
-An $800 hire funds. `mandate.issue_intent` on a ghost parent is `mandate.known_parent` — a tighter child still allows; a dead parent is not this deny — and writes no child. That funded work still releases. Heir TAP is a dead parent. Nest TAP is a dead hop. Vacant TAP is a cadence with no slots. Grade TAP is a junior nested mint. Graft TAP is a missing hop parent. Still 88 rules.
+An $800 hire funds. `mandate.issue_intent` on a ghost parent is `mandate.known_parent` — a tighter child still allows; a dead parent is not this deny — and writes no child. That funded work still releases. Heir TAP is a dead parent. Nest TAP is a dead hop. Vacant TAP is a cadence with no slots. Grade TAP is a junior nested mint. Graft TAP is a missing hop parent. Still 89 rules.
 
 ### Docket (`pnpm demo docket`)
 
 **Fixture:** `fixtures/demo/docket/`.
 
-An $800 hire funds under the auto-approve line. `approval.resolve` on a ghost ticket is `approval.known` — a dead pause still allows; a stale command is not this deny — and writes no ticket. That funded work still releases. Pause TAP is a dead ticket. Sour TAP is a stale pause. Replay TAP is a retry of an allow. Velocity TAP is a hot hour. Still 88 rules.
+An $800 hire funds under the auto-approve line. `approval.resolve` on a ghost ticket is `approval.known` — a dead pause still allows; a stale command is not this deny — and writes no ticket. That funded work still releases. Pause TAP is a dead ticket. Sour TAP is a stale pause. Replay TAP is a retry of an allow. Velocity TAP is a hot hour. Still 89 rules.
 
 ### Graft (`pnpm demo graft`)
 
 **Fixture:** `fixtures/demo/graft/`.
 
-An $800 hire funds. `kya.attest` under a ghost parent hop is `kya.known_parent` — a dead hop still allows; a missing slip parent is not this deny — and writes no hop. That funded work still releases. Nest TAP is a dead hop. Root TAP is a missing slip parent. Pair TAP is a second live hop. Mirror TAP is a handshake with yourself. Seal TAP is a missing handshake. Still 88 rules.
+An $800 hire funds. `kya.attest` under a ghost parent hop is `kya.known_parent` — a dead hop still allows; a missing slip parent is not this deny — and writes no hop. That funded work still releases. Nest TAP is a dead hop. Root TAP is a missing slip parent. Pair TAP is a second live hop. Mirror TAP is a handshake with yourself. Seal TAP is a missing handshake. Still 89 rules.
 
 ### Seal (`pnpm demo seal`)
 
 **Fixture:** `fixtures/demo/seal/`.
 
-An $800 hire funds. A live handshake is minted. `kya.revoke` of a ghost attestation is `kya.known_attestation` — a missing hop parent still allows; someone else’s name is not this deny — and does not tombstone the live hop. That funded work still releases. Graft TAP is a missing hop parent. Name TAP is whose name a handshake is in. Night Watch is revoke of a live hop. Still 88 rules.
+An $800 hire funds. A live handshake is minted. `kya.revoke` of a ghost attestation is `kya.known_attestation` — a missing hop parent still allows; someone else’s name is not this deny — and does not tombstone the live hop. That funded work still releases. Graft TAP is a missing hop parent. Name TAP is whose name a handshake is in. Night Watch is revoke of a live hop. Still 89 rules.
 
 ### Guest (`pnpm demo guest`)
 
 **Fixture:** `fixtures/demo/guest/`.
 
-An $800 hire funds. `market.rfq` that invites a missing seller is `identity.known` — a closed guest list still allows; a missing SKU is not this deny — and writes no RFQ. That funded work still releases. Room TAP is a closed guest list. Shelf TAP is a ghost SKU. Hall TAP is a ghost RFQ. Still 88 rules.
+An $800 hire funds. `market.rfq` that invites a missing seller is `identity.known` — a closed guest list still allows; a missing SKU is not this deny — and writes no RFQ. That funded work still releases. Room TAP is a closed guest list. Shelf TAP is a ghost SKU. Hall TAP is a ghost RFQ. Still 89 rules.
 
 ### Dust (`pnpm demo dust`)
 
 **Fixture:** `fixtures/demo/dust/`.
 
-An $800 hire funds. `mandate.issue_payment` on a stale unpaid cart is `mandate.not_expired` — occupancy still allows; a dead cart at fund is not this deny — and writes no payment. That funded work still releases. Cart TAP is occupancy. Chain TAP is a dead cart at fund. Crate TAP is a ghost cart. Still 88 rules.
+An $800 hire funds. `mandate.issue_payment` on a stale unpaid cart is `mandate.not_expired` — occupancy still allows; a dead cart at fund is not this deny — and writes no payment. That funded work still releases. Cart TAP is occupancy. Chain TAP is a dead cart at fund. Crate TAP is a ghost cart. Still 89 rules.
 
 ### Thaw (`pnpm demo thaw`)
 
 **Fixture:** `fixtures/demo/thaw/`.
 
-An $800 hire funds. `identity.unfreeze` of a live unfrozen auditor is `identity.freeze_state` — a missing agent still allows; a frozen speaker is not this deny — and writes no UNFREEZE line. That funded work still releases. The auditor still verifies. Deny TAP is a frozen speaker. Night Watch is freeze then a real unfreeze. Guest TAP is a missing agent. Still 88 rules.
+An $800 hire funds. `identity.unfreeze` of a live unfrozen auditor is `identity.freeze_state` — a missing agent still allows; a frozen speaker is not this deny — and writes no UNFREEZE line. That funded work still releases. The auditor still verifies. Deny TAP is a frozen speaker. Night Watch is freeze then a real unfreeze. Guest TAP is a missing agent. Still 89 rules.
 
 ### Twin (`pnpm demo twin`)
 
 **Fixture:** `fixtures/demo/twin/`.
 
-An $800 hire funds. `identity.register` on the taken desk alias is `identity.unique_key` — L5 at birth still allows; system minting a second agent is not this deny — and writes no agent. That funded work still releases. Cradle TAP is L5 at birth. Fence TAP is system minting a second agent. Still 88 rules.
+An $800 hire funds. `identity.register` on the taken desk alias is `identity.unique_key` — L5 at birth still allows; system minting a second agent is not this deny — and writes no agent. That funded work still releases. Cradle TAP is L5 at birth. Fence TAP is system minting a second agent. Still 89 rules.
 
 ### Fence (`pnpm demo fence`)
 
 **Fixture:** `fixtures/demo/fence/`.
 
-An $800 hire funds. `identity.register` as system after the first human is `actor.system_scope` — a taken alias still allows; L5 at birth is not this deny — and writes no agent. System still reads the catalog. That funded work still releases. Twin TAP is a taken alias. Cradle TAP is L5 at birth. Mute TAP is a missing speaker. Still 88 rules.
+An $800 hire funds. `identity.register` as system after the first human is `actor.system_scope` — a taken alias still allows; L5 at birth is not this deny — and writes no agent. System still reads the catalog. That funded work still releases. Twin TAP is a taken alias. Cradle TAP is L5 at birth. Mute TAP is a missing speaker. Still 89 rules.
 
 ### Mute (`pnpm demo mute`)
 
 **Fixture:** `fixtures/demo/mute/`.
 
-An $800 hire funds. `ledger.balances` from a missing actorId is `actor.known` — a missing named target still allows; a frozen speaker is not this deny; system spending is not this deny — and writes no books. The live desk still reads. That funded work still releases. Guest TAP is a missing named target. Fence TAP is system spending. Deny TAP is a frozen speaker. Nil TAP is a missing receipt. Still 88 rules.
+An $800 hire funds. `ledger.balances` from a missing actorId is `actor.known` — a missing named target still allows; a frozen speaker is not this deny; system spending is not this deny — and writes no books. The live desk still reads. That funded work still releases. Guest TAP is a missing named target. Fence TAP is system spending. Deny TAP is a frozen speaker. Nil TAP is a missing receipt. Still 89 rules.
 
 ### Nil (`pnpm demo nil`)
 
 **Fixture:** `fixtures/demo/nil/`.
 
-An $800 hire funds. `receipt.get` of a missing receiptId is `receipt.known` — a missing speaker still allows; a missing named target is not this deny — and writes no receipt. The live receipt still fetches. That funded work still releases. Mute TAP is a missing speaker. Guest TAP is a missing named target. Still 88 rules.
+An $800 hire funds. `receipt.get` of a missing receiptId is `receipt.known` — a missing speaker still allows; a missing named target is not this deny — and writes no receipt. The live receipt still fetches. That funded work still releases. Mute TAP is a missing speaker. Guest TAP is a missing named target. Still 89 rules.
 
 ### Spark (`pnpm demo spark`)
 
 **Fixture:** `fixtures/demo/spark/`.
 
-An $800 hire funds with no handshake yet. `kya.attest` with `expiresAt` already past is `kya.mint_fresh` — a century mint still allows; a second live hop is not this deny — and writes no hop. A one-year hop still mints. That funded work still releases. Year TAP is a hop past one year. Pair TAP is a second live hop. Unparseable `expiresAt` is the same first deny. Still 88 rules.
+An $800 hire funds with no handshake yet. `kya.attest` with `expiresAt` already past is `kya.mint_fresh` — a century mint still allows; a second live hop is not this deny — and writes no hop. A one-year hop still mints. That funded work still releases. Year TAP is a hop past one year. Pair TAP is a second live hop. Unparseable `expiresAt` is the same first deny. Still 89 rules.
 
 ### Wilt (`pnpm demo wilt`)
 
 **Fixture:** `fixtures/demo/wilt/`.
 
-An $800 hire funds on a live slip. `mandate.issue_intent` with `not_after` already past is `mandate.window_fresh` — a window that opens after the slip dies still allows; a hire-time calendar is not this deny — and writes no slip. A live slip still mints. That funded work still releases. Reach TAP is a window that opens after the slip dies. Calendar TAP is hire-time. Unparseable or inverted windows are the same first deny. Still 88 rules.
+An $800 hire funds on a live slip. `mandate.issue_intent` with `not_after` already past is `mandate.window_fresh` — a window that opens after the slip dies still allows; a hire-time calendar is not this deny — and writes no slip. A live slip still mints. That funded work still releases. Reach TAP is a window that opens after the slip dies. Calendar TAP is hire-time. Unparseable or inverted windows are the same first deny. Still 89 rules.
 
 ### Maker (`pnpm demo maker`)
 
 **Fixture:** `fixtures/demo/maker/`.
 
-An $800 hire funds with no market maker in the world. `market.fx_settle` of a live FX quote is `mm.known` — empty inventory still allows; a missing dest book is not this deny — and consumes nothing. A maker still sits and that same window still converts. That funded work still releases. Wallet TAP is a missing dest book. Stock TAP is empty MM USDC. Missing MM books is the same first deny. Still 88 rules.
+An $800 hire funds with no market maker in the world. `market.fx_settle` of a live FX quote is `mm.known` — empty inventory still allows; a missing dest book is not this deny — and consumes nothing. A maker still sits and that same window still converts. That funded work still releases. Wallet TAP is a missing dest book. Stock TAP is empty MM USDC. Missing MM books is the same first deny. Still 89 rules.
 
 ### Ink (`pnpm demo ink`)
 
 **Fixture:** `fixtures/demo/ink/`.
 
-An $800 hire funds. `hire.fund` of a second accepted USD hire with a loose USDC cart is `payment.currency_match` — a mixed journal, a USDC quote, and a loose USD pointer still allow — and locks no escrow. A USD cart still binds and funds. That first funded work still releases. Mix TAP is a mixed journal. Priced TAP is a USDC quote. Cart TAP is a loose USD pointer. Match TAP is a cheaper cart. Still 88 rules.
+An $800 hire funds. `hire.fund` of a second accepted USD hire with a loose USDC cart is `payment.currency_match` — a mixed journal, a USDC quote, and a loose USD pointer still allow — and locks no escrow. A USD cart still binds and funds. That first funded work still releases. Mix TAP is a mixed journal. Priced TAP is a USDC quote. Cart TAP is a loose USD pointer. Match TAP is a cheaper cart. Still 89 rules.
 
 ### Brim (`pnpm demo brim`)
 
 **Fixture:** `fixtures/demo/brim/`.
 
-An $800 hire funds. `ledger.transfer` of one more cent into a book already at the integer ceiling is `ledger.safe_balance` — empty cash, a missing dest, a mixed journal, and a mint still allow — and posts no journal. A penny still posts to a book that can hold it. That funded work still releases. Cash TAP is empty operating cash. Wallet TAP is a missing dest book. Mix TAP is a mixed journal. Mint TAP is a transfer from equity. Still 88 rules.
+An $800 hire funds. `ledger.transfer` of one more cent into a book already at the integer ceiling is `ledger.safe_balance` — empty cash, a missing dest, a mixed journal, and a mint still allow — and posts no journal. A penny still posts to a book that can hold it. That funded work still releases. Cash TAP is empty operating cash. Wallet TAP is a missing dest book. Mix TAP is a mixed journal. Mint TAP is a transfer from equity. Still 89 rules.
 
 ### Swap (`pnpm demo swap`)
 
 **Fixture:** `fixtures/demo/swap/`.
 
-An $800 hire funds. A market maker’s `market.quote` of an FX SKU with swapped `from`/`to` is `market.fx_pair` — a missing window, a corpse mint, and catalog currency still allow — and writes no quote. A real window still quotes and converts. That funded work still releases. Pane TAP is a missing window. Born TAP is a corpse mint. Conversion TAP is hiring the window. Paper TAP is settling a research quote. Pair TAP is unique-live. Still 88 rules.
+An $800 hire funds. A market maker’s `market.quote` of an FX SKU with swapped `from`/`to` is `market.fx_pair` — a missing window, a corpse mint, and catalog currency still allow — and writes no quote. A real window still quotes and converts. That funded work still releases. Pane TAP is a missing window. Born TAP is a corpse mint. Conversion TAP is hiring the window. Paper TAP is settling a research quote. Pair TAP is unique-live. Still 89 rules.
 
 ### Sour (`pnpm demo sour`)
 
 **Fixture:** `fixtures/demo/sour/`.
 
-An $800 hire funds under the auto-approve line. A $6,400 `hire.create` escalates. After that quote dies, `approval.resolve` approved is `approval.replay` — a missing ticket and a dead ticket still allow — the ticket stays pending and the quote stays held. A grown-up no still frees the quote. That funded work still releases. Pause TAP is a dead ticket. Docket TAP is a missing ticket. Replay TAP is a retry of an allow. Still 88 rules.
+An $800 hire funds under the auto-approve line. A $6,400 `hire.create` escalates. After that quote dies, `approval.resolve` approved is `approval.replay` — a missing ticket and a dead ticket still allow — the ticket stays pending and the quote stays held. A grown-up no still frees the quote. That funded work still releases. Pause TAP is a dead ticket. Docket TAP is a missing ticket. Replay TAP is a retry of an allow. Still 89 rules.
 
 ### Cut (`pnpm demo cut`)
 
 **Fixture:** `fixtures/demo/cut/`.
 
-An $800 hire funds under a live handshake. After that hop is revoked, a new `hire.create` is `kya.chain_intact` — an expired hop, a nested parent, a frozen speaker, and a ghost revoke still allow — and writes no hire. A new handshake still unlocks the lock. That funded work still releases. Lapse TAP is an expired hop. Nest TAP is a nested parent. Deny TAP is a frozen speaker. Seal TAP is a ghost revoke. Ice TAP is a frozen founder. Completing funded work after expiry is legal; freeze and revoke still bind. Still 88 rules.
+An $800 hire funds under a live handshake. After that hop is revoked, a new `hire.create` is `kya.chain_intact` — an expired hop, a nested parent, a frozen speaker, and a ghost revoke still allow — and writes no hire. A new handshake still unlocks the lock. That funded work still releases. Lapse TAP is an expired hop. Nest TAP is a nested parent. Deny TAP is a frozen speaker. Seal TAP is a ghost revoke. Ice TAP is a frozen founder. Completing funded work after expiry is legal; freeze and revoke still bind. Still 89 rules.
 
 ### Ice (`pnpm demo ice`)
 
 **Fixture:** `fixtures/demo/ice/`.
 
-An $800 hire funds under a live handshake. After the founder is frozen, a new `hire.create` is `kya.principal_not_frozen` — a frozen speaker, a revoked hop, and a no-op thaw still allow — and writes no hire. An unfreeze still unlocks the lock. That funded work still releases. Deny TAP is a frozen speaker. Cut TAP is a revoked hop. Thaw TAP is a no-op unfreeze. Completing funded work after expiry is legal; freeze and revoke still bind. Still 88 rules.
+An $800 hire funds under a live handshake. After the founder is frozen, a new `hire.create` is `kya.principal_not_frozen` — a frozen speaker, a revoked hop, and a no-op thaw still allow — and writes no hire. An unfreeze still unlocks the lock. That funded work still releases. Deny TAP is a frozen speaker. Cut TAP is a revoked hop. Thaw TAP is a no-op unfreeze. Completing funded work after expiry is legal; freeze and revoke still bind. Still 89 rules.
 
 ### Rail (`pnpm demo rail`)
 
 **Fixture:** `fixtures/demo/rail/`.
 
-An $800 hire funds under a slip that lists this kernel's sim ledger. A second slip that lists a ghost rail is `payment.allowed_payment_instruments` — listed payee, amount, SKU, and `instrument.sim_only` still allow — and writes no hire. That funded work still releases. A listed rail is not decoration. Payee TAP is who. SKU TAP is what. Live rails stay `instrument.sim_only`. Empty lists and nested children that drop the parent's list are the same first deny / `mandate.child_tighter`. `payment.reference` stays AP2-shaped until a prior payment exists to bind. Still 88 rules.
+An $800 hire funds under a slip that lists this kernel's sim ledger. A second slip that lists a ghost rail is `payment.allowed_payment_instruments` — listed payee, amount, SKU, and `instrument.sim_only` still allow — and writes no hire. That funded work still releases. A listed rail is not decoration. Payee TAP is who. SKU TAP is what. Live rails stay `instrument.sim_only`. Empty lists and nested children that drop the parent's list are the same first deny / `mandate.child_tighter`. Cite TAP binds `payment.reference` once a funded check exists. Still 89 rules.
 
 ### Pen (`pnpm demo pen`)
 
 **Fixture:** `fixtures/demo/pen/`.
 
-An $800 hire funds through grown-up pauses on an L1 desk. `envelope.submit` is `human.signature_present` — role, subject, and party still allow; the rung only pauses; no ticket is minted. Treasury still releases. Grade TAP is a junior nested mint. Pause TAP is a dead ticket. Badge TAP is auditor hire. Subject TAP is a stranger's slip. A vendor pull stays `mandate.subject_is_actor`. Demoting the buyer after fund is the same first deny. Completing funded work is legal. Still 88 rules.
+An $800 hire funds through grown-up pauses on an L1 desk. `envelope.submit` is `human.signature_present` — role, subject, and party still allow; the rung only pauses; no ticket is minted. Treasury still releases. Grade TAP is a junior nested mint. Pause TAP is a dead ticket. Badge TAP is auditor hire. Subject TAP is a stranger's slip. A vendor pull stays `mandate.subject_is_actor`. Demoting the buyer after fund is the same first deny. Completing funded work is legal. Still 89 rules.
 
 ### Well (`pnpm demo well`)
 
 **Fixture:** `fixtures/demo/well/`.
 
-An $800 hire funds under a three-hop handshake. A four-hop desk's `hire.create` is `kya.delegation_depth` — a missing path, a dead parent hop, and a climb still allow — and writes no hire. That funded work still releases. A fourth hop is not a nested parent. Cut TAP is a revoked hop. Nest TAP is a dead parent hop. Climb TAP is a grant ceiling. Name TAP is attesting in someone else's name. A nested `parentId` under the same grantor does not add hops. An agent attesting the founder's principal stays `kya.party`. Completing funded work is legal. Still 88 rules.
+An $800 hire funds under a three-hop handshake. A four-hop desk's `hire.create` is `kya.delegation_depth` — a missing path, a dead parent hop, and a climb still allow — and writes no hire. That funded work still releases. A fourth hop is not a nested parent. Cut TAP is a revoked hop. Nest TAP is a dead parent hop. Climb TAP is a grant ceiling. Name TAP is attesting in someone else's name. A nested `parentId` under the same grantor does not add hops. An agent attesting the founder's principal stays `kya.party`. Completing funded work is legal. Still 89 rules.
+
+### Cite (`pnpm demo cite`)
+
+**Fixture:** `fixtures/demo/cite/`.
+
+An $800 hire funds. A second slip that cites a ghost checkout is `payment.reference` — listed payee, amount, SKU, listed rail, and `instrument.sim_only` still allow — and writes no hire. A citation of that funded check still hires. That funded work still releases. A listed reference is not decoration once a check exists. Payee TAP is who. Rail TAP is which ledger. SKU TAP is what. Live rails stay `instrument.sim_only`. Before any funded payment the constraint is still AP2-shaped catalog surface. Completing funded work is legal. Nested children that drop or change the parent's hash stay `mandate.child_tighter`. Still 89 rules.
 
 ---
 
@@ -1656,14 +1665,15 @@ export interface AetherError {
 | `allowed-instruments.test.ts` | Rail TAP; $800 hire funds under a slip that lists the sim ledger; hire.create against a ghost-rail slip is `payment.allowed_payment_instruments` and writes no hire; payee, amount, SKU, and sim_only still allow; funded work still releases |
 | `human-signature.test.ts` | Pen TAP; $800 hire funds through grown-up pauses on an L1 desk; envelope.submit is `human.signature_present` and mints no ticket; role, subject, and party still allow; the rung only pauses; treasury still releases |
 | `delegation-depth.test.ts` | Well TAP; $800 hire funds under a three-hop handshake; hire.create down a four-hop chain is `kya.delegation_depth` and writes no hire; chain_intact, parent_fresh, and capability_subset still allow; funded work still releases |
-| `mcp.test.ts` | Sub-hire TAP + clearing-window TAP over `aether_demo_clearing` + refund TAP over `aether_demo_refund` + replay TAP over `aether_demo_replay` + envelope-nonce TAP over `aether_demo_nonce` + deny-cache TAP over `aether_demo_deny` + recurrence TAP over `aether_demo_recurrence` + calendar TAP over `aether_demo_calendar` + slot TAP over `aether_demo_slot` + daily TAP over `aether_demo_daily` + cart occupancy TAP over `aether_demo_cart` + velocity TAP over `aether_demo_velocity` + operator-door TAP over `aether_demo_door` + cart-match TAP over `aether_demo_match` + closed-room TAP over `aether_demo_room` + conversion TAP over `aether_demo_conversion` + unique-live TAP over `aether_demo_pair` + spread TAP over `aether_demo_band` + nest TAP over `aether_demo_nest` + heir TAP over `aether_demo_heir` + stock TAP over `aether_demo_stock` + purse TAP over `aether_demo_purse` + seat TAP over `aether_demo_seat` + cover TAP over `aether_demo_cover` + mint TAP over `aether_demo_mint` + payee TAP over `aether_demo_payee` + climb TAP over `aether_demo_climb` + born TAP over `aether_demo_born` + reach TAP over `aether_demo_reach` + year TAP over `aether_demo_year` + fuse TAP over `aether_demo_fuse` + sku TAP over `aether_demo_sku` + priced TAP over `aether_demo_priced` + party TAP over `aether_demo_party` + cash TAP over `aether_demo_cash` + stale TAP over `aether_demo_stale` + chain TAP over `aether_demo_chain` + arrow TAP over `aether_demo_arrow` + wallet TAP over `aether_demo_wallet` + name TAP over `aether_demo_name` + pane TAP over `aether_demo_pane` + subject TAP over `aether_demo_subject` + paper TAP over `aether_demo_paper` + mix TAP over `aether_demo_mix` + rung TAP over `aether_demo_rung` + grade TAP over `aether_demo_grade` + cradle TAP over `aether_demo_cradle` + ceiling TAP over `aether_demo_ceiling` + lapse TAP over `aether_demo_lapse` + pause TAP over `aether_demo_pause` + mirror TAP over `aether_demo_mirror` + warrant TAP over `aether_demo_warrant` + vacant TAP over `aether_demo_vacant` + badge TAP over `aether_demo_badge` + lid TAP over `aether_demo_lid` + bare TAP over `aether_demo_bare` + shelf TAP over `aether_demo_shelf` + hall TAP over `aether_demo_hall` + writ TAP over `aether_demo_writ` + crate TAP over `aether_demo_crate` + pact TAP over `aether_demo_pact` + root TAP over `aether_demo_root` + docket TAP over `aether_demo_docket` + graft TAP over `aether_demo_graft` + seal TAP over `aether_demo_seal` + guest TAP over `aether_demo_guest` + dust TAP over `aether_demo_dust` + thaw TAP over `aether_demo_thaw` + twin TAP over `aether_demo_twin` + fence TAP over `aether_demo_fence` + mute TAP over `aether_demo_mute` + nil TAP over `aether_demo_nil` + spark TAP over `aether_demo_spark` + wilt TAP over `aether_demo_wilt` + maker TAP over `aether_demo_maker` + ink TAP over `aether_demo_ink` + brim TAP over `aether_demo_brim` + swap TAP over `aether_demo_swap` + sour TAP over `aether_demo_sour` + cut TAP over `aether_demo_cut` + ice TAP over `aether_demo_ice` + rail TAP over `aether_demo_rail` + pen TAP over `aether_demo_pen` + well TAP over `aether_demo_well` + MCP `tools/list` + `identity.register` replay + `aether_hire_refund`; command tools are 1:1 with CommandType including `aether_market_fx_settle` and `aether_ledger_transfer`; an unknown `actor` alias is `actor.known`, not silent system; omit or `system` still bootstraps; omit-actor `aether_audit_verify` is the same speaker as HTTP GET; omit-actor `aether_ledger_balances` / `aether_receipt_get` is the same speaker as HTTP GET |
+| `payment-reference.test.ts` | Cite TAP; $800 hire funds; hire.create against a ghost-checkout slip is `payment.reference` and writes no hire; payee, amount, SKU, listed rail, and sim_only still allow; a citation of that funded check still hires; funded work still releases |
+| `mcp.test.ts` | Sub-hire TAP + clearing-window TAP over `aether_demo_clearing` + refund TAP over `aether_demo_refund` + replay TAP over `aether_demo_replay` + envelope-nonce TAP over `aether_demo_nonce` + deny-cache TAP over `aether_demo_deny` + recurrence TAP over `aether_demo_recurrence` + calendar TAP over `aether_demo_calendar` + slot TAP over `aether_demo_slot` + daily TAP over `aether_demo_daily` + cart occupancy TAP over `aether_demo_cart` + velocity TAP over `aether_demo_velocity` + operator-door TAP over `aether_demo_door` + cart-match TAP over `aether_demo_match` + closed-room TAP over `aether_demo_room` + conversion TAP over `aether_demo_conversion` + unique-live TAP over `aether_demo_pair` + spread TAP over `aether_demo_band` + nest TAP over `aether_demo_nest` + heir TAP over `aether_demo_heir` + stock TAP over `aether_demo_stock` + purse TAP over `aether_demo_purse` + seat TAP over `aether_demo_seat` + cover TAP over `aether_demo_cover` + mint TAP over `aether_demo_mint` + payee TAP over `aether_demo_payee` + climb TAP over `aether_demo_climb` + born TAP over `aether_demo_born` + reach TAP over `aether_demo_reach` + year TAP over `aether_demo_year` + fuse TAP over `aether_demo_fuse` + sku TAP over `aether_demo_sku` + priced TAP over `aether_demo_priced` + party TAP over `aether_demo_party` + cash TAP over `aether_demo_cash` + stale TAP over `aether_demo_stale` + chain TAP over `aether_demo_chain` + arrow TAP over `aether_demo_arrow` + wallet TAP over `aether_demo_wallet` + name TAP over `aether_demo_name` + pane TAP over `aether_demo_pane` + subject TAP over `aether_demo_subject` + paper TAP over `aether_demo_paper` + mix TAP over `aether_demo_mix` + rung TAP over `aether_demo_rung` + grade TAP over `aether_demo_grade` + cradle TAP over `aether_demo_cradle` + ceiling TAP over `aether_demo_ceiling` + lapse TAP over `aether_demo_lapse` + pause TAP over `aether_demo_pause` + mirror TAP over `aether_demo_mirror` + warrant TAP over `aether_demo_warrant` + vacant TAP over `aether_demo_vacant` + badge TAP over `aether_demo_badge` + lid TAP over `aether_demo_lid` + bare TAP over `aether_demo_bare` + shelf TAP over `aether_demo_shelf` + hall TAP over `aether_demo_hall` + writ TAP over `aether_demo_writ` + crate TAP over `aether_demo_crate` + pact TAP over `aether_demo_pact` + root TAP over `aether_demo_root` + docket TAP over `aether_demo_docket` + graft TAP over `aether_demo_graft` + seal TAP over `aether_demo_seal` + guest TAP over `aether_demo_guest` + dust TAP over `aether_demo_dust` + thaw TAP over `aether_demo_thaw` + twin TAP over `aether_demo_twin` + fence TAP over `aether_demo_fence` + mute TAP over `aether_demo_mute` + nil TAP over `aether_demo_nil` + spark TAP over `aether_demo_spark` + wilt TAP over `aether_demo_wilt` + maker TAP over `aether_demo_maker` + ink TAP over `aether_demo_ink` + brim TAP over `aether_demo_brim` + swap TAP over `aether_demo_swap` + sour TAP over `aether_demo_sour` + cut TAP over `aether_demo_cut` + ice TAP over `aether_demo_ice` + rail TAP over `aether_demo_rail` + pen TAP over `aether_demo_pen` + well TAP over `aether_demo_well` + cite TAP over `aether_demo_cite` + MCP `tools/list` + `identity.register` replay + `aether_hire_refund`; command tools are 1:1 with CommandType including `aether_market_fx_settle` and `aether_ledger_transfer`; an unknown `actor` alias is `actor.known`, not silent system; omit or `system` still bootstraps; omit-actor `aether_audit_verify` is the same speaker as HTTP GET; omit-actor `aether_ledger_balances` / `aether_receipt_get` is the same speaker as HTTP GET |
 | `operator.test.ts` | Register/hire/refund retries replay; denies not cached; refund restores cash; durable idempotency; `SIM_RAIL.live === false`; ghost book is `ledger.known_account`; mixed-currency transfer is `ledger.same_currency`; overdraft is `ledger.sufficient`; dest overflow is `ledger.safe_balance`; transfer from equity or escrow is `ledger.operating_book`; an amount_range with no max is `command.malformed`; a leftover nonce on a transfer is not `idempotency.nonce` |
 | `inspect.test.ts` | `aether_get` / inspect by id; MCP command schemas; expired approval tickets refuse resolve; inspect / snapshot label an expired ticket `expired`, not `pending`; inspect / snapshot label a pending ticket whose paused command would not allow `stale`, not `pending`; approve of that pause still names `approval.replay`; reject still releases the quote; the store stays `pending`; inspect of a `dlg_` hop labels `live` / `expired` / `revoked` the same way the graph does, without writing status into the store; inspect of a `qte_` quote labels `live` / `expired` / `spent` / `held` without writing status into the store; spent and held win over expired; a reservation whose ticket is past expiresAt is not held; a lapsed FX `validUntil` inside the quote envelope is `expired`; a hire quote whose parent RFQ died is `expired` even if the quote envelope still lives; an FX quote does not expire when the RFQ dies; inspect of an `rfq_` room labels `live` / `expired` without writing status into the store; quoting or hiring against a stale room still names `market.not_expired`; inspect of a cart labels `live` / `expired` / `bound` without writing status into the store; bound (unique_payment occupies) wins over expired; a hire that points at a cart is not bound; inspect of a payment labels `live` / `expired` / `funded` without writing status into the store; funded (escrow moved, including refund) wins over expired; snapshot lists payments; an accepted-but-unfunded payment is live; fund of a stale unpaid payment still names `mandate.chain_integrity`; a payment whose parent cart died is `expired` even if its own `exp` still lives; funded still wins after that cart death; inspect of an intent labels `live` / `expired` / `funded` without writing status into the store; funded (escrow moved against this slip, including refund) wins over expired; a child hire does not occupy the parent; recurrence spend is not occupancy; snapshot lists signed intent views; an accepted-but-unfunded intent is live; a new hire against a stale unused slip still names `mandate.not_expired`; a child whose parent died is `expired` even if its own `exp` still lives; funded still wins after that parent death; hire against that unpaid child still names `mandate.parent_fresh`; completing a funded hire after the seven-day window is legal; inspect of a hire labels `live` / `expired` / `funded` without writing status into the store; funded (escrow moved) wins over expired; an offered hire whose slip died is `expired`; an offered child hire whose parent died is `expired` even if the child exp still lives; accept of that unpaid offer still names `mandate.not_expired` / `mandate.parent_fresh`; completing a funded hire after the slip dies is legal; a missing receipt is `receipt.known`, not an empty success |
-| `host.test.ts` | System pins the host card (`hosted` false, `evaluateLlm` false, self-host 0); a desk may read it; subscribe on this kernel is `host.not_hosted`; system subscribe is `actor.system_scope`; vendor subscribe is `actor.role_capability`; MCP `aether_host_card` / `aether://host` match the pin; a hosted operator records a unique `hsb_` against a live human-issued intent; inspect / snapshot label that row `live` or `expired` without writing status into the store; a row whose slip died is `expired`, not live enrollment; unique_subscriber still occupies; ghost/omit is `mandate.known_intent`; stale is `mandate.not_expired`; wrong subject is `mandate.subject_is_actor`; agent-issued is `host.human_authority`; a second row is `host.unique_subscriber`; spend is not gated on the row; durable restore keeps the row; discovery card names POST /v1/commands and the TAP demos including refund, replay, nonce, deny, recurrence, calendar, slot, daily, cart, velocity, door, match, room, conversion, pair, band, nest, heir, stock, purse, seat, cover, mint, payee, climb, born, reach, year, fuse, sku, priced, party, cash, stale, chain, arrow, and wallet; discovery card names POST /v1/commands and the TAP demos including refund, replay, nonce, deny, recurrence, calendar, slot, daily, cart, velocity, door, match, room, conversion, pair, band, nest, heir, stock, purse, seat, cover, mint, payee, climb, born, reach, year, fuse, sku, priced, party, cash, stale, chain, arrow, wallet, name, pane, subject, paper, mix, rung, grade, cradle, ceiling, lapse, pause, mirror, warrant, vacant, badge, lid, bare, shelf, hall, writ, crate, pact, root, docket, graft, and seal, and guest, and dust, and thaw, and twin, and fence, and mute, and nil, and spark, and wilt, and maker, and ink, and brim, and swap, and sour, and cut, and ice, and rail, and pen, and well |
+| `host.test.ts` | System pins the host card (`hosted` false, `evaluateLlm` false, self-host 0); a desk may read it; subscribe on this kernel is `host.not_hosted`; system subscribe is `actor.system_scope`; vendor subscribe is `actor.role_capability`; MCP `aether_host_card` / `aether://host` match the pin; a hosted operator records a unique `hsb_` against a live human-issued intent; inspect / snapshot label that row `live` or `expired` without writing status into the store; a row whose slip died is `expired`, not live enrollment; unique_subscriber still occupies; ghost/omit is `mandate.known_intent`; stale is `mandate.not_expired`; wrong subject is `mandate.subject_is_actor`; agent-issued is `host.human_authority`; a second row is `host.unique_subscriber`; spend is not gated on the row; durable restore keeps the row; discovery card names POST /v1/commands and the TAP demos including refund, replay, nonce, deny, recurrence, calendar, slot, daily, cart, velocity, door, match, room, conversion, pair, band, nest, heir, stock, purse, seat, cover, mint, payee, climb, born, reach, year, fuse, sku, priced, party, cash, stale, chain, arrow, and wallet; discovery card names POST /v1/commands and the TAP demos including refund, replay, nonce, deny, recurrence, calendar, slot, daily, cart, velocity, door, match, room, conversion, pair, band, nest, heir, stock, purse, seat, cover, mint, payee, climb, born, reach, year, fuse, sku, priced, party, cash, stale, chain, arrow, wallet, name, pane, subject, paper, mix, rung, grade, cradle, ceiling, lapse, pause, mirror, warrant, vacant, badge, lid, bare, shelf, hall, writ, crate, pact, root, docket, graft, and seal, and guest, and dust, and thaw, and twin, and fence, and mute, and nil, and spark, and wilt, and maker, and ink, and brim, and swap, and sour, and cut, and ice, and rail, and pen, and well, and cite |
 | `approval.test.ts` | Ghost ticket is `approval.known`; expired or already-resolved is `approval.pending`; approving a stale pause or a ticket with no held command is `approval.replay`, not a mutate throw after yes; reject of a dead pause still releases the quote; an L1 hire.create ticket that a grown-up signs is an offered hire, not a stuck escalate; an expired hire.create escalate is not a leftover replay that traps the quote |
 | `identity.test.ts` | Ghost freeze / handshake principal / revoke is `identity.known`; attesting yourself is `kya.not_self`; nested handshake with a ghost parent is `kya.known_parent`; nested handshake under an expired or revoked parent hop is `kya.parent_fresh`; ghost or foreign attestationId revoke is `kya.known_attestation`; L4 writing a founder handshake is `kya.party`; omitted principalId is the speaker, not the supervisor; L4 omitting `maxAutonomy` (L5) is `kya.capability_subset`; reused alias, second market maker, or a taken USDC book is `identity.unique_key`; vendor/MM USDC `ownerId` is the agent, not system; minting L5 at register is `ladder.birth_rung`; unfreeze of a live unfrozen agent (and a second freeze) is `identity.freeze_state`; a second live handshake for the same pair is `kya.unique_live`; a handshake born expired or unparseable is `kya.mint_fresh`; a handshake that outlives one year is `kya.mint_window`; an expired hop is `expired` in the graph view, not `live`, and still occupies the pair; a missing speaker is `actor.known`, not a throw before policy; system spending or minting a second agent is `actor.system_scope`; system may verify the notary; a vendor cannot; HTTP/MCP unknown alias is `actor.known`, not silent system; an RFQ that invites a missing seller is `identity.known`; Thaw TAP is unfreeze of a live unfrozen auditor |
-| `http.test.ts` | `GET /v1/audit/verify` is `audit.verify` on the command bus (kind allow, POLICY_DECISION, AUDIT_VERIFY, clock steps); POST omit-actor is the same speaker; vendor POST is `actor.role_capability`; `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}` are `ledger.balances` / `receipt.get` as system (not ops-human); a missing founder or frozen founder is not a deny; a ghost book is `ledger.known_account`; a ghost receipt is `receipt.known`; `POST /v1/commands` is every CommandType; unknown type is `command.malformed`; hire.deliver / hire.release / market.fx_settle / ledger.transfer have HTTP aliases; `POST /v1/demo/clearing` is the clearing-window TAP; `POST /v1/demo/refund` is the refund TAP; `POST /v1/demo/replay` is the replay TAP; `POST /v1/demo/nonce` is the envelope-nonce TAP; `POST /v1/demo/deny` is the deny-cache TAP; `POST /v1/demo/recurrence` is the recurrence TAP; `POST /v1/demo/calendar` is the calendar TAP; `POST /v1/demo/slot` is the slot TAP; `POST /v1/demo/daily` is the daily TAP; `POST /v1/demo/cart` is the cart occupancy TAP; `POST /v1/demo/velocity` is the velocity TAP; `POST /v1/demo/door` is the operator-door TAP; `POST /v1/demo/match` is the cart-match TAP; `POST /v1/demo/room` is the closed-room TAP; `POST /v1/demo/conversion` is the conversion TAP; `POST /v1/demo/pair` is the unique-live TAP; `POST /v1/demo/band` is the spread TAP; `POST /v1/demo/nest` is the nest TAP; `POST /v1/demo/heir` is the heir TAP; `POST /v1/demo/stock` is the stock TAP; `POST /v1/demo/purse` is the purse TAP; `POST /v1/demo/seat` is the seat TAP; `POST /v1/demo/cover` is the cover TAP; `POST /v1/demo/mint` is the mint TAP; `POST /v1/demo/payee` is the payee TAP; `POST /v1/demo/climb` is the climb TAP; `POST /v1/demo/born` is the born TAP; `POST /v1/demo/reach` is the reach TAP; `POST /v1/demo/year` is the year TAP; `POST /v1/demo/fuse` is the fuse TAP; `POST /v1/demo/sku` is the sku TAP; `POST /v1/demo/priced` is the priced TAP; `POST /v1/demo/party` is the party TAP; `POST /v1/demo/cash` is the cash TAP; `POST /v1/demo/stale` is the stale TAP; `POST /v1/demo/chain` is the chain TAP; `POST /v1/demo/arrow` is the arrow TAP; `POST /v1/demo/wallet` is the wallet TAP; `POST /v1/demo/name` is the name TAP; `POST /v1/demo/pane` is the pane TAP; `POST /v1/demo/subject` is the subject TAP; `POST /v1/demo/paper` is the paper TAP; `POST /v1/demo/mix` is the mix TAP; `POST /v1/demo/rung` is the rung TAP; `POST /v1/demo/grade` is the grade TAP; `POST /v1/demo/cradle` is the cradle TAP; `POST /v1/demo/ceiling` is the ceiling TAP; `POST /v1/demo/lapse` is the lapse TAP; `POST /v1/demo/pause` is the pause TAP; `POST /v1/demo/mirror` is the mirror TAP; `POST /v1/demo/warrant` is the warrant TAP; `POST /v1/demo/vacant` is the vacant TAP; `POST /v1/demo/badge` is the badge TAP; `POST /v1/demo/lid` is the lid TAP; `POST /v1/demo/bare` is the bare TAP; `POST /v1/demo/shelf` is the shelf TAP; `POST /v1/demo/hall` is the hall TAP; `POST /v1/demo/writ` is the writ TAP; `POST /v1/demo/crate` is the crate TAP; `POST /v1/demo/pact` is the pact TAP; `POST /v1/demo/root` is the root TAP; `POST /v1/demo/docket` is the docket TAP; `POST /v1/demo/graft` is the graft TAP; `POST /v1/demo/seal` is the seal TAP; `POST /v1/demo/guest` is the guest TAP; `POST /v1/demo/dust` is the dust TAP; `POST /v1/demo/thaw` is the thaw TAP; `POST /v1/demo/twin` is the twin TAP; `POST /v1/demo/fence` is the fence TAP; `POST /v1/demo/mute` is the mute TAP; `POST /v1/demo/nil` is the nil TAP; `POST /v1/demo/spark` is the spark TAP; `POST /v1/demo/wilt` is the wilt TAP; `POST /v1/demo/maker` is the maker TAP; `POST /v1/demo/ink` is the ink TAP; `POST /v1/demo/brim` is the brim TAP; `POST /v1/demo/swap` is the swap TAP; `POST /v1/demo/sour` is the sour TAP; `POST /v1/demo/cut` is the cut TAP; `POST /v1/demo/ice` is the ice TAP; `POST /v1/demo/rail` is the rail TAP; `POST /v1/demo/pen` is the pen TAP; `POST /v1/demo/well` is the well TAP; `GET /v1/kya` lists genesis issuers; `POST /v1/clearing/windows` is the command bus |
-| `openapi.test.ts` | OpenAPI advertises 200 for command allows, not 201 Created; hire.state and nonce reuse are 422, not 409; a host subscription whose slip died is expired; POST /v1/commands and hire/FX/transfer aliases; every HTTP TAP the discovery card names (sprint, night-watch, sub-hire, clearing, refund, replay, nonce, deny, recurrence, calendar, slot, daily, cart, velocity, door, match, room, conversion, pair, band, nest, heir, stock, purse, seat, cover, mint, payee, climb, born, reach, year, fuse, sku, priced, party, cash, stale, chain, arrow, wallet, name, pane, subject, paper, mix, rung, grade, cradle, ceiling, lapse, pause, mirror, warrant, vacant, badge, lid, bare, shelf, hall, writ, crate, pact, root, docket, graft, seal, guest, dust, thaw, twin, fence, mute, nil, spark, wilt, maker, ink, brim, swap, sour, cut, ice, rail, pen, well); HTTP aliases the bus actually serves (kya, circuit, freeze, agent-card, clearing windows) |
+| `http.test.ts` | `GET /v1/audit/verify` is `audit.verify` on the command bus (kind allow, POLICY_DECISION, AUDIT_VERIFY, clock steps); POST omit-actor is the same speaker; vendor POST is `actor.role_capability`; `GET /v1/accounts/{id}` and `GET /v1/receipts/{id}` are `ledger.balances` / `receipt.get` as system (not ops-human); a missing founder or frozen founder is not a deny; a ghost book is `ledger.known_account`; a ghost receipt is `receipt.known`; `POST /v1/commands` is every CommandType; unknown type is `command.malformed`; hire.deliver / hire.release / market.fx_settle / ledger.transfer have HTTP aliases; `POST /v1/demo/clearing` is the clearing-window TAP; `POST /v1/demo/refund` is the refund TAP; `POST /v1/demo/replay` is the replay TAP; `POST /v1/demo/nonce` is the envelope-nonce TAP; `POST /v1/demo/deny` is the deny-cache TAP; `POST /v1/demo/recurrence` is the recurrence TAP; `POST /v1/demo/calendar` is the calendar TAP; `POST /v1/demo/slot` is the slot TAP; `POST /v1/demo/daily` is the daily TAP; `POST /v1/demo/cart` is the cart occupancy TAP; `POST /v1/demo/velocity` is the velocity TAP; `POST /v1/demo/door` is the operator-door TAP; `POST /v1/demo/match` is the cart-match TAP; `POST /v1/demo/room` is the closed-room TAP; `POST /v1/demo/conversion` is the conversion TAP; `POST /v1/demo/pair` is the unique-live TAP; `POST /v1/demo/band` is the spread TAP; `POST /v1/demo/nest` is the nest TAP; `POST /v1/demo/heir` is the heir TAP; `POST /v1/demo/stock` is the stock TAP; `POST /v1/demo/purse` is the purse TAP; `POST /v1/demo/seat` is the seat TAP; `POST /v1/demo/cover` is the cover TAP; `POST /v1/demo/mint` is the mint TAP; `POST /v1/demo/payee` is the payee TAP; `POST /v1/demo/climb` is the climb TAP; `POST /v1/demo/born` is the born TAP; `POST /v1/demo/reach` is the reach TAP; `POST /v1/demo/year` is the year TAP; `POST /v1/demo/fuse` is the fuse TAP; `POST /v1/demo/sku` is the sku TAP; `POST /v1/demo/priced` is the priced TAP; `POST /v1/demo/party` is the party TAP; `POST /v1/demo/cash` is the cash TAP; `POST /v1/demo/stale` is the stale TAP; `POST /v1/demo/chain` is the chain TAP; `POST /v1/demo/arrow` is the arrow TAP; `POST /v1/demo/wallet` is the wallet TAP; `POST /v1/demo/name` is the name TAP; `POST /v1/demo/pane` is the pane TAP; `POST /v1/demo/subject` is the subject TAP; `POST /v1/demo/paper` is the paper TAP; `POST /v1/demo/mix` is the mix TAP; `POST /v1/demo/rung` is the rung TAP; `POST /v1/demo/grade` is the grade TAP; `POST /v1/demo/cradle` is the cradle TAP; `POST /v1/demo/ceiling` is the ceiling TAP; `POST /v1/demo/lapse` is the lapse TAP; `POST /v1/demo/pause` is the pause TAP; `POST /v1/demo/mirror` is the mirror TAP; `POST /v1/demo/warrant` is the warrant TAP; `POST /v1/demo/vacant` is the vacant TAP; `POST /v1/demo/badge` is the badge TAP; `POST /v1/demo/lid` is the lid TAP; `POST /v1/demo/bare` is the bare TAP; `POST /v1/demo/shelf` is the shelf TAP; `POST /v1/demo/hall` is the hall TAP; `POST /v1/demo/writ` is the writ TAP; `POST /v1/demo/crate` is the crate TAP; `POST /v1/demo/pact` is the pact TAP; `POST /v1/demo/root` is the root TAP; `POST /v1/demo/docket` is the docket TAP; `POST /v1/demo/graft` is the graft TAP; `POST /v1/demo/seal` is the seal TAP; `POST /v1/demo/guest` is the guest TAP; `POST /v1/demo/dust` is the dust TAP; `POST /v1/demo/thaw` is the thaw TAP; `POST /v1/demo/twin` is the twin TAP; `POST /v1/demo/fence` is the fence TAP; `POST /v1/demo/mute` is the mute TAP; `POST /v1/demo/nil` is the nil TAP; `POST /v1/demo/spark` is the spark TAP; `POST /v1/demo/wilt` is the wilt TAP; `POST /v1/demo/maker` is the maker TAP; `POST /v1/demo/ink` is the ink TAP; `POST /v1/demo/brim` is the brim TAP; `POST /v1/demo/swap` is the swap TAP; `POST /v1/demo/sour` is the sour TAP; `POST /v1/demo/cut` is the cut TAP; `POST /v1/demo/ice` is the ice TAP; `POST /v1/demo/rail` is the rail TAP; `POST /v1/demo/pen` is the pen TAP; `POST /v1/demo/well` is the well TAP; `POST /v1/demo/cite` is the cite TAP; `GET /v1/kya` lists genesis issuers; `POST /v1/clearing/windows` is the command bus |
+| `openapi.test.ts` | OpenAPI advertises 200 for command allows, not 201 Created; hire.state and nonce reuse are 422, not 409; a host subscription whose slip died is expired; POST /v1/commands and hire/FX/transfer aliases; every HTTP TAP the discovery card names (sprint, night-watch, sub-hire, clearing, refund, replay, nonce, deny, recurrence, calendar, slot, daily, cart, velocity, door, match, room, conversion, pair, band, nest, heir, stock, purse, seat, cover, mint, payee, climb, born, reach, year, fuse, sku, priced, party, cash, stale, chain, arrow, wallet, name, pane, subject, paper, mix, rung, grade, cradle, ceiling, lapse, pause, mirror, warrant, vacant, badge, lid, bare, shelf, hall, writ, crate, pact, root, docket, graft, seal, guest, dust, thaw, twin, fence, mute, nil, spark, wilt, maker, ink, brim, swap, sour, cut, ice, rail, pen, well, cite); HTTP aliases the bus actually serves (kya, circuit, freeze, agent-card, clearing windows) |
 | `host-door.test.ts` | Public kernel needs no speaker proof; a hosted named speaker without a signature is 401 at the door; a priced host without a current invoice is 402 `host.unpaid`; invoicing is not a Command and not a spend gate; subscribe still does not gate hire; invoices restore from `world.json`; inspect of an `inv_` invoice labels `current` / `lapsed` without writing status into the store; MCP omit-actor cannot spend on a hosted operator; `PROTOCOL.hosted` stays false; `takeRate` is null |
 | `kya.test.ts` | Nested hops; revoke cascades; unknown parent hop throws; unknown or foreign attestation throws; a second live pair throws; snapshot edges label expired hops `expired`, not `live`; revoked wins over expired; graph `attest()` still writes a nested hop under an expired parent (dispatch refuses); genesis stores four shape-only `iss_` issuers; restore without issuers synthesizes the catalog; a four-hop grantor chain reports depth 4 |
 | `market.test.ts` | Catalog SKU deny; stale quote cannot be hired; audit.query by hire id; garbage role/decision/numeric agentId is `command.malformed`; a USD-only SKU quoted in USDC is `market.sku_currency`; `fxPairSettles` is the FX SKU priced in `from`; inviting a missing agent onto an RFQ is `identity.known`, not a closed room |

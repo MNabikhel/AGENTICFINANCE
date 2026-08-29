@@ -1080,6 +1080,15 @@ export interface PolicyContext {
    * Absent = not a hosted subscribe with a known intent. One subscriber, one row.
    */
   subscribeUnique?: boolean;
+  /**
+   * False when hire.create / hire.fund cites a `payment.reference` whose
+   * `conditional_transaction_id` is not a funded payment's `transaction_id`
+   * (cart hash) in this world, after at least one funded payment exists.
+   * Absent = not a spend-start, no `payment.reference` constraint, or no
+   * funded payment yet (AP2-shaped catalog surface until a prior payment exists).
+   * Completing funded work does not set this flag.
+   */
+  referenceOk?: boolean;
 }
 
 /**

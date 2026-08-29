@@ -110,6 +110,7 @@ export default defineConfig({
       "@aether/allowed-instruments": path.resolve(__dirname, "packages/aether-runtime/src/allowed-instruments.ts"),
       "@aether/human-signature": path.resolve(__dirname, "packages/aether-runtime/src/human-signature.ts"),
       "@aether/delegation-depth": path.resolve(__dirname, "packages/aether-runtime/src/delegation-depth.ts"),
+      "@aether/payment-reference": path.resolve(__dirname, "packages/aether-runtime/src/payment-reference.ts"),
     },
   },
 });

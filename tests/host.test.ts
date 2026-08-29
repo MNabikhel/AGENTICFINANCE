@@ -258,6 +258,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "human-signature")?.description).toContain("POST /v1/demo/pen");
     expect(card.skills.some((s) => s.id === "delegation-depth")).toBe(true);
     expect(card.skills.find((s) => s.id === "delegation-depth")?.description).toContain("POST /v1/demo/well");
+    expect(card.skills.some((s) => s.id === "payment-reference")).toBe(true);
+    expect(card.skills.find((s) => s.id === "payment-reference")?.description).toContain("POST /v1/demo/cite");
   });
 
   it("lets a registered desk read the same card", () => {

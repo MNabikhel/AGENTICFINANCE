@@ -709,6 +709,12 @@ paths:
       responses:
         "200": { description: Well TAP report. A fourth hop is not a nested parent. }
         "500": { description: Assertions failed }
+  /v1/demo/cite:
+    post:
+      operationId: demoCite
+      responses:
+        "200": { description: Cite TAP report. A listed reference is not decoration once a check exists. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

@@ -277,6 +277,9 @@ export const PEN_TLDR =
 export const WELL_TLDR =
   "A founder funded an $800 hire under a three-hop handshake. A four-hop desk was kya.delegation_depth — a missing path is not this deny, a dead parent hop is not this deny, a climb is not this deny. No hire written. That funded work still released. A fourth hop is not a nested parent.";
 
+export const CITE_TLDR =
+  "A founder funded an $800 hire. A second slip that cited a ghost checkout was payment.reference — a listed payee is not this deny, a listed rail is not this deny. No hire written. A citation of that funded check still hired. That funded work still released. A listed reference is not decoration once a check exists.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -844,6 +847,8 @@ export function autoBeat(input: {
         body = "That seller is not on this permission slip’s payee list. A registered vendor is not a listed payee. A closed room is a guest list on the RFQ; this is the slip. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.allowed_payment_instruments") {
         body = "That payment rail is not on this permission slip’s instrument list. The sim ledger this kernel stamps is not a ghost id. Live rails stay instrument.sim_only. Completing funded work after that is legal; a new hire is not.";
+      } else if (ruleId === "payment.reference") {
+        body = "That citation is not a funded check. Cite a funded payment's transaction_id (the cart hash), or omit the constraint until a check exists. A listed payee, a listed rail, and a listed SKU are different objects. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "payment.allowed_skus") {
         body = "That good is not on this permission slip’s SKU list. A catalog SKU is not a listed SKU. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {
@@ -895,7 +900,9 @@ export function autoBeat(input: {
             ? `${who} hired against a slip that does not exist`
             : ruleId === "kya.delegation_depth"
               ? `${who} hired down a chain that is too long`
-              : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+              : ruleId === "payment.reference"
+                ? `${who} hired against a citation that is not a check`
+                : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
         body,
         tone: "deny",
         commandType: cmd.type,

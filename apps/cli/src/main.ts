@@ -86,6 +86,7 @@ import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal
 import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
 import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
+import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
 
 const [, , command, name] = process.argv;
 
@@ -627,6 +628,12 @@ if (command === "demo" && (name === "well" || name === "deep" || name === "fatho
   process.exit(0);
 }
 
+if (command === "demo" && (name === "cite" || name === "xref" || name === "hitch")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/cite/scenario.json");
+  printReport(runPaymentReference(loadPaymentReference(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -719,5 +726,6 @@ usage:
   pnpm demo rail
   pnpm demo pen
   pnpm demo well
+  pnpm demo cite
   pnpm mcp`);
 process.exit(command ? 1 : 0);

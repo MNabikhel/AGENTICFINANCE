@@ -93,6 +93,7 @@ import { loadPrincipalNotFrozen, runPrincipalNotFrozen } from "@aether/principal
 import { loadAllowedInstruments, runAllowedInstruments } from "@aether/allowed-instruments";
 import { loadHumanSignature, runHumanSignature } from "@aether/human-signature";
 import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-depth";
+import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -224,6 +225,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_rail",
   "aether_demo_pen",
   "aether_demo_well",
+  "aether_demo_cite",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -916,6 +918,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_well") {
       const report = runDelegationDepth(loadDelegationDepth("fixtures/demo/well/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cite") {
+      const report = runPaymentReference(loadPaymentReference("fixtures/demo/cite/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

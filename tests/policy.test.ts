@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 88 rules", () => {
-    expect(RULE_IDS).toHaveLength(88);
+  it("has 89 rules", () => {
+    expect(RULE_IDS).toHaveLength(89);
   });
 
   it("denies frozen actors", () => {
@@ -245,6 +245,90 @@ describe("policy catalog", () => {
         commandType: "mandate.issue_intent",
         parentIntent: parent,
         proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200000 }],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+  });
+
+  it("denies hire.create when a ghost citation misses a funded check", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        referenceOk: false,
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: "f".repeat(64) }]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("deny");
+    const rem = remediationFor(d);
+    expect(rem?.kind).toBe("issue_intent");
+    expect(rem?.ruleId).toBe("payment.reference");
+    expect(rem?.commandType).toBe("mandate.issue_intent");
+  });
+
+  it("allows hire.create with payment.reference when no prior funded payment exists", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: "f".repeat(64) }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("allow");
+  });
+
+  it("allows hire.create when the citation matches a funded check", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        referenceOk: true,
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: HASH }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("allow");
+  });
+
+  it("allows complete-after-fund even when the citation would miss", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.deliver",
+        referenceOk: false,
+        hire: hire({ state: "funded" }),
+        intent: signedIntent([{ type: "payment.reference", conditional_transaction_id: "f".repeat(64) }]),
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "payment.reference")?.verdict).toBe("allow");
+  });
+
+  it("denies a child that drops the parent's payment.reference", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      { type: "payment.reference", conditional_transaction_id: HASH },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200000 }],
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+  });
+
+  it("denies a child that changes the parent's payment.reference", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      { type: "payment.reference", conditional_transaction_id: HASH },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 200000 },
+          { type: "payment.reference", conditional_transaction_id: "f".repeat(64) },
+        ],
       }),
     );
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");

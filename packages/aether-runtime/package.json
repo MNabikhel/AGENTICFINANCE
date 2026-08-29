@@ -89,7 +89,8 @@
     "./principal-not-frozen": "./src/principal-not-frozen.ts",
     "./allowed-instruments": "./src/allowed-instruments.ts",
     "./human-signature": "./src/human-signature.ts",
-    "./delegation-depth": "./src/delegation-depth.ts"
+    "./delegation-depth": "./src/delegation-depth.ts",
+    "./payment-reference": "./src/payment-reference.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

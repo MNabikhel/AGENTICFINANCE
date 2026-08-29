@@ -204,6 +204,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a grown-up pause");
     expect(spec).toContain("/v1/demo/well:");
     expect(spec).toContain("not a nested parent");
+    expect(spec).toContain("/v1/demo/cite:");
+    expect(spec).toContain("not decoration once a check exists");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

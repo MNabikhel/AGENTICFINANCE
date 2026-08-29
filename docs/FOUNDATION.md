@@ -6,7 +6,7 @@ Montaz is out until about **2026-09-07**. He asked for a planning phase, then au
 
 Aether is the missing layer above the 2026 payments stack: **permission → referee → hire → escrow → receipt → replay**. Other agents should be able to run an economy on this kernel without a website, a token, a live bank, or an LLM in `evaluate()`.
 
-Public pin stays `aether.protocol.1` / `0.96.0` until the pin would otherwise lie. `PROTOCOL.hosted` stays false. `WORLD_VERSION` stays 1. Catalog stays 88 rules unless a new first-deny is required.
+Public pin stays `aether.protocol.1` / `0.96.0` until the pin would otherwise lie. `PROTOCOL.hosted` stays false. `WORLD_VERSION` stays 1. Catalog stays 89 rules unless a new first-deny is required.
 
 ## Do not
 
@@ -1066,7 +1066,7 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list ice.
 
 ### 161. A listed rail is not decoration
 
-`payment.allowed_payment_instruments` is a listed constraint type. DESIGN claimed every intent constraint evaluates; the referee never did. That allow was a lie. Completing funded work is legal. Payee TAP is who (`payment.allowed_payees`). SKU TAP is what (`payment.allowed_skus`). Live-rail *type* stays `instrument.sim_only`. Empty lists and nested children that drop the parent's list are the same first deny / `mandate.child_tighter`. `payment.reference` stays AP2-shaped until a prior payment exists to bind.
+`payment.allowed_payment_instruments` is a listed constraint type. DESIGN claimed every intent constraint evaluates; the referee never did. That allow was a lie. Completing funded work is legal. Payee TAP is who (`payment.allowed_payees`). SKU TAP is what (`payment.allowed_skus`). Live-rail *type* stays `instrument.sim_only`. Empty lists and nested children that drop the parent's list are the same first deny / `mandate.child_tighter`. Cite TAP binds `payment.reference` once a funded check exists.
 
 - [x] A TAP (`pnpm demo rail`) funds an $800 hire under a slip that lists this kernel's sim ledger, refuses a new `hire.create` against a slip that lists a ghost rail as `payment.allowed_payment_instruments` without writing a hire (a listed payee and a live-rail type still allow), then that funded work still releases.
 - [x] New first-deny: a listed instrument is not decoration. Catalog is 88. Pin stays 0.96.0.
@@ -1097,7 +1097,20 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list pen.
 - [x] A TAP (`pnpm demo well`) funds an $800 hire under a three-hop handshake, refuses a new `hire.create` down a four-hop chain as `kya.delegation_depth` without writing a hire (a missing path, a dead parent hop, and a climb still allow), then that funded work still releases.
 - [x] No new policy rule unless a current allow is a fourth hop that spends, or a nested parent that is counted as a hop.
 
-### 166. Next: only if the pin would lie
+### 166. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list well. No lying allow on the well listing.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through well. No inspect-overlay grind.
+
+### 167. A listed reference is not decoration once a check exists
+
+`payment.reference` is a listed constraint type. DESIGN claimed every intent constraint evaluates; the referee did not bind it until a prior payment existed. After every TAP's $800 fund, a prior funded payment does exist, and a ghost `conditional_transaction_id` still allowed. That allow was a lie. Completing funded work is legal. Payee TAP is who (`payment.allowed_payees`). Rail TAP is which ledger (`payment.allowed_payment_instruments`). SKU TAP is what (`payment.allowed_skus`). Live-rail *type* stays `instrument.sim_only`. Before any funded payment the constraint is still AP2-shaped catalog surface. Nested children that drop or change the parent's hash stay `mandate.child_tighter`.
+
+- [x] A TAP (`pnpm demo cite`) funds an $800 hire, refuses a new `hire.create` against a slip that cites a ghost checkout as `payment.reference` without writing a hire (a listed payee, a listed rail, and a listed SKU still allow), then a citation of that funded check still hires and that funded work still releases.
+- [x] New first-deny: `payment.reference`. Catalog 88 → 89. Protocol stays 0.96.0.
+
+### 168. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -1105,4 +1118,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket` + `pnpm demo graft` + `pnpm demo seal` + `pnpm demo guest` + `pnpm demo dust` + `pnpm demo thaw` + `pnpm demo twin` + `pnpm demo fence` + `pnpm demo mute` + `pnpm demo nil` + `pnpm demo spark` + `pnpm demo wilt` + `pnpm demo maker` + `pnpm demo ink` + `pnpm demo brim` + `pnpm demo swap` + `pnpm demo sour` + `pnpm demo cut` + `pnpm demo ice` + `pnpm demo rail` + `pnpm demo pen` + `pnpm demo well`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf` + `pnpm demo hall` + `pnpm demo writ` + `pnpm demo crate` + `pnpm demo pact` + `pnpm demo root` + `pnpm demo docket` + `pnpm demo graft` + `pnpm demo seal` + `pnpm demo guest` + `pnpm demo dust` + `pnpm demo thaw` + `pnpm demo twin` + `pnpm demo fence` + `pnpm demo mute` + `pnpm demo nil` + `pnpm demo spark` + `pnpm demo wilt` + `pnpm demo maker` + `pnpm demo ink` + `pnpm demo brim` + `pnpm demo swap` + `pnpm demo sour` + `pnpm demo cut` + `pnpm demo ice` + `pnpm demo rail` + `pnpm demo pen` + `pnpm demo well` + `pnpm demo cite`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
