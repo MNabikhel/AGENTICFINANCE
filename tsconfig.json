@@ -75,7 +75,8 @@
       "@aether/occurrence-fresh": ["packages/aether-runtime/src/occurrence-fresh.ts"],
       "@aether/role-capability": ["packages/aether-runtime/src/role-capability.ts"],
       "@aether/amount-range": ["packages/aether-runtime/src/amount-range.ts"],
-      "@aether/escrow-required": ["packages/aether-runtime/src/escrow-required.ts"]
+      "@aether/escrow-required": ["packages/aether-runtime/src/escrow-required.ts"],
+      "@aether/known-sku": ["packages/aether-runtime/src/known-sku.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

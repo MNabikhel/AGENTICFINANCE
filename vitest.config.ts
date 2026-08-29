@@ -82,6 +82,7 @@ export default defineConfig({
       "@aether/role-capability": path.resolve(__dirname, "packages/aether-runtime/src/role-capability.ts"),
       "@aether/amount-range": path.resolve(__dirname, "packages/aether-runtime/src/amount-range.ts"),
       "@aether/escrow-required": path.resolve(__dirname, "packages/aether-runtime/src/escrow-required.ts"),
+      "@aether/known-sku": path.resolve(__dirname, "packages/aether-runtime/src/known-sku.ts"),
     },
   },
 });

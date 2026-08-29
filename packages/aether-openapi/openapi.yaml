@@ -541,6 +541,12 @@ paths:
       responses:
         "200": { description: Bare TAP report. Unfunded work is not a delivery. }
         "500": { description: Assertions failed }
+  /v1/demo/shelf:
+    post:
+      operationId: demoShelf
+      responses:
+        "200": { description: Shelf TAP report. A ghost SKU is not a catalog good. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

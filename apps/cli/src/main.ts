@@ -58,6 +58,7 @@ import { loadOccurrenceFresh, runOccurrenceFresh } from "@aether/occurrence-fres
 import { loadRoleCapability, runRoleCapability } from "@aether/role-capability";
 import { loadAmountRange, runAmountRange } from "@aether/amount-range";
 import { loadEscrowRequired, runEscrowRequired } from "@aether/escrow-required";
+import { loadKnownSku, runKnownSku } from "@aether/known-sku";
 
 const [, , command, name] = process.argv;
 
@@ -431,6 +432,12 @@ if (command === "demo" && (name === "bare" || name === "owed" || name === "tab")
   process.exit(0);
 }
 
+if (command === "demo" && (name === "shelf" || name === "aisle" || name === "rack")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/shelf/scenario.json");
+  printReport(runKnownSku(loadKnownSku(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -495,5 +502,6 @@ usage:
   pnpm demo badge
   pnpm demo lid
   pnpm demo bare
+  pnpm demo shelf
   pnpm mcp`);
 process.exit(command ? 1 : 0);

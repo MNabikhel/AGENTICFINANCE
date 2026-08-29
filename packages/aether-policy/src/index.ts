@@ -1351,7 +1351,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.known_sku": {
     kind: "none",
-    hint: "This is not a storefront. Only catalog SKUs can be hired. Read market.catalog.",
+    hint: "This is not a storefront. Only catalog SKUs can be hired. Read market.catalog. A listed SKU not on the slip stays payment.allowed_skus. Completing funded work is legal. A ghost SKU is not a catalog good.",
   },
   "market.not_expired": {
     kind: "none",

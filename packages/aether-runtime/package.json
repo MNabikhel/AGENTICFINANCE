@@ -61,7 +61,8 @@
     "./occurrence-fresh": "./src/occurrence-fresh.ts",
     "./role-capability": "./src/role-capability.ts",
     "./amount-range": "./src/amount-range.ts",
-    "./escrow-required": "./src/escrow-required.ts"
+    "./escrow-required": "./src/escrow-required.ts",
+    "./known-sku": "./src/known-sku.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

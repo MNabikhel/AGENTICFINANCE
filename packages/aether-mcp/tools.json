@@ -445,6 +445,11 @@
       "name": "aether_demo_bare",
       "commandType": "demo.bare",
       "description": "Run the bare TAP: unfunded work is not a delivery. hire.deliver on an accepted hire is hire.escrow_required; the seller is still the party; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_shelf",
+      "commandType": "demo.shelf",
+      "description": "Run the shelf TAP: a ghost SKU is not a catalog good. market.rfq of a SKU not in the catalog is market.known_sku; the slip list still allows; funded work still finishes."
     }
   ]
 }

@@ -416,7 +416,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 61. A listed SKU is not any catalog good
 
-`payment.allowed_skus` already binds `hire.create` when the slip lists SKUs and the quote’s good is not among them. Completing funded work is legal. Payee TAP is who. Ghost SKU stays `market.known_sku`. Conversion TAP is `hire.not_fx`.
+`payment.allowed_skus` already binds `hire.create` when the slip lists SKUs and the quote’s good is not among them. Completing funded work is legal. Payee TAP is who. Shelf TAP is a ghost SKU (`market.known_sku`). Conversion TAP is `hire.not_fx`.
 
 - [x] A TAP (`pnpm demo sku`) funds an $800 hire of listed `research.brief`, refuses `hire.create` of catalog `research.deep` as `payment.allowed_skus` without writing a hire (known SKU, listed payee, and room still allow), then that funded work still releases.
 - [x] No new policy rule unless a current allow is an unlisted catalog hire, or a current deny traps funded work.
@@ -429,7 +429,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 63. A listed SKU is only priced in a catalog currency
 
-`market.sku_currency` already binds `market.quote` when a catalog SKU is priced in a currency the catalog does not name. Completing funded work is legal. SKU TAP is the slip list. Convert with `market.fx_settle`. Ghost SKU stays `market.known_sku`.
+`market.sku_currency` already binds `market.quote` when a catalog SKU is priced in a currency the catalog does not name. Completing funded work is legal. SKU TAP is the slip list. Convert with `market.fx_settle`. Shelf TAP is a ghost SKU.
 
 - [x] A TAP (`pnpm demo priced`) refuses `market.quote` of `research.brief` in `USDC_SIM` as `market.sku_currency` without writing a quote (known SKU, known RFQ, and FX pair still allow), then a USD quote still writes and that funded work still releases.
 - [x] No new policy rule unless a current allow is a mixed-currency catalog quote, or a current deny traps funded work.
@@ -533,7 +533,7 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ### 79. An FX SKU is a window, not a good
 
-`market.fx_window` already binds `market.quote` when a listed FX SKU has no `fx` window. Completing funded work is legal. Conversion TAP is hiring the window (`hire.not_fx`). Born TAP is a corpse mint (`market.fx_fresh`). Pair TAP is a swapped pair (`market.fx_pair`). Ghost SKU stays `market.known_sku`.
+`market.fx_window` already binds `market.quote` when a listed FX SKU has no `fx` window. Completing funded work is legal. Conversion TAP is hiring the window (`hire.not_fx`). Born TAP is a corpse mint (`market.fx_fresh`). Pair TAP is a swapped pair (`market.fx_pair`). Shelf TAP is a ghost SKU.
 
 - [x] A TAP (`pnpm demo pane`) funds an $800 hire, refuses `market.quote` of an FX SKU without an `fx` window as `market.fx_window` without writing a quote (known SKU, known room, pair, and born-dead still allow), then a real window still quotes and converts and that funded work still releases.
 - [x] No new policy rule unless a current allow is an FX SKU quoted as a good, or a current deny traps funded work.
@@ -733,7 +733,20 @@ CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list lid.
 - [x] A TAP (`pnpm demo bare`) funds an $800 hire, refuses `hire.deliver` on an accepted hire as `hire.escrow_required` without writing a deliverable (the hire is still known; the seller is still the party; hire stays accepted), then that funded work still releases.
 - [x] No new policy rule unless a current allow is a delivery on unfunded work, or a current deny traps funded work.
 
-### 110. Next: only if the pin would lie
+### 110. Honesty remainder
+
+CommandType 1:1 with MCP command tools. OpenAPI and the discovery card list bare. No lying allow.
+
+- [x] CommandType ↔ MCP command tools stay 1:1. OpenAPI lists every TAP the discovery card names through bare. No inspect-overlay grind.
+
+### 111. A ghost SKU is not a catalog good
+
+`market.known_sku` already binds `market.rfq` when the SKU is not in the catalog. Completing funded work is legal. SKU TAP is the slip list (`payment.allowed_skus`). Priced TAP is catalog currency (`market.sku_currency`).
+
+- [x] A TAP (`pnpm demo shelf`) funds an $800 hire of a catalog good, refuses `market.rfq` of a SKU not in the catalog as `market.known_sku` without writing an RFQ (the slip list still allows; catalog currency is not this deny), then that funded work still releases.
+- [x] No new policy rule unless a current allow is a ghost SKU hire, or a current deny traps funded work.
+
+### 112. Next: only if the pin would lie
 
 If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. Do not mint 0.97 unless the pin would otherwise lie. Do not grind inspect overlays.
 
@@ -741,4 +754,4 @@ If an allow, a listed HTTP/MCP face, or the protocol card would lie, patch it. D
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing` + `pnpm demo refund` + `pnpm demo replay` + `pnpm demo nonce` + `pnpm demo deny` + `pnpm demo recurrence` + `pnpm demo calendar` + `pnpm demo slot` + `pnpm demo daily` + `pnpm demo cart` + `pnpm demo velocity` + `pnpm demo door` + `pnpm demo match` + `pnpm demo room` + `pnpm demo conversion` + `pnpm demo pair` + `pnpm demo band` + `pnpm demo nest` + `pnpm demo heir` + `pnpm demo stock` + `pnpm demo purse` + `pnpm demo seat` + `pnpm demo cover` + `pnpm demo mint` + `pnpm demo payee` + `pnpm demo climb` + `pnpm demo born` + `pnpm demo reach` + `pnpm demo year` + `pnpm demo fuse` + `pnpm demo sku` + `pnpm demo priced` + `pnpm demo party` + `pnpm demo cash` + `pnpm demo stale` + `pnpm demo chain` + `pnpm demo arrow` + `pnpm demo wallet` + `pnpm demo name` + `pnpm demo pane` + `pnpm demo subject` + `pnpm demo paper` + `pnpm demo mix` + `pnpm demo rung` + `pnpm demo grade` + `pnpm demo cradle` + `pnpm demo ceiling` + `pnpm demo lapse` + `pnpm demo pause` + `pnpm demo mirror` + `pnpm demo warrant` + `pnpm demo vacant` + `pnpm demo badge` + `pnpm demo lid` + `pnpm demo bare` + `pnpm demo shelf`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

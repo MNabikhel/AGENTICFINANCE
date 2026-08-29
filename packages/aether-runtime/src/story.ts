@@ -193,6 +193,9 @@ export const LID_TLDR =
 export const BARE_TLDR =
   "A founder funded an $800 hire. Deliver on an accepted hire was hire.escrow_required — the seller is still the party, the hire is still known. That funded work still released. Unfunded work is not a delivery.";
 
+export const SHELF_TLDR =
+  "A founder funded an $800 hire of a catalog good. An RFQ for a ghost SKU was market.known_sku — the slip list still allows, a listed SKU is not this deny. That funded work still released. A ghost SKU is not a catalog good.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -574,6 +577,16 @@ export function autoBeat(input: {
   if (cmd.type === "market.rfq") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
+      if (rule?.ruleId === "market.known_sku") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} asked the market for a SKU that is not in the catalog`,
+          body: "This is not a storefront. Only catalog SKUs can be hired. A listed SKU not on the slip is a different object. Completing funded work after that is legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "identity.known") {
         return {
           seq: input.seq,

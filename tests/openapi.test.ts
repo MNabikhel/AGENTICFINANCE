@@ -148,6 +148,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not an envelope");
     expect(spec).toContain("/v1/demo/bare:");
     expect(spec).toContain("not a delivery");
+    expect(spec).toContain("/v1/demo/shelf:");
+    expect(spec).toContain("not a catalog good");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {
