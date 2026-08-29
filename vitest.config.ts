@@ -47,6 +47,7 @@ export default defineConfig({
       "@aether/parent-fresh": path.resolve(__dirname, "packages/aether-runtime/src/parent-fresh.ts"),
       "@aether/mandate-parent": path.resolve(__dirname, "packages/aether-runtime/src/mandate-parent.ts"),
       "@aether/mm-inventory": path.resolve(__dirname, "packages/aether-runtime/src/mm-inventory.ts"),
+      "@aether/payment-budget": path.resolve(__dirname, "packages/aether-runtime/src/payment-budget.ts"),
     },
   },
 });

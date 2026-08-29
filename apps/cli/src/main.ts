@@ -23,6 +23,7 @@ import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
 import { loadParentFresh, runParentFresh } from "@aether/parent-fresh";
 import { loadMandateParent, runMandateParent } from "@aether/mandate-parent";
 import { loadMmInventory, runMmInventory } from "@aether/mm-inventory";
+import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
 
 const [, , command, name] = process.argv;
 
@@ -186,6 +187,12 @@ if (command === "demo" && (name === "stock" || name === "inventory" || name === 
   process.exit(0);
 }
 
+if (command === "demo" && (name === "purse" || name === "budget" || name === "payment-budget")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/purse/scenario.json");
+  printReport(runPaymentBudget(loadPaymentBudget(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -215,5 +222,6 @@ usage:
   pnpm demo nest
   pnpm demo heir
   pnpm demo stock
+  pnpm demo purse
   pnpm mcp`);
 process.exit(command ? 1 : 0);

@@ -270,6 +270,11 @@
       "name": "aether_demo_stock",
       "commandType": "demo.stock",
       "description": "Run the stock TAP: empty MM USDC is not a missing maker. Thin inventory is mm.inventory; a smaller window still converts."
+    },
+    {
+      "name": "aether_demo_purse",
+      "commandType": "demo.purse",
+      "description": "Run the purse TAP: a budget is not an item cap. Second hire.create is payment.budget; the item cap still allows; funded work still finishes."
     }
   ]
 }

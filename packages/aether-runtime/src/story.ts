@@ -88,6 +88,9 @@ export const HEIR_TLDR =
 export const STOCK_TLDR =
   "A market maker quoted a conversion against a thin USDC book. That was mm.inventory — the window stayed unspent. A smaller window on a different RFQ converted. Empty MM USDC is not a missing maker, not a vendor overdraft, and not the 200bps band.";
 
+export const PURSE_TLDR =
+  "A founder wrote a $1,000 envelope with a $5,000 per-item cap. The desk funded an $800 hire. A $400 second hire was payment.budget — the item cap still allowed. That funded work still released. A budget is not an item cap.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -537,6 +540,8 @@ export function autoBeat(input: {
       let body = `The referee (policy kernel) said no. Rule: ${ruleId}. ${rule?.message ?? ""}`;
       if (ruleId === "payment.amount_range") {
         body += " Hard constraints cannot be waved through by a manager — someone has to issue a new permission slip.";
+      } else if (ruleId === "payment.budget") {
+        body = "This permission slip’s envelope is spent. The per-item cap is a different object. Completing funded work after that is legal; a new hire is not.";
       } else if (ruleId === "circuit.daily") {
         body = "The daily fuse blew. Standing permission does not mean unlimited. Until a human resets the circuit, even a tiny hire is refused.";
       } else if (ruleId === "kya.principal_not_frozen") {

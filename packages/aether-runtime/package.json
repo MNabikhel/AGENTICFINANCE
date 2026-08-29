@@ -26,7 +26,8 @@
     "./spread-bound": "./src/spread-bound.ts",
     "./parent-fresh": "./src/parent-fresh.ts",
     "./mandate-parent": "./src/mandate-parent.ts",
-    "./mm-inventory": "./src/mm-inventory.ts"
+    "./mm-inventory": "./src/mm-inventory.ts",
+    "./payment-budget": "./src/payment-budget.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

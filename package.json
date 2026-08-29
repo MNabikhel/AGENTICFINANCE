@@ -31,6 +31,7 @@
     "demo:nest": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo nest",
     "demo:heir": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo heir",
     "demo:stock": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo stock",
+    "demo:purse": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo purse",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"
