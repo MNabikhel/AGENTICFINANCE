@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 90 rules", () => {
-    expect(RULE_IDS).toHaveLength(90);
+  it("has 91 rules", () => {
+    expect(RULE_IDS).toHaveLength(91);
   });
 
   it("denies frozen actors", () => {
@@ -903,6 +903,59 @@ describe("policy catalog", () => {
     );
     expect(d.trace.find((t) => t.ruleId === "identity.party")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+  });
+
+  it("still names market.known_rfq first when folding a missing quote", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.withdraw",
+        rfqKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies folding someone else's bid as market.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "compute_vendor", autonomyLevel: 2 }),
+        commandType: "market.withdraw",
+        rfqKnown: true,
+        marketFresh: true,
+        quoteUnspent: true,
+        marketPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a seller folding its own bid as market.party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.withdraw",
+        rfqKnown: true,
+        marketFresh: true,
+        quoteUnspent: true,
+        marketPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
   });
 

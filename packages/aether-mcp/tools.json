@@ -47,6 +47,11 @@
       "description": "Submit a quote or FX rate. MM rates must stay inside 200bps. An FX validUntil already past or unparseable is refused."
     },
     {
+      "name": "aether_market_withdraw",
+      "commandType": "market.withdraw",
+      "description": "Pull a live unspent quote off the table. Seller, human, or treasury. Ghost quote stays market.known_rfq. Stranger stays market.party. Spent stays hire.quote_unspent. A folded quote is market.not_expired on hire.create. Someone else's bid is not yours to pull."
+    },
+    {
       "name": "aether_market_fx_settle",
       "commandType": "market.fx_settle",
       "description": "Settle a one-shot FX window. Same command as POST /v1/fx/settle. Not a hire. Completing after a hot settle hour is legal; a new settle is not."
@@ -610,6 +615,11 @@
       "name": "aether_demo_void",
       "commandType": "demo.void",
       "description": "Run the void TAP: a void is not a refund. hire.void of a funded hire is hire.state; the party still allows; a missing hire is not this deny; no void line; an unfunded offer still voids without restoring the quote; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_fold",
+      "commandType": "demo.fold",
+      "description": "Run the fold TAP: someone else's bid is not yours to pull. market.withdraw of a live quote by a second vendor is market.party; a missing quote and an expired window still allow; no QUOTE_WITHDRAW line; the seller still folds its own bid; hire.create of that folded quote is market.not_expired; funded work still finishes."
     }
   ]
 }

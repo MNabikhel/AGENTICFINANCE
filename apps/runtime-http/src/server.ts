@@ -101,6 +101,7 @@ import { loadDelegationDepth, runDelegationDepth } from "@aether/delegation-dept
 import { loadPaymentReference, runPaymentReference } from "@aether/payment-reference";
 import { loadIdentityParty, runIdentityParty } from "@aether/identity-party";
 import { loadHireVoid, runHireVoid } from "@aether/hire-void";
+import { loadMarketParty, runMarketParty } from "@aether/market-party";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -194,6 +195,7 @@ const wellFixture = join(process.cwd(), "fixtures/demo/well/scenario.json");
 const citeFixture = join(process.cwd(), "fixtures/demo/cite/scenario.json");
 const lockFixture = join(process.cwd(), "fixtures/demo/lock/scenario.json");
 const voidFixture = join(process.cwd(), "fixtures/demo/void/scenario.json");
+const foldFixture = join(process.cwd(), "fixtures/demo/fold/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1069,6 +1071,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
+      if (req.method === "POST" && path === "/v1/demo/fold") {
+        const report = runMarketParty(loadMarketParty(foldFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "fold" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
       if (req.method === "POST" && path === "/v1/reset") {
         runtime = boot();
         lastDemo = null;
@@ -1190,6 +1199,11 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
       const hireVoid = path.match(/^\/v1\/hires\/([^/]+)\/void$/);
       if (req.method === "POST" && hireVoid) {
         handleDispatch(req, res, "hire.void", { ...body, hireId: hireVoid[1] });
+        return;
+      }
+      const quoteWithdraw = path.match(/^\/v1\/quotes\/([^/]+)\/withdraw$/);
+      if (req.method === "POST" && quoteWithdraw) {
+        handleDispatch(req, res, "market.withdraw", { ...body, quoteId: quoteWithdraw[1] });
         return;
       }
       const approval = path.match(/^\/v1\/approvals\/([^/]+)\/resolve$/);

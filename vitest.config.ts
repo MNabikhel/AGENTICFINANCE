@@ -113,6 +113,7 @@ export default defineConfig({
       "@aether/payment-reference": path.resolve(__dirname, "packages/aether-runtime/src/payment-reference.ts"),
       "@aether/identity-party": path.resolve(__dirname, "packages/aether-runtime/src/identity-party.ts"),
       "@aether/hire-void": path.resolve(__dirname, "packages/aether-runtime/src/hire-void.ts"),
+      "@aether/market-party": path.resolve(__dirname, "packages/aether-runtime/src/market-party.ts"),
     },
   },
 });

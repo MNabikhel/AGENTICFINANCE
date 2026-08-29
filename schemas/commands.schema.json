@@ -155,6 +155,16 @@
         }
       }
     },
+    "market.withdraw": {
+      "type": "object",
+      "required": ["quoteId"],
+      "properties": {
+        "quoteId": {
+          "type": "string",
+          "description": "Pull a live unspent quote off the table. Seller, human, or treasury. A spent quote stays spent. A folded quote is not a hire."
+        }
+      }
+    },
     "market.fx_settle": {
       "type": "object",
       "required": ["quoteId"],

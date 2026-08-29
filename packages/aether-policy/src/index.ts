@@ -896,7 +896,7 @@ export const RULES: readonly Rule[] = [
   {
     id: "hire.quote_unspent",
     evaluate: (ctx) => {
-      if (ctx.quoteUnspent === undefined) return v("hire.quote_unspent", "allow", "not a hire.create");
+      if (ctx.quoteUnspent === undefined) return v("hire.quote_unspent", "allow", "not a spend-or-withdraw of a known quote");
       return ctx.quoteUnspent
         ? v("hire.quote_unspent", "allow", "quote has not been used")
         : v("hire.quote_unspent", "deny", "quote already used");
@@ -1347,6 +1347,15 @@ export const RULES: readonly Rule[] = [
         : v("identity.party", "deny", "actor is not the named agent");
     },
   },
+  {
+    id: "market.party",
+    evaluate: (ctx) => {
+      if (ctx.marketPartyOk === undefined) return v("market.party", "allow", "not a withdraw");
+      return ctx.marketPartyOk
+        ? v("market.party", "allow", "actor is the named seller or a kill-switch role")
+        : v("market.party", "deny", "actor is not the named seller");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1674,6 +1683,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "identity.party": {
     kind: "none",
     hint: "Rotate your own key, or ask a human or treasury. Someone else's key is not yours to turn. A missing agent is identity.known. System is not a treasurer.",
+  },
+  "market.party": {
+    kind: "none",
+    hint: "Fold your own bid, or ask a human or treasury. Someone else's quote is not yours to pull. A missing quote is market.known_rfq. A spent quote is hire.quote_unspent. A folded quote is market.not_expired.",
   },
   "clearing.bilateral_limit": {
     kind: "none",

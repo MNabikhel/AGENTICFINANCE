@@ -76,6 +76,8 @@ export interface WorldState {
   consumedQuotes?: string[];
   /** Quote id → pending approval id. Optional so old worlds boot. */
   reservedQuotes?: Array<[string, string]>;
+  /** Quote ids folded by market.withdraw. Optional so old worlds boot. */
+  withdrawnQuotes?: string[];
   settleEvents: Array<{ at: string; volume: number }>;
   decisions: Array<{ at: string; type: CommandType; decision: PolicyDecision }>;
   story: StoryBeat[];

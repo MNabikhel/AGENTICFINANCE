@@ -286,6 +286,9 @@ export const LOCK_TLDR =
 export const VOID_TLDR =
   "A founder funded an $800 hire. Voiding that funded hire was hire.state — the party still allowed; a missing hire is not this deny. No void line was written. An unfunded offer still voided. That quote stayed spent. That funded work still released. A void is not a refund.";
 
+export const FOLD_TLDR =
+  "A founder funded an $800 hire. A second vendor folding the research desk's live bid was market.party — a missing quote is not this deny, an expired window is not this deny. No QUOTE_WITHDRAW line was written. The seller still folded its own bid. Hiring that folded quote was market.not_expired. That funded work still released. Someone else's bid is not yours to pull.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1093,6 +1096,36 @@ export function autoBeat(input: {
       commandType: cmd.type,
     };
   }
+  if (cmd.type === "market.withdraw") {
+    if (decision.verdict === "deny") {
+      const rule = decision.trace.find((t) => t.verdict === "deny");
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: `${who} could not fold that bid`,
+        body:
+          rule?.ruleId === "market.party"
+            ? "Someone else's bid is not yours to pull. The seller, a human, or treasury may fold a live quote."
+            : rule?.ruleId === "market.known_rfq"
+              ? "That quote is not in this world. A missing bid is not a folded bid."
+              : rule?.ruleId === "hire.quote_unspent"
+                ? "A spent quote stays spent. Folding does not unwind a hire."
+                : rule?.ruleId === "market.not_expired"
+                  ? "That window is already closed. A folded bid is not a second fold."
+                  : "A live bid can be folded. That is not a spent quote.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    return {
+      seq: input.seq,
+      at: input.at,
+      headline: `${who} folded a live bid`,
+      body: "The quote is off the table. Hire.create of a folded bid is market.not_expired. Spent is when hire.create consumed it.",
+      tone: "allow",
+      commandType: cmd.type,
+    };
+  }
   if (cmd.type === "hire.release") {
     if (decision.verdict === "deny") {
       const rule = decision.trace.find((t) => t.verdict === "deny");
@@ -1496,6 +1529,7 @@ export function analog(): Analog {
       "An auditor may read the notary book. They may freeze people. They may not buy lunch with the company card.",
       "An agent can change the lock on its key without becoming someone else. Someone else's key is not yours to turn.",
       "An unfunded offer can be torn up. That is not a refund. A refund is cash coming back after escrow moved.",
+      "A live bid can be folded. That is not a spent quote. Spent is when hire.create consumed it. Someone else's bid is not yours to pull.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

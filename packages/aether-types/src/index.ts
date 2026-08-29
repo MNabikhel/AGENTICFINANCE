@@ -514,12 +514,12 @@ export interface Quote {
 }
 
 /**
- * Inspect / snapshot view. Spent and held win over expired. Expired includes the
- * quote envelope, a lapsed FX `validUntil`, and (for a hire quote) a dead parent RFQ.
- * An FX quote is a window on the quote, not the room — RFQ death does not expire it.
- * The store stays raw.
+ * Inspect / snapshot view. Spent and held win over withdrawn and expired.
+ * Withdrawn wins over expired. Expired includes the quote envelope, a lapsed FX
+ * `validUntil`, and (for a hire quote) a dead parent RFQ. An FX quote is a window
+ * on the quote, not the room — RFQ death does not expire it. The store stays raw.
  */
-export type QuoteStatus = "live" | "expired" | "spent" | "held";
+export type QuoteStatus = "live" | "expired" | "spent" | "held" | "withdrawn";
 
 // ---------------------------------------------------------------------------
 // Ledger
@@ -802,11 +802,12 @@ export interface PolicyContext {
    */
   fxMintFresh?: boolean;
   /**
-   * False when `hire.create` would reuse a quote that already produced a hire, an FX settle,
-   * or is held by an open approval ticket.
-   * Absent = not a hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * False when `hire.create` or `market.withdraw` would reuse a quote that already
+   * produced a hire, an FX settle, or is held by an open approval ticket.
+   * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).
    * A deny does not consume the quote. An escalate *reserves* it until
-   * the ticket is approved, rejected, or expired. A void/refund does not restore it.
+   * the ticket is approved, rejected, or expired. A void/refund/withdraw of a spent
+   * quote does not restore it. A folded live quote is `market.not_expired`, not this flag.
    */
   quoteUnspent?: boolean;
   /**
@@ -911,6 +912,12 @@ export interface PolicyContext {
    * Omitted agentId is the speaker. A vendor cannot turn a desk's lock.
    */
   identityPartyOk?: boolean;
+  /**
+   * False when market.withdraw names a quote whose seller is not the speaker,
+   * and the speaker is not a human or treasury. Absent = not a withdraw, or the
+   * quote is unknown (`rfqKnown` handles that). A vendor cannot fold someone else's bid.
+   */
+  marketPartyOk?: boolean;
   /**
    * False when identity.register would reuse a runtime alias or its operating book
    * (USD cash, and USDC for data_vendor / market_maker).
@@ -1184,6 +1191,7 @@ export type AuditAction =
   | "MANDATE_ISSUE"
   | "RFQ_CREATE"
   | "QUOTE_SUBMIT"
+  | "QUOTE_WITHDRAW"
   | "HIRE_TRANSITION"
   | "POLICY_DECISION"
   | "APPROVAL_RESOLVE"
@@ -1251,6 +1259,7 @@ export type CommandType =
   | "mandate.issue_payment"
   | "market.rfq"
   | "market.quote"
+  | "market.withdraw"
   | "market.fx_settle"
   | "market.catalog"
   | "hire.create"
@@ -1340,6 +1349,7 @@ export const ROLE_CAPABILITY: Record<
     "mandate.issue_payment",
     "market.rfq",
     "market.fx_settle",
+    "market.withdraw",
     "hire.create",
     "hire.accept",
     "hire.fund",
@@ -1386,6 +1396,7 @@ export const ROLE_CAPABILITY: Record<
   data_vendor: [
     "identity.rotate",
     "market.quote",
+    "market.withdraw",
     "market.fx_settle",
     "hire.accept",
     "hire.void",
@@ -1401,6 +1412,7 @@ export const ROLE_CAPABILITY: Record<
   compute_vendor: [
     "identity.rotate",
     "market.quote",
+    "market.withdraw",
     "market.fx_settle",
     "hire.accept",
     "hire.void",
@@ -1416,6 +1428,7 @@ export const ROLE_CAPABILITY: Record<
   market_maker: [
     "identity.rotate",
     "market.quote",
+    "market.withdraw",
     "market.fx_settle",
     "envelope.require",
     "envelope.submit",
@@ -1431,6 +1444,7 @@ export const ROLE_CAPABILITY: Record<
     "identity.freeze",
     "identity.unfreeze",
     "identity.rotate",
+    "market.withdraw",
     "kya.attest",
     "kya.revoke",
     "circuit.reset",

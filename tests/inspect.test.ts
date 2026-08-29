@@ -297,6 +297,23 @@ describe("quote inspect", () => {
     expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
   });
 
+  it("labels a folded quote withdrawn, not expired or spent", () => {
+    const rt = boot();
+    const { desk, vendor } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "fold me",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const folded = rt.dispatch(cmd("market.withdraw", vendor.id, { quoteId: invited.quoteId }));
+    expect(folded.ok).toBe(true);
+    expect((rt.inspect(invited.quoteId)?.value as { status: string }).status).toBe("withdrawn");
+    expect(rt.snapshotState().quotes.find((q) => q.id === invited.quoteId)?.status).toBe("withdrawn");
+    expect("status" in (rt.quotes.get(invited.quoteId) ?? {})).toBe(false);
+  });
+
   it("labels a hired quote spent, not live", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);
