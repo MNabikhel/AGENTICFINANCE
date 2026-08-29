@@ -29,7 +29,8 @@
     "./mm-inventory": "./src/mm-inventory.ts",
     "./payment-budget": "./src/payment-budget.ts",
     "./host-unique": "./src/host-unique.ts",
-    "./payment-parent": "./src/payment-parent.ts"
+    "./payment-parent": "./src/payment-parent.ts",
+    "./operating-book": "./src/operating-book.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -285,6 +285,11 @@
       "name": "aether_demo_cover",
       "commandType": "demo.cover",
       "description": "Run the cover TAP: a parent envelope is not a child's leftover. Scout hire.create is payment.parent_budget; the child's own envelope still allows; funded parent work still finishes."
+    },
+    {
+      "name": "aether_demo_mint",
+      "commandType": "demo.mint",
+      "description": "Run the mint TAP: a transfer is not a mint. Equity and escrow transfers are ledger.operating_book; funded work still finishes."
     }
   ]
 }

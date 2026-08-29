@@ -43,7 +43,8 @@
       "@aether/mm-inventory": ["packages/aether-runtime/src/mm-inventory.ts"],
       "@aether/payment-budget": ["packages/aether-runtime/src/payment-budget.ts"],
       "@aether/host-unique": ["packages/aether-runtime/src/host-unique.ts"],
-      "@aether/payment-parent": ["packages/aether-runtime/src/payment-parent.ts"]
+      "@aether/payment-parent": ["packages/aether-runtime/src/payment-parent.ts"],
+      "@aether/operating-book": ["packages/aether-runtime/src/operating-book.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

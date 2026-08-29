@@ -26,6 +26,7 @@ import { loadMmInventory, runMmInventory } from "@aether/mm-inventory";
 import { loadPaymentBudget, runPaymentBudget } from "@aether/payment-budget";
 import { loadHostUnique, runHostUnique } from "@aether/host-unique";
 import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
+import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
 
 const [, , command, name] = process.argv;
 
@@ -207,6 +208,12 @@ if (command === "demo" && (name === "cover" || name === "roof" || name === "pare
   process.exit(0);
 }
 
+if (command === "demo" && (name === "mint" || name === "lock" || name === "operating-book")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/mint/scenario.json");
+  printReport(runOperatingBook(loadOperatingBook(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -239,5 +246,6 @@ usage:
   pnpm demo purse
   pnpm demo seat
   pnpm demo cover
+  pnpm demo mint
   pnpm mcp`);
 process.exit(command ? 1 : 0);

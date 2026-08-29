@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover` | `aether_demo_mint`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -174,6 +174,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 122. A budget is not an item cap. `pnpm demo purse` / `aether_demo_purse` / `POST /v1/demo/purse` funds an $800 hire against a $1,000 envelope with a $5,000 per-item cap, refuses a $400 second `hire.create` as `payment.budget` (the item cap still allows; no hire written), then that funded work still releases. Sprint hits `payment.amount_range`. No new policy rule.
 123. One subscriber is one row. `pnpm demo seat` / `aether_demo_seat` / `POST /v1/demo/seat` records a hosted subscribe row, funds an $800 hire (spend is not gated on the row), refuses a second `host.subscribe` as `host.unique_subscriber` even on a fresh slip (no second row), then a different agent takes its own seat and that funded work still releases. Door TAP is the 401/402 door. `PROTOCOL.hosted` stays false. No new policy rule.
 124. A parent envelope is not a child's leftover. `pnpm demo cover` / `aether_demo_cover` / `POST /v1/demo/cover` funds an $800 desk hire against a $1,000 parent envelope, refuses a $400 scout `hire.create` on a tighter child as `payment.parent_budget` (the child's own envelope still allows; no hire written), then that funded parent work still releases. Sub-hire hits `mandate.child_tighter` and the child's item cap. Purse hits `payment.budget`. No new policy rule.
+125. A transfer is not a mint. `pnpm demo mint` / `aether_demo_mint` / `POST /v1/demo/mint` refuses `ledger.transfer` from equity as `ledger.operating_book` (overdraft still allows), funds an $800 hire, refuses a transfer out of that escrow as `ledger.operating_book` (the hire stays funded), then that funded work still releases. Overdraft stays `ledger.sufficient`. No new policy rule.
 
 ## Autonomy
 
@@ -220,4 +221,5 @@ pnpm demo stock
 pnpm demo purse
 pnpm demo seat
 pnpm demo cover
+pnpm demo mint
 ```

@@ -97,6 +97,9 @@ export const SEAT_TLDR =
 export const COVER_TLDR =
   "A founder wrote a $1,000 parent envelope. The desk funded an $800 hire against the parent. A $400 scout hire on a tighter child was payment.parent_budget — the child's own envelope still allowed. That funded work still released. A parent envelope is not a child's leftover.";
 
+export const MINT_TLDR =
+  "Treasury tried to pull from equity. That was ledger.operating_book — not a mint. The desk funded an $800 hire. Pulling that escrow was ledger.operating_book — not an allocation. That funded work still released. A transfer moves operating cash.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

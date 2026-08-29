@@ -41,3 +41,4 @@ jobs:
       - run: pnpm demo:purse
       - run: pnpm demo:seat
       - run: pnpm demo:cover
+      - run: pnpm demo:mint

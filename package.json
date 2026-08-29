@@ -34,6 +34,7 @@
     "demo:purse": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo purse",
     "demo:seat": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo seat",
     "demo:cover": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo cover",
+    "demo:mint": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mint",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

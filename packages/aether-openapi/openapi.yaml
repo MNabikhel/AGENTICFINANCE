@@ -349,6 +349,12 @@ paths:
       responses:
         "200": { description: Cover TAP report. A parent envelope is not a child's leftover. }
         "500": { description: Assertions failed }
+  /v1/demo/mint:
+    post:
+      operationId: demoMint
+      responses:
+        "200": { description: Mint TAP report. A transfer is not a mint. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

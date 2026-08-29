@@ -50,6 +50,7 @@ export default defineConfig({
       "@aether/payment-budget": path.resolve(__dirname, "packages/aether-runtime/src/payment-budget.ts"),
       "@aether/host-unique": path.resolve(__dirname, "packages/aether-runtime/src/host-unique.ts"),
       "@aether/payment-parent": path.resolve(__dirname, "packages/aether-runtime/src/payment-parent.ts"),
+      "@aether/operating-book": path.resolve(__dirname, "packages/aether-runtime/src/operating-book.ts"),
     },
   },
 });
