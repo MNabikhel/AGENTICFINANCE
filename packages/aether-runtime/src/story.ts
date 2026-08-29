@@ -76,6 +76,9 @@ export const CONVERSION_TLDR =
 export const PAIR_TLDR =
   "A founder shook hands with a desk. A tighter second hop was kya.unique_live — one live handshake per pair. A hop to a different agent went through. Revoke, then attest again. A second live hop is not a tighter grant.";
 
+export const BAND_TLDR =
+  "A market maker quoted a conversion at half price. That was mm.spread_bound — no window written. An in-band quote went through and settled. A decoy top-level rate is not the nested band. The 200bps band is not decoration.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -484,6 +487,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} quoted a conversion window that was already closed`,
           body: "An FX window cannot be born dead. Name a validUntil after now. Settle of a window that later lapses is still market.not_expired.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mm.spread_bound") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted outside the 200bps band`,
+          body: "The nested rate is what is stored and what settle uses. A top-level rateE6 is not the band. Re-quote inside 980000–1020000.",
           tone: "deny",
           commandType: cmd.type,
         };

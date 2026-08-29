@@ -43,6 +43,7 @@ export default defineConfig({
       "@aether/closed-room": path.resolve(__dirname, "packages/aether-runtime/src/closed-room.ts"),
       "@aether/fx-not-hire": path.resolve(__dirname, "packages/aether-runtime/src/fx-not-hire.ts"),
       "@aether/unique-live": path.resolve(__dirname, "packages/aether-runtime/src/unique-live.ts"),
+      "@aether/spread-bound": path.resolve(__dirname, "packages/aether-runtime/src/spread-bound.ts"),
     },
   },
 });

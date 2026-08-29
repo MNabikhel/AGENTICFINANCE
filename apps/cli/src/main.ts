@@ -19,6 +19,7 @@ import { loadCartMatch, runCartMatch } from "@aether/cart-match";
 import { loadClosedRoom, runClosedRoom } from "@aether/closed-room";
 import { loadConversion, runConversion } from "@aether/fx-not-hire";
 import { loadUniqueLive, runUniqueLive } from "@aether/unique-live";
+import { loadSpreadBound, runSpreadBound } from "@aether/spread-bound";
 
 const [, , command, name] = process.argv;
 
@@ -158,6 +159,12 @@ if (command === "demo" && (name === "pair" || name === "hop" || name === "unique
   process.exit(0);
 }
 
+if (command === "demo" && (name === "band" || name === "spread" || name === "spread-bound")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/band/scenario.json");
+  printReport(runSpreadBound(loadSpreadBound(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -183,5 +190,6 @@ usage:
   pnpm demo room
   pnpm demo conversion
   pnpm demo pair
+  pnpm demo band
   pnpm mcp`);
 process.exit(command ? 1 : 0);

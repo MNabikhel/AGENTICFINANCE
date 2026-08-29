@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -167,6 +167,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 115. A closed room is not a bulletin board. `pnpm demo room` / `aether_demo_room` / `POST /v1/demo/room` refuses an uninvited quote as `market.invited_seller` without writing a quote, then the invited seller quotes and `hire.create` allows. An empty invite list lets the outsider quote. A ghost guest stays `identity.known`. No new policy rule.
 116. An FX window is not a hire. `pnpm demo conversion` / `aether_demo_conversion` / `POST /v1/demo/conversion` refuses `hire.create` as `hire.not_fx` without consuming or reserving the window, then `market.fx_settle` converts. A spent window is `hire.quote_unspent`. No new policy rule.
 117. A second live hop is not a tighter grant. `pnpm demo pair` / `aether_demo_pair` / `POST /v1/demo/pair` attests once, refuses a second live handshake as `kya.unique_live` without writing a hop, attests a different pair, then revokes and attests again. Night-watch attests once; this TAP occupies the pair. No new policy rule.
+118. A 200bps band is not decoration. `pnpm demo band` / `aether_demo_band` / `POST /v1/demo/band` refuses an off-band nested FX rate as `mm.spread_bound` without writing a window, even with an in-band top-level decoy, then an in-band quote settles. Conversion (`hire.not_fx`) is a different object. No new policy rule.
 
 ## Autonomy
 
@@ -206,4 +207,5 @@ pnpm demo match
 pnpm demo room
 pnpm demo conversion
 pnpm demo pair
+pnpm demo band
 ```

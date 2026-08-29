@@ -37,6 +37,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_room");
     expect(names).toContain("aether_demo_conversion");
     expect(names).toContain("aether_demo_pair");
+    expect(names).toContain("aether_demo_band");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_market_fx_settle");
     expect(names).toContain("aether_ledger_transfer");
@@ -231,6 +232,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("not a tighter grant");
+  });
+
+  it("runs the spread demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_band", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("not decoration");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

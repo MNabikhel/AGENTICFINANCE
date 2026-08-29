@@ -307,6 +307,12 @@ paths:
       responses:
         "200": { description: Unique-live TAP report. A second live hop is not a tighter grant. }
         "500": { description: Assertions failed }
+  /v1/demo/band:
+    post:
+      operationId: demoBand
+      responses:
+        "200": { description: Spread TAP report. A 200bps band is not decoration. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

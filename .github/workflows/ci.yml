@@ -34,3 +34,4 @@ jobs:
       - run: pnpm demo:room
       - run: pnpm demo:conversion
       - run: pnpm demo:pair
+      - run: pnpm demo:band

@@ -1497,6 +1497,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books.",
   },
+  "mm.spread_bound": {
+    kind: "none",
+    hint: "The nested fx.rateE6 is the stored rate. It must sit inside the 200bps band (980000–1020000). A top-level rateE6 is not the band.",
+  },
   "actor.known": {
     kind: "none",
     hint: "That actorId is not in this world. Register them first. A missing speaker is not a 500. identity.known is for named targets, not the speaker.",

@@ -124,6 +124,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "fx-not-hire")?.description).toContain("POST /v1/demo/conversion");
     expect(card.skills.some((s) => s.id === "unique-live")).toBe(true);
     expect(card.skills.find((s) => s.id === "unique-live")?.description).toContain("POST /v1/demo/pair");
+    expect(card.skills.some((s) => s.id === "spread-bound")).toBe(true);
+    expect(card.skills.find((s) => s.id === "spread-bound")?.description).toContain("POST /v1/demo/band");
   });
 
   it("lets a registered desk read the same card", () => {

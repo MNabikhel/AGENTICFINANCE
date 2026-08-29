@@ -250,6 +250,11 @@
       "name": "aether_demo_pair",
       "commandType": "demo.pair",
       "description": "Run the unique-live TAP: a second live hop is not a tighter grant. kya.unique_live occupies the pair until revoke."
+    },
+    {
+      "name": "aether_demo_band",
+      "commandType": "demo.band",
+      "description": "Run the spread TAP: a 200bps band is not decoration. Off-band nested rate is mm.spread_bound; a decoy top-level rate is not the band."
     }
   ]
 }
