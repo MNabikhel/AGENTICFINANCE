@@ -158,6 +158,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("not a broken payment chain");
     expect(spec).toContain("/v1/demo/pact:");
     expect(spec).toContain("not a broken mandate chain");
+    expect(spec).toContain("/v1/demo/root:");
+    expect(spec).toContain("not a tighter child");
   });
 
   it("lists HTTP aliases the bus actually serves", () => {

@@ -208,6 +208,9 @@ export const CRATE_TLDR =
 export const PACT_TLDR =
   "A founder funded an $800 hire. Deliver on a ghost hire was hire.known — a stranger’s deliver is not this deny, unfunded work is not this deny. That funded work still released. A missing contract is not a broken mandate chain.";
 
+export const ROOT_TLDR =
+  "A founder funded an $800 hire. A child of a ghost parent was mandate.known_parent — a tighter child is not this deny, a dead parent is not this deny. That funded work still released. A missing parent is not a tighter child.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

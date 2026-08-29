@@ -63,6 +63,7 @@ import { loadKnownRfq, runKnownRfq } from "@aether/known-rfq";
 import { loadKnownIntent, runKnownIntent } from "@aether/known-intent";
 import { loadKnownCart, runKnownCart } from "@aether/known-cart";
 import { loadKnownHire, runKnownHire } from "@aether/known-hire";
+import { loadKnownParent, runKnownParent } from "@aether/known-parent";
 
 const [, , command, name] = process.argv;
 
@@ -466,6 +467,12 @@ if (command === "demo" && (name === "pact" || name === "bond" || name === "lease
   process.exit(0);
 }
 
+if (command === "demo" && (name === "root" || name === "stem" || name === "trunk")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/root/scenario.json");
+  printReport(runKnownParent(loadKnownParent(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -535,5 +542,6 @@ usage:
   pnpm demo writ
   pnpm demo crate
   pnpm demo pact
+  pnpm demo root
   pnpm mcp`);
 process.exit(command ? 1 : 0);

@@ -1407,7 +1407,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_parent": {
     kind: "none",
-    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child.",
+    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
   },
   "identity.known": {
     kind: "none",

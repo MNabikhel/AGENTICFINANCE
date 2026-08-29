@@ -571,6 +571,12 @@ paths:
       responses:
         "200": { description: Pact TAP report. A missing contract is not a broken mandate chain. }
         "500": { description: Assertions failed }
+  /v1/demo/root:
+    post:
+      operationId: demoRoot
+      responses:
+        "200": { description: Root TAP report. A missing parent is not a tighter child. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

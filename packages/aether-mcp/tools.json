@@ -470,6 +470,11 @@
       "name": "aether_demo_pact",
       "commandType": "demo.pact",
       "description": "Run the pact TAP: a missing contract is not a broken mandate chain. hire.deliver on a ghost hire is hire.known; a stranger’s deliver and unfunded work still allow; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_root",
+      "commandType": "demo.root",
+      "description": "Run the root TAP: a missing parent is not a tighter child. mandate.issue_intent on a ghost parent is mandate.known_parent; a tighter child and a dead parent still allow; funded work still finishes."
     }
   ]
 }

@@ -80,7 +80,8 @@
       "@aether/known-rfq": ["packages/aether-runtime/src/known-rfq.ts"],
       "@aether/known-intent": ["packages/aether-runtime/src/known-intent.ts"],
       "@aether/known-cart": ["packages/aether-runtime/src/known-cart.ts"],
-      "@aether/known-hire": ["packages/aether-runtime/src/known-hire.ts"]
+      "@aether/known-hire": ["packages/aether-runtime/src/known-hire.ts"],
+      "@aether/known-parent": ["packages/aether-runtime/src/known-parent.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
