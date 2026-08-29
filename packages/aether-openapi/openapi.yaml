@@ -367,6 +367,12 @@ paths:
       responses:
         "200": { description: Climb TAP report. A climb is not a wider handshake. }
         "500": { description: Assertions failed }
+  /v1/demo/born:
+    post:
+      operationId: demoBorn
+      responses:
+        "200": { description: Born TAP report. An FX window cannot be born dead. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

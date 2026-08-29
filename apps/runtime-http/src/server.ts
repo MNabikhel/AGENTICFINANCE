@@ -41,6 +41,7 @@ import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
 import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
+import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -74,6 +75,7 @@ const coverFixture = join(process.cwd(), "fixtures/demo/cover/scenario.json");
 const mintFixture = join(process.cwd(), "fixtures/demo/mint/scenario.json");
 const payeeFixture = join(process.cwd(), "fixtures/demo/payee/scenario.json");
 const climbFixture = join(process.cwd(), "fixtures/demo/climb/scenario.json");
+const bornFixture = join(process.cwd(), "fixtures/demo/born/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -526,6 +528,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runCapabilitySubset(loadCapabilitySubset(climbFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "climb" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/born") {
+        const report = runFxFresh(loadFxFresh(bornFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "born" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

@@ -32,7 +32,8 @@
     "./payment-parent": "./src/payment-parent.ts",
     "./operating-book": "./src/operating-book.ts",
     "./payment-payees": "./src/payment-payees.ts",
-    "./capability-subset": "./src/capability-subset.ts"
+    "./capability-subset": "./src/capability-subset.ts",
+    "./fx-fresh": "./src/fx-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

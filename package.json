@@ -37,6 +37,7 @@
     "demo:mint": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mint",
     "demo:payee": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo payee",
     "demo:climb": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo climb",
+    "demo:born": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo born",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

@@ -106,6 +106,9 @@ export const PAYEE_TLDR =
 export const CLIMB_TLDR =
   "A founder shook hands with a desk at a ceiling of L3. The desk funded an $800 hire. After a climb to L4, a new hire was kya.capability_subset — the slip ceiling still allowed. That funded work still released. A climb is not a wider handshake.";
 
+export const BORN_TLDR =
+  "A market maker quoted a conversion that had already closed. That was market.fx_fresh — no window written. An open window went through and settled. A later lapse is still market.not_expired. An FX window cannot be born dead.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

@@ -29,6 +29,7 @@ import { loadParentBudget, runParentBudget } from "@aether/payment-parent";
 import { loadOperatingBook, runOperatingBook } from "@aether/operating-book";
 import { loadPaymentPayees, runPaymentPayees } from "@aether/payment-payees";
 import { loadCapabilitySubset, runCapabilitySubset } from "@aether/capability-subset";
+import { loadFxFresh, runFxFresh } from "@aether/fx-fresh";
 
 const [, , command, name] = process.argv;
 
@@ -228,6 +229,12 @@ if (command === "demo" && (name === "climb" || name === "grant" || name === "cap
   process.exit(0);
 }
 
+if (command === "demo" && (name === "born" || name === "fx-fresh" || name === "dead-window")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/born/scenario.json");
+  printReport(runFxFresh(loadFxFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -263,5 +270,6 @@ usage:
   pnpm demo mint
   pnpm demo payee
   pnpm demo climb
+  pnpm demo born
   pnpm mcp`);
 process.exit(command ? 1 : 0);

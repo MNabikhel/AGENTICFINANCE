@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover` | `aether_demo_mint` | `aether_demo_payee` | `aether_demo_climb`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing` | `aether_demo_refund` | `aether_demo_replay` | `aether_demo_nonce` | `aether_demo_deny` | `aether_demo_recurrence` | `aether_demo_calendar` | `aether_demo_slot` | `aether_demo_daily` | `aether_demo_cart` | `aether_demo_velocity` | `aether_demo_door` | `aether_demo_match` | `aether_demo_room` | `aether_demo_conversion` | `aether_demo_pair` | `aether_demo_band` | `aether_demo_nest` | `aether_demo_heir` | `aether_demo_stock` | `aether_demo_purse` | `aether_demo_seat` | `aether_demo_cover` | `aether_demo_mint` | `aether_demo_payee` | `aether_demo_climb` | `aether_demo_born`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -177,6 +177,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 125. A transfer is not a mint. `pnpm demo mint` / `aether_demo_mint` / `POST /v1/demo/mint` refuses `ledger.transfer` from equity as `ledger.operating_book` (overdraft still allows), funds an $800 hire, refuses a transfer out of that escrow as `ledger.operating_book` (the hire stays funded), then that funded work still releases. Overdraft stays `ledger.sufficient`. No new policy rule.
 126. A listed payee is not any registered vendor. `pnpm demo payee` / `aether_demo_payee` / `POST /v1/demo/payee` funds an $800 hire to a listed vendor, refuses `hire.create` of a registered outsider as `payment.allowed_payees` (the quote is still written; amount and known counterparty still allow; no hire written), then that funded work still releases. Room TAP is the RFQ guest list. No new policy rule.
 127. A climb is not a wider handshake. `pnpm demo climb` / `aether_demo_climb` / `POST /v1/demo/climb` funds an $800 hire under an L3 handshake, climbs the desk to L4, refuses a new `hire.create` as `kya.capability_subset` (the slip ceiling still allows; no hire written), then that funded work still releases. Night Watch climbs inside the grant. The slip ceiling stays `ladder.max_autonomy_constraint`. No new policy rule.
+128. An FX window cannot be born dead. `pnpm demo born` / `aether_demo_born` / `POST /v1/demo/born` refuses `market.quote` with `validUntil` already past as `market.fx_fresh` (the pair, window shape, 200bps band, and later-lapse rule still allow; no quote written), then an open window quotes and settles. Settle of a window that lapses after mint stays `market.not_expired`. Conversion (`hire.not_fx`) and spread (`mm.spread_bound`) are different objects. No new policy rule.
 
 ## Autonomy
 
@@ -226,4 +227,5 @@ pnpm demo cover
 pnpm demo mint
 pnpm demo payee
 pnpm demo climb
+pnpm demo born
 ```

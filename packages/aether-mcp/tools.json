@@ -300,6 +300,11 @@
       "name": "aether_demo_climb",
       "commandType": "demo.climb",
       "description": "Run the climb TAP: a climb is not a wider handshake. New hire.create after L3→L4 is kya.capability_subset; the slip ceiling still allows; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_born",
+      "commandType": "demo.born",
+      "description": "Run the born TAP: an FX window cannot be born dead. A quote with validUntil already past is market.fx_fresh; no window written; an open window still settles."
     }
   ]
 }
