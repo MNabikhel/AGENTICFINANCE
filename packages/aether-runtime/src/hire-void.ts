@@ -173,7 +173,9 @@ export function runHireVoid(scenario: HireVoidScenario): HireVoidReport {
   const offeredId = (offered.data as { id: string }).id;
   const offeredQuote = sneakOffer.quoteId;
   const torn = must(rt.dispatch(cmd("hire.void", desk.id, { hireId: offeredId })), "void unfunded offer");
-  const reuse = rt.dispatch(cmd("hire.create", desk.id, { quoteId: offeredQuote, intentId }));
+  const reuse = rt.dispatch(
+    cmd("hire.create", desk.id, { quoteId: offeredQuote, intentId }, "void-reuse"),
+  );
 
   must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver after void TAP");
   must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
@@ -211,7 +213,8 @@ export function runHireVoid(scenario: HireVoidScenario): HireVoidReport {
         (torn.data as { state: string }).state === "void" &&
         rt.consumedQuotes.has(offeredQuote) &&
         reuse.ok === false &&
-        deniedRule(reuse, "hire.quote_unspent"),
+        deniedRule(reuse, "hire.quote_unspent") &&
+        (reuse.ok ? undefined : reuse.error.decision?.remediation?.ruleId) === "hire.quote_unspent",
       3,
       "that funded work still releases after the funded void is refused, and an unfunded offer still voids without restoring the quote",
       offeredId,

@@ -271,7 +271,7 @@ describe("HTTP command bus", () => {
     });
     expect(r.status).toBe(422);
     const decision = r.body.decision as { remediation?: { ruleId: string } };
-    expect(decision.remediation?.ruleId).toBe("actor.role_capability");
+    expect(decision.remediation?.ruleId).toBe("hire.known");
   });
 
   it("POST /v1/fx/settle and POST /v1/ledger/transfers are the command bus", async () => {
