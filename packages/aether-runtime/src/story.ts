@@ -235,6 +235,9 @@ export const TWIN_TLDR =
 export const FENCE_TLDR =
   "A founder funded an $800 hire. System minting a second agent was actor.system_scope — a taken alias is not this deny, L5 at birth is not this deny. No agent was written. System still read the catalog. That funded work still released. System is not a treasurer.";
 
+export const MUTE_TLDR =
+  "A founder funded an $800 hire. A missing speaker reading the books was actor.known — a missing named target is not this deny, a frozen speaker is not this deny, system spending is not this deny. No books were written. The live desk still read. That funded work still released. A missing speaker is not a 500.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -268,6 +271,16 @@ export function autoBeat(input: {
         at: input.at,
         headline: "system is not a treasurer",
         body: "System may bootstrap the first human and read the catalog, the host card, the notary, balances, and receipts. Name a registered actor to spend, freeze, or mint further agents.",
+        tone: "deny",
+        commandType: cmd.type,
+      };
+    }
+    if (rule?.ruleId === "actor.known") {
+      return {
+        seq: input.seq,
+        at: input.at,
+        headline: "a missing speaker is not a 500",
+        body: "That actorId is not a registered agent. HTTP/MCP unknown alias is this string, not silent system. Named targets stay identity.known. Completing funded work after that is legal.",
         tone: "deny",
         commandType: cmd.type,
       };

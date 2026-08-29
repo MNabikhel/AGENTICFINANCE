@@ -87,3 +87,4 @@ jobs:
       - run: pnpm demo:thaw
       - run: pnpm demo:twin
       - run: pnpm demo:fence
+      - run: pnpm demo:mute

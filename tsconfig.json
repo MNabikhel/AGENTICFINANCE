@@ -89,7 +89,8 @@
       "@aether/cart-fresh": ["packages/aether-runtime/src/cart-fresh.ts"],
       "@aether/freeze-state": ["packages/aether-runtime/src/freeze-state.ts"],
       "@aether/unique-key": ["packages/aether-runtime/src/unique-key.ts"],
-      "@aether/system-scope": ["packages/aether-runtime/src/system-scope.ts"]
+      "@aether/system-scope": ["packages/aether-runtime/src/system-scope.ts"],
+      "@aether/actor-known": ["packages/aether-runtime/src/actor-known.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

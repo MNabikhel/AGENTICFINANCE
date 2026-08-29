@@ -96,6 +96,7 @@ export default defineConfig({
       "@aether/freeze-state": path.resolve(__dirname, "packages/aether-runtime/src/freeze-state.ts"),
       "@aether/unique-key": path.resolve(__dirname, "packages/aether-runtime/src/unique-key.ts"),
       "@aether/system-scope": path.resolve(__dirname, "packages/aether-runtime/src/system-scope.ts"),
+      "@aether/actor-known": path.resolve(__dirname, "packages/aether-runtime/src/actor-known.ts"),
     },
   },
 });

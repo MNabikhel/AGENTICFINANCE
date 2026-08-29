@@ -625,6 +625,12 @@ paths:
       responses:
         "200": { description: Fence TAP report. System is not a treasurer. }
         "500": { description: Assertions failed }
+  /v1/demo/mute:
+    post:
+      operationId: demoMute
+      responses:
+        "200": { description: Mute TAP report. A missing speaker is not a 500. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

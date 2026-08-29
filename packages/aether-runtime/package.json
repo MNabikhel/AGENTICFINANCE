@@ -75,7 +75,8 @@
     "./cart-fresh": "./src/cart-fresh.ts",
     "./freeze-state": "./src/freeze-state.ts",
     "./unique-key": "./src/unique-key.ts",
-    "./system-scope": "./src/system-scope.ts"
+    "./system-scope": "./src/system-scope.ts",
+    "./actor-known": "./src/actor-known.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

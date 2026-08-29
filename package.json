@@ -80,6 +80,7 @@
     "demo:thaw": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo thaw",
     "demo:twin": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo twin",
     "demo:fence": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo fence",
+    "demo:mute": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo mute",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"
