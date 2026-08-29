@@ -11,6 +11,7 @@
     "demo": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo",
     "demo:night-watch": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo night-watch",
     "demo:sub-hire": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo sub-hire",
+    "demo:clearing": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo clearing",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

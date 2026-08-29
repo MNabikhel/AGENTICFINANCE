@@ -54,9 +54,9 @@ Not a superintelligence at the Fed.
 
 It looks like **procurement agents buying data and compute from vendor agents**, **treasury agents allocating cash under a mandate**, **market-maker agents quoting a tightly bounded FX window**, and **auditor agents who can verify everything and spend nothing** — with a human who issued the intent still holding the freeze.
 
-Sprint Procurement in this repo is that picture, shrunk to a TAP test. Night Watch is the same loop with the human off the click path: a KYA handshake, standing permission, a sticky daily fuse, freeze that cascades through the graph, and revoke.
+Sprint Procurement in this repo is that picture, shrunk to a TAP test. Night Watch is the same loop with the human off the click path: a KYA handshake, standing permission, a sticky daily fuse, freeze that cascades through the graph, and revoke. Clearing window is the credit line: open gross, a photo, not a second payment.
 
-Next revisions are sequenced in [`docs/FOUNDATION.md`](FOUNDATION.md): HTTP as a complete command bus, an OpenAPI document that is the bus, a clearing-window TAP, then adapter-shaped KYA issuers. Rail adapters stay off `evaluate()`. `liveMoney` stays false.
+Next revisions are sequenced in [`docs/FOUNDATION.md`](FOUNDATION.md): adapter-shaped KYA issuers. Rail adapters stay off `evaluate()`. `liveMoney` stays false.
 
 ## 5. Sources (starting points)
 

@@ -158,11 +158,29 @@ paths:
       responses:
         "200": { description: One receipt. Same command as MCP aether_receipt_get. System speaker. Writes POLICY_DECISION. Not ops-human. }
         "422": { description: receipt.known for a missing receipt. }
+  /v1/demo/sprint-procurement:
+    post:
+      operationId: demoSprintProcurement
+      responses:
+        "200": { description: Sprint Procurement TAP report. Conformance, not a storefront. }
+        "500": { description: Assertions failed }
+  /v1/demo/night-watch:
+    post:
+      operationId: demoNightWatch
+      responses:
+        "200": { description: Night Watch TAP report. Standing mandate, KYA, circuit breaker. }
+        "500": { description: Assertions failed }
   /v1/demo/sub-hire:
     post:
       operationId: demoSubHire
       responses:
         "200": { description: Nested-slip TAP report }
+        "500": { description: Assertions failed }
+  /v1/demo/clearing:
+    post:
+      operationId: demoClearingWindow
+      responses:
+        "200": { description: Clearing-window TAP report. Bilateral credit, settlement photo, not a second payment. }
         "500": { description: Assertions failed }
   /v1/protocol:
     get:

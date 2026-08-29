@@ -160,6 +160,11 @@
       "name": "aether_demo_sub_hire",
       "commandType": "demo.sub-hire",
       "description": "Run the L4 sub-intent TAP demo: nested slips, parent budget, revoke child handshake."
+    },
+    {
+      "name": "aether_demo_clearing",
+      "commandType": "demo.clearing",
+      "description": "Run the clearing-window TAP: bilateral credit limit, settlement photo, not a second payment."
     }
   ]
 }

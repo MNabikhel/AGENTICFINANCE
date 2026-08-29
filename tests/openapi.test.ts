@@ -33,4 +33,12 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("/v1/fx/settle:");
     expect(spec).toContain("/v1/ledger/transfers:");
   });
+
+  it("lists every HTTP TAP the discovery card names", () => {
+    expect(spec).toContain("/v1/demo/sprint-procurement:");
+    expect(spec).toContain("/v1/demo/night-watch:");
+    expect(spec).toContain("/v1/demo/sub-hire:");
+    expect(spec).toContain("/v1/demo/clearing:");
+    expect(spec).toContain("not a second payment");
+  });
 });

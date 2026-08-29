@@ -36,9 +36,9 @@ An HTTP agent could not deliver work, release escrow, settle an FX window, or tr
 
 `clearing.bilateral_limit` already binds when a payee and amount exist. The TAP demos never hit it. `clearing.settle_window` archives net exposure; it is not a second payment.
 
-- [ ] A fourth TAP (`pnpm demo clearing` or an extension of sprint) shows gross legs, a window photo, and a deny when projected gross exceeds the bilateral limit.
-- [ ] No new policy rule unless the current allow is a lie (limit absent when a pair is in the book).
-- [ ] Constructor / host option for a test limit is fine. A new `clearing.set_limit` command is not the default.
+- [x] A fourth TAP (`pnpm demo clearing` or an extension of sprint) shows gross legs, a window photo, and a deny when projected gross exceeds the bilateral limit.
+- [x] No new policy rule unless the current allow is a lie (limit absent when a pair is in the book).
+- [x] Constructor / host option for a test limit is fine. A new `clearing.set_limit` command is not the default.
 
 ### 4. KYA issuers are objects, not stickers
 
@@ -54,4 +54,4 @@ Inspect honesty, OpenAPI status codes, MCP description drift. Not a workstream o
 
 ## Hard constraints (every turn)
 
-Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.
+Tests + `pnpm demo` + `pnpm demo night-watch` + `pnpm demo sub-hire` + `pnpm demo clearing`. Commit, push, update PR #4 (`cursor/aether-economic-runtime-d9b6`). Short high-level update. Keep the iterate timer alive; do not remove it.

@@ -303,5 +303,14 @@ describe("HTTP command bus", () => {
     expect(r.body.path).toBeUndefined();
     expect(r.body.note).toBeUndefined();
   });
+
+  it("POST /v1/demo/clearing is the clearing-window TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/clearing", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("clearing");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
 });
 

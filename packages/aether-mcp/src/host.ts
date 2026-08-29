@@ -10,6 +10,7 @@ import { Runtime, admitInvoice, admitSpeaker, cmd, parseHostedMonthly, speakerKe
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
+import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -54,7 +55,12 @@ const COMMAND_BY_TOOL = new Map(
   catalog.tools.filter((t) => t.commandType && !t.commandType.startsWith("demo.")).map((t) => [t.name, t.commandType as CommandType]),
 );
 
-const DEMO_TOOLS = new Set(["aether_demo_sprint", "aether_demo_night_watch", "aether_demo_sub_hire"]);
+const DEMO_TOOLS = new Set([
+  "aether_demo_sprint",
+  "aether_demo_night_watch",
+  "aether_demo_sub_hire",
+  "aether_demo_clearing",
+]);
 
 const ACTOR_PROPERTIES = {
   actor: { type: "string", description: "Runtime alias after register (ops-human, desk, scout), aid_, or system. Unknown names are missing speakers, not system. Omit to bootstrap. On a hosted operator a named speaker must also pass speakerProof." },
@@ -331,6 +337,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_sub_hire") {
       const report = runSubHire(loadSubHire("fixtures/demo/sub-hire/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_clearing") {
+      const report = runClearingWindow(loadClearingWindow("fixtures/demo/clearing-window/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

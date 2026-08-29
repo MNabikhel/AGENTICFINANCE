@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -108,6 +108,39 @@ describe("durable world", () => {
       expect(b.clearing.windows).toHaveLength(1);
       expect(b.clearing.windows[0]?.netVolume).toBe(50000);
       expect(b.clearing.snapshot().legs).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not persist a TAP bilateralLimit; restore without the option is the public default", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aether-limit-"));
+    try {
+      const a = new Runtime({
+        startIso: "2026-08-28T00:00:00.000Z",
+        genesisNonce: "01J6AETHERGENESISWORLD000002",
+        dailyLimit: 10_000_000,
+        dataDir: dir,
+        bilateralLimit: 100000,
+      });
+      expect(a.clearing.snapshot().bilateralLimit).toBe(100000);
+      a.persistWorld();
+      const raw = JSON.parse(readFileSync(join(dir, "world.json"), "utf8")) as {
+        clearing: { bilateralLimit?: number; legs: unknown[]; windows: unknown[] };
+      };
+      expect(raw.clearing.bilateralLimit).toBeUndefined();
+
+      const b = durable(dir);
+      expect(b.clearing.snapshot().bilateralLimit).toBe(50_000_000);
+
+      const c = new Runtime({
+        startIso: "2026-08-28T00:00:00.000Z",
+        genesisNonce: "01J6AETHERGENESISWORLD000002",
+        dailyLimit: 10_000_000,
+        dataDir: dir,
+        bilateralLimit: 100000,
+      });
+      expect(c.clearing.snapshot().bilateralLimit).toBe(100000);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

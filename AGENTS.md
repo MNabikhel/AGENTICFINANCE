@@ -42,7 +42,7 @@ MCP tools map 1:1 onto `CommandType` plus:
 - `aether_ledger_balances` / `GET /v1/accounts/:id` — named book. System may. HTTP GET is system, not ops-human. A missing book is `ledger.known_account`.
 - `aether_receipt_get` / `GET /v1/receipts/:id` — one receipt. System may. HTTP GET is system, not ops-human. A missing receipt is `receipt.known`.
 - `aether_reset` (wipes `AETHER_DATA_DIR` if set)
-- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire`
+- `aether_demo_sprint` | `aether_demo_night_watch` | `aether_demo_sub_hire` | `aether_demo_clearing`
 
 `tools/list` inputSchema lists the body fields the kernel reads. Do not guess.
 
@@ -149,6 +149,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 97. A pause whose held command would not allow is not a live yes. Inspect / snapshot label that ticket `stale`, not `pending`, while the clock window still lives. Approve is still `approval.replay`. Reject still releases the quote. Time-expired still wins (`expired` / `approval.pending`). The store stays `pending`. Occupancy of the quote stays `held` until reject or the ticket expires.
 98. Fetching one host subscription by id (`aether_get` / `GET /v1/objects/hsb_*`) labels it `live` or `expired`. Expired includes a dead intent and a dead parent intent. Unique_subscriber still occupies. Spend is not gated on the row. The store stays raw. Snapshot uses the same derivation. A second subscribe still names `host.unique_subscriber`.
 99. `POST /v1/commands` is the HTTP command bus. Body `type` is a `CommandType`. Unknown or omitted type is `command.malformed` (HTTP 400). REST aliases (`POST /v1/hires/{id}/deliver`, `/release`, `POST /v1/fx/settle`, `POST /v1/ledger/transfers`, …) construct the same `Command`. `GET /v1/commands` is the JSON Schema, not a dispatcher.
+100. `clearing.settle_window` photographs open gross and empties the live book. It is not a second payment. Constructor `bilateralLimit` may lower the instance cap for a TAP. Public default stays 50_000_000. The cap is not durable and is not a Command. `pnpm demo clearing` / `aether_demo_clearing` / `POST /v1/demo/clearing` is the proof.
 
 ## Autonomy
 
@@ -172,4 +173,5 @@ pnpm test
 pnpm demo
 pnpm demo night-watch
 pnpm demo sub-hire
+pnpm demo clearing
 ```

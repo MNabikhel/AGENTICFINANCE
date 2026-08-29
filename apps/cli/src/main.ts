@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { loadScenario, runSprintProcurement } from "@aether/sprint";
 import { loadNightWatch, runNightWatch } from "@aether/night-watch";
 import { loadSubHire, runSubHire } from "@aether/sub-hire";
+import { loadClearingWindow, runClearingWindow } from "@aether/clearing-window";
 
 const [, , command, name] = process.argv;
 
@@ -46,6 +47,12 @@ if (command === "demo" && (name === "sub-hire" || name === "subhire")) {
   process.exit(0);
 }
 
+if (command === "demo" && (name === "clearing" || name === "clearing-window")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/clearing-window/scenario.json");
+  printReport(runClearingWindow(loadClearingWindow(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   fail("boot a runtime first: pnpm demo");
 }
@@ -55,5 +62,6 @@ usage:
   pnpm demo
   pnpm demo night-watch
   pnpm demo sub-hire
+  pnpm demo clearing
   pnpm mcp`);
 process.exit(command ? 1 : 0);

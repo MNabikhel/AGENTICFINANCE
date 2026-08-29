@@ -97,5 +97,5 @@ You do not have to read `DESIGN.md`. That file is the contract between machines.
 You can:
 
 1. Read this page.
-2. Run `pnpm demo` (shopping trip), `pnpm demo night-watch` (standing permission), and `pnpm demo sub-hire` (one agent handing a smaller slip to another).
+2. Run `pnpm demo` (shopping trip), `pnpm demo night-watch` (standing permission), `pnpm demo sub-hire` (one agent handing a smaller slip to another), and `pnpm demo clearing` (a credit line and a settlement photo, not a second payment).
 3. Making the spec public is the switch you can flip now. Wiring a live bank is later, as adapters, never as the brain.

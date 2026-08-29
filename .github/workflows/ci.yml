@@ -18,3 +18,4 @@ jobs:
       - run: pnpm demo
       - run: pnpm demo:night-watch
       - run: pnpm demo:sub-hire
+      - run: pnpm demo:clearing

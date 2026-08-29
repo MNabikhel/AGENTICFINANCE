@@ -41,4 +41,13 @@ describe("clearing book", () => {
     expect(book.snapshot().legs).toEqual([]);
     expect(book.windows).toHaveLength(1);
   });
+
+  it("snapshots the instance cap and accepts a constructor override", () => {
+    expect(new ExposureBook().snapshot().bilateralLimit).toBe(50_000_000);
+    const tight = new ExposureBook(100000);
+    expect(tight.snapshot().bilateralLimit).toBe(100000);
+    tight.record("aid_A", "aid_B", 80000, "USD_SIM");
+    expect(tight.wouldExceed("aid_A", "aid_B", "USD_SIM", 40000)).toBe(true);
+    expect(tight.wouldExceed("aid_A", "aid_B", "USD_SIM", 20000)).toBe(false);
+  });
 });

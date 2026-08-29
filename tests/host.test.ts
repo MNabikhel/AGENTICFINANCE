@@ -92,6 +92,8 @@ describe("host card", () => {
     expect(card.url).toBe("http://127.0.0.1:8787");
     expect(card.skills.some((s) => s.id === "inspect")).toBe(true);
     expect(card.skills.find((s) => s.id === "commands")?.description).toContain("POST /v1/commands");
+    expect(card.skills.some((s) => s.id === "clearing-window")).toBe(true);
+    expect(card.skills.find((s) => s.id === "clearing-window")?.description).toContain("POST /v1/demo/clearing");
   });
 
   it("lets a registered desk read the same card", () => {

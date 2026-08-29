@@ -1563,6 +1563,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "This agent already has a subscription on this host. One subscriber, one row. Spend is not gated on the row.",
   },
+  "clearing.bilateral_limit": {
+    kind: "none",
+    commandType: "clearing.settle_window",
+    hint: "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.",
+  },
   "payment.execution_date": {
     kind: "none",
     hint: "This slip's calendar window is closed for new spends. Completing a funded hire is not a new spend. Issue a new intent if you need another hire.",

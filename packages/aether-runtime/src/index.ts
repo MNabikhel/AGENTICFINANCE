@@ -259,6 +259,11 @@ export class Runtime {
      * Public kernel card stays `hostedMonthly: null`. Env: `AETHER_HOSTED_MONTHLY`.
      */
     hostedMonthly?: number;
+    /**
+     * Pairwise gross credit cap in integer minor units. Default is 50_000_000 ($500,000).
+     * A TAP may lower it. Not a Command. Not durable. Public kernel default stays 50_000_000.
+     */
+    bilateralLimit?: number;
   }) {
     const worldPath = opts.dataDir ? join(opts.dataDir, "world.json") : undefined;
     const existing =
@@ -280,6 +285,13 @@ export class Runtime {
     this.audit = new AuditLog(opts.dataDir ? join(opts.dataDir, "audit.jsonl") : opts.auditPath);
     this.ledger = new Ledger(opts.dataDir ? undefined : opts.ledgerPath);
     this.dailyLimit = existing?.dailyLimit ?? opts.dailyLimit ?? 10_000_000;
+    if (
+      typeof opts.bilateralLimit === "number" &&
+      Number.isSafeInteger(opts.bilateralLimit) &&
+      opts.bilateralLimit > 0
+    ) {
+      this.clearing.defaultBilateralLimit = opts.bilateralLimit;
+    }
     if (existing) {
       if (existing.auditLength !== this.audit.length) {
         throw new Error(
@@ -742,6 +754,11 @@ export class Runtime {
           id: "sub-hire",
           name: "Sub-hire TAP",
           description: "POST /v1/demo/sub-hire — L4 nested slips, parent budget, child handshake",
+        },
+        {
+          id: "clearing-window",
+          name: "Clearing window TAP",
+          description: "POST /v1/demo/clearing — bilateral credit, settlement photo, not a second payment",
         },
       ],
       defaultInputModes: ["application/json"],
@@ -3135,7 +3152,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

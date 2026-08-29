@@ -28,6 +28,9 @@ export const NIGHT_WATCH_TLDR =
 export const SUBHIRE_TLDR =
   "A desk agent at L4 handed a smaller permission slip to a scout. The scout hired a vendor for $800. A $2,500 hire was refused because the child slip was tighter than the parent. Revoking the desk→scout handshake stopped the scout without deleting it. Agents hiring agents is the economy; nested slips are how authority stays bounded.";
 
+export const CLEARING_TLDR =
+  "A desk hired a vendor for $800. A second $400 hire was refused — that pair’s open gross would have blown a $1,000 bilateral credit line. Closing a settlement window photographed the $800 and cleared the open book. Money did not move again. After the photo, the $400 hire went through. Credit is a window, not a second payment.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -454,6 +457,8 @@ export function autoBeat(input: {
         body = "This agent sits above the handshake ceiling. Completing a funded hire after a climb is legal; a new hire is not.";
       } else if (ruleId === "ladder.max_autonomy_constraint") {
         body = "This permission slip’s max autonomy is below the actor’s rung. Completing a funded hire after a climb is legal; a new hire is not.";
+      } else if (ruleId === "clearing.bilateral_limit") {
+        body = "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (the photo, not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.";
       }
       return {
         seq: input.seq,

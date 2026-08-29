@@ -20,6 +20,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_identity_register");
     expect(names).toContain("aether_snapshot");
     expect(names).toContain("aether_demo_sub_hire");
+    expect(names).toContain("aether_demo_clearing");
     expect(names).toContain("aether_hire_refund");
     expect(names).toContain("aether_protocol");
     const hireTool = ((listed as { result: { tools: { name: string; inputSchema?: { required?: string[] } }[] } }).result.tools).find(
@@ -72,6 +73,14 @@ describe("MCP host", () => {
     const report = mcp.callTool("aether_demo_sub_hire", {}) as { ok: boolean; results: { ok: boolean }[] };
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
+  });
+
+  it("runs the clearing-window demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_clearing", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("settlement window");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {
