@@ -842,6 +842,19 @@ export interface PolicyContext {
    */
   fxBandOk?: boolean;
   /**
+   * False when `market.fx_settle` would convert against an FX quote whose
+   * seller is another vendor, or when the speaker is the market maker
+   * (a wash is not a conversion). Absent = not an FX settle, or the quote
+   * has no `fx` (`market.fx_quote` handles ghost / paper / spent). A maker's
+   * quoted window still converts for a non-maker with books. The named
+   * vendor still converts its own window. Human/treasury still pass this
+   * flag (a missing dest book stays `ledger.known_account`). A missing
+   * maker stays `mm.known`. A compute vendor's USD cash stays
+   * `ledger.known_account`. Quoin TAP is minting FX while a maker sits
+   * (`market.fx_party`). Fold TAP is tearing a bid (`market.party`).
+   */
+  settlePartyOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).
@@ -1027,6 +1040,18 @@ export interface PolicyContext {
    * (`mandate.child_currency`). Sub-hire TAP is the parent subject nesting.
    */
   childPartyOk?: boolean;
+  /**
+   * False when issue_intent without parentId would name a subject who is not
+   * the speaker, and the speaker is not a human or treasury. Absent = nested
+   * issue_intent (`parentId` is a string), or the subject is unknown
+   * (`identity.known` handles that). Named subject still mints a self-root.
+   * Human/treasury still mint roots for a desk. Nested foreign stays
+   * `mandate.child_party`. Ghost subject stays `identity.known`. A junior
+   * foreign root stays `ladder.min_level`. A vendor root stays
+   * `actor.role_capability`. Warrant TAP is a self-root. Cuckoo TAP is a
+   * nested foreign child. Sub-hire TAP is the parent subject nesting.
+   */
+  rootPartyOk?: boolean;
   /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the

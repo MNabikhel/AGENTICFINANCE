@@ -1591,6 +1591,24 @@ export const RULES: readonly Rule[] = [
         : v("mandate.child_party", "deny", "speaker is not the parent subject or issuer");
     },
   },
+  {
+    id: "mandate.root_party",
+    evaluate: (ctx) => {
+      if (ctx.rootPartyOk === undefined) return v("mandate.root_party", "allow", "not a root slip");
+      return ctx.rootPartyOk
+        ? v("mandate.root_party", "allow", "speaker is the named subject or a kill-switch role")
+        : v("mandate.root_party", "deny", "speaker is not the named subject");
+    },
+  },
+  {
+    id: "market.settle_party",
+    evaluate: (ctx) => {
+      if (ctx.settlePartyOk === undefined) return v("market.settle_party", "allow", "not an FX settle");
+      return ctx.settlePartyOk
+        ? v("market.settle_party", "allow", "speaker is this window's converter, or a kill-switch role")
+        : v("market.settle_party", "deny", "speaker is not this window's converter");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1643,7 +1661,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ladder.min_level": {
     kind: "none",
-    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party.",
+    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party. Minting a root in someone else's name stays mandate.root_party.",
   },
   "circuit.daily": {
     kind: "reset_circuit",
@@ -1699,7 +1717,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.fx_quote": {
     kind: "none",
-    hint: "An FX quote is a one-shot window. A research quote is not a conversion. A missing quote, a spent quote, or a quote held by an open hire ticket is not a second settle. Hiring the window stays hire.not_fx. A missing window on quote stays market.fx_window.",
+    hint: "An FX quote is a one-shot window. A research quote is not a conversion. A missing quote, a spent quote, or a quote held by an open hire ticket is not a second settle. Hiring the window stays hire.not_fx. A missing window on quote stays market.fx_window. Settling someone else's vendor window stays market.settle_party.",
   },
   "hire.quote_unspent": {
     kind: "none",
@@ -1739,7 +1757,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "identity.known": {
     kind: "none",
-    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, a revoke target, or an RFQ guest.",
+    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, a revoke target, or an RFQ guest. Minting a root in someone else's name stays mandate.root_party.",
   },
   "hire.escrow_required": {
     kind: "none",
@@ -1763,7 +1781,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ledger.known_account": {
     kind: "none",
-    hint: "That account name is not in this world. Register the agent (or open the book) first. A missing book is not an allocation. An FX settle needs the vendor’s USDC book — USD cash is not a USDC wallet.",
+    hint: "That account name is not in this world. Register the agent (or open the book) first. A missing book is not an allocation. An FX settle needs the vendor’s USDC book — USD cash is not a USDC wallet. Settling someone else's vendor window stays market.settle_party.",
   },
   "ledger.same_currency": {
     kind: "none",
@@ -1843,7 +1861,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mm.known": {
     kind: "none",
-    hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books.",
+    hint: "There is no market maker (or their USD/USDC books) in this world. Register a market_maker before settling FX. A window is not a journal against missing books. Settling someone else's vendor window stays market.settle_party.",
   },
   "mm.spread_bound": {
     kind: "none",
@@ -1956,7 +1974,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.fx_party": {
     kind: "none",
-    hint: "A vendor cannot mint an FX window while a market maker sits. Have the maker quote. Quoting FX with no maker on the pit is not this deny — settle stays mm.known. A closed guest list stays market.invited_seller. A 200bps miss stays mm.spread_bound. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A research quote with no fx is not this deny. An empty pit does not waive the band — that is market.rate_fresh.",
+    hint: "A vendor cannot mint an FX window while a market maker sits. Have the maker quote. Quoting FX with no maker on the pit is not this deny — settle stays mm.known. A closed guest list stays market.invited_seller. A 200bps miss stays mm.spread_bound. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A research quote with no fx is not this deny. An empty pit does not waive the band — that is market.rate_fresh. Settling someone else's vendor window stays market.settle_party.",
   },
   "market.rate_fresh": {
     kind: "none",
@@ -1980,7 +1998,15 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.child_party": {
     kind: "none",
-    hint: "Nest under your own parent slip, or ask a human or treasury. Someone else's parent is not yours to hang a child on. A missing parent is mandate.known_parent. A dead parent is mandate.parent_fresh. A wider nested slip is mandate.child_tighter. A junior nested mint is ladder.min_level. A mixed nested currency is mandate.child_currency. Completing funded work is legal. The parent subject still nests. Human/treasury still nest.",
+    hint: "Nest under your own parent slip, or ask a human or treasury. Someone else's parent is not yours to hang a child on. A missing parent is mandate.known_parent. A dead parent is mandate.parent_fresh. A wider nested slip is mandate.child_tighter. A junior nested mint is ladder.min_level. A mixed nested currency is mandate.child_currency. Minting a root in someone else's name stays mandate.root_party. Completing funded work is legal. The parent subject still nests. Human/treasury still nest.",
+  },
+  "mandate.root_party": {
+    kind: "none",
+    hint: "Mint a root slip in your own name, or ask a human or treasury. Someone else's name is not a root slip to mint. A missing subject is identity.known. Nesting under someone else's parent is mandate.child_party. A junior root is ladder.min_level. A vendor root is actor.role_capability. Completing funded work is legal. The named subject still mints a self-root. Human/treasury still mint roots for a desk.",
+  },
+  "market.settle_party": {
+    kind: "none",
+    hint: "Settle your own conversion window, or a maker's quoted window. Someone else's vendor window is not yours to convert. A maker settling is a wash, not a conversion. A missing quote is market.fx_quote. A missing maker is mm.known. A missing dest book is ledger.known_account. Minting FX while a maker sits stays market.fx_party. Folding a bid stays market.party. Completing funded work is legal. The named seller still converts. A maker window still converts for a non-maker with books.",
   },
   "host.not_hosted": {
     kind: "none",

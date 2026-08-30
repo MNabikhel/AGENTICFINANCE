@@ -358,6 +358,12 @@ export const GUISE_TLDR =
 export const CUCKOO_TLDR =
   "A founder funded an $800 hire. A second desk nesting under the research desk's unused parent was mandate.child_party — a missing parent is not this deny, a dead parent is not this deny, a wider nested slip is not this deny, a junior nested mint is not this deny. No child written. The parent subject still nested a tighter child. That funded work still released. Someone else's parent slip is not yours to nest under.";
 
+export const FORGE_TLDR =
+  "A founder funded an $800 hire. A second desk minting a root in the research desk's name was mandate.root_party — a missing subject is not this deny, a nested child is not this deny, a junior mint is not this deny, a vendor verb is not this deny. No extra root written. The named subject still minted a root in their own name. That funded work still released. Someone else's name is not a root slip to mint.";
+
+export const SNARE_TLDR =
+  "A founder funded an $800 hire. A second vendor settling the research vendor's unused conversion window was market.settle_party — a missing maker is not this deny, a missing quote is not this deny, a missing dest book is not this deny, a vendor verb is not this deny. No window consumed. The named seller still converted its own window. That funded work still released. Someone else's conversion window is not yours to settle.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -805,6 +811,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot nest under someone else's parent`,
           body: "Someone else's parent slip is not yours to nest under. Nest under your own parent, or ask a human or treasury. A missing parent is a different object. A dead parent is a different object. A wider nested slip is a different object. A junior nested mint is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.root_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a root in someone else's name`,
+          body: "Someone else's name is not a root slip to mint. Mint a root in your own name, or ask a human or treasury. A missing subject is a different object. A nested child is a different object. A junior mint is a different object. A vendor verb is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1555,6 +1571,8 @@ export function autoBeat(input: {
                   ? "The market maker’s USDC book does not cover this payout. Empty inventory is not a missing maker, not a vendor overdraft, and not the 200bps band. A smaller window still converts."
                 : rule?.ruleId === "ledger.safe_balance"
                   ? "A book on this window cannot hold the resulting cents. IEEE rounding is not a mint. The market maker’s USDC inventory is a different rule."
+                : rule?.ruleId === "market.settle_party"
+                  ? "Someone else's conversion window is not yours to settle. Settle your own vendor window, or a maker's quoted window. A maker settling is a wash, not a conversion. A missing quote is a different object. A missing maker is a different object."
               : (rule?.message ?? "The referee refused the FX settle."),
         tone: "deny",
         commandType: cmd.type,
@@ -1952,6 +1970,8 @@ export function analog(): Analog {
       "Someone else's room is not yours to hire from. The buyer still hires its own quote. Shutting someone else's room is a different object.",
       "Someone else's unused slip is not yours to hire against. The named subject still hires against its own unused slip. Tearing someone else's unused slip is a different object.",
       "Someone else's parent slip is not yours to nest under. The parent subject still nests a tighter child. A wider nested slip is a different object. A junior nested mint is a different object.",
+      "Someone else's name is not a root slip to mint. The named subject still mints a root in their own name. A nested child is a different object. A junior mint is a different object.",
+      "Someone else's conversion window is not yours to settle. The named seller still converts its own window. A maker window still converts for a non-maker. A missing maker is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

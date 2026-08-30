@@ -312,6 +312,10 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "hire-slip-party")?.description).toContain("POST /v1/demo/guise");
     expect(card.skills.some((s) => s.id === "mandate-child-party")).toBe(true);
     expect(card.skills.find((s) => s.id === "mandate-child-party")?.description).toContain("POST /v1/demo/cuckoo");
+    expect(card.skills.some((s) => s.id === "mandate-root-party")).toBe(true);
+    expect(card.skills.find((s) => s.id === "mandate-root-party")?.description).toContain("POST /v1/demo/forge");
+    expect(card.skills.some((s) => s.id === "settle-party")).toBe(true);
+    expect(card.skills.find((s) => s.id === "settle-party")?.description).toContain("POST /v1/demo/snare");
   });
 
   it("lets a registered desk read the same card", () => {

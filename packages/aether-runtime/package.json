@@ -116,7 +116,9 @@
     "./checkout-party": "./src/checkout-party.ts",
     "./hire-room-party": "./src/hire-room-party.ts",
     "./hire-slip-party": "./src/hire-slip-party.ts",
-    "./child-party": "./src/child-party.ts"
+    "./child-party": "./src/child-party.ts",
+    "./root-party": "./src/root-party.ts",
+    "./settle-party": "./src/settle-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

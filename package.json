@@ -121,6 +121,8 @@
     "demo:poach": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo poach",
     "demo:guise": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo guise",
     "demo:cuckoo": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo cuckoo",
+    "demo:forge": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo forge",
+    "demo:snare": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo snare",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

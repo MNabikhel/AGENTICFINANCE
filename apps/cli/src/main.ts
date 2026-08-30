@@ -113,6 +113,8 @@ import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
 import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
 import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
 import { loadChildParty, runChildParty } from "@aether/child-party";
+import { loadRootParty, runRootParty } from "@aether/root-party";
+import { loadSettleParty, runSettleParty } from "@aether/settle-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -817,6 +819,18 @@ if (command === "demo" && (name === "cuckoo" || name === "brood" || name === "ch
   process.exit(0);
 }
 
+if (command === "demo" && (name === "forge" || name === "fake" || name === "dummy")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/forge/scenario.json");
+  printReport(runRootParty(loadRootParty(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "snare" || name === "gin" || name === "wire")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/snare/scenario.json");
+  printReport(runSettleParty(loadSettleParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -952,6 +966,8 @@ usage:
   pnpm demo poach
   pnpm demo guise
   pnpm demo cuckoo
+  pnpm demo forge
+  pnpm demo snare
   aether audit verify
   aether ledger replay
   pnpm mcp`);
