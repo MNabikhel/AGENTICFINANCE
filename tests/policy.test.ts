@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 115 rules", () => {
-    expect(RULE_IDS).toHaveLength(115);
+  it("has 116 rules", () => {
+    expect(RULE_IDS).toHaveLength(116);
   });
 
   it("denies frozen actors", () => {
@@ -6758,6 +6758,118 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.child_currency");
+  });
+
+  it("denies minting a root in someone else's name as mandate.root_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        rootPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.root_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a named subject minting a self-root as mandate.root_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        rootPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("allow");
+  });
+
+  it("allows a human minting a root for a desk as mandate.root_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        rootPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.root_party when the speaker is not minting a root slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("allow");
+  });
+
+  it("still names identity.known first when a ghost subject would also be a forge", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+  });
+
+  it("still names mandate.child_party first when a nested foreign child would also be a forge", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: true,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        childPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_party");
+  });
+
+  it("still names ladder.min_level first when a junior foreign root would also be a forge", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3, id: "aid_scout" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        rootPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.min_level");
+  });
+
+  it("still names actor.role_capability first when a vendor foreign root would also be a forge", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2, id: "aid_vendor" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        rootPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("actor.role_capability");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

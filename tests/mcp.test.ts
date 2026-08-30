@@ -131,6 +131,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_poach");
     expect(names).toContain("aether_demo_guise");
     expect(names).toContain("aether_demo_cuckoo");
+    expect(names).toContain("aether_demo_forge");
     expect(names).toContain("aether_identity_rotate");
     expect(names).toContain("aether_hire_void");
     expect(names).toContain("aether_market_withdraw");
@@ -1097,6 +1098,15 @@ describe("MCP host", () => {
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("child_party");
     expect(report.tldr).toContain("not yours to nest under");
+  });
+
+  it("runs the forge demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_forge", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("root_party");
+    expect(report.tldr).toContain("not a root slip to mint");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

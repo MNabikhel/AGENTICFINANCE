@@ -1591,6 +1591,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.child_party", "deny", "speaker is not the parent subject or issuer");
     },
   },
+  {
+    id: "mandate.root_party",
+    evaluate: (ctx) => {
+      if (ctx.rootPartyOk === undefined) return v("mandate.root_party", "allow", "not a root slip");
+      return ctx.rootPartyOk
+        ? v("mandate.root_party", "allow", "speaker is the named subject or a kill-switch role")
+        : v("mandate.root_party", "deny", "speaker is not the named subject");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1643,7 +1652,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ladder.min_level": {
     kind: "none",
-    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party.",
+    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party. Minting a root in someone else's name stays mandate.root_party.",
   },
   "circuit.daily": {
     kind: "reset_circuit",
@@ -1739,7 +1748,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "identity.known": {
     kind: "none",
-    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, a revoke target, or an RFQ guest.",
+    hint: "That agent id is not in this world. Register them first. A missing agent is not a freeze, a handshake, a merchant, a permission-slip subject, a revoke target, or an RFQ guest. Minting a root in someone else's name stays mandate.root_party.",
   },
   "hire.escrow_required": {
     kind: "none",
@@ -1980,7 +1989,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.child_party": {
     kind: "none",
-    hint: "Nest under your own parent slip, or ask a human or treasury. Someone else's parent is not yours to hang a child on. A missing parent is mandate.known_parent. A dead parent is mandate.parent_fresh. A wider nested slip is mandate.child_tighter. A junior nested mint is ladder.min_level. A mixed nested currency is mandate.child_currency. Completing funded work is legal. The parent subject still nests. Human/treasury still nest.",
+    hint: "Nest under your own parent slip, or ask a human or treasury. Someone else's parent is not yours to hang a child on. A missing parent is mandate.known_parent. A dead parent is mandate.parent_fresh. A wider nested slip is mandate.child_tighter. A junior nested mint is ladder.min_level. A mixed nested currency is mandate.child_currency. Minting a root in someone else's name stays mandate.root_party. Completing funded work is legal. The parent subject still nests. Human/treasury still nest.",
+  },
+  "mandate.root_party": {
+    kind: "none",
+    hint: "Mint a root slip in your own name, or ask a human or treasury. Someone else's name is not a root slip to mint. A missing subject is identity.known. Nesting under someone else's parent is mandate.child_party. A junior root is ladder.min_level. A vendor root is actor.role_capability. Completing funded work is legal. The named subject still mints a self-root. Human/treasury still mint roots for a desk.",
   },
   "host.not_hosted": {
     kind: "none",

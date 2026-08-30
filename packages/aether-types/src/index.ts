@@ -1028,6 +1028,18 @@ export interface PolicyContext {
    */
   childPartyOk?: boolean;
   /**
+   * False when issue_intent without parentId would name a subject who is not
+   * the speaker, and the speaker is not a human or treasury. Absent = nested
+   * issue_intent (`parentId` is a string), or the subject is unknown
+   * (`identity.known` handles that). Named subject still mints a self-root.
+   * Human/treasury still mint roots for a desk. Nested foreign stays
+   * `mandate.child_party`. Ghost subject stays `identity.known`. A junior
+   * foreign root stays `ladder.min_level`. A vendor root stays
+   * `actor.role_capability`. Warrant TAP is a self-root. Cuckoo TAP is a
+   * nested foreign child. Sub-hire TAP is the parent subject nesting.
+   */
+  rootPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.

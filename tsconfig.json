@@ -130,7 +130,8 @@
       "@aether/checkout-party": ["packages/aether-runtime/src/checkout-party.ts"],
       "@aether/hire-room-party": ["packages/aether-runtime/src/hire-room-party.ts"],
       "@aether/hire-slip-party": ["packages/aether-runtime/src/hire-slip-party.ts"],
-      "@aether/child-party": ["packages/aether-runtime/src/child-party.ts"]
+      "@aether/child-party": ["packages/aether-runtime/src/child-party.ts"],
+      "@aether/root-party": ["packages/aether-runtime/src/root-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]
