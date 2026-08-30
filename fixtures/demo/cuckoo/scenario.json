@@ -1,0 +1,20 @@
+{
+  "id": "mandate-child-party",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000115",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "Someone else's parent slip is not yours to nest under. Completing funded work is legal. A missing parent is a different object. A dead parent is a different object. A wider nested slip is a different object. A junior nested mint is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

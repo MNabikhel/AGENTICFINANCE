@@ -727,6 +727,16 @@ export const RULES: readonly Rule[] = [
           childMax: childRange?.max ?? null,
         });
       }
+      if (parentRange && childRange) {
+        const parentMin = typeof parentRange.min === "number" ? parentRange.min : 0;
+        const childMin = typeof childRange.min === "number" ? childRange.min : 0;
+        if (childMin < parentMin) {
+          return v("mandate.child_tighter", "deny", "child amount_range floor wider than parent", {
+            parentMin,
+            childMin,
+          });
+        }
+      }
       const parentBudget = listed(parent, "payment.budget");
       const childBudget = listed(child, "payment.budget");
       if (
@@ -1419,6 +1429,168 @@ export const RULES: readonly Rule[] = [
         : v("mandate.cadence_reach", "deny", "next slot opens after the slip dies");
     },
   },
+  {
+    id: "mandate.range_fresh",
+    evaluate: (ctx) => {
+      if (ctx.rangeMintOk === undefined) return v("mandate.range_fresh", "allow", "not a range mint");
+      return ctx.rangeMintOk
+        ? v("mandate.range_fresh", "allow", "amount_range can still admit an amount")
+        : v("mandate.range_fresh", "deny", "amount_range min exceeds max");
+    },
+  },
+  {
+    id: "mandate.budget_fresh",
+    evaluate: (ctx) => {
+      if (ctx.budgetMintOk === undefined) return v("mandate.budget_fresh", "allow", "not a budget mint");
+      return ctx.budgetMintOk
+        ? v("mandate.budget_fresh", "allow", "budget can still admit an amount the lid would allow")
+        : v("mandate.budget_fresh", "deny", "budget cannot admit an amount the lid would allow");
+    },
+  },
+  {
+    id: "mandate.currency_fresh",
+    evaluate: (ctx) => {
+      if (ctx.currencyMintOk === undefined) return v("mandate.currency_fresh", "allow", "not a paired money mint");
+      return ctx.currencyMintOk
+        ? v("mandate.currency_fresh", "allow", "lid and coffer name the same currency")
+        : v("mandate.currency_fresh", "deny", "lid and coffer name different currencies");
+    },
+  },
+  {
+    id: "mandate.lid_fresh",
+    evaluate: (ctx) => {
+      if (ctx.lidMintOk === undefined) return v("mandate.lid_fresh", "allow", "not a lid mint");
+      return ctx.lidMintOk
+        ? v("mandate.lid_fresh", "allow", "amount_range can still admit a positive hire")
+        : v("mandate.lid_fresh", "deny", "amount_range max cannot admit a positive hire");
+    },
+  },
+  {
+    id: "mandate.cap_fresh",
+    evaluate: (ctx) => {
+      if (ctx.capMintOk === undefined) return v("mandate.cap_fresh", "allow", "not a cap mint");
+      return ctx.capMintOk
+        ? v("mandate.cap_fresh", "allow", "subject's live rung is at or below the cap")
+        : v("mandate.cap_fresh", "deny", "subject's live rung is above the cap");
+    },
+  },
+  {
+    id: "kya.grant_fresh",
+    evaluate: (ctx) => {
+      if (ctx.grantMintOk === undefined) return v("kya.grant_fresh", "allow", "not a grant mint");
+      return ctx.grantMintOk
+        ? v("kya.grant_fresh", "allow", "delegate's live rung is at or below the grant")
+        : v("kya.grant_fresh", "deny", "delegate's live rung is above the grant");
+    },
+  },
+  {
+    id: "kya.nest_tighter",
+    evaluate: (ctx) => {
+      if (ctx.nestTighterOk === undefined) return v("kya.nest_tighter", "allow", "not a nested grant mint");
+      return ctx.nestTighterOk
+        ? v("kya.nest_tighter", "allow", "nested grant is at or below the parent hop")
+        : v("kya.nest_tighter", "deny", "nested grant is wider than the parent hop");
+    },
+  },
+  {
+    id: "kya.path_tighter",
+    evaluate: (ctx) => {
+      if (ctx.pathTighterOk === undefined) return v("kya.path_tighter", "allow", "not a path grant mint");
+      return ctx.pathTighterOk
+        ? v("kya.path_tighter", "allow", "path grant is at or below the incoming hop")
+        : v("kya.path_tighter", "deny", "path grant is wider than the incoming hop");
+    },
+  },
+  {
+    id: "kya.path_live",
+    evaluate: (ctx) => {
+      if (ctx.pathLiveOk === undefined) return v("kya.path_live", "allow", "not an orphan hop mint");
+      return ctx.pathLiveOk
+        ? v("kya.path_live", "allow", "speaker has a live incoming hop")
+        : v("kya.path_live", "deny", "speaker has no live incoming hop");
+    },
+  },
+  {
+    id: "mandate.child_currency",
+    evaluate: (ctx) => {
+      if (ctx.childCurrencyOk === undefined) return v("mandate.child_currency", "allow", "not a nested currency mint");
+      return ctx.childCurrencyOk
+        ? v("mandate.child_currency", "allow", "nested lid and coffer name the parent's currency")
+        : v("mandate.child_currency", "deny", "nested lid or coffer names a different currency than the parent");
+    },
+  },
+  {
+    id: "market.payout_fresh",
+    evaluate: (ctx) => {
+      if (ctx.fxPayoutOk === undefined) return v("market.payout_fresh", "allow", "not an FX payout mint");
+      return ctx.fxPayoutOk
+        ? v("market.payout_fresh", "allow", "FX floor payout is a positive amount")
+        : v("market.payout_fresh", "deny", "FX floor payout is zero");
+    },
+  },
+  {
+    id: "market.fx_party",
+    evaluate: (ctx) => {
+      if (ctx.fxPartyOk === undefined) return v("market.fx_party", "allow", "not an FX party mint");
+      return ctx.fxPartyOk
+        ? v("market.fx_party", "allow", "speaker is the market maker, or no maker sits")
+        : v("market.fx_party", "deny", "speaker is not the market maker");
+    },
+  },
+  {
+    id: "market.rate_fresh",
+    evaluate: (ctx) => {
+      if (ctx.fxBandOk === undefined) return v("market.rate_fresh", "allow", "not an FX rate mint");
+      return ctx.fxBandOk
+        ? v("market.rate_fresh", "allow", "FX rate is inside the 200bps band")
+        : v("market.rate_fresh", "deny", "FX rate is outside the 200bps band");
+    },
+  },
+  {
+    id: "kya.nest_party",
+    evaluate: (ctx) => {
+      if (ctx.nestPartyOk === undefined) return v("kya.nest_party", "allow", "not a nested hop mint");
+      return ctx.nestPartyOk
+        ? v("kya.nest_party", "allow", "nested hop names the parent's principal")
+        : v("kya.nest_party", "deny", "nested hop is under another principal");
+    },
+  },
+  {
+    id: "mandate.checkout_party",
+    evaluate: (ctx) => {
+      if (ctx.checkoutPartyOk === undefined) return v("mandate.checkout_party", "allow", "not a checkout mint");
+      return ctx.checkoutPartyOk
+        ? v("mandate.checkout_party", "allow", "speaker is the hire buyer, intent subject, or a kill-switch role")
+        : v("mandate.checkout_party", "deny", "speaker is not the hire buyer");
+    },
+  },
+  {
+    id: "hire.room_party",
+    evaluate: (ctx) => {
+      if (ctx.hireRoomPartyOk === undefined) return v("hire.room_party", "allow", "not a room hire");
+      return ctx.hireRoomPartyOk
+        ? v("hire.room_party", "allow", "speaker is the named buyer or a kill-switch role")
+        : v("hire.room_party", "deny", "speaker is not the named buyer");
+    },
+  },
+  {
+    id: "hire.slip_party",
+    evaluate: (ctx) => {
+      if (ctx.hireSlipPartyOk === undefined) return v("hire.slip_party", "allow", "not a slip hire");
+      return ctx.hireSlipPartyOk
+        ? v("hire.slip_party", "allow", "speaker is the named subject or a kill-switch role")
+        : v("hire.slip_party", "deny", "speaker is not the named subject");
+    },
+  },
+  {
+    id: "mandate.child_party",
+    evaluate: (ctx) => {
+      if (ctx.childPartyOk === undefined) return v("mandate.child_party", "allow", "not a nested slip");
+      return ctx.childPartyOk
+        ? v("mandate.child_party", "allow", "speaker is the parent subject, issuer, or a kill-switch role")
+        : v("mandate.child_party", "deny", "speaker is not the parent subject or issuer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1471,7 +1643,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ladder.min_level": {
     kind: "none",
-    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter.",
+    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party.",
   },
   "circuit.daily": {
     kind: "reset_circuit",
@@ -1499,7 +1671,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.capability_subset": {
     kind: "none",
-    hint: "Omitted maxAutonomy is L5. An agent may not grant a standing-mandate ceiling above its own rung, or spend above the handshake ceiling. Name a ceiling you hold. A human or treasury may grant L5. Completing a funded hire after a climb is legal; freeze and revoke still bind.",
+    hint: "Omitted maxAutonomy is L5. An agent may not grant a standing-mandate ceiling above its own rung, or spend above the handshake ceiling. Name a ceiling you hold. A human or treasury may grant L5. Completing a funded hire after a climb is legal; freeze and revoke still bind. A grant below the desk is kya.grant_fresh.",
   },
   "market.known_sku": {
     kind: "none",
@@ -1511,7 +1683,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.invited_seller": {
     kind: "none",
-    hint: "This RFQ named its sellers. Only invitedSellerIds may quote. An empty invite list is an open RFQ.",
+    hint: "This RFQ named its sellers. Only invitedSellerIds may quote. An empty invite list is an open RFQ. A vendor conversion while a maker sits is market.fx_party.",
   },
   "payment.recurrence": {
     kind: "none",
@@ -1539,7 +1711,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_intent": {
     kind: "none",
-    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake. A missing handshake stays kya.chain_intact. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
+    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake. A missing handshake stays kya.chain_intact. A dead parent stays mandate.parent_fresh. Wearing someone else's unused slip stays hire.slip_party. Completing funded work is legal.",
   },
   "mandate.known_cart": {
     kind: "none",
@@ -1563,7 +1735,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_parent": {
     kind: "none",
-    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
+    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child. A dead parent stays mandate.parent_fresh. Nesting under someone else's parent stays mandate.child_party. Completing funded work is legal.",
   },
   "identity.known": {
     kind: "none",
@@ -1627,7 +1799,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.unique_live": {
     kind: "none",
-    hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant.",
+    hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant. A grant below the desk is kya.grant_fresh. A nested grant wider than its parent is kya.nest_tighter. A grant wider than the incoming hop is kya.path_tighter.",
   },
   "hire.unique_cart": {
     kind: "none",
@@ -1667,7 +1839,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.subject_is_actor": {
     kind: "none",
-    hint: "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row.",
+    hint: "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row. Wearing someone else's unused slip at hire.create stays hire.slip_party.",
   },
   "mm.known": {
     kind: "none",
@@ -1675,7 +1847,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mm.spread_bound": {
     kind: "none",
-    hint: "The nested fx.rateE6 is the stored rate. It must sit inside the 200bps band (980000–1020000). A top-level rateE6 is not the band.",
+    hint: "The nested fx.rateE6 is the stored rate. It must sit inside the 200bps band (980000–1020000). A top-level rateE6 is not the band. A vendor conversion while a maker sits is market.fx_party. An empty pit does not waive the band — that is market.rate_fresh.",
   },
   "mm.inventory": {
     kind: "none",
@@ -1703,11 +1875,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.mint_fresh": {
     kind: "none",
-    hint: "A handshake cannot be born dead. Name an expiresAt strictly after now, or omit it for one year. An unparseable Instant is not a window. Ghost, self, party, a second live hop, and an over-grant keep first deny.",
+    hint: "A handshake cannot be born dead. Name an expiresAt strictly after now, or omit it for one year. An unparseable Instant is not a window. Ghost, self, party, a second live hop, and an over-grant keep first deny. A grant below the desk is kya.grant_fresh.",
   },
   "kya.mint_window": {
     kind: "none",
-    hint: "A handshake cannot outlive one year. Omit expiresAt for that ceiling, or name a sooner Instant. Year 9999 is not standing identity. A corpse mint stays kya.mint_fresh.",
+    hint: "A handshake cannot outlive one year. Omit expiresAt for that ceiling, or name a sooner Instant. Year 9999 is not standing identity. A corpse mint stays kya.mint_fresh. A grant below the desk is kya.grant_fresh.",
   },
   "mandate.window_fresh": {
     kind: "none",
@@ -1723,20 +1895,92 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.cadence_reach": {
     kind: "none",
-    hint: "A slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY (max_occurrences 1), or omit recurrence. A vacant cap stays mandate.occurrence_fresh. Hire still names payment.recurrence.",
+    hint: "A slip lives seven days. WEEKLY and MONTHLY cannot admit a second hire before that exp. Name DAILY, a one-shot WEEKLY (max_occurrences 1), or omit recurrence. A vacant cap stays mandate.occurrence_fresh. Hire still names payment.recurrence. A floor above the lid is mandate.range_fresh.",
+  },
+  "mandate.range_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band (min === max). Hire still names payment.amount_range. A vacant cap stays mandate.occurrence_fresh. A week that cannot admit a second hire stays mandate.cadence_reach. Lid TAP is hire-time max. A closed hatch is mandate.lid_fresh. A closed coffer is mandate.budget_fresh.",
+  },
+  "mandate.budget_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with a payment.budget that cannot admit an amount the lid would allow. Name max > 0, and if a floor is named, max ≥ min. Hire still names payment.budget. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Purse TAP is hire-time envelope. A mixed envelope is mandate.currency_fresh.",
+  },
+  "mandate.currency_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still names payment.currency_match. A closed coffer stays mandate.budget_fresh. A floor above the lid stays mandate.range_fresh. A closed hatch is mandate.lid_fresh. Mix TAP is a mixed journal. Ink TAP is cart vs hire. A nested child in a different currency is mandate.child_currency.",
+  },
+  "mandate.lid_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an amount_range whose max cannot admit a positive hire. Name max > 0, or omit the range. Hire still names payment.amount_range. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Lid TAP is hire-time max. A closed coffer is mandate.budget_fresh. A mixed envelope is mandate.currency_fresh. A cap below the desk is mandate.cap_fresh.",
+  },
+  "mandate.cap_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an aether.max_autonomy below the named subject's live rung. Name max ≥ that rung, or omit the cap. Hire still names ladder.max_autonomy_constraint. A closed hatch stays mandate.lid_fresh. Ceiling TAP is a climb after mint. Grade TAP is a junior nested mint. Rung TAP is a skipped climb. A grant below the desk is kya.grant_fresh.",
+  },
+  "kya.grant_fresh": {
+    kind: "none",
+    hint: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still names kya.capability_subset. A corpse mint stays kya.mint_fresh. A century mint stays kya.mint_window. A second live hop stays kya.unique_live. Climb TAP is a climb after mint. Eave TAP is a slip cap below the desk. A nested grant wider than its parent is kya.nest_tighter. A grant wider than the incoming hop is kya.path_tighter.",
+  },
+  "kya.nest_tighter": {
+    kind: "none",
+    hint: "A nested handshake cannot be born wider than its parent hop. Name max ≤ the parent's maxAutonomy, or omit only when the parent is already L5. Hire still names kya.capability_subset. A grant below the desk stays kya.grant_fresh. A dead parent stays kya.parent_fresh. A ghost parent stays kya.known_parent. A second live hop stays kya.unique_live. An agent over-grant stays kya.capability_subset. Mandate child_tighter is a nested slip, not a nested hop. A grant wider than the incoming hop is kya.path_tighter. A nested hop under another principal is kya.nest_party.",
+  },
+  "kya.path_tighter": {
+    kind: "none",
+    hint: "A handshake in another principal's name cannot be born wider than the speaker's live incoming hop from that principal. Name max ≤ that hop's maxAutonomy, or omit only when the incoming hop is already L5. Hire still names kya.capability_subset. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. An agent over-grant stays kya.capability_subset. Well TAP equal hops still mint. A speaker granting in their own name is not this deny. An orphan hop is kya.path_live.",
+  },
+  "kya.path_live": {
+    kind: "none",
+    hint: "A handshake in another principal's name cannot be born without a live incoming hop from that principal. Attest the speaker under that principal, then nest. Speaker granting in their own name is not this deny. Ghost principal stays identity.known. An agent filling in another principal's id stays kya.party. A grant wider than a live incoming hop stays kya.path_tighter. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. A dead parentId stays kya.parent_fresh. A nested hop under another principal is kya.nest_party.",
+  },
+  "mandate.child_currency": {
+    kind: "none",
+    hint: "A nested slip cannot be born in a different currency than its parent. Name the parent's currency on the child's amount_range and payment.budget, or omit a constraint the parent also omitted. Same-slip lid vs coffer stays mandate.currency_fresh. A wider nested slip stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party. Matching USD still mints. Matching USDC still mints. Hire still names payment.currency_match. Ink TAP is cart vs hire. Mix TAP is a mixed journal. Clash TAP is a mixed envelope.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",
     commandType: "mandate.issue_intent",
-    hint: "A dead parent is not a parent. Issue a new parent slip, then a tighter child. Completing a funded hire after the parent dies is legal. Ghost parent stays mandate.known_parent. The child's own expiry stays mandate.not_expired.",
+    hint: "A dead parent is not a parent. Issue a new parent slip, then a tighter child. Completing a funded hire after the parent dies is legal. Ghost parent stays mandate.known_parent. Nesting under someone else's parent stays mandate.child_party. The child's own expiry stays mandate.not_expired.",
   },
   "kya.parent_fresh": {
     kind: "none",
-    hint: "A dead parent hop is not a parent. Attest a live parent, then nest. A new hire or fund against a nested hop whose parent died is a refuse. Completing a funded hire after that is legal. Ghost parent stays kya.known_parent. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
+    hint: "A dead parent hop is not a parent. Attest a live parent, then nest. A new hire or fund against a nested hop whose parent died is a refuse. Completing a funded hire after that is legal. Ghost parent stays kya.known_parent. A nested grant wider than its parent stays kya.nest_tighter. A grant wider than the incoming hop stays kya.path_tighter. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
   },
   "market.fx_fresh": {
     kind: "none",
-    hint: "An FX window cannot be born dead. Name a validUntil strictly after now. An unparseable Instant is not a window. Settle of a window that lapses after mint stays market.not_expired. Ghost RFQ stays market.known_rfq. A missing window stays market.fx_window. A swapped pair stays market.fx_pair.",
+    hint: "An FX window cannot be born dead. Name a validUntil strictly after now. An unparseable Instant is not a window. Settle of a window that lapses after mint stays market.not_expired. Ghost RFQ stays market.known_rfq. A missing window stays market.fx_window. A swapped pair stays market.fx_pair. A conversion that pays nothing is market.payout_fresh. A vendor conversion while a maker sits is market.fx_party.",
+  },
+  "market.payout_fresh": {
+    kind: "none",
+    hint: "An FX window cannot be born with a floor payout of 0. Name a from-amount whose floor(from * rateE6 / 1e6) is at least 1 cent, or a higher in-band rate. A 1-cent window at the low band is not a conversion. A 0-cent window is not a conversion. A 2-cent window at the low band still mints. A 1-cent window at par still mints. A 200bps miss stays mm.spread_bound. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A vendor conversion while a maker sits is market.fx_party. An empty pit does not waive the band — that is market.rate_fresh.",
+  },
+  "market.fx_party": {
+    kind: "none",
+    hint: "A vendor cannot mint an FX window while a market maker sits. Have the maker quote. Quoting FX with no maker on the pit is not this deny — settle stays mm.known. A closed guest list stays market.invited_seller. A 200bps miss stays mm.spread_bound. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A research quote with no fx is not this deny. An empty pit does not waive the band — that is market.rate_fresh.",
+  },
+  "market.rate_fresh": {
+    kind: "none",
+    hint: "An FX window cannot be born outside the 200bps band, even when no market maker sits. Name a nested rateE6 inside 980000–1020000. A maker's own off-band quote stays mm.spread_bound. A vendor conversion while a maker sits stays market.fx_party. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. An in-band guest quote with no maker still mints. The maker still mints in-band after sitting.",
+  },
+  "kya.nest_party": {
+    kind: "none",
+    hint: "A nested handshake cannot be born under another principal's parent hop. Nest under a hop in this principal's name, or omit parentId. A nested grant wider than its parent stays kya.nest_tighter. A dead parent stays kya.parent_fresh. A ghost parent stays kya.known_parent. An orphan hop stays kya.path_live. Whose name a handshake is in stays kya.party. A grant below the desk stays kya.grant_fresh. Speaker granting in their own name without parentId is not this deny. Exact same-principal nest still mints. A tighter same-principal nest still mints.",
+  },
+  "mandate.checkout_party": {
+    kind: "none",
+    hint: "Fill your own checkout, or ask a human or treasury. Someone else's cart is not yours to fill. A missing cart is mandate.known_cart. A missing hire is hire.known. A cheaper cart is hire.cart_matches. A second cart is hire.unique_cart. A second payment is mandate.unique_payment. Dumping someone else's cart is mandate.cart_party. Spiking someone else's check is mandate.payment_party. Completing funded work is legal. Buyer still fills its own checkout.",
+  },
+  "hire.room_party": {
+    kind: "none",
+    hint: "Hire from your own room, or ask a human or treasury. Someone else's quote is not yours to hire. A missing room is market.known_rfq. A spent quote is hire.quote_unspent. A shut or expired room is market.not_expired. An FX window is hire.not_fx. Shutting someone else's room is market.rfq_party. Folding someone else's bid is market.party. Wearing someone else's unused slip stays hire.slip_party. Completing funded work is legal. Buyer still hires its own quote.",
+  },
+  "hire.slip_party": {
+    kind: "none",
+    hint: "Hire against your own unused slip, or ask a human or treasury. Someone else's permission is not yours to wear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired. Hiring from someone else's room is hire.room_party. Tearing someone else's unused slip is mandate.party. Fund and submit stay mandate.subject_is_actor. Completing funded work is legal. The named subject still hires.",
+  },
+  "mandate.child_party": {
+    kind: "none",
+    hint: "Nest under your own parent slip, or ask a human or treasury. Someone else's parent is not yours to hang a child on. A missing parent is mandate.known_parent. A dead parent is mandate.parent_fresh. A wider nested slip is mandate.child_tighter. A junior nested mint is ladder.min_level. A mixed nested currency is mandate.child_currency. Completing funded work is legal. The parent subject still nests. Human/treasury still nest.",
   },
   "host.not_hosted": {
     kind: "none",
@@ -1761,11 +2005,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.party": {
     kind: "none",
-    hint: "Rip your own unused slip, or ask a human or treasury. Someone else's permission is not yours to tear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired on a new hire. Completing funded work is legal.",
+    hint: "Rip your own unused slip, or ask a human or treasury. Someone else's permission is not yours to tear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired on a new hire. Wearing someone else's unused slip stays hire.slip_party. Completing funded work is legal.",
   },
   "market.rfq_party": {
     kind: "none",
-    hint: "Shut your own room, or ask a human or treasury. Someone else's RFQ is not yours to close. A missing room is market.known_rfq. A shut room is market.not_expired on quote or hire.create.",
+    hint: "Shut your own room, or ask a human or treasury. Someone else's RFQ is not yours to close. A missing room is market.known_rfq. A shut room is market.not_expired on quote or hire.create. Hiring from someone else's room stays hire.room_party.",
   },
   "mandate.cart_party": {
     kind: "none",

@@ -304,6 +304,60 @@ export const SPIKE_TLDR =
 export const WEEK_TLDR =
   "A founder funded an $800 hire. Minting WEEKLY or MONTHLY that cannot admit a second hire before the seven-day exp was mandate.cadence_reach — not a vacant slot, not a closed calendar, not hire-time recurrence. A one-shot WEEKLY still minted. DAILY still minted. That funded work still released. A week is not a cadence on a seven-day slip.";
 
+export const GULF_TLDR =
+  "A founder funded an $800 hire. Minting an amount_range whose min exceeds max was mandate.range_fresh — not a vacant slot, not a week on a seven-day slip, not hire-time max. An exact band still minted. An open floor still minted. That funded work still released. A floor above the lid is not a range.";
+
+export const COFFER_TLDR =
+  "A founder funded an $800 hire. Minting a closed coffer or a coffer below the floor was mandate.budget_fresh — not a vacant slot, not a floor above the lid, not hire-time envelope. A coffer that covers the floor still minted. An open floor still minted. That funded work still released. A closed coffer is not a budget.";
+
+export const CLASH_TLDR =
+  "A founder funded an $800 hire. Minting a USDC coffer on a USD lid was mandate.currency_fresh — not a vacant slot, not a closed coffer, not hire-time currency. Matching USD still minted. Matching USDC still minted. That funded work still released. A USDC coffer on a USD lid is not a budget.";
+
+export const HATCH_TLDR =
+  "A founder funded an $800 hire. Minting a closed hatch or a zero lid was mandate.lid_fresh — not a vacant slot, not a floor above the lid, not hire-time max. A live lid still minted. An open floor still minted. That funded work still released. A closed hatch is not a range.";
+
+export const EAVE_TLDR =
+  "A founder funded an $800 hire. Minting a cap below the desk's live rung was mandate.cap_fresh — not a vacant slot, not a closed hatch, not a climb after mint. An exact cap still minted. An open ceiling still minted. That funded work still released. A cap below the desk is not a cap.";
+
+export const SILL_TLDR =
+  "A founder funded an $800 hire. Minting a grant below the desk's live rung was kya.grant_fresh — not a vacant hop, not a dead handshake, not a climb after mint. An exact grant still minted. An open ceiling still minted. That funded work still released. A grant below the desk is not a handshake.";
+
+export const JOIST_TLDR =
+  "A founder funded an $800 hire. Minting a nested grant wider than its parent hop was kya.nest_tighter — not a dead parent hop, not a grant below the desk, not a nested slip. An exact nested grant still minted. A tighter nested grant still minted. That funded work still released. A nested grant wider than its parent is not a handshake.";
+
+export const STUD_TLDR =
+  "A founder funded an $800 hire. Minting a grant wider than the incoming hop was kya.path_tighter — not a nested parent hop, not a grant below the desk, not a climb after mint. An exact path grant still minted. A tighter path grant still minted. That funded work still released. A grant wider than the incoming hop is not a handshake.";
+
+export const PLATE_TLDR =
+  "A founder funded an $800 hire. Minting a hop in another principal's name with no live incoming path was kya.path_live — not a grant wider than the incoming hop, not a nested parent hop, not whose name a handshake is in. An exact path grant still minted. A tighter path grant still minted. That funded work still released. An orphan hop is not a handshake.";
+
+export const HEADER_TLDR =
+  "A founder funded an $800 hire. Minting a nested USDC slip under a USD parent was mandate.child_currency — not a mixed envelope, not a wider nested slip, not hire-time currency. Matching USD still minted. Matching USDC still minted. That funded work still released. A USDC header under a USD plate is not a nested slip.";
+
+export const PIP_TLDR =
+  "A founder funded an $800 hire. Minting an FX window whose floor payout is 0 was market.payout_fresh — not a dead window, not a swapped pair, not a 200bps band miss. A two-cent window at the low band still minted. A one-cent window at par still minted. That funded work still released. A conversion that pays nothing is not an FX window.";
+
+export const QUOIN_TLDR =
+  "A founder funded an $800 hire. Minting an FX window as a vendor while a market maker sat was market.fx_party — not a closed guest list, not a 200bps band miss, not a conversion that pays nothing. The market maker still minted an in-band window. A par window still minted. That funded work still released. A vendor's conversion is not a market-maker window.";
+
+export const ASHLAR_TLDR =
+  "A founder funded an $800 hire. Minting an FX window at half price with no maker was market.rate_fresh — not a 200bps miss by the maker, not a vendor conversion while a maker sits, not a conversion that pays nothing. The market maker still minted an in-band window after sitting. A par window still minted. That funded work still released. An empty pit does not waive the band.";
+
+export const CORBEL_TLDR =
+  "A founder funded an $800 hire. Minting a nested hop under another principal's parent hop was kya.nest_party — not a nested grant wider than its parent, not a dead parent hop, not whose name a handshake is in. An exact same-principal nested grant still minted. A tighter same-principal nested grant still minted. That funded work still released. A nested hop under another principal is not a nested handshake.";
+
+export const TROLLEY_TLDR =
+  "A founder funded an $800 hire. A second desk filling the research desk's unused checkout was mandate.checkout_party — a missing cart is not this deny, dumping someone else's cart is not this deny, a second cart on the same hire is not this deny. No cart/payment written. The buyer still filled its own checkout. That funded work still released. Someone else's checkout is not yours to fill.";
+
+export const POACH_TLDR =
+  "A founder funded an $800 hire. A second desk hiring the research desk's live unused quote was hire.room_party — a missing room is not this deny, a spent quote is not this deny, shutting someone else's room is not this deny. No hire written. The buyer still hired its own quote. That funded work still released. Someone else's room is not yours to hire from.";
+
+export const GUISE_TLDR =
+  "A founder funded an $800 hire. A second desk hiring against the research desk's unused slip was hire.slip_party — a missing slip is not this deny, a ripped slip is not this deny, hiring from someone else's room is not this deny. No hire written. The named subject still hired against its own unused slip. That funded work still released. Someone else's unused slip is not yours to hire against.";
+
+export const CUCKOO_TLDR =
+  "A founder funded an $800 hire. A second desk nesting under the research desk's unused parent was mandate.child_party — a missing parent is not this deny, a dead parent is not this deny, a wider nested slip is not this deny, a junior nested mint is not this deny. No child written. The parent subject still nested a tighter child. That funded work still released. Someone else's parent slip is not yours to nest under.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -442,6 +496,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "mandate.checkout_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot fill someone else's checkout`,
+          body: "Someone else's checkout is not yours to fill. Fill your own checkout, or ask a human or treasury. A missing cart is a different object. Dumping someone else's cart is a different object. A second cart is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
     }
     return undefined;
   }
@@ -464,6 +528,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} could not mint a second payment`,
           body: "A cart takes one payment. A second payment is not a second check.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.checkout_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot fill someone else's checkout`,
+          body: "Someone else's checkout is not yours to fill. Fill your own checkout, or ask a human or treasury. A missing cart is a different object. Spiking someone else's check is a different object. A second payment is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -615,6 +689,96 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "mandate.range_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a floor above the lid`,
+          body: "A permission slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band. Hire still checks the lid when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.budget_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a closed coffer`,
+          body: "A permission slip cannot be born with a payment.budget that cannot admit an amount the lid would allow. Name max > 0, and if a floor is named, max ≥ min. Hire still checks the envelope when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.currency_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a mixed envelope`,
+          body: "A permission slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still checks currency when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.child_currency") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a USDC header under a USD plate`,
+          body: "A nested slip cannot be born in a different currency than its parent. Name the parent's currency on the child's lid and coffer. A mixed envelope is a different object. A wider nested slip is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.lid_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a closed hatch`,
+          body: "A permission slip cannot be born with an amount_range whose max cannot admit a positive hire. Name max > 0, or omit the range. Hire still checks the lid when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.cap_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a cap below the desk`,
+          body: "A permission slip cannot be born with an aether.max_autonomy below the named subject's live rung. Name max ≥ that rung, or omit the cap. Hire still checks the ceiling when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.grant_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a grant below the desk`,
+          body: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still checks the handshake when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.nest_tighter") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a nested grant wider than its parent`,
+          body: "A nested handshake cannot be born wider than its parent hop. Name max ≤ the parent's ceiling, or omit only when the parent is already L5. A grant below the desk is a different object. A nested slip is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.nest_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a nested hop under another principal`,
+          body: "A nested handshake cannot be born under another principal's parent hop. Nest under a hop in this principal's name, or omit parentId. A nested grant wider than its parent is a different object. Whose name a handshake is in is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "ladder.min_level") {
         return {
           seq: input.seq,
@@ -631,6 +795,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot hand down a slip whose parent is dead`,
           body: "A dead parent is not a parent. Issue a new parent permission slip, then a tighter child. Completing a funded hire after the parent dies is still legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.child_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot nest under someone else's parent`,
+          body: "Someone else's parent slip is not yours to nest under. Nest under your own parent, or ask a human or treasury. A missing parent is a different object. A dead parent is a different object. A wider nested slip is a different object. A junior nested mint is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -806,6 +980,36 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "market.payout_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion that pays nothing`,
+          body: "An FX window cannot be born with a floor payout of 0. Name a from-amount whose floor conversion is at least 1 cent. A 200bps miss is a different object. A dead window is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.fx_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion that is not a market-maker window`,
+          body: "A vendor cannot mint an FX window while a market maker sits. Have the maker quote. A closed guest list is a different object. A 200bps miss is a different object. A conversion that pays nothing is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.rate_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion outside the band with nobody on the pit`,
+          body: "An FX window cannot be born outside the 200bps band, even when no market maker sits. A maker's own off-band quote is a different object. A vendor conversion while a maker sits is a different object. A conversion that pays nothing is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       if (rule?.ruleId === "market.fx_window") {
         return {
           seq: input.seq,
@@ -925,6 +1129,10 @@ export function autoBeat(input: {
         body = "An FX window is a conversion, not a good. Settle it. A deny does not consume or reserve the window.";
       } else if (ruleId === "clearing.bilateral_limit") {
         body = "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (the photo, not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.";
+      } else if (ruleId === "hire.room_party") {
+        body = "Someone else's room is not yours to hire from. Hire from your own RFQ, or ask a human or treasury. A missing room is a different object. A spent quote is a different object. Shutting someone else's room is a different object.";
+      } else if (ruleId === "hire.slip_party") {
+        body = "Someone else's unused slip is not yours to hire against. Hire against your own unused slip, or ask a human or treasury. A missing slip is a different object. A ripped slip is a different object. Hiring from someone else's room is a different object.";
       }
       return {
         seq: input.seq,
@@ -936,7 +1144,11 @@ export function autoBeat(input: {
               ? `${who} hired down a chain that is too long`
               : ruleId === "payment.reference"
                 ? `${who} hired against a citation that is not a check`
-                : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+                : ruleId === "hire.room_party"
+                  ? `${who} cannot hire from someone else's room`
+                  : ruleId === "hire.slip_party"
+                    ? `${who} cannot hire against someone else's unused slip`
+                    : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
         body,
         tone: "deny",
         commandType: cmd.type,
@@ -1545,6 +1757,56 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.grant_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a grant below the desk`,
+          body: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still checks the handshake when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.nest_tighter") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a nested grant wider than its parent`,
+          body: "A nested handshake cannot be born wider than its parent hop. Name max ≤ the parent's ceiling, or omit only when the parent is already L5. A grant below the desk is a different object. A nested slip is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.path_tighter") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a grant wider than the incoming hop`,
+          body: "A handshake in another principal's name cannot be born wider than the speaker's live incoming hop. Name max ≤ that hop, or omit only when the incoming hop is already L5. A nested parent hop is a different object. A grant below the desk is a different object. An orphan hop is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.path_live") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint an orphan hop`,
+          body: "A handshake in another principal's name cannot be born without a live incoming hop from that principal. Attest the speaker under that principal, then nest. A grant wider than the incoming hop is a different object. Whose name a handshake is in is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.nest_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a nested hop under another principal`,
+          body: "A nested handshake cannot be born under another principal's parent hop. Nest under a hop in this principal's name, or omit parentId. A nested grant wider than its parent is a different object. Whose name a handshake is in is a different object. An orphan hop is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -1672,6 +1934,24 @@ export function analog(): Analog {
       "A checkout can be torn up. That is not a refund. Bound is when a payment occupies it. Someone else's unused checkout is not yours to dump.",
       "A check can be torn up. That is not a refund. Funded is when escrow occupies it. Someone else's unused payment is not yours to spike.",
       "A week is not a cadence on a seven-day slip. Daily is 24 hours. A vacant cap is no slots. A one-shot WEEKLY still mints.",
+      "A floor above the lid is not a range. An exact band still mints. An open floor still mints. Hire-time max is a different object.",
+      "A closed coffer is not a budget. A coffer below the floor is not a budget. A coffer that covers the floor still mints. Hire-time envelope is a different object.",
+      "A USDC coffer on a USD lid is not a budget. Matching USD still mints. Matching USDC still mints. Hire-time currency is a different object.",
+      "A closed hatch is not a range. A zero lid is not a range. A live lid still mints. An open floor still mints. Hire-time max is a different object.",
+      "A cap below the desk is not a cap. An exact cap still mints. An open ceiling still mints. Hire-time climb is a different object.",
+      "A grant below the desk is not a handshake. An exact grant still mints. An open ceiling still mints. Hire-time climb is a different object.",
+      "A nested grant wider than its parent is not a handshake. An exact nested grant still mints. A tighter nested grant still mints. A nested slip is a different object.",
+      "A grant wider than the incoming hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A nested parent hop is a different object.",
+      "An orphan hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A grant wider than the incoming hop is a different object.",
+      "A USDC header under a USD plate is not a nested slip. Matching USD still mints. Matching USDC still mints. A mixed envelope is a different object.",
+      "A conversion that pays nothing is not an FX window. A two-cent window at the low band still mints. A one-cent window at par still mints. A dead window is a different object.",
+      "A vendor's conversion is not a market-maker window. The maker still mints an in-band window. A par window still mints. A closed guest list is a different object.",
+      "An empty pit does not waive the band. The maker still mints an in-band window after sitting. A par window still mints. A 200bps miss by the maker is a different object.",
+      "A nested hop under another principal is not a nested handshake. An exact same-principal nested grant still mints. A tighter same-principal nested grant still mints. A nested grant wider than its parent is a different object.",
+      "Someone else's checkout is not yours to fill. The buyer still fills its own checkout. Dumping someone else's cart is a different object.",
+      "Someone else's room is not yours to hire from. The buyer still hires its own quote. Shutting someone else's room is a different object.",
+      "Someone else's unused slip is not yours to hire against. The named subject still hires against its own unused slip. Tearing someone else's unused slip is a different object.",
+      "Someone else's parent slip is not yours to nest under. The parent subject still nests a tighter child. A wider nested slip is a different object. A junior nested mint is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

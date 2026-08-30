@@ -113,6 +113,24 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_dump");
     expect(names).toContain("aether_demo_spike");
     expect(names).toContain("aether_demo_week");
+    expect(names).toContain("aether_demo_gulf");
+    expect(names).toContain("aether_demo_coffer");
+    expect(names).toContain("aether_demo_clash");
+    expect(names).toContain("aether_demo_hatch");
+    expect(names).toContain("aether_demo_eave");
+    expect(names).toContain("aether_demo_sill");
+    expect(names).toContain("aether_demo_joist");
+    expect(names).toContain("aether_demo_stud");
+    expect(names).toContain("aether_demo_plate");
+    expect(names).toContain("aether_demo_header");
+    expect(names).toContain("aether_demo_pip");
+    expect(names).toContain("aether_demo_quoin");
+    expect(names).toContain("aether_demo_ashlar");
+    expect(names).toContain("aether_demo_corbel");
+    expect(names).toContain("aether_demo_trolley");
+    expect(names).toContain("aether_demo_poach");
+    expect(names).toContain("aether_demo_guise");
+    expect(names).toContain("aether_demo_cuckoo");
     expect(names).toContain("aether_identity_rotate");
     expect(names).toContain("aether_hire_void");
     expect(names).toContain("aether_market_withdraw");
@@ -928,6 +946,157 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("seven-day slip");
+  });
+
+  it("runs the gulf demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_gulf", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("floor above the lid");
+  });
+
+  it("runs the coffer demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_coffer", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("closed coffer");
+  });
+
+  it("runs the clash demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_clash", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("USDC coffer");
+  });
+
+  it("runs the hatch demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_hatch", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("closed hatch");
+  });
+
+  it("runs the eave demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_eave", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("cap below the desk");
+  });
+
+  it("runs the sill demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_sill", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("grant below the desk");
+  });
+
+  it("runs the joist demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_joist", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("nested grant wider than its parent");
+  });
+
+  it("runs the stud demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_stud", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("grant wider than the incoming hop");
+  });
+
+  it("runs the plate demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_plate", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("no live incoming path");
+  });
+
+  it("runs the header demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_header", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("nested USDC slip under a USD parent");
+  });
+
+  it("runs the pip demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_pip", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("floor payout is 0");
+  });
+
+  it("runs the quoin demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_quoin", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("vendor");
+    expect(report.tldr).toContain("market-maker window");
+  });
+
+  it("runs the ashlar demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_ashlar", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("empty pit");
+    expect(report.tldr).toContain("waive the band");
+  });
+
+  it("runs the corbel demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_corbel", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("another principal");
+    expect(report.tldr).toContain("nested handshake");
+  });
+
+  it("runs the trolley demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_trolley", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("checkout_party");
+    expect(report.tldr).toContain("not yours to fill");
+  });
+
+  it("runs the poach demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_poach", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("room_party");
+    expect(report.tldr).toContain("not yours to hire from");
+  });
+
+  it("runs the guise demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_guise", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("slip_party");
+    expect(report.tldr).toContain("not yours to hire against");
+  });
+
+  it("runs the cuckoo demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_cuckoo", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("child_party");
+    expect(report.tldr).toContain("not yours to nest under");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

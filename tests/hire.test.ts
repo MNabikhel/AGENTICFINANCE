@@ -254,6 +254,29 @@ describe("parent freshness", () => {
     expect((r.data as { payload: { parentId?: string } }).payload.parentId).toBe(intentId);
   });
 
+  it("refuses a nested child in a different currency as mandate.child_currency, not a written slip", () => {
+    const rt = boot();
+    const { desk, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    const before = rt.intents.size;
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        parentId: intentId,
+        task: "hand down a USDC lid",
+        constraints: [{ type: "payment.amount_range", currency: "USDC_SIM", max: 100_000 }],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.child_currency");
+    expect(rt.intents.size).toBe(before);
+  });
+
   it("refuses a new hire against a child after the parent dies as mandate.parent_fresh", () => {
     const rt = boot();
     const { desk, vendor, intentId } = economy(rt);

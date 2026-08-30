@@ -229,12 +229,14 @@ export type MandateConstraint =
   | {
       type: "payment.amount_range";
       currency: CurrencyCode;
+      /** Omit is an open floor. min === max still mints. min > max is mandate.range_fresh. */
       min?: number;
       max: number;
     }
   | {
       type: "payment.budget";
       currency: CurrencyCode;
+      /** Remaining computed at eval. max ≤ 0, or max below an amount_range floor, is mandate.budget_fresh. */
       max: number;
     }
   | {
@@ -807,6 +809,39 @@ export interface PolicyContext {
    */
   fxMintFresh?: boolean;
   /**
+   * False when `market.quote` would write an FX window whose floor payout is 0
+   * (`floor(from * rateE6 / 1e6)`). Absent = not quoting with an `fx` object, or
+   * amount/rate missing (shape / other first denies). A 200bps miss stays
+   * `mm.spread_bound`. A dead window stays `market.fx_fresh`. A swapped pair
+   * stays `market.fx_pair`. A missing window stays `market.fx_window`. Ghost RFQ
+   * stays `market.known_rfq`. Pip TAP is a conversion that pays nothing.
+   */
+  fxPayoutOk?: boolean;
+  /**
+   * False when `market.quote` would write an FX window as a non-maker while a
+   * `market_maker` already sits. Absent = not quoting with an `fx` object.
+   * A research quote with no `fx` is not this deny. Quoting FX with no maker
+   * on the pit is not this deny (Maker TAP still mints; settle stays `mm.known`).
+   * A closed guest list stays `market.invited_seller`. A 200bps miss stays
+   * `mm.spread_bound`. A conversion that pays nothing stays `market.payout_fresh`.
+   * A dead window stays `market.fx_fresh`. A swapped pair stays `market.fx_pair`.
+   * A missing window stays `market.fx_window`. Ghost RFQ stays `market.known_rfq`.
+   * Quoin TAP is a vendor's conversion while a maker sits.
+   */
+  fxPartyOk?: boolean;
+  /**
+   * False when `market.quote` would write an FX window whose nested `rateE6`
+   * sits outside the 200bps band (980000–1020000). Absent = not quoting with
+   * an `fx` object, or rate missing (shape / other first denies). A maker's
+   * own off-band quote stays `mm.spread_bound`. A vendor conversion while a
+   * maker sits stays `market.fx_party`. A conversion that pays nothing stays
+   * `market.payout_fresh`. A dead window stays `market.fx_fresh`. A swapped
+   * pair stays `market.fx_pair`. A missing window stays `market.fx_window`.
+   * Ghost RFQ stays `market.known_rfq`. Ashlar TAP is an empty pit that does
+   * not waive the band.
+   */
+  fxBandOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).
@@ -950,6 +985,48 @@ export interface PolicyContext {
    * `mandate.cart_party` — that flag is the named merchant of a cart.
    */
   paymentPartyOk?: boolean;
+  /**
+   * False when issue_cart / issue_payment would write a checkout whose hire buyer
+   * (or intent subject) is not the speaker, and the speaker is not a human or treasury.
+   * Absent = not those verbs, or hire/intent/cart unknown (`hire.known` /
+   * `mandate.known_intent` / `mandate.known_cart` handle those). Buyer still mints.
+   * Human/treasury still mint. Dump stays `mandate.cart_party`. Spike stays
+   * `mandate.payment_party`. A second cart stays `hire.unique_cart`. A cheaper
+   * cart stays `hire.cart_matches`.
+   */
+  checkoutPartyOk?: boolean;
+  /**
+   * False when hire.create would consume a quote whose RFQ buyer is not the
+   * speaker, and the speaker is not a human or treasury. Absent = not a
+   * hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * Buyer still hires. Human/treasury still hire. Ghost quote stays
+   * `market.known_rfq`. A spent quote stays `hire.quote_unspent`. A shut
+   * room stays `market.not_expired`. Shut TAP is tearing the room
+   * (`market.rfq_party`). Fold TAP is tearing the bid (`market.party`).
+   */
+  hireRoomPartyOk?: boolean;
+  /**
+   * False when hire.create would bind an intent whose subject is not the
+   * speaker, and the speaker is not a human or treasury. Absent = not a
+   * hire.create, or the intent is unknown (`intentKnown` handles that).
+   * Named subject still hires. Human/treasury still hire. Ghost intent stays
+   * `mandate.known_intent`. A ripped unused slip stays `mandate.not_expired`.
+   * Poach TAP is hiring from someone else's room (`hire.room_party`). Rip TAP
+   * is tearing the slip (`mandate.party`). Subject TAP is fund/submit.
+   */
+  hireSlipPartyOk?: boolean;
+  /**
+   * False when issue_intent with a known parentId would nest under a parent
+   * whose subject and issuer are not the speaker, and the speaker is not a
+   * human or treasury. Absent = not a nested issue_intent, or the parent is
+   * unknown (`parentKnown` handles that). Parent subject and issuer still nest.
+   * Human/treasury still nest. Ghost parent stays `mandate.known_parent`.
+   * A dead parent stays `mandate.parent_fresh`. A wider child stays
+   * `mandate.child_tighter`. A junior nested mint stays `ladder.min_level`.
+   * Grade TAP is L3 (`ladder.min_level`). Header TAP is mixed currency
+   * (`mandate.child_currency`). Sub-hire TAP is the parent subject nesting.
+   */
+  childPartyOk?: boolean;
   /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
@@ -1106,6 +1183,116 @@ export interface PolicyContext {
    * Hire/fund still names `payment.recurrence`.
    */
   cadenceReachOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an amount_range whose min
+   * exceeds max. Absent = not issue_intent, or no amount_range constraint.
+   * Omit min is an open floor and still mints. min === max still mints (exact).
+   * Hire/fund still names `payment.amount_range`. A vacant cap stays
+   * `mandate.occurrence_fresh`. A week that cannot admit a second hire stays
+   * `mandate.cadence_reach`. Lid TAP is hire-time max. A closed hatch is
+   * `mandate.lid_fresh`. A closed coffer is `mandate.budget_fresh`.
+   */
+  rangeMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write a payment.budget whose max
+   * cannot admit an amount the lid would allow (`max` ≤ 0, or `max` below an
+   * amount_range floor). Absent = not issue_intent, or no budget constraint.
+   * A budget that covers the floor still mints. An open floor still mints.
+   * Hire/fund still names `payment.budget`. Purse TAP is hire-time envelope.
+   * A floor above the lid stays `mandate.range_fresh`. A mixed envelope is
+   * `mandate.currency_fresh`.
+   */
+  budgetMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an amount_range and a
+   * payment.budget in different currencies. Absent = not issue_intent, or
+   * only one of those constraints is present. Matching USD still mints.
+   * Matching USDC still mints. Hire/fund still names `payment.currency_match`.
+   * A closed coffer stays `mandate.budget_fresh`. A floor above the lid stays
+   * `mandate.range_fresh`. Mix TAP is a mixed journal. Ink TAP is cart vs hire.
+   * A closed hatch is `mandate.lid_fresh`.
+   */
+  currencyMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent with a known parent would write an
+   * amount_range or payment.budget whose currency differs from the parent's
+   * matching constraint. Absent = not a nested mint, or parent unknown
+   * (`mandate.known_parent`). Missing currency keeps hire-time first deny.
+   * Matching USD still mints. Matching USDC still mints. Same-slip lid vs
+   * coffer stays `mandate.currency_fresh`. A wider nested slip stays
+   * `mandate.child_tighter`. Clash TAP is a mixed envelope. Header TAP is a
+   * nested child in a different currency.
+   */
+  childCurrencyOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an amount_range whose max
+   * cannot admit a positive hire (`max` ≤ 0). Absent = not issue_intent, or
+   * no amount_range constraint. Missing/non-finite max keeps hire-time first
+   * deny. A live lid still mints. An open floor with max > 0 still mints.
+   * Hire/fund still names `payment.amount_range`. Lid TAP is hire-time max.
+   * A floor above the lid stays `mandate.range_fresh`. A closed coffer is
+   * `mandate.budget_fresh`. A mixed envelope is `mandate.currency_fresh`.
+   */
+  lidMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an aether.max_autonomy below
+   * the named subject's live rung. Absent = not issue_intent, no max_autonomy
+   * constraint, or the subject is unknown (`identity.known` handles that).
+   * Exact cap (max === rung) still mints. An open ceiling (omit the constraint)
+   * still mints. Hire/fund still names `ladder.max_autonomy_constraint`.
+   * Ceiling TAP is a climb after mint. Grade TAP is a junior nested mint.
+   * A closed hatch stays `mandate.lid_fresh`.
+   */
+  capMintOk?: boolean;
+  /**
+   * False when kya.attest would write a maxAutonomy below the named delegate's
+   * live rung. Absent = not attest, omitted maxAutonomy (open ceiling / L5),
+   * or the delegate is unknown (`identity.known` handles that).
+   * Exact grant (max === rung) still mints. Hire still names
+   * `kya.capability_subset`. Climb TAP is a climb after mint.
+   * Eave TAP is a slip cap below the desk (`mandate.cap_fresh`).
+   */
+  grantMintOk?: boolean;
+  /**
+   * False when kya.attest would write a nested hop whose ceiling is wider
+   * than its live parent's maxAutonomy. Absent = not attest, no parentId,
+   * parent unknown (`kya.known_parent`), or parent not live (`kya.parent_fresh`).
+   * Omitted maxAutonomy is L5. Exact match (child === parent) still mints.
+   * A tighter child still mints. A grant below the desk stays `kya.grant_fresh`.
+   * Mandate `child_tighter` is a nested slip, not a nested hop.
+   * A nested hop under another principal is `kya.nest_party`.
+   */
+  nestTighterOk?: boolean;
+  /**
+   * False when kya.attest would write a hop in another principal's name
+   * whose ceiling is wider than the speaker's live incoming hop from that
+   * principal. Absent = not attest, speaker is the principal, or no live
+   * path from that principal (`kya.path_live`). Omitted maxAutonomy is L5. Exact match
+   * (child === incoming) still mints. A tighter child still mints.
+   * A nested grant wider than its parentId hop stays `kya.nest_tighter`.
+   * A grant below the desk stays `kya.grant_fresh`.
+   */
+  pathTighterOk?: boolean;
+  /**
+   * False when kya.attest would write a hop in another known principal's
+   * name and the speaker has no live path from that principal. Absent = not
+   * attest, speaker is the principal, principal unknown (`identity.known`),
+   * or a live incoming hop exists (`kya.path_tighter` owns width). An agent
+   * filling in another principal's id stays `kya.party`. Speaker granting in
+   * their own name is not this deny. A dead incoming hop is this deny, not
+   * `kya.parent_fresh` (that rule is an explicit parentId).
+   */
+  pathLiveOk?: boolean;
+  /**
+   * False when kya.attest would write a nested hop whose principal is not
+   * the live parent hop's principal. Absent = not attest, no parentId,
+   * parent unknown (`kya.known_parent`), or parent not live (`kya.parent_fresh`).
+   * Same-principal nest still mints. Speaker granting in their own name
+   * without parentId is not this deny. A nested grant wider than its parent
+   * stays `kya.nest_tighter`. An orphan hop stays `kya.path_live`.
+   * Whose name a handshake is in stays `kya.party`.
+   */
+  nestPartyOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.

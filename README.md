@@ -110,6 +110,24 @@ pnpm demo shut            # someone else's room is not yours to close
 pnpm demo dump            # someone else's unused checkout is not yours to dump
 pnpm demo spike           # someone else's unused payment is not yours to spike
 pnpm demo week            # a week is not a cadence on a seven-day slip
+pnpm demo gulf            # a floor above the lid is not a range
+pnpm demo coffer          # a closed coffer is not a budget
+pnpm demo clash           # a USDC coffer on a USD lid is not a budget
+pnpm demo hatch           # a closed hatch is not a range
+pnpm demo eave            # a cap below the desk is not a cap
+pnpm demo sill            # a grant below the desk is not a handshake
+pnpm demo joist           # a nested grant wider than its parent is not a handshake
+pnpm demo stud            # a grant wider than the incoming hop is not a handshake
+pnpm demo plate           # an orphan hop is not a handshake
+pnpm demo header          # a USDC header under a USD plate is not a nested slip
+pnpm demo pip             # a conversion that pays nothing is not an FX window
+pnpm demo quoin           # a vendor's conversion is not a market-maker window
+pnpm demo ashlar          # an empty pit does not waive the band
+pnpm demo corbel          # a nested hop under another principal is not a nested handshake
+pnpm demo trolley         # someone else's checkout is not yours to fill
+pnpm demo poach           # someone else's room is not yours to hire from
+pnpm demo guise           # someone else's unused slip is not yours to hire against
+pnpm demo cuckoo          # someone else's parent slip is not yours to nest under
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
@@ -139,6 +157,8 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 **Daily:** a founder writes a daily cadence. The desk hires once. A same-day second hire is refused. After 24 hours that hire goes through. A cadence is a gap, not a burst.
 
 **Week:** a founder funds an $800 hire. Minting WEEKLY or MONTHLY that cannot admit a second hire before the seven-day exp is refused. A one-shot WEEKLY still mints. DAILY still mints. That funded work still releases. A week is not a cadence on a seven-day slip.
+
+**Gulf:** a founder funds an $800 hire. Minting an amount_range whose min exceeds max is refused. An exact band still mints. An open floor still mints. That funded work still releases. A floor above the lid is not a range.
 
 **Cart occupancy:** a desk accepts an $800 hire. Funding with a loose cartId is refused. Binding a cart occupies the hire; a second cart is refused. A second payment on that cart is refused. The same fund command then goes through. Occupancy is a bind, not a field on fund. Ink TAP is a USDC cart on a USD hire.
 
@@ -252,6 +272,12 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 
 **Spark:** a founder funds an $800 hire. A handshake born expired is refused — a century mint and a second live hop still allow. No handshake is written. A one-year hop still mints. That funded work still releases. A handshake cannot be born dead.
 
+**Sill:** a founder funds an $800 hire. Minting a grant below the desk's live rung is refused — a dead handshake, a second live hop, and hire-time climb still allow. An exact grant still mints. An open ceiling still mints. That funded work still releases. A grant below the desk is not a handshake.
+
+**Joist:** a founder funds an $800 hire. Minting a nested grant wider than its parent hop is refused — a dead parent hop, a grant below the desk, and a nested slip still allow. An exact nested grant still mints. A tighter nested grant still mints. That funded work still releases. A nested grant wider than its parent is not a handshake.
+
+**Stud:** a founder funds an $800 hire. Minting a grant wider than the incoming hop is refused — a nested parent hop, a grant below the desk, and a climb after mint still allow. An exact path grant still mints. A tighter path grant still mints. That funded work still releases. A grant wider than the incoming hop is not a handshake.
+
 **Wilt:** a founder funds an $800 hire. A slip born with a closed calendar is refused — a window that opens after the slip dies and a hire-time calendar still allow. No slip is written. A live slip still mints. That funded work still releases. A permission slip cannot be born with a closed calendar.
 
 **Maker:** a founder funds an $800 hire. Settling a live FX window with no market maker is refused — empty inventory and a missing dest book still allow. The window stays unspent. A maker still sits and that same window still converts. That funded work still releases. A window is not a journal against nobody.
@@ -303,7 +329,7 @@ Human writes a permission slip (mandate)
 | Path | Role |
 |---|---|
 | `AGENTS.md` | How another agent talks to Aether |
-| `packages/aether-policy` | Referee. 93 ordered rules. No LLM. No I/O. |
+| `packages/aether-policy` | Referee. 103 ordered rules. No LLM. No I/O. |
 | `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
 | `packages/aether-mcp` | Real MCP host. One Runtime. Tools are commands. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |

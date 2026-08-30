@@ -102,6 +102,24 @@ import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
 import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
+import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
+import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
+import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
+import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
+import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
+import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
+import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
+import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
+import { loadPathLive, runPathLive } from "@aether/path-live";
+import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
+import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
+import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
+import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
+import { loadNestParty, runNestParty } from "@aether/nest-party";
+import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
+import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
+import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
+import { loadChildParty, runChildParty } from "@aether/child-party";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -242,6 +260,24 @@ const DEMO_TOOLS = new Set([
   "aether_demo_dump",
   "aether_demo_spike",
   "aether_demo_week",
+  "aether_demo_gulf",
+  "aether_demo_coffer",
+  "aether_demo_clash",
+  "aether_demo_hatch",
+  "aether_demo_eave",
+  "aether_demo_sill",
+  "aether_demo_joist",
+  "aether_demo_stud",
+  "aether_demo_plate",
+  "aether_demo_header",
+  "aether_demo_pip",
+  "aether_demo_quoin",
+  "aether_demo_ashlar",
+  "aether_demo_corbel",
+  "aether_demo_trolley",
+  "aether_demo_poach",
+  "aether_demo_guise",
+  "aether_demo_cuckoo",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -979,6 +1015,96 @@ export class AetherMcp {
     }
     if (name === "aether_demo_week") {
       const report = runCadenceReach(loadCadenceReach("fixtures/demo/week/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_gulf") {
+      const report = runRangeFresh(loadRangeFresh("fixtures/demo/gulf/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_coffer") {
+      const report = runBudgetFresh(loadBudgetFresh("fixtures/demo/coffer/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_clash") {
+      const report = runCurrencyFresh(loadCurrencyFresh("fixtures/demo/clash/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_hatch") {
+      const report = runHatchFresh(loadHatchFresh("fixtures/demo/hatch/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_eave") {
+      const report = runCapFresh(loadCapFresh("fixtures/demo/eave/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_sill") {
+      const report = runGrantFresh(loadGrantFresh("fixtures/demo/sill/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_joist") {
+      const report = runNestTighter(loadNestTighter("fixtures/demo/joist/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_stud") {
+      const report = runPathTighter(loadPathTighter("fixtures/demo/stud/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_plate") {
+      const report = runPathLive(loadPathLive("fixtures/demo/plate/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_header") {
+      const report = runChildCurrency(loadChildCurrency("fixtures/demo/header/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_pip") {
+      const report = runPayoutFresh(loadPayoutFresh("fixtures/demo/pip/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_quoin") {
+      const report = runFxMaker(loadFxMaker("fixtures/demo/quoin/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_ashlar") {
+      const report = runRateFresh(loadRateFresh("fixtures/demo/ashlar/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_corbel") {
+      const report = runNestParty(loadNestParty("fixtures/demo/corbel/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_trolley") {
+      const report = runCheckoutParty(loadCheckoutParty("fixtures/demo/trolley/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_poach") {
+      const report = runHireRoomParty(loadHireRoomParty("fixtures/demo/poach/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_guise") {
+      const report = runHireSlipParty(loadHireSlipParty("fixtures/demo/guise/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_cuckoo") {
+      const report = runChildParty(loadChildParty("fixtures/demo/cuckoo/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

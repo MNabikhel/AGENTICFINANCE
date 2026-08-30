@@ -1,0 +1,27 @@
+{
+  "id": "payout-fresh",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000108",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" },
+    "research-vendor:cash": { "amount": 200000, "currency": "USD_SIM" },
+    "market_maker:cash_usdc": { "amount": 1000000, "currency": "USDC_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "validUntil": "2026-08-29T00:00:00.000Z",
+  "sneak": { "amount": 1, "rateE6": 980000 },
+  "zero": { "amount": 0, "rateE6": 1000000 },
+  "legal": { "amount": 2, "rateE6": 980000 },
+  "open": { "amount": 1, "rateE6": 1000000 },
+  "intent": {
+    "task": "A conversion that pays nothing is not an FX window. Completing funded work is legal. A 200bps band miss is a different object. A dead window is a different object. A swapped pair is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

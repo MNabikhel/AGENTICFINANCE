@@ -1,0 +1,29 @@
+{
+  "id": "child-currency",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000107",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneak": {
+    "task": "a USDC header under a USD plate is not a nested slip"
+  },
+  "legal": {
+    "task": "hand down a tighter USD lid"
+  },
+  "open": {
+    "task": "hand down a tighter USDC lid"
+  },
+  "intent": {
+    "task": "A USDC header under a USD plate is not a nested slip. Completing funded work is legal. A mixed envelope is a different object. A wider nested slip is a different object. Hire-time currency is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

@@ -131,7 +131,10 @@
       "properties": {
         "intentId": { "type": "string" },
         "merchantId": { "type": "string" },
-        "hireId": { "type": "string" },
+        "hireId": {
+          "type": "string",
+          "description": "Bind this cart to a live hire. Speaker must be the hire buyer, intent subject, human, or treasury. Someone else's checkout is mandate.checkout_party. A second cart is hire.unique_cart. A cheaper cart is hire.cart_matches. Ghost hire is hire.known. Dump stays mandate.cart_party."
+        },
         "line_items": {
           "type": "array",
           "minItems": 1,
@@ -152,7 +155,12 @@
     "mandate.issue_payment": {
       "type": "object",
       "required": ["cartId"],
-      "properties": { "cartId": { "type": "string" } }
+      "properties": {
+        "cartId": {
+          "type": "string",
+          "description": "Mint a check for this cart. Speaker must be the hire buyer, intent subject, human, or treasury. Someone else's checkout is mandate.checkout_party. A second payment is mandate.unique_payment. Ghost cart is mandate.known_cart. Spike stays mandate.payment_party."
+        }
+      }
     },
     "market.rfq": {
       "type": "object",
@@ -182,10 +190,10 @@
       "required": ["rfqId", "price"],
       "properties": {
         "rfqId": { "type": "string" },
-        "price": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM." },
+        "price": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM. An FX from-amount whose floor payout is 0 is market.payout_fresh. A vendor conversion while a maker sits is market.fx_party. An empty pit does not waive the band — that is market.rate_fresh." },
         "fx": {
           "type": "object",
-          "description": "FX window. Nested rateE6 is what the 200bps band binds and what settle uses.",
+          "description": "FX window. Nested rateE6 is what the 200bps band binds and what settle uses. A conversion whose floor payout is 0 is market.payout_fresh. A vendor conversion while a maker sits is market.fx_party. An empty pit does not waive the band — that is market.rate_fresh.",
           "properties": {
             "from": { "enum": ["USD_SIM", "USDC_SIM"] },
             "to": { "enum": ["USD_SIM", "USDC_SIM"] },

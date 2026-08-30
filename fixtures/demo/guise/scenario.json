@@ -1,0 +1,21 @@
+{
+  "id": "hire-slip-party",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000114",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "intent": {
+    "task": "Someone else's unused slip is not yours to hire against. Completing funded work is legal. A missing slip is a different object. A ripped slip is a different object. Hiring from someone else's room is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "first": { "amount": 80000, "currency": "USD_SIM" },
+    "live": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

@@ -123,7 +123,7 @@ export function runUniqueLive(scenario: UniqueLiveScenario): UniqueLiveReport {
   };
 
   const again = must(
-    rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 })),
+    rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
     "re-attest",
   );
   const againHop = again.data as { id: string; maxAutonomy: number };
@@ -153,7 +153,7 @@ export function runUniqueLive(scenario: UniqueLiveScenario): UniqueLiveReport {
     expect(
       afterRevoke.desk === 0 &&
         afterRevoke.scout === 1 &&
-        againHop.maxAutonomy === 2 &&
+        againHop.maxAutonomy === 3 &&
         liveHops(rt, founder.id, desk.id).length === 1 &&
         liveHops(rt, founder.id, scout.id).length === 1,
       4,

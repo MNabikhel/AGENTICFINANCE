@@ -665,6 +665,96 @@
       "name": "aether_demo_week",
       "commandType": "demo.week",
       "description": "Run the week TAP: a week is not a cadence on a seven-day slip. mandate.issue_intent with WEEKLY or MONTHLY that cannot admit a second hire is mandate.cadence_reach; a vacant slot, a closed calendar, and hire-time recurrence still allow; a one-shot WEEKLY still mints; DAILY still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_gulf",
+      "commandType": "demo.gulf",
+      "description": "Run the gulf TAP: a floor above the lid is not a range. mandate.issue_intent with amount_range min exceeding max is mandate.range_fresh; a vacant slot, a week on a seven-day slip, and hire-time max still allow; an exact band still mints; an open floor still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_coffer",
+      "commandType": "demo.coffer",
+      "description": "Run the coffer TAP: a closed coffer is not a budget. mandate.issue_intent with budget max 0 or budget below the amount_range floor is mandate.budget_fresh; a vacant slot, a floor above the lid, and hire-time envelope still allow; a coffer that covers the floor still mints; an open floor still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_clash",
+      "commandType": "demo.clash",
+      "description": "Run the clash TAP: a USDC coffer on a USD lid is not a budget. mandate.issue_intent with amount_range and payment.budget in different currencies is mandate.currency_fresh; a vacant slot, a closed coffer, and hire-time currency still allow; matching USD still mints; matching USDC still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_hatch",
+      "commandType": "demo.hatch",
+      "description": "Run the hatch TAP: a closed hatch is not a range. mandate.issue_intent with amount_range max 0 or an exact zero lid is mandate.lid_fresh; a vacant slot, a floor above the lid, and hire-time max still allow; a live lid still mints; an open floor still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_eave",
+      "commandType": "demo.eave",
+      "description": "Run the eave TAP: a cap below the desk is not a cap. mandate.issue_intent with aether.max_autonomy below the named subject's live rung is mandate.cap_fresh; a vacant slot, a closed hatch, and hire-time climb still allow; an exact cap still mints; an open ceiling still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_sill",
+      "commandType": "demo.sill",
+      "description": "Run the sill TAP: a grant below the desk is not a handshake. kya.attest with maxAutonomy below the named delegate's live rung is kya.grant_fresh; a dead handshake, a second live hop, and hire-time climb still allow; an exact grant still mints; an open ceiling still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_joist",
+      "commandType": "demo.joist",
+      "description": "Run the joist TAP: a nested grant wider than its parent is not a handshake. kya.attest with parentId and maxAutonomy above the parent hop is kya.nest_tighter; a dead parent hop, a grant below the desk, and a nested slip still allow; an exact nested grant still mints; a tighter nested grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_stud",
+      "commandType": "demo.stud",
+      "description": "Run the stud TAP: a grant wider than the incoming hop is not a handshake. kya.attest in another principal's name with maxAutonomy above the speaker's live incoming hop is kya.path_tighter; a nested parent hop, a grant below the desk, and a climb after mint still allow; an exact path grant still mints; a tighter path grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_plate",
+      "commandType": "demo.plate",
+      "description": "Run the plate TAP: an orphan hop is not a handshake. kya.attest in another principal's name with no live incoming path is kya.path_live; a grant wider than the incoming hop, a nested parent hop, and whose name a handshake is in still allow; an exact path grant still mints; a tighter path grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_header",
+      "commandType": "demo.header",
+      "description": "Run the header TAP: a USDC header under a USD plate is not a nested slip. mandate.issue_intent nested under a parent in a different currency is mandate.child_currency; a mixed envelope, a wider nested slip, and hire-time currency still allow; matching USD still mints; matching USDC still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pip",
+      "commandType": "demo.pip",
+      "description": "Run the pip TAP: a conversion that pays nothing is not an FX window. market.quote of an FX window whose floor payout is 0 is market.payout_fresh; a dead window, a swapped pair, and a 200bps band miss still allow; a two-cent window at the low band still mints; a one-cent window at par still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_quoin",
+      "commandType": "demo.quoin",
+      "description": "Run the quoin TAP: a vendor's conversion is not a market-maker window. market.quote of an in-band FX window by a vendor while a market maker sits is market.fx_party; a closed guest list, a 200bps band miss, and a conversion that pays nothing still allow; the maker still mints an in-band window; a par window still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ashlar",
+      "commandType": "demo.ashlar",
+      "description": "Run the ashlar TAP: an empty pit does not waive the band. market.quote of an off-band FX window with no maker is market.rate_fresh; a 200bps miss by the maker, a vendor conversion while a maker sits, and a conversion that pays nothing still allow; the maker still mints an in-band window after sitting; a par window still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_corbel",
+      "commandType": "demo.corbel",
+      "description": "Run the corbel TAP: a nested hop under another principal is not a nested handshake. kya.attest with parentId whose principal is not the speaker's principal is kya.nest_party; a nested grant wider than its parent, a dead parent hop, and whose name a handshake is in still allow; an exact same-principal nested grant still mints; a tighter same-principal nested grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_trolley",
+      "commandType": "demo.trolley",
+      "description": "Run the trolley TAP: someone else's checkout is not yours to fill. mandate.issue_cart of a live unused hire by a second desk is mandate.checkout_party; mandate.issue_payment of that cart by a second desk is mandate.checkout_party; a missing cart, dumping someone else's cart, and a second cart still allow; no cart or payment written by the sneak; the buyer still fills its own checkout; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_poach",
+      "commandType": "demo.poach",
+      "description": "Run the poach TAP: someone else's room is not yours to hire from. hire.create of a live unused quote by a second desk is hire.room_party; a missing room, a spent quote, and shutting someone else's room still allow; no hire written by the sneak; the buyer still hires its own quote; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_guise",
+      "commandType": "demo.guise",
+      "description": "Run the guise TAP: someone else's unused slip is not yours to hire against. hire.create against a live unused intent by a second desk is hire.slip_party; a missing slip, a ripped slip, and hiring from someone else's room still allow; no hire written by the sneak; the named subject still hires against its own unused slip; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_cuckoo",
+      "commandType": "demo.cuckoo",
+      "description": "Run the cuckoo TAP: someone else's parent slip is not yours to nest under. mandate.issue_intent nested under another desk's live unused parent by a second desk is mandate.child_party; a missing parent, a dead parent, a wider nested slip, and a junior nested mint still allow first-deny elsewhere; no child written by the sneak; the parent subject still nests a tighter child; funded work still finishes."
     }
   ]
 }

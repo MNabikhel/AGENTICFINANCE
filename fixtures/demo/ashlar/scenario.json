@@ -1,0 +1,29 @@
+{
+  "id": "rate-fresh",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000110",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" },
+    "research-vendor:cash": { "amount": 200000, "currency": "USD_SIM" }
+  },
+  "mmOpening": {
+    "market_maker:cash_usdc": { "amount": 1000000, "currency": "USDC_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "validUntil": "2026-08-29T00:00:00.000Z",
+  "sneak": { "amount": 80000, "rateE6": 500000 },
+  "flip": { "amount": 80000, "rateE6": 1100000 },
+  "legal": { "amount": 80000, "rateE6": 998000 },
+  "open": { "amount": 80000, "rateE6": 1000000 },
+  "intent": {
+    "task": "An empty pit does not waive the band. Completing funded work is legal. A 200bps miss by the maker is a different object. A vendor conversion while a maker sits is a different object. A conversion that pays nothing is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

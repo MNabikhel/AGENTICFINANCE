@@ -854,6 +854,114 @@ paths:
       responses:
         "200": { description: Week TAP report. A week is not a cadence on a seven-day slip. }
         "500": { description: Assertions failed }
+  /v1/demo/gulf:
+    post:
+      operationId: demoGulf
+      responses:
+        "200": { description: Gulf TAP report. A floor above the lid is not a range. }
+        "500": { description: Assertions failed }
+  /v1/demo/coffer:
+    post:
+      operationId: demoCoffer
+      responses:
+        "200": { description: Coffer TAP report. A closed coffer is not a budget. }
+        "500": { description: Assertions failed }
+  /v1/demo/clash:
+    post:
+      operationId: demoClash
+      responses:
+        "200": { description: Clash TAP report. A USDC coffer on a USD lid is not a budget. }
+        "500": { description: Assertions failed }
+  /v1/demo/hatch:
+    post:
+      operationId: demoHatch
+      responses:
+        "200": { description: Hatch TAP report. A closed hatch is not a range. }
+        "500": { description: Assertions failed }
+  /v1/demo/eave:
+    post:
+      operationId: demoEave
+      responses:
+        "200": { description: Eave TAP report. A cap below the desk is not a cap. }
+        "500": { description: Assertions failed }
+  /v1/demo/sill:
+    post:
+      operationId: demoSill
+      responses:
+        "200": { description: Sill TAP report. A grant below the desk is not a handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/joist:
+    post:
+      operationId: demoJoist
+      responses:
+        "200": { description: Joist TAP report. A nested grant wider than its parent is not a handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/stud:
+    post:
+      operationId: demoStud
+      responses:
+        "200": { description: Stud TAP report. A grant wider than the incoming hop is not a handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/plate:
+    post:
+      operationId: demoPlate
+      responses:
+        "200": { description: Plate TAP report. An orphan hop is not a handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/header:
+    post:
+      operationId: demoHeader
+      responses:
+        "200": { description: Header TAP report. A USDC header under a USD plate is not a nested slip. }
+        "500": { description: Assertions failed }
+  /v1/demo/pip:
+    post:
+      operationId: demoPip
+      responses:
+        "200": { description: Pip TAP report. A conversion that pays nothing is not an FX window. }
+        "500": { description: Assertions failed }
+  /v1/demo/quoin:
+    post:
+      operationId: demoQuoin
+      responses:
+        "200": { description: Quoin TAP report. A vendor's conversion is not a market-maker window. }
+        "500": { description: Assertions failed }
+  /v1/demo/ashlar:
+    post:
+      operationId: demoAshlar
+      responses:
+        "200": { description: Ashlar TAP report. An empty pit does not waive the band. }
+        "500": { description: Assertions failed }
+  /v1/demo/corbel:
+    post:
+      operationId: demoCorbel
+      responses:
+        "200": { description: Corbel TAP report. A nested hop under another principal is not a nested handshake. }
+        "500": { description: Assertions failed }
+  /v1/demo/trolley:
+    post:
+      operationId: demoTrolley
+      responses:
+        "200": { description: Trolley TAP report. Someone else's checkout is not yours to fill. }
+        "500": { description: Assertions failed }
+  /v1/demo/poach:
+    post:
+      operationId: demoPoach
+      responses:
+        "200": { description: Poach TAP report. Someone else's room is not yours to hire from. }
+        "500": { description: Assertions failed }
+  /v1/demo/guise:
+    post:
+      operationId: demoGuise
+      responses:
+        "200": { description: Guise TAP report. Someone else's unused slip is not yours to hire against. }
+        "500": { description: Assertions failed }
+  /v1/demo/cuckoo:
+    post:
+      operationId: demoCuckoo
+      responses:
+        "200": { description: Cuckoo TAP report. Someone else's parent slip is not yours to nest under. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

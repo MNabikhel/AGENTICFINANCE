@@ -95,6 +95,24 @@ import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
 import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
+import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
+import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
+import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
+import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
+import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
+import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
+import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
+import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
+import { loadPathLive, runPathLive } from "@aether/path-live";
+import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
+import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
+import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
+import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
+import { loadNestParty, runNestParty } from "@aether/nest-party";
+import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
+import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
+import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
+import { loadChildParty, runChildParty } from "@aether/child-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -691,6 +709,114 @@ if (command === "demo" && (name === "week" || name === "tide" || name === "cycle
   process.exit(0);
 }
 
+if (command === "demo" && (name === "gulf" || name === "rift" || name === "span")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/gulf/scenario.json");
+  printReport(runRangeFresh(loadRangeFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "coffer" || name === "vault" || name === "pouch")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/coffer/scenario.json");
+  printReport(runBudgetFresh(loadBudgetFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "clash" || name === "jolt" || name === "snag")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/clash/scenario.json");
+  printReport(runCurrencyFresh(loadCurrencyFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "hatch" || name === "flap" || name === "cork")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/hatch/scenario.json");
+  printReport(runHatchFresh(loadHatchFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "eave" || name === "ridge" || name === "gable")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/eave/scenario.json");
+  printReport(runCapFresh(loadCapFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "sill" || name === "ledge" || name === "lintel")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/sill/scenario.json");
+  printReport(runGrantFresh(loadGrantFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "joist" || name === "strut" || name === "brace")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/joist/scenario.json");
+  printReport(runNestTighter(loadNestTighter(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "stud" || name === "noggin" || name === "dwang")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/stud/scenario.json");
+  printReport(runPathTighter(loadPathTighter(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "plate" || name === "sole" || name === "shoe")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/plate/scenario.json");
+  printReport(runPathLive(loadPathLive(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "header" || name === "cripple" || name === "king")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/header/scenario.json");
+  printReport(runChildCurrency(loadChildCurrency(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "pip" || name === "tick" || name === "basis")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/pip/scenario.json");
+  printReport(runPayoutFresh(loadPayoutFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "quoin" || name === "pier" || name === "plinth")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/quoin/scenario.json");
+  printReport(runFxMaker(loadFxMaker(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "ashlar" || name === "voussoir" || name === "impost")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/ashlar/scenario.json");
+  printReport(runRateFresh(loadRateFresh(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "corbel" || name === "springer" || name === "haunch")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/corbel/scenario.json");
+  printReport(runNestParty(loadNestParty(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "trolley" || name === "basket" || name === "buggy")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/trolley/scenario.json");
+  printReport(runCheckoutParty(loadCheckoutParty(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "poach" || name === "raid" || name === "snatch")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/poach/scenario.json");
+  printReport(runHireRoomParty(loadHireRoomParty(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "guise" || name === "mask" || name === "cloak")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/guise/scenario.json");
+  printReport(runHireSlipParty(loadHireSlipParty(fixture)));
+  process.exit(0);
+}
+
+if (command === "demo" && (name === "cuckoo" || name === "brood" || name === "changeling")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/cuckoo/scenario.json");
+  printReport(runChildParty(loadChildParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -808,6 +934,24 @@ usage:
   pnpm demo dump
   pnpm demo spike
   pnpm demo week
+  pnpm demo gulf
+  pnpm demo coffer
+  pnpm demo clash
+  pnpm demo hatch
+  pnpm demo eave
+  pnpm demo sill
+  pnpm demo joist
+  pnpm demo stud
+  pnpm demo plate
+  pnpm demo header
+  pnpm demo pip
+  pnpm demo quoin
+  pnpm demo ashlar
+  pnpm demo corbel
+  pnpm demo trolley
+  pnpm demo poach
+  pnpm demo guise
+  pnpm demo cuckoo
   aether audit verify
   aether ledger replay
   pnpm mcp`);

@@ -107,6 +107,24 @@ import { loadRfqParty, runRfqParty } from "@aether/rfq-party";
 import { loadCartParty, runCartParty } from "@aether/cart-party";
 import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
 import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
+import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
+import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
+import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
+import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
+import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
+import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
+import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
+import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
+import { loadPathLive, runPathLive } from "@aether/path-live";
+import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
+import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
+import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
+import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
+import { loadNestParty, runNestParty } from "@aether/nest-party";
+import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
+import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
+import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
+import { loadChildParty, runChildParty } from "@aether/child-party";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -206,6 +224,24 @@ const shutFixture = join(process.cwd(), "fixtures/demo/shut/scenario.json");
 const dumpFixture = join(process.cwd(), "fixtures/demo/dump/scenario.json");
 const spikeFixture = join(process.cwd(), "fixtures/demo/spike/scenario.json");
 const weekFixture = join(process.cwd(), "fixtures/demo/week/scenario.json");
+const gulfFixture = join(process.cwd(), "fixtures/demo/gulf/scenario.json");
+const cofferFixture = join(process.cwd(), "fixtures/demo/coffer/scenario.json");
+const clashFixture = join(process.cwd(), "fixtures/demo/clash/scenario.json");
+const hatchFixture = join(process.cwd(), "fixtures/demo/hatch/scenario.json");
+const eaveFixture = join(process.cwd(), "fixtures/demo/eave/scenario.json");
+const sillFixture = join(process.cwd(), "fixtures/demo/sill/scenario.json");
+const joistFixture = join(process.cwd(), "fixtures/demo/joist/scenario.json");
+const studFixture = join(process.cwd(), "fixtures/demo/stud/scenario.json");
+const plateFixture = join(process.cwd(), "fixtures/demo/plate/scenario.json");
+const headerFixture = join(process.cwd(), "fixtures/demo/header/scenario.json");
+const pipFixture = join(process.cwd(), "fixtures/demo/pip/scenario.json");
+const quoinFixture = join(process.cwd(), "fixtures/demo/quoin/scenario.json");
+const ashlarFixture = join(process.cwd(), "fixtures/demo/ashlar/scenario.json");
+const corbelFixture = join(process.cwd(), "fixtures/demo/corbel/scenario.json");
+const trolleyFixture = join(process.cwd(), "fixtures/demo/trolley/scenario.json");
+const poachFixture = join(process.cwd(), "fixtures/demo/poach/scenario.json");
+const guiseFixture = join(process.cwd(), "fixtures/demo/guise/scenario.json");
+const cuckooFixture = join(process.cwd(), "fixtures/demo/cuckoo/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1120,6 +1156,132 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runCadenceReach(loadCadenceReach(weekFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "week" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/gulf") {
+        const report = runRangeFresh(loadRangeFresh(gulfFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "gulf" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/coffer") {
+        const report = runBudgetFresh(loadBudgetFresh(cofferFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "coffer" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/clash") {
+        const report = runCurrencyFresh(loadCurrencyFresh(clashFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "clash" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/hatch") {
+        const report = runHatchFresh(loadHatchFresh(hatchFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "hatch" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/eave") {
+        const report = runCapFresh(loadCapFresh(eaveFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "eave" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/sill") {
+        const report = runGrantFresh(loadGrantFresh(sillFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "sill" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/joist") {
+        const report = runNestTighter(loadNestTighter(joistFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "joist" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/stud") {
+        const report = runPathTighter(loadPathTighter(studFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "stud" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/plate") {
+        const report = runPathLive(loadPathLive(plateFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "plate" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/header") {
+        const report = runChildCurrency(loadChildCurrency(headerFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "header" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/pip") {
+        const report = runPayoutFresh(loadPayoutFresh(pipFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "pip" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/quoin") {
+        const report = runFxMaker(loadFxMaker(quoinFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "quoin" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/ashlar") {
+        const report = runRateFresh(loadRateFresh(ashlarFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "ashlar" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/corbel") {
+        const report = runNestParty(loadNestParty(corbelFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "corbel" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/trolley") {
+        const report = runCheckoutParty(loadCheckoutParty(trolleyFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "trolley" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/poach") {
+        const report = runHireRoomParty(loadHireRoomParty(poachFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "poach" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/guise") {
+        const report = runHireSlipParty(loadHireSlipParty(guiseFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "guise" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/cuckoo") {
+        const report = runChildParty(loadChildParty(cuckooFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "cuckoo" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

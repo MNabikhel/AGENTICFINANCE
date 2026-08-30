@@ -102,3 +102,29 @@ jobs:
       - run: pnpm demo:pen
       - run: pnpm demo:well
       - run: pnpm demo:cite
+      - run: pnpm demo:lock
+      - run: pnpm demo:void
+      - run: pnpm demo:fold
+      - run: pnpm demo:rip
+      - run: pnpm demo:shut
+      - run: pnpm demo:dump
+      - run: pnpm demo:spike
+      - run: pnpm demo:week
+      - run: pnpm demo:gulf
+      - run: pnpm demo:coffer
+      - run: pnpm demo:clash
+      - run: pnpm demo:hatch
+      - run: pnpm demo:eave
+      - run: pnpm demo:sill
+      - run: pnpm demo:joist
+      - run: pnpm demo:stud
+      - run: pnpm demo:plate
+      - run: pnpm demo:header
+      - run: pnpm demo:pip
+      - run: pnpm demo:quoin
+      - run: pnpm demo:ashlar
+      - run: pnpm demo:corbel
+      - run: pnpm demo:trolley
+      - run: pnpm demo:poach
+      - run: pnpm demo:guise
+      - run: pnpm demo:cuckoo

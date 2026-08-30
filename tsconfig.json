@@ -112,7 +112,25 @@
       "@aether/rfq-party": ["packages/aether-runtime/src/rfq-party.ts"],
       "@aether/cart-party": ["packages/aether-runtime/src/cart-party.ts"],
       "@aether/payment-party": ["packages/aether-runtime/src/payment-party.ts"],
-      "@aether/cadence-reach": ["packages/aether-runtime/src/cadence-reach.ts"]
+      "@aether/cadence-reach": ["packages/aether-runtime/src/cadence-reach.ts"],
+      "@aether/range-fresh": ["packages/aether-runtime/src/range-fresh.ts"],
+      "@aether/budget-fresh": ["packages/aether-runtime/src/budget-fresh.ts"],
+      "@aether/currency-fresh": ["packages/aether-runtime/src/currency-fresh.ts"],
+      "@aether/hatch-fresh": ["packages/aether-runtime/src/hatch-fresh.ts"],
+      "@aether/cap-fresh": ["packages/aether-runtime/src/cap-fresh.ts"],
+      "@aether/grant-fresh": ["packages/aether-runtime/src/grant-fresh.ts"],
+      "@aether/nest-tighter": ["packages/aether-runtime/src/nest-tighter.ts"],
+      "@aether/path-tighter": ["packages/aether-runtime/src/path-tighter.ts"],
+      "@aether/path-live": ["packages/aether-runtime/src/path-live.ts"],
+      "@aether/child-currency": ["packages/aether-runtime/src/child-currency.ts"],
+      "@aether/payout-fresh": ["packages/aether-runtime/src/payout-fresh.ts"],
+      "@aether/fx-maker": ["packages/aether-runtime/src/fx-maker.ts"],
+      "@aether/rate-fresh": ["packages/aether-runtime/src/rate-fresh.ts"],
+      "@aether/nest-party": ["packages/aether-runtime/src/nest-party.ts"],
+      "@aether/checkout-party": ["packages/aether-runtime/src/checkout-party.ts"],
+      "@aether/hire-room-party": ["packages/aether-runtime/src/hire-room-party.ts"],
+      "@aether/hire-slip-party": ["packages/aether-runtime/src/hire-slip-party.ts"],
+      "@aether/child-party": ["packages/aether-runtime/src/child-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

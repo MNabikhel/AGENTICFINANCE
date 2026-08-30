@@ -19,7 +19,7 @@ import {
 } from "@aether/kernel";
 import { isOperatingBook, Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
-import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout, isFxSku } from "@aether/market";
+import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout, isFxSku, rateInBand } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, hopStatus, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
@@ -125,6 +125,24 @@ import {
   DUMP_TLDR,
   SPIKE_TLDR,
   WEEK_TLDR,
+  GULF_TLDR,
+  COFFER_TLDR,
+  CLASH_TLDR,
+  HATCH_TLDR,
+  EAVE_TLDR,
+  SILL_TLDR,
+  JOIST_TLDR,
+  STUD_TLDR,
+  PLATE_TLDR,
+  HEADER_TLDR,
+  PIP_TLDR,
+  QUOIN_TLDR,
+  ASHLAR_TLDR,
+  CORBEL_TLDR,
+  TROLLEY_TLDR,
+  POACH_TLDR,
+  GUISE_TLDR,
+  CUCKOO_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -285,12 +303,187 @@ function cadenceReachable(c: { frequency?: unknown; max_occurrences?: unknown })
   return gap < INTENT_TTL_MS;
 }
 
+/** A min that exceeds max cannot admit any amount. Omit min is an open floor. min === max still mints. */
+function rangeMintable(c: { min?: unknown; max?: unknown }): boolean {
+  if (typeof c.max !== "number" || !Number.isFinite(c.max)) return true;
+  if (c.min === undefined) return true;
+  if (typeof c.min !== "number" || !Number.isFinite(c.min)) return false;
+  return c.min <= c.max;
+}
+
+/**
+ * A lid that cannot admit a positive hire is not a range. Missing/non-finite max
+ * keeps hire-time first deny. max ≤ 0 is empty even when min is omitted or equal.
+ */
+function lidMintable(c: { min?: unknown; max?: unknown }): boolean {
+  if (typeof c.max !== "number" || !Number.isFinite(c.max)) return true;
+  return c.max > 0;
+}
+
+/**
+ * A cap below the named subject's live rung cannot admit a hire by that subject.
+ * Missing/non-finite max keeps hire-time first deny. Exact cap (max === rung) still mints.
+ */
+function capMintable(max: unknown, subjectLevel: number): boolean {
+  if (typeof max !== "number" || !Number.isFinite(max)) return true;
+  return subjectLevel <= max;
+}
+
+/**
+ * A handshake whose ceiling is below the named delegate's live rung cannot
+ * admit a hire by that delegate. Missing/non-finite max keeps hire-time first
+ * deny. Exact grant (max === rung) still mints. Omit is an open ceiling (L5).
+ */
+function grantMintable(max: unknown, delegateLevel: number): boolean {
+  if (typeof max !== "number" || !Number.isFinite(max)) return true;
+  return delegateLevel <= max;
+}
+
+/**
+ * A nested hop whose ceiling is wider than its live parent is not nested.
+ * Omitted maxAutonomy is L5 (same mutate default). Exact match still mints.
+ * A tighter child still mints. Dead/ghost parent keep first deny.
+ */
+function nestTighterMintable(childMax: unknown, parentMax: number): boolean {
+  const ceiling = typeof childMax === "number" && Number.isFinite(childMax) ? childMax : 5;
+  return ceiling <= parentMax;
+}
+
+/**
+ * A nested hop whose principal is not the parent hop's principal is not nested.
+ * Same-principal nest still mints. Ghost/dead parent keep first deny.
+ */
+function nestPartyMintable(childPrincipal: AgentId, parentPrincipal: AgentId): boolean {
+  return childPrincipal === parentPrincipal;
+}
+
+/**
+ * Filling a checkout whose hire buyer (or intent subject) is not the speaker
+ * is not a mint. Human/treasury still fill. Ghost hire/intent/cart keep first deny.
+ */
+function checkoutMintable(actor: Agent, ownerId: AgentId): boolean {
+  return actor.role === "human_operator" || actor.role === "treasury" || actor.id === ownerId;
+}
+
+/**
+ * Hiring a quote whose RFQ buyer is not the speaker is not a mint.
+ * Human/treasury still hire. Ghost quote/RFQ keep first deny.
+ */
+function hireRoomMintable(actor: Agent, ownerId: AgentId): boolean {
+  return checkoutMintable(actor, ownerId);
+}
+
+/**
+ * Hiring against an intent whose subject is not the speaker is not a mint.
+ * Human/treasury still hire. Ghost intent keeps first deny.
+ */
+function hireSlipMintable(actor: Agent, ownerId: AgentId): boolean {
+  return checkoutMintable(actor, ownerId);
+}
+
+/**
+ * Nesting under an intent whose subject (or issuer) is not the speaker is
+ * not a sub-hire. Human/treasury still nest. Ghost parent keeps first deny.
+ */
+function childMintable(actor: Agent, parent: Signed<IntentMandate>): boolean {
+  return (
+    actor.role === "human_operator" ||
+    actor.role === "treasury" ||
+    actor.id === parent.payload.subjectId ||
+    actor.id === parent.payload.issuerId
+  );
+}
+
+/**
+ * A hop in another principal's name whose ceiling is wider than the
+ * speaker's live incoming hop is not sitting under that handshake.
+ * Omitted maxAutonomy is L5 (same mutate default). Exact match still mints.
+ * A tighter child still mints. Speaker-as-principal and no live path keep
+ * first deny (not this flag).
+ */
+function pathTighterMintable(childMax: unknown, incomingMax: number): boolean {
+  return nestTighterMintable(childMax, incomingMax);
+}
+
+/**
+ * A budget that cannot admit a positive amount, or that sits below an amount_range
+ * floor, is not an envelope. Missing/non-finite max keeps hire-time first deny.
+ */
+function budgetMintable(
+  budget: { max?: unknown },
+  range?: { min?: unknown; max?: unknown },
+): boolean {
+  if (typeof budget.max !== "number" || !Number.isFinite(budget.max)) return true;
+  if (budget.max <= 0) return false;
+  if (!range) return true;
+  if (typeof range.min !== "number" || !Number.isFinite(range.min)) return true;
+  return budget.max >= range.min;
+}
+
+/** Lid and coffer in different currencies cannot admit any amount. Missing currency keeps hire-time first deny. */
+function moneyCurrenciesAligned(
+  range: { currency?: unknown },
+  budget: { currency?: unknown },
+): boolean {
+  if (typeof range.currency !== "string" || typeof budget.currency !== "string") return true;
+  return range.currency === budget.currency;
+}
+
+/** Nested lid/coffer in a different currency than the parent is not a nested slip. Missing currency keeps hire-time first deny. */
+function childCurrenciesAligned(parent: MandateConstraint[], child: MandateConstraint[]): boolean {
+  const parentRange = parent.find((c) => c.type === "payment.amount_range");
+  const childRange = child.find((c) => c.type === "payment.amount_range");
+  if (
+    parentRange &&
+    childRange &&
+    typeof parentRange.currency === "string" &&
+    typeof childRange.currency === "string" &&
+    parentRange.currency !== childRange.currency
+  ) {
+    return false;
+  }
+  const parentBudget = parent.find((c) => c.type === "payment.budget");
+  const childBudget = child.find((c) => c.type === "payment.budget");
+  if (
+    parentBudget &&
+    childBudget &&
+    typeof parentBudget.currency === "string" &&
+    typeof childBudget.currency === "string" &&
+    parentBudget.currency !== childBudget.currency
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /** Closed when validUntil ≤ now (same exclusive end as quote expiresAt). Unparseable is not a window. */
 function fxWindowMintable(fx: { validUntil?: unknown }, nowIso: Instant): boolean {
   if (typeof fx.validUntil !== "string") return false;
   const until = Date.parse(fx.validUntil);
   const now = Date.parse(nowIso);
   return Number.isFinite(until) && until > now;
+}
+
+/** Conversion must pay at least one minor unit. Missing / non-finite fields stay
+ *  mintable so `market.fx_window` / `mm.spread_bound` stay first. */
+function fxPayoutMintable(amount: unknown, rateE6: unknown): boolean {
+  if (typeof amount !== "number" || !Number.isFinite(amount)) return true;
+  if (typeof rateE6 !== "number" || !Number.isFinite(rateE6)) return true;
+  return fxPayout(amount, rateE6) > 0;
+}
+
+/** A vendor cannot mint an FX window while a market maker sits. No maker on the pit
+ *  is not this refuse (Maker TAP still mints; settle stays `mm.known`). */
+function fxPartyMintable(role: AgentRole, mmSits: boolean): boolean {
+  return role === "market_maker" || !mmSits;
+}
+
+/** An FX window cannot be born outside the 200bps band, even with nobody on the pit.
+ *  Missing / non-finite rate stays mintable so `market.fx_window` / `mm.spread_bound`
+ *  stay first. */
+function fxBandMintable(rateE6: unknown): boolean {
+  if (typeof rateE6 !== "number" || !Number.isFinite(rateE6)) return true;
+  return rateInBand(rateE6);
 }
 
 /** New spend (not completing funded work). Nested hops on these verbs must have a live parent. */
@@ -1364,6 +1557,96 @@ export class Runtime {
           name: "Week TAP",
           description: "POST /v1/demo/week — a week is not a cadence on a seven-day slip",
         },
+        {
+          id: "range-fresh",
+          name: "Gulf TAP",
+          description: "POST /v1/demo/gulf — a floor above the lid is not a range",
+        },
+        {
+          id: "budget-fresh",
+          name: "Coffer TAP",
+          description: "POST /v1/demo/coffer — a closed coffer is not a budget",
+        },
+        {
+          id: "currency-fresh",
+          name: "Clash TAP",
+          description: "POST /v1/demo/clash — a USDC coffer on a USD lid is not a budget",
+        },
+        {
+          id: "hatch-fresh",
+          name: "Hatch TAP",
+          description: "POST /v1/demo/hatch — a closed hatch is not a range",
+        },
+        {
+          id: "cap-fresh",
+          name: "Eave TAP",
+          description: "POST /v1/demo/eave — a cap below the desk is not a cap",
+        },
+        {
+          id: "grant-fresh",
+          name: "Sill TAP",
+          description: "POST /v1/demo/sill — a grant below the desk is not a handshake",
+        },
+        {
+          id: "nest-tighter",
+          name: "Joist TAP",
+          description: "POST /v1/demo/joist — a nested grant wider than its parent is not a handshake",
+        },
+        {
+          id: "path-tighter",
+          name: "Stud TAP",
+          description: "POST /v1/demo/stud — a grant wider than the incoming hop is not a handshake",
+        },
+        {
+          id: "path-live",
+          name: "Plate TAP",
+          description: "POST /v1/demo/plate — an orphan hop is not a handshake",
+        },
+        {
+          id: "child-currency",
+          name: "Header TAP",
+          description: "POST /v1/demo/header — a USDC header under a USD plate is not a nested slip",
+        },
+        {
+          id: "payout-fresh",
+          name: "Pip TAP",
+          description: "POST /v1/demo/pip — a conversion that pays nothing is not an FX window",
+        },
+        {
+          id: "fx-maker",
+          name: "Quoin TAP",
+          description: "POST /v1/demo/quoin — a vendor's conversion is not a market-maker window",
+        },
+        {
+          id: "rate-fresh",
+          name: "Ashlar TAP",
+          description: "POST /v1/demo/ashlar — an empty pit does not waive the band",
+        },
+        {
+          id: "nest-party",
+          name: "Corbel TAP",
+          description: "POST /v1/demo/corbel — a nested hop under another principal is not a nested handshake",
+        },
+        {
+          id: "checkout-party",
+          name: "Trolley TAP",
+          description: "POST /v1/demo/trolley — someone else's checkout is not yours to fill",
+        },
+        {
+          id: "hire-room-party",
+          name: "Poach TAP",
+          description: "POST /v1/demo/poach — someone else's room is not yours to hire from",
+        },
+        {
+          id: "hire-slip-party",
+          name: "Guise TAP",
+          description: "POST /v1/demo/guise — someone else's unused slip is not yours to hire against",
+        },
+        {
+          id: "mandate-child-party",
+          name: "Cuckoo TAP",
+          description: "POST /v1/demo/cuckoo — someone else's parent slip is not yours to nest under",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2019,6 +2302,7 @@ export class Runtime {
     const parentIntent = parentId ? this.intents.get(parentId) : undefined;
     if (cmd.type === "mandate.issue_intent" && typeof body.parentId === "string") {
       ctx.parentKnown = Boolean(parentIntent);
+      if (parentIntent) ctx.childPartyOk = childMintable(actor, parentIntent);
     }
     if (parentIntent) {
       ctx.parentIntent = parentIntent;
@@ -2048,6 +2332,28 @@ export class Runtime {
       if (rec) {
         ctx.occurrenceMintOk = recurrenceMintable(rec);
         ctx.cadenceReachOk = cadenceReachable(rec);
+      }
+      const range = ctx.proposedConstraints.find((c) => c.type === "payment.amount_range");
+      if (range) {
+        ctx.rangeMintOk = rangeMintable(range);
+        ctx.lidMintOk = lidMintable(range);
+      }
+      const budget = ctx.proposedConstraints.find((c) => c.type === "payment.budget");
+      if (budget) {
+        ctx.budgetMintOk = budgetMintable(budget, range);
+      }
+      if (range && budget) {
+        ctx.currencyMintOk = moneyCurrenciesAligned(range, budget);
+      }
+      if (parentIntent) {
+        ctx.childCurrencyOk = childCurrenciesAligned(parentIntent.payload.constraints, ctx.proposedConstraints);
+      }
+      const cap = ctx.proposedConstraints.find((c) => c.type === "aether.max_autonomy");
+      if (cap) {
+        const subject = this.identity.get(body.subjectId as AgentId);
+        if (subject) {
+          ctx.capMintOk = capMintable(cap.max, subject.autonomyLevel);
+        }
       }
     }
     const namedIds = this.namedAgentIds(cmd, body);
@@ -2083,11 +2389,34 @@ export class Runtime {
       const now = Date.parse(this.clock.now());
       ctx.kyaMintFresh = exp > now;
       ctx.kyaMintWindowOk = Number.isFinite(exp) && exp <= now + KYA_TTL_MS;
+      if (typeof body.maxAutonomy === "number") {
+        const delegate = this.identity.get(body.delegateId as AgentId);
+        if (delegate) {
+          ctx.grantMintOk = grantMintable(body.maxAutonomy, delegate.autonomyLevel);
+        }
+      }
     }
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       const parentHop = this.kya.attestations.get(body.parentId as DelegationId);
       ctx.kyaParentKnown = Boolean(parentHop);
-      if (parentHop) ctx.kyaParentFresh = hopStatus(parentHop, this.clock.now()) === "live";
+      if (parentHop) {
+        ctx.kyaParentFresh = hopStatus(parentHop, this.clock.now()) === "live";
+        if (ctx.kyaParentFresh) {
+          ctx.nestTighterOk = nestTighterMintable(body.maxAutonomy, parentHop.maxAutonomy);
+          ctx.nestPartyOk = nestPartyMintable(this.kyaPrincipalId(body, actor), parentHop.principalId);
+        }
+      }
+    }
+    if (cmd.type === "kya.attest") {
+      const principalId = this.kyaPrincipalId(body, actor);
+      if (principalId !== actor.id && this.identity.get(principalId)) {
+        const incoming = this.incomingHopCeiling(principalId, actor.id);
+        if (incoming !== undefined) {
+          ctx.pathTighterOk = pathTighterMintable(body.maxAutonomy, incoming);
+        } else {
+          ctx.pathLiveOk = false;
+        }
+      }
     }
     if (cmd.type === "kya.attest" || cmd.type === "kya.revoke") {
       const principalId = this.kyaPrincipalId(body, actor);
@@ -2194,6 +2523,9 @@ export class Runtime {
     if (market.hireNotFx !== undefined) ctx.hireNotFx = market.hireNotFx;
     if (market.fxWindowOk !== undefined) ctx.fxWindowOk = market.fxWindowOk;
     if (market.fxMintFresh !== undefined) ctx.fxMintFresh = market.fxMintFresh;
+    if (market.fxPayoutOk !== undefined) ctx.fxPayoutOk = market.fxPayoutOk;
+    if (market.fxPartyOk !== undefined) ctx.fxPartyOk = market.fxPartyOk;
+    if (market.fxBandOk !== undefined) ctx.fxBandOk = market.fxBandOk;
     if (cmd.type === "market.withdraw") {
       const quoted = this.quoteOf(body);
       if (quoted) {
@@ -2266,6 +2598,30 @@ export class Runtime {
     if (cartMatch.cartMatchesHire !== undefined) ctx.cartMatchesHire = cartMatch.cartMatchesHire;
     if (cmd.type === "mandate.issue_cart" && hire && hire.id !== "hid_draft") {
       ctx.cartUnbound = hire.cartId === undefined;
+    }
+    if (cmd.type === "mandate.issue_cart") {
+      const owner = hire && hire.id !== "hid_draft" ? hire.buyerId : intent?.payload.subjectId;
+      if (typeof owner === "string") {
+        ctx.checkoutPartyOk = checkoutMintable(actor, owner);
+      }
+    }
+    if (cmd.type === "mandate.issue_payment" && cart) {
+      const occupying = this.hireOccupyingCart(cart.payload.id);
+      const slip = this.intents.get(cart.payload.intentId);
+      const owner = occupying?.buyerId ?? slip?.payload.subjectId;
+      if (typeof owner === "string") {
+        ctx.checkoutPartyOk = checkoutMintable(actor, owner);
+      }
+    }
+    if (cmd.type === "hire.create") {
+      const quoted = this.quoteOf(body);
+      const room = quoted ? this.rfqs.get(quoted.rfqId) : undefined;
+      if (room) {
+        ctx.hireRoomPartyOk = hireRoomMintable(actor, room.buyerId);
+      }
+      if (intent) {
+        ctx.hireSlipPartyOk = hireSlipMintable(actor, intent.payload.subjectId);
+      }
     }
     if (
       (cmd.type === "hire.fund" || cmd.type === "hire.release" || cmd.type === "envelope.submit") &&
@@ -2388,6 +2744,9 @@ export class Runtime {
     hireNotFx?: boolean;
     fxWindowOk?: boolean;
     fxMintFresh?: boolean;
+    fxPayoutOk?: boolean;
+    fxPartyOk?: boolean;
+    fxBandOk?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -2411,6 +2770,9 @@ export class Runtime {
       hireNotFx?: boolean;
       fxWindowOk?: boolean;
       fxMintFresh?: boolean;
+      fxPayoutOk?: boolean;
+      fxPartyOk?: boolean;
+      fxBandOk?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -2419,7 +2781,13 @@ export class Runtime {
     if (cmd.type === "market.quote") {
       out.rfqKnown = Boolean(rfq);
       if (body.fx && typeof body.fx === "object" && !Array.isArray(body.fx)) {
-        out.fxMintFresh = fxWindowMintable(body.fx as { validUntil?: unknown }, this.clock.now());
+        const fx = body.fx as { validUntil?: unknown; rateE6?: unknown };
+        out.fxMintFresh = fxWindowMintable(fx, this.clock.now());
+        const priced = body.price && typeof body.price === "object" ? (body.price as Money) : undefined;
+        out.fxPayoutOk = fxPayoutMintable(priced?.amount, fx.rateE6);
+        const mmSits = [...this.identity.all()].some((a) => a.role === "market_maker");
+        out.fxPartyOk = fxPartyMintable(actor.role, mmSits);
+        out.fxBandOk = fxBandMintable(fx.rateE6);
       }
       if (rfq) {
         out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -2936,11 +3304,32 @@ export class Runtime {
     if (Date.parse(att.expiresAt) > Date.parse(att.createdAt) + KYA_TTL_MS) {
       throw new Error("kya hop outlives one year");
     }
+    if (typeof body.maxAutonomy === "number") {
+      const delegate = this.identity.get(delegateId);
+      if (delegate && !grantMintable(body.maxAutonomy, delegate.autonomyLevel)) {
+        throw new Error("kya grant below delegate");
+      }
+    }
     if (typeof body.parentId === "string") {
       const parentHop = this.kya.attestations.get(body.parentId as DelegationId);
       if (!parentHop) throw new Error("unknown parent hop");
       if (hopStatus(parentHop, this.clock.now()) !== "live") throw new Error("kya parent hop not live");
+      if (!nestTighterMintable(body.maxAutonomy, parentHop.maxAutonomy)) {
+        throw new Error("kya nested grant wider than parent");
+      }
+      if (!nestPartyMintable(principalId, parentHop.principalId)) {
+        throw new Error("kya nested hop under another principal");
+      }
       att.parentId = body.parentId as DelegationId;
+    }
+    if (principalId !== actor.id) {
+      const incoming = this.incomingHopCeiling(principalId, actor.id);
+      if (incoming !== undefined && !pathTighterMintable(body.maxAutonomy, incoming)) {
+        throw new Error("kya grant wider than incoming hop");
+      }
+      if (incoming === undefined && this.identity.get(principalId)) {
+        throw new Error("kya hop has no live incoming path");
+      }
     }
     this.kya.attest(att);
     this.audit.append({
@@ -3030,6 +3419,27 @@ export class Runtime {
     if (rec && !cadenceReachable(rec)) {
       throw new Error("intent cadence unreachable");
     }
+    const range = constraints.find((c) => c.type === "payment.amount_range");
+    if (range && !rangeMintable(range)) {
+      throw new Error("intent range empty");
+    }
+    const budget = constraints.find((c) => c.type === "payment.budget");
+    if (budget && !budgetMintable(budget, range)) {
+      throw new Error("intent budget empty");
+    }
+    if (range && budget && !moneyCurrenciesAligned(range, budget)) {
+      throw new Error("intent currencies mixed");
+    }
+    if (range && !lidMintable(range)) {
+      throw new Error("intent lid empty");
+    }
+    const cap = constraints.find((c) => c.type === "aether.max_autonomy");
+    if (cap) {
+      const subject = this.identity.get(body.subjectId as AgentId);
+      if (subject && !capMintable(cap.max, subject.autonomyLevel)) {
+        throw new Error("intent cap below subject");
+      }
+    }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",
       id: this.ids.next("mid") as MandateId,
@@ -3046,6 +3456,10 @@ export class Runtime {
       if (parent.payload.exp <= unixSeconds(this.clock.now())) throw new Error("parent intent expired");
       if (this.revokedIntents.has(parent.payload.id)) throw new Error("parent intent revoked");
       this.assertKyaNestedParentsLive(actor, parent);
+      if (!childCurrenciesAligned(parent.payload.constraints, constraints)) {
+        throw new Error("intent child currency");
+      }
+      if (!childMintable(actor, parent)) throw new Error("child party");
       payload.parentId = body.parentId as MandateId;
     }
     const signed = signMandate(payload, actor.did, this.keypair(actor.id));
@@ -3127,6 +3541,8 @@ export class Runtime {
     const intent = this.intents.get(body.intentId as MandateId);
     if (!intent) throw new Error("unknown intent");
     if (this.revokedIntents.has(intent.payload.id)) throw new Error("intent revoked");
+    const owner = boundHire?.buyerId ?? intent.payload.subjectId;
+    if (owner && !checkoutMintable(actor, owner)) throw new Error("checkout party");
     const merchantAgent = this.identity.require(body.merchantId as AgentId);
     const lineItems = body.line_items as CartMandate["line_items"];
     if (!lineItems[0]?.unitAmount || typeof lineItems[0].quantity !== "number") {
@@ -3174,6 +3590,10 @@ export class Runtime {
     if (!cart) throw new Error("unknown cart");
     if (this.revokedCarts.has(cart.payload.id)) throw new Error("cart revoked");
     if (this.occupyingPayment(cart)) throw new Error("cart already has a payment");
+    const occupying = this.hireOccupyingCart(cart.payload.id);
+    const slip = this.intents.get(cart.payload.intentId);
+    const owner = occupying?.buyerId ?? slip?.payload.subjectId;
+    if (owner && !checkoutMintable(actor, owner)) throw new Error("checkout party");
     const payload: PaymentMandate = {
       vct: "aether.mandate.payment.1",
       id: this.ids.next("mid") as MandateId,
@@ -3264,6 +3684,15 @@ export class Runtime {
     if (quote.fx && !fxWindowMintable(quote.fx, this.clock.now())) {
       throw new Error("fx window already closed");
     }
+    if (quote.fx && !fxPayoutMintable(quote.price.amount, quote.fx.rateE6)) {
+      throw new Error("fx conversion pays nothing");
+    }
+    if (quote.fx && !fxPartyMintable(actor.role, [...this.identity.all()].some((a) => a.role === "market_maker"))) {
+      throw new Error("fx party");
+    }
+    if (quote.fx && !fxBandMintable(quote.fx.rateE6)) {
+      throw new Error("fx rate outside band");
+    }
     this.quotes.set(quote.id, quote);
     this.audit.append({
       clock: this.clock,
@@ -3314,6 +3743,8 @@ export class Runtime {
       throw new Error("sku currency");
     }
     if (quote.fx || isFxSku(rfq.sku)) throw new Error("fx hire");
+    if (!hireRoomMintable(actor, rfq.buyerId)) throw new Error("hire room party");
+    if (!hireSlipMintable(actor, intent.payload.subjectId)) throw new Error("hire slip party");
     const hireId = this.ids.next("hid") as HireId;
     const escrow = this.ledger.openAccount({
       id: this.ids.next("acct") as AccountId,
@@ -4028,6 +4459,14 @@ export class Runtime {
     return typeof body.principalId === "string" ? (body.principalId as AgentId) : actor.id;
   }
 
+  /** Leaf maxAutonomy on the live grantor path from principal to speaker. */
+  private incomingHopCeiling(principalId: AgentId, speakerId: AgentId): number | undefined {
+    if (principalId === speakerId) return undefined;
+    const hops = this.kya.path(principalId, speakerId, this.clock.now());
+    const leaf = hops?.[hops.length - 1];
+    return leaf?.maxAutonomy;
+  }
+
   /** Omitted expiresAt is one year from now. Snapshot and mutate share this. */
   private kyaExpiresAt(body: Record<string, unknown>): string {
     return typeof body.expiresAt === "string"
@@ -4111,7 +4550,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, PLATE_TLDR, HEADER_TLDR, PIP_TLDR, QUOIN_TLDR, ASHLAR_TLDR, CORBEL_TLDR, TROLLEY_TLDR, POACH_TLDR, GUISE_TLDR, CUCKOO_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };
