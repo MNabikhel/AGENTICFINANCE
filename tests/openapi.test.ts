@@ -251,6 +251,9 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("/v1/demo/ashlar:");
     expect(spec).toContain("empty pit");
     expect(spec).toContain("waive the band");
+    expect(spec).toContain("/v1/demo/corbel:");
+    expect(spec).toContain("another principal");
+    expect(spec).toContain("nested handshake");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {

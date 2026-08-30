@@ -1218,6 +1218,7 @@ export interface PolicyContext {
    * Omitted maxAutonomy is L5. Exact match (child === parent) still mints.
    * A tighter child still mints. A grant below the desk stays `kya.grant_fresh`.
    * Mandate `child_tighter` is a nested slip, not a nested hop.
+   * A nested hop under another principal is `kya.nest_party`.
    */
   nestTighterOk?: boolean;
   /**
@@ -1240,6 +1241,16 @@ export interface PolicyContext {
    * `kya.parent_fresh` (that rule is an explicit parentId).
    */
   pathLiveOk?: boolean;
+  /**
+   * False when kya.attest would write a nested hop whose principal is not
+   * the live parent hop's principal. Absent = not attest, no parentId,
+   * parent unknown (`kya.known_parent`), or parent not live (`kya.parent_fresh`).
+   * Same-principal nest still mints. Speaker granting in their own name
+   * without parentId is not this deny. A nested grant wider than its parent
+   * stays `kya.nest_tighter`. An orphan hop stays `kya.path_live`.
+   * Whose name a handshake is in stays `kya.party`.
+   */
+  nestPartyOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.

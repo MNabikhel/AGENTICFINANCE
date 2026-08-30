@@ -108,6 +108,7 @@ import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
 import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
 import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
 import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
+import { loadNestParty, runNestParty } from "@aether/nest-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -782,6 +783,12 @@ if (command === "demo" && (name === "ashlar" || name === "voussoir" || name === 
   process.exit(0);
 }
 
+if (command === "demo" && (name === "corbel" || name === "springer" || name === "haunch")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/corbel/scenario.json");
+  printReport(runNestParty(loadNestParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -912,6 +919,7 @@ usage:
   pnpm demo pip
   pnpm demo quoin
   pnpm demo ashlar
+  pnpm demo corbel
   aether audit verify
   aether ledger replay
   pnpm mcp`);

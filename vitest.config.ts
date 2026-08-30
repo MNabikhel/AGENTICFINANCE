@@ -132,6 +132,7 @@ export default defineConfig({
       "@aether/payout-fresh": path.resolve(__dirname, "packages/aether-runtime/src/payout-fresh.ts"),
       "@aether/fx-maker": path.resolve(__dirname, "packages/aether-runtime/src/fx-maker.ts"),
       "@aether/rate-fresh": path.resolve(__dirname, "packages/aether-runtime/src/rate-fresh.ts"),
+      "@aether/nest-party": path.resolve(__dirname, "packages/aether-runtime/src/nest-party.ts"),
     },
   },
 });

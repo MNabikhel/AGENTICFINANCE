@@ -125,7 +125,8 @@
       "@aether/child-currency": ["packages/aether-runtime/src/child-currency.ts"],
       "@aether/payout-fresh": ["packages/aether-runtime/src/payout-fresh.ts"],
       "@aether/fx-maker": ["packages/aether-runtime/src/fx-maker.ts"],
-      "@aether/rate-fresh": ["packages/aether-runtime/src/rate-fresh.ts"]
+      "@aether/rate-fresh": ["packages/aether-runtime/src/rate-fresh.ts"],
+      "@aether/nest-party": ["packages/aether-runtime/src/nest-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

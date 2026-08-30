@@ -115,6 +115,7 @@ import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
 import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
 import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
 import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
+import { loadNestParty, runNestParty } from "@aether/nest-party";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -268,6 +269,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_pip",
   "aether_demo_quoin",
   "aether_demo_ashlar",
+  "aether_demo_corbel",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -1070,6 +1072,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_ashlar") {
       const report = runRateFresh(loadRateFresh("fixtures/demo/ashlar/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_corbel") {
+      const report = runNestParty(loadNestParty("fixtures/demo/corbel/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

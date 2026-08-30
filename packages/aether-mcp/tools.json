@@ -730,6 +730,11 @@
       "name": "aether_demo_ashlar",
       "commandType": "demo.ashlar",
       "description": "Run the ashlar TAP: an empty pit does not waive the band. market.quote of an off-band FX window with no maker is market.rate_fresh; a 200bps miss by the maker, a vendor conversion while a maker sits, and a conversion that pays nothing still allow; the maker still mints an in-band window after sitting; a par window still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_corbel",
+      "commandType": "demo.corbel",
+      "description": "Run the corbel TAP: a nested hop under another principal is not a nested handshake. kya.attest with parentId whose principal is not the speaker's principal is kya.nest_party; a nested grant wider than its parent, a dead parent hop, and whose name a handshake is in still allow; an exact same-principal nested grant still mints; a tighter same-principal nested grant still mints; funded work still finishes."
     }
   ]
 }

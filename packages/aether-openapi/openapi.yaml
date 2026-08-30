@@ -932,6 +932,12 @@ paths:
       responses:
         "200": { description: Ashlar TAP report. An empty pit does not waive the band. }
         "500": { description: Assertions failed }
+  /v1/demo/corbel:
+    post:
+      operationId: demoCorbel
+      responses:
+        "200": { description: Corbel TAP report. A nested hop under another principal is not a nested handshake. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

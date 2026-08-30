@@ -1,0 +1,24 @@
+{
+  "id": "nest-party",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000111",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "parent": { "maxAutonomy": 3 },
+  "sneak": { "maxAutonomy": 3 },
+  "legal": { "maxAutonomy": 3 },
+  "tighter": { "maxAutonomy": 2 },
+  "intent": {
+    "task": "A nested hop under another principal is not a nested handshake. Completing funded work is legal. A nested grant wider than its parent is a different object. A dead parent hop is a different object. Whose name a handshake is in is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

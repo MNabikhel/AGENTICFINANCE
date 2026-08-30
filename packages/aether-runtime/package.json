@@ -111,7 +111,8 @@
     "./child-currency": "./src/child-currency.ts",
     "./payout-fresh": "./src/payout-fresh.ts",
     "./fx-maker": "./src/fx-maker.ts",
-    "./rate-fresh": "./src/rate-fresh.ts"
+    "./rate-fresh": "./src/rate-fresh.ts",
+    "./nest-party": "./src/nest-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

@@ -1546,6 +1546,15 @@ export const RULES: readonly Rule[] = [
         : v("market.rate_fresh", "deny", "FX rate is outside the 200bps band");
     },
   },
+  {
+    id: "kya.nest_party",
+    evaluate: (ctx) => {
+      if (ctx.nestPartyOk === undefined) return v("kya.nest_party", "allow", "not a nested hop mint");
+      return ctx.nestPartyOk
+        ? v("kya.nest_party", "allow", "nested hop names the parent's principal")
+        : v("kya.nest_party", "deny", "nested hop is under another principal");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1878,7 +1887,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.nest_tighter": {
     kind: "none",
-    hint: "A nested handshake cannot be born wider than its parent hop. Name max ≤ the parent's maxAutonomy, or omit only when the parent is already L5. Hire still names kya.capability_subset. A grant below the desk stays kya.grant_fresh. A dead parent stays kya.parent_fresh. A ghost parent stays kya.known_parent. A second live hop stays kya.unique_live. An agent over-grant stays kya.capability_subset. Mandate child_tighter is a nested slip, not a nested hop. A grant wider than the incoming hop is kya.path_tighter.",
+    hint: "A nested handshake cannot be born wider than its parent hop. Name max ≤ the parent's maxAutonomy, or omit only when the parent is already L5. Hire still names kya.capability_subset. A grant below the desk stays kya.grant_fresh. A dead parent stays kya.parent_fresh. A ghost parent stays kya.known_parent. A second live hop stays kya.unique_live. An agent over-grant stays kya.capability_subset. Mandate child_tighter is a nested slip, not a nested hop. A grant wider than the incoming hop is kya.path_tighter. A nested hop under another principal is kya.nest_party.",
   },
   "kya.path_tighter": {
     kind: "none",
@@ -1886,7 +1895,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.path_live": {
     kind: "none",
-    hint: "A handshake in another principal's name cannot be born without a live incoming hop from that principal. Attest the speaker under that principal, then nest. Speaker granting in their own name is not this deny. Ghost principal stays identity.known. An agent filling in another principal's id stays kya.party. A grant wider than a live incoming hop stays kya.path_tighter. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. A dead parentId stays kya.parent_fresh.",
+    hint: "A handshake in another principal's name cannot be born without a live incoming hop from that principal. Attest the speaker under that principal, then nest. Speaker granting in their own name is not this deny. Ghost principal stays identity.known. An agent filling in another principal's id stays kya.party. A grant wider than a live incoming hop stays kya.path_tighter. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. A dead parentId stays kya.parent_fresh. A nested hop under another principal is kya.nest_party.",
   },
   "mandate.child_currency": {
     kind: "none",
@@ -1916,6 +1925,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.rate_fresh": {
     kind: "none",
     hint: "An FX window cannot be born outside the 200bps band, even when no market maker sits. Name a nested rateE6 inside 980000–1020000. A maker's own off-band quote stays mm.spread_bound. A vendor conversion while a maker sits stays market.fx_party. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. An in-band guest quote with no maker still mints. The maker still mints in-band after sitting.",
+  },
+  "kya.nest_party": {
+    kind: "none",
+    hint: "A nested handshake cannot be born under another principal's parent hop. Nest under a hop in this principal's name, or omit parentId. A nested grant wider than its parent stays kya.nest_tighter. A dead parent stays kya.parent_fresh. A ghost parent stays kya.known_parent. An orphan hop stays kya.path_live. Whose name a handshake is in stays kya.party. A grant below the desk stays kya.grant_fresh. Speaker granting in their own name without parentId is not this deny. Exact same-principal nest still mints. A tighter same-principal nest still mints.",
   },
   "host.not_hosted": {
     kind: "none",
