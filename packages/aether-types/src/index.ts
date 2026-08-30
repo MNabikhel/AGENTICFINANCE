@@ -855,6 +855,18 @@ export interface PolicyContext {
    */
   settlePartyOk?: boolean;
   /**
+   * False when a market_maker submits `market.quote` for a listed non-FX SKU
+   * (a plain research/compute good). A maker's quote is a window, not a good:
+   * makers have no `hire.accept` / `hire.deliver` verb, so a maker's good
+   * quote mints a hire no verb can advance. Absent = not a maker catalog
+   * quote (vendors still quote goods; makers still quote FX windows). A ghost
+   * room stays `market.known_rfq`. A shut room stays `market.not_expired`. An
+   * uninvited maker stays `market.invited_seller`. A maker FX quote without a
+   * window stays `market.fx_window` (Pane TAP). A vendor minting FX while a
+   * maker sits stays `market.fx_party` (Quoin TAP).
+   */
+  makerQuoteOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

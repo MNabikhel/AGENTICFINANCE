@@ -52,7 +52,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 
 1. Integer cents only. Safe integers only. Canonical JSON (sorted keys) is what is hashed. One cart is one currency. A journal that would leave a book outside `Number.isSafeInteger` is `ledger.safe_balance`.
 2. Intent → Cart → Payment chain must verify on fund (`hire.fund`). Submit verifies signatures and hashes; expiry was checked at fund. Completing a funded hire after the cart or payment window is legal.
-3. 100 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
+3. 118 ordered policy rules always all run. Any deny wins. Else any escalate. Else allow.
 4. KYA: spend requires a live path from the intent issuer (or implicit supervisor). Revoke is a tombstone; implicit grants die with it. Depth ≤ 3. A nested hop does not outlive its parent (`kya.parent_fresh`). Completing a funded hire after the hop expires, or after a climb above the grant, is legal; freeze and revoke still bind.
 5. Sub-intents (`parentId`) must be tighter than the parent. Child spend counts against the parent budget. A dead parent is not a parent (`mandate.parent_fresh`).
 6. Budget and daily circuit are consumed at **fund**, not again at deliver/submit.
@@ -266,6 +266,7 @@ Pass `actor` as a runtime alias (`ops-human`, `desk`, `scout`) after register. A
 214. Someone else's parent slip is not yours to nest under. `pnpm demo cuckoo` / `aether_demo_cuckoo` / `POST /v1/demo/cuckoo` funds an $800 hire, refuses `mandate.issue_intent` nested under another desk's live unused parent by a second procurement desk as `mandate.child_party` (a missing parent, a dead parent, a wider nested slip, and a junior nested mint still allow; no child written), then the parent subject still nests a tighter child, and that funded work still releases. Grade TAP is a junior nested mint (`ladder.min_level`). Header TAP is mixed nested currency (`mandate.child_currency`). Sub-hire TAP is the parent subject nesting (`mandate.child_tighter`). Completing funded work is legal. New first-deny: `mandate.child_party`.
 215. Someone else's name is not a root slip to mint. `pnpm demo forge` / `aether_demo_forge` / `POST /v1/demo/forge` funds an $800 hire, refuses `mandate.issue_intent` without `parentId` naming another desk by a second procurement desk as `mandate.root_party` (a missing subject, a nested child, a junior mint, and a vendor verb still allow; no extra root written), then the named subject still mints a self-root, and that funded work still releases. Cuckoo TAP is a nested foreign child (`mandate.child_party`). Warrant TAP is a self-root (`host.human_authority`). Grade TAP is a junior mint (`ladder.min_level`). Sub-hire TAP is the parent subject nesting. Completing funded work is legal. New first-deny: `mandate.root_party`.
 216. Someone else's conversion window is not yours to settle. `pnpm demo snare` / `aether_demo_snare` / `POST /v1/demo/snare` funds an $800 hire, refuses `market.fx_settle` of another vendor's unused conversion window by a second data vendor as `market.settle_party` (a missing maker, a missing quote, a missing dest book, and a vendor verb still allow; no window consumed), then the named seller still converts its own window, a maker window still converts, and that funded work still releases. Maker TAP is settle with no MM (`mm.known`). Wallet TAP is a missing dest book (`ledger.known_account`). Paper TAP is a research quote (`market.fx_quote`). Quoin TAP is minting FX while a maker sits (`market.fx_party`). Fold TAP is tearing a bid (`market.party`). Completing funded work is legal. New first-deny: `market.settle_party`.
+217. A maker's quote is a window, not a good. `pnpm demo hawk` / `aether_demo_hawk` / `POST /v1/demo/hawk` funds an $800 hire, refuses `market.quote` of the listed research good by a market maker as `mm.fx_only` (a ghost room, a shut room, an uninvited maker, and a windowless FX quote still allow first-deny elsewhere; no quote written) — makers have no `hire.accept` / `hire.deliver` verb, so a maker's good quote would mint a hire no verb can advance — then the research vendor still quotes the good, the maker still quotes an FX window, that window still converts, and that funded work still releases. Pane TAP is a windowless FX quote (`market.fx_window`). Quoin TAP is a vendor minting FX while a maker sits (`market.fx_party`). Completing funded work is legal. New first-deny: `mm.fx_only`.
 
 ## Autonomy
 
@@ -400,4 +401,6 @@ pnpm demo poach
 pnpm demo guise
 pnpm demo cuckoo
 pnpm demo forge
+pnpm demo snare
+pnpm demo hawk
 ```

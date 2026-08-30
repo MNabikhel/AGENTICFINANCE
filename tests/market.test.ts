@@ -1327,6 +1327,188 @@ describe("market.settle_party", () => {
   });
 });
 
+describe("mm.fx_only", () => {
+  function hawkWorld() {
+    const rt = boot();
+    must(
+      rt.dispatch(
+        cmd("identity.register", "system", {
+          key: "ops-human",
+          displayName: "Founder",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "founder",
+    );
+    const founder = rt.alias("ops-human");
+    for (const a of [
+      { key: "desk", displayName: "Desk", role: "procurement", autonomyLevel: 4 },
+      { key: "research-vendor", displayName: "Research Vendor", role: "data_vendor", autonomyLevel: 2 },
+      { key: "mm", displayName: "Market Maker", role: "market_maker", autonomyLevel: 2 },
+    ] as const) {
+      must(
+        rt.dispatch(
+          cmd("identity.register", founder.id, {
+            key: a.key,
+            displayName: a.displayName,
+            role: a.role,
+            autonomyLevel: a.autonomyLevel,
+          }),
+        ),
+        a.key,
+      );
+    }
+    rt.seedOpening({
+      "research-vendor:cash": { amount: 200_000, currency: "USD_SIM" },
+      "market_maker:cash_usd": { amount: 200_000, currency: "USD_SIM" },
+      "market_maker:cash_usdc": { amount: 1_000_000, currency: "USDC_SIM" },
+    });
+    const desk = rt.alias("desk");
+    const vendor = rt.alias("research-vendor");
+    const mm = rt.alias("mm");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "research.brief",
+          spec: "hawk",
+          invitedSellerIds: [vendor.id, mm.id],
+        }),
+      ),
+      "rfq",
+    );
+    return { rt, founder, desk, vendor, mm, rfqId: (rfq.data as { id: string }).id };
+  }
+
+  it("refuses a maker quoting a research good as mm.fx_only without writing a quote", () => {
+    const { rt, mm, rfqId } = hawkWorld();
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, { rfqId, price: { amount: 90_000, currency: "USD_SIM" } }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mm.fx_only");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("still names market.known_rfq first when a ghost room would also be a hawk", () => {
+    const { rt, mm } = hawkWorld();
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: "rfq_01J6AETHERGHOSTROOM00000001",
+        price: { amount: 90_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.known_rfq");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+  });
+
+  it("still names market.not_expired first when a shut room would also be a hawk", () => {
+    const { rt, desk, mm, rfqId } = hawkWorld();
+    must(rt.dispatch(cmd("market.close", desk.id, { rfqId })), "close");
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, { rfqId, price: { amount: 90_000, currency: "USD_SIM" } }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.not_expired");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+  });
+
+  it("still names market.invited_seller first when an uninvited maker would also be a hawk", () => {
+    const { rt, desk, vendor, mm } = hawkWorld();
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "research.brief",
+          spec: "closed guest list",
+          invitedSellerIds: [vendor.id],
+        }),
+      ),
+      "closed list",
+    );
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 90_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.invited_seller");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+  });
+
+  it("still names market.fx_window first when a windowless maker FX quote is not a hawk", () => {
+    const { rt, desk, mm } = hawkWorld();
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "fx room",
+          invitedSellerIds: [mm.id],
+        }),
+      ),
+      "fx room",
+    );
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 50_000, currency: "USD_SIM" },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_window");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+  });
+
+  it("allows a vendor quoting the good and a maker quoting an FX window", () => {
+    const { rt, desk, vendor, mm, rfqId } = hawkWorld();
+    const vendorQuote = rt.dispatch(
+      cmd("market.quote", vendor.id, { rfqId, price: { amount: 90_000, currency: "USD_SIM" } }),
+    );
+    expect(vendorQuote.ok).toBe(true);
+    if (vendorQuote.ok) {
+      expect(vendorQuote.value.decision.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+    }
+    const fxRfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "fx room",
+          invitedSellerIds: [mm.id],
+        }),
+      ),
+      "fx room",
+    );
+    const makerFx = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (fxRfq.data as { id: string }).id,
+        price: { amount: 50_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 1_000_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(makerFx.ok).toBe(true);
+    if (makerFx.ok) {
+      expect(makerFx.value.decision.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+    }
+  });
+});
+
 describe("command schema", () => {
   it("refuses missing required fields before policy or the clock", () => {
     const rt = boot();

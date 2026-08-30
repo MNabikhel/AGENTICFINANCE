@@ -115,6 +115,7 @@ import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
 import { loadChildParty, runChildParty } from "@aether/child-party";
 import { loadRootParty, runRootParty } from "@aether/root-party";
 import { loadSettleParty, runSettleParty } from "@aether/settle-party";
+import { loadFxOnly, runFxOnly } from "@aether/fx-only";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -831,6 +832,12 @@ if (command === "demo" && (name === "snare" || name === "gin" || name === "wire"
   process.exit(0);
 }
 
+if (command === "demo" && (name === "hawk" || name === "peddle" || name === "tout")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/hawk/scenario.json");
+  printReport(runFxOnly(loadFxOnly(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -968,6 +975,7 @@ usage:
   pnpm demo cuckoo
   pnpm demo forge
   pnpm demo snare
+  pnpm demo hawk
   aether audit verify
   aether ledger replay
   pnpm mcp`);

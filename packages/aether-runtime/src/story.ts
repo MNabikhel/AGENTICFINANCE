@@ -364,6 +364,9 @@ export const FORGE_TLDR =
 export const SNARE_TLDR =
   "A founder funded an $800 hire. A second vendor settling the research vendor's unused conversion window was market.settle_party — a missing maker is not this deny, a missing quote is not this deny, a missing dest book is not this deny, a vendor verb is not this deny. No window consumed. The named seller still converted its own window. That funded work still released. Someone else's conversion window is not yours to settle.";
 
+export const HAWK_TLDR =
+  "A founder funded an $800 hire. A market maker quoting the research good was mm.fx_only — a ghost room is not this deny, a shut room is not this deny, an uninvited maker is not this deny, a windowless FX quote is not this deny. No quote written. The research vendor still quoted the good, the maker still quoted an FX window, and that window still converted. That funded work still released. A maker's quote is a window, not a good.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

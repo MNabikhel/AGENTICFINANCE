@@ -974,6 +974,12 @@ paths:
       responses:
         "200": { description: Snare TAP report. Someone else's conversion window is not yours to settle. }
         "500": { description: Assertions failed }
+  /v1/demo/hawk:
+    post:
+      operationId: demoHawk
+      responses:
+        "200": { description: Hawk TAP report. A maker's quote is a window, not a good. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

@@ -1609,6 +1609,15 @@ export const RULES: readonly Rule[] = [
         : v("market.settle_party", "deny", "speaker is not this window's converter");
     },
   },
+  {
+    id: "mm.fx_only",
+    evaluate: (ctx) => {
+      if (ctx.makerQuoteOk === undefined) return v("mm.fx_only", "allow", "not a maker catalog quote");
+      return ctx.makerQuoteOk
+        ? v("mm.fx_only", "allow", "maker is quoting an FX window")
+        : v("mm.fx_only", "deny", "a maker's quote is a window, not a good");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -2007,6 +2016,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.settle_party": {
     kind: "none",
     hint: "Settle your own conversion window, or a maker's quoted window. Someone else's vendor window is not yours to convert. A maker settling is a wash, not a conversion. A missing quote is market.fx_quote. A missing maker is mm.known. A missing dest book is ledger.known_account. Minting FX while a maker sits stays market.fx_party. Folding a bid stays market.party. Completing funded work is legal. The named seller still converts. A maker window still converts for a non-maker with books.",
+  },
+  "mm.fx_only": {
+    kind: "none",
+    hint: "A maker's quote is a window, not a good. Makers have no accept or deliver verb, so a maker's good quote mints a hire no verb can advance. Quote FX, or let a vendor quote the good. A ghost room is market.known_rfq. A shut room is market.not_expired. An uninvited maker is market.invited_seller. A windowless FX quote is market.fx_window. A vendor minting FX while a maker sits stays market.fx_party. Vendors still quote goods. Makers still quote FX windows.",
   },
   "host.not_hosted": {
     kind: "none",

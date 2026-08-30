@@ -118,7 +118,8 @@
     "./hire-slip-party": "./src/hire-slip-party.ts",
     "./child-party": "./src/child-party.ts",
     "./root-party": "./src/root-party.ts",
-    "./settle-party": "./src/settle-party.ts"
+    "./settle-party": "./src/settle-party.ts",
+    "./fx-only": "./src/fx-only.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

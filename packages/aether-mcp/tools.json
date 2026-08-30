@@ -765,6 +765,11 @@
       "name": "aether_demo_snare",
       "commandType": "demo.snare",
       "description": "Run the snare TAP: someone else's conversion window is not yours to settle. market.fx_settle of another vendor's unused FX window is market.settle_party; a missing maker, a missing quote, a missing dest book, and a vendor verb still allow first-deny elsewhere; no window consumed by the sneak; the named seller still converts its own window; a maker window still converts; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_hawk",
+      "commandType": "demo.hawk",
+      "description": "Run the hawk TAP: a maker's quote is a window, not a good. market.quote of a listed non-FX SKU by a market maker is mm.fx_only; a ghost room, a shut room, an uninvited maker, and a windowless FX quote still allow first-deny elsewhere; no quote written by the sneak; the research vendor still quotes the good; the maker still quotes an FX window and it still converts; funded work still finishes."
     }
   ]
 }

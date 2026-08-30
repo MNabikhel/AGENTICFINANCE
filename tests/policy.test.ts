@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 117 rules", () => {
-    expect(RULE_IDS).toHaveLength(117);
+  it("has 118 rules", () => {
+    expect(RULE_IDS).toHaveLength(118);
   });
 
   it("denies frozen actors", () => {
@@ -6979,6 +6979,128 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("actor.role_capability");
+  });
+
+  it("denies a maker quoting a good as mm.fx_only", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+        makerQuoteOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mm.fx_only");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a maker quoting an FX window as mm.fx_only", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+        makerQuoteOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+  });
+
+  it("does not name mm.fx_only when a vendor quotes a good", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2, id: "aid_vendor" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+  });
+
+  it("still names market.known_rfq first when a ghost room would also be a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("still names market.not_expired first when a shut room would also be a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: false,
+        sellerInvited: true,
+        makerQuoteOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.not_expired");
+  });
+
+  it("still names market.invited_seller first when an uninvited maker would also be a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: false,
+        makerQuoteOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.invited_seller");
+  });
+
+  it("still names market.fx_window first when a windowless maker FX quote is not a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+        makerQuoteOk: true,
+        fxWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_window");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {
