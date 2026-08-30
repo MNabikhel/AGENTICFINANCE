@@ -114,6 +114,7 @@ import { loadPathLive, runPathLive } from "@aether/path-live";
 import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
 import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
 import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
+import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -266,6 +267,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_header",
   "aether_demo_pip",
   "aether_demo_quoin",
+  "aether_demo_ashlar",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -1063,6 +1065,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_quoin") {
       const report = runFxMaker(loadFxMaker("fixtures/demo/quoin/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_ashlar") {
+      const report = runRateFresh(loadRateFresh("fixtures/demo/ashlar/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

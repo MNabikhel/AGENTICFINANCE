@@ -19,7 +19,7 @@ import {
 } from "@aether/kernel";
 import { isOperatingBook, Ledger } from "@aether/ledger";
 import { cartHash, intentHash, signMandate, verifyChain } from "@aether/mandate";
-import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout, isFxSku } from "@aether/market";
+import { CATALOG, isCatalogSku, skuAllowsCurrency, fxPairSettles, fxPayout, isFxSku, rateInBand } from "@aether/market";
 import { ExposureBook } from "@aether/clearing";
 import { DelegationGraph, hopStatus, resolveKya } from "@aether/kya";
 import { evaluate, remediationFor } from "@aether/policy";
@@ -137,6 +137,7 @@ import {
   HEADER_TLDR,
   PIP_TLDR,
   QUOIN_TLDR,
+  ASHLAR_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -425,6 +426,14 @@ function fxPayoutMintable(amount: unknown, rateE6: unknown): boolean {
  *  is not this refuse (Maker TAP still mints; settle stays `mm.known`). */
 function fxPartyMintable(role: AgentRole, mmSits: boolean): boolean {
   return role === "market_maker" || !mmSits;
+}
+
+/** An FX window cannot be born outside the 200bps band, even with nobody on the pit.
+ *  Missing / non-finite rate stays mintable so `market.fx_window` / `mm.spread_bound`
+ *  stay first. */
+function fxBandMintable(rateE6: unknown): boolean {
+  if (typeof rateE6 !== "number" || !Number.isFinite(rateE6)) return true;
+  return rateInBand(rateE6);
 }
 
 /** New spend (not completing funded work). Nested hops on these verbs must have a live parent. */
@@ -1558,6 +1567,11 @@ export class Runtime {
           name: "Quoin TAP",
           description: "POST /v1/demo/quoin — a vendor's conversion is not a market-maker window",
         },
+        {
+          id: "rate-fresh",
+          name: "Ashlar TAP",
+          description: "POST /v1/demo/ashlar — an empty pit does not waive the band",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2434,6 +2448,7 @@ export class Runtime {
     if (market.fxMintFresh !== undefined) ctx.fxMintFresh = market.fxMintFresh;
     if (market.fxPayoutOk !== undefined) ctx.fxPayoutOk = market.fxPayoutOk;
     if (market.fxPartyOk !== undefined) ctx.fxPartyOk = market.fxPartyOk;
+    if (market.fxBandOk !== undefined) ctx.fxBandOk = market.fxBandOk;
     if (cmd.type === "market.withdraw") {
       const quoted = this.quoteOf(body);
       if (quoted) {
@@ -2630,6 +2645,7 @@ export class Runtime {
     fxMintFresh?: boolean;
     fxPayoutOk?: boolean;
     fxPartyOk?: boolean;
+    fxBandOk?: boolean;
   } {
     const now = Date.parse(this.clock.now());
     const quote =
@@ -2655,6 +2671,7 @@ export class Runtime {
       fxMintFresh?: boolean;
       fxPayoutOk?: boolean;
       fxPartyOk?: boolean;
+      fxBandOk?: boolean;
     } = {};
     if (cmd.type === "market.rfq") {
       out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -2669,6 +2686,7 @@ export class Runtime {
         out.fxPayoutOk = fxPayoutMintable(priced?.amount, fx.rateE6);
         const mmSits = [...this.identity.all()].some((a) => a.role === "market_maker");
         out.fxPartyOk = fxPartyMintable(actor.role, mmSits);
+        out.fxBandOk = fxBandMintable(fx.rateE6);
       }
       if (rfq) {
         out.skuListed = typeof sku === "string" && isCatalogSku(sku);
@@ -3561,6 +3579,9 @@ export class Runtime {
     if (quote.fx && !fxPartyMintable(actor.role, [...this.identity.all()].some((a) => a.role === "market_maker"))) {
       throw new Error("fx party");
     }
+    if (quote.fx && !fxBandMintable(quote.fx.rateE6)) {
+      throw new Error("fx rate outside band");
+    }
     this.quotes.set(quote.id, quote);
     this.audit.append({
       clock: this.clock,
@@ -4416,7 +4437,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, PLATE_TLDR, HEADER_TLDR, PIP_TLDR, QUOIN_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, PLATE_TLDR, HEADER_TLDR, PIP_TLDR, QUOIN_TLDR, ASHLAR_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

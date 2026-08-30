@@ -830,6 +830,18 @@ export interface PolicyContext {
    */
   fxPartyOk?: boolean;
   /**
+   * False when `market.quote` would write an FX window whose nested `rateE6`
+   * sits outside the 200bps band (980000–1020000). Absent = not quoting with
+   * an `fx` object, or rate missing (shape / other first denies). A maker's
+   * own off-band quote stays `mm.spread_bound`. A vendor conversion while a
+   * maker sits stays `market.fx_party`. A conversion that pays nothing stays
+   * `market.payout_fresh`. A dead window stays `market.fx_fresh`. A swapped
+   * pair stays `market.fx_pair`. A missing window stays `market.fx_window`.
+   * Ghost RFQ stays `market.known_rfq`. Ashlar TAP is an empty pit that does
+   * not waive the band.
+   */
+  fxBandOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

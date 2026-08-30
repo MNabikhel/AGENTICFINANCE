@@ -725,6 +725,11 @@
       "name": "aether_demo_quoin",
       "commandType": "demo.quoin",
       "description": "Run the quoin TAP: a vendor's conversion is not a market-maker window. market.quote of an in-band FX window by a vendor while a market maker sits is market.fx_party; a closed guest list, a 200bps band miss, and a conversion that pays nothing still allow; the maker still mints an in-band window; a par window still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_ashlar",
+      "commandType": "demo.ashlar",
+      "description": "Run the ashlar TAP: an empty pit does not waive the band. market.quote of an off-band FX window with no maker is market.rate_fresh; a 200bps miss by the maker, a vendor conversion while a maker sits, and a conversion that pays nothing still allow; the maker still mints an in-band window after sitting; a par window still mints; funded work still finishes."
     }
   ]
 }

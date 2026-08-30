@@ -107,6 +107,7 @@ import { loadPathLive, runPathLive } from "@aether/path-live";
 import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
 import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
 import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
+import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -775,6 +776,12 @@ if (command === "demo" && (name === "quoin" || name === "pier" || name === "plin
   process.exit(0);
 }
 
+if (command === "demo" && (name === "ashlar" || name === "voussoir" || name === "impost")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/ashlar/scenario.json");
+  printReport(runRateFresh(loadRateFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -904,6 +911,7 @@ usage:
   pnpm demo header
   pnpm demo pip
   pnpm demo quoin
+  pnpm demo ashlar
   aether audit verify
   aether ledger replay
   pnpm mcp`);

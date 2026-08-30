@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 109 rules", () => {
-    expect(RULE_IDS).toHaveLength(109);
+  it("has 110 rules", () => {
+    expect(RULE_IDS).toHaveLength(110);
   });
 
   it("denies frozen actors", () => {
@@ -5393,6 +5393,7 @@ describe("policy catalog", () => {
         fxMintFresh: true,
         fxPayoutOk: true,
         fxPartyOk: false,
+        fxBandOk: true,
         fxRateE6: 998_000,
       }),
     );
@@ -5406,6 +5407,7 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("allow");
     expect(remediationFor(d)?.kind).toBe("none");
     expect(remediationFor(d)?.ruleId).toBe("market.fx_party");
   });
@@ -5496,12 +5498,14 @@ describe("policy catalog", () => {
         fxMintFresh: true,
         fxPayoutOk: true,
         fxPartyOk: true,
+        fxBandOk: false,
         fxRateE6: 500_000,
       }),
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mm.spread_bound");
   });
 
@@ -5612,6 +5616,256 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("denies quoting an off-band FX window with no maker as market.rate_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.payout_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("market.rate_fresh");
+  });
+
+  it("does not name market.rate_fresh when the nested rate is in band", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxBandOk: true,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name market.rate_fresh when the speaker is not quoting a window", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names mm.spread_bound first when the maker is off-band and the band flag is also false", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mm.spread_bound");
+  });
+
+  it("still names market.fx_party first when a vendor is off-band while a maker sits", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: false,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_party");
+  });
+
+  it("still names market.payout_fresh first when a vendor conversion pays nothing off-band", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: false,
+        fxPartyOk: true,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.payout_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.payout_fresh");
+  });
+
+  it("still names market.fx_fresh first when a vendor quotes a dead off-band window", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: false,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_fresh");
+  });
+
+  it("still names market.fx_pair first when a vendor quotes a swapped pair off-band", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: false,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_pair");
+  });
+
+  it("still names market.fx_window first when an FX SKU has no window and the band is unset", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_window");
+  });
+
+  it("still names market.known_rfq first when the RFQ is a ghost and the rate is off-band", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: false,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("still names market.invited_seller first when the vendor is not invited and off-band", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: false,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxBandOk: false,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.rate_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.invited_seller");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

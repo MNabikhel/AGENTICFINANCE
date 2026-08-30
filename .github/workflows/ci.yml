@@ -122,3 +122,4 @@ jobs:
       - run: pnpm demo:header
       - run: pnpm demo:pip
       - run: pnpm demo:quoin
+      - run: pnpm demo:ashlar

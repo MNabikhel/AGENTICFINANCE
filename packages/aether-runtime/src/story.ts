@@ -340,6 +340,9 @@ export const PIP_TLDR =
 export const QUOIN_TLDR =
   "A founder funded an $800 hire. Minting an FX window as a vendor while a market maker sat was market.fx_party — not a closed guest list, not a 200bps band miss, not a conversion that pays nothing. The market maker still minted an in-band window. A par window still minted. That funded work still released. A vendor's conversion is not a market-maker window.";
 
+export const ASHLAR_TLDR =
+  "A founder funded an $800 hire. Minting an FX window at half price with no maker was market.rate_fresh — not a 200bps miss by the maker, not a vendor conversion while a maker sits, not a conversion that pays nothing. The market maker still minted an in-band window after sitting. A par window still minted. That funded work still released. An empty pit does not waive the band.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -938,6 +941,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} quoted a conversion that is not a market-maker window`,
           body: "A vendor cannot mint an FX window while a market maker sits. Have the maker quote. A closed guest list is a different object. A 200bps miss is a different object. A conversion that pays nothing is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.rate_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion outside the band with nobody on the pit`,
+          body: "An FX window cannot be born outside the 200bps band, even when no market maker sits. A maker's own off-band quote is a different object. A vendor conversion while a maker sits is a different object. A conversion that pays nothing is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1860,6 +1873,7 @@ export function analog(): Analog {
       "A USDC header under a USD plate is not a nested slip. Matching USD still mints. Matching USDC still mints. A mixed envelope is a different object.",
       "A conversion that pays nothing is not an FX window. A two-cent window at the low band still mints. A one-cent window at par still mints. A dead window is a different object.",
       "A vendor's conversion is not a market-maker window. The maker still mints an in-band window. A par window still mints. A closed guest list is a different object.",
+      "An empty pit does not waive the band. The maker still mints an in-band window after sitting. A par window still mints. A 200bps miss by the maker is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

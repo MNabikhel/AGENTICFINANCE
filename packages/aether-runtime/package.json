@@ -110,7 +110,8 @@
     "./path-live": "./src/path-live.ts",
     "./child-currency": "./src/child-currency.ts",
     "./payout-fresh": "./src/payout-fresh.ts",
-    "./fx-maker": "./src/fx-maker.ts"
+    "./fx-maker": "./src/fx-maker.ts",
+    "./rate-fresh": "./src/rate-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

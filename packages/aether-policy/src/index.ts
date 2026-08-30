@@ -1537,6 +1537,15 @@ export const RULES: readonly Rule[] = [
         : v("market.fx_party", "deny", "speaker is not the market maker");
     },
   },
+  {
+    id: "market.rate_fresh",
+    evaluate: (ctx) => {
+      if (ctx.fxBandOk === undefined) return v("market.rate_fresh", "allow", "not an FX rate mint");
+      return ctx.fxBandOk
+        ? v("market.rate_fresh", "allow", "FX rate is inside the 200bps band")
+        : v("market.rate_fresh", "deny", "FX rate is outside the 200bps band");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1793,7 +1802,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mm.spread_bound": {
     kind: "none",
-    hint: "The nested fx.rateE6 is the stored rate. It must sit inside the 200bps band (980000–1020000). A top-level rateE6 is not the band. A vendor conversion while a maker sits is market.fx_party.",
+    hint: "The nested fx.rateE6 is the stored rate. It must sit inside the 200bps band (980000–1020000). A top-level rateE6 is not the band. A vendor conversion while a maker sits is market.fx_party. An empty pit does not waive the band — that is market.rate_fresh.",
   },
   "mm.inventory": {
     kind: "none",
@@ -1898,11 +1907,15 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.payout_fresh": {
     kind: "none",
-    hint: "An FX window cannot be born with a floor payout of 0. Name a from-amount whose floor(from * rateE6 / 1e6) is at least 1 cent, or a higher in-band rate. A 1-cent window at the low band is not a conversion. A 0-cent window is not a conversion. A 2-cent window at the low band still mints. A 1-cent window at par still mints. A 200bps miss stays mm.spread_bound. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A vendor conversion while a maker sits is market.fx_party.",
+    hint: "An FX window cannot be born with a floor payout of 0. Name a from-amount whose floor(from * rateE6 / 1e6) is at least 1 cent, or a higher in-band rate. A 1-cent window at the low band is not a conversion. A 0-cent window is not a conversion. A 2-cent window at the low band still mints. A 1-cent window at par still mints. A 200bps miss stays mm.spread_bound. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A vendor conversion while a maker sits is market.fx_party. An empty pit does not waive the band — that is market.rate_fresh.",
   },
   "market.fx_party": {
     kind: "none",
-    hint: "A vendor cannot mint an FX window while a market maker sits. Have the maker quote. Quoting FX with no maker on the pit is not this deny — settle stays mm.known. A closed guest list stays market.invited_seller. A 200bps miss stays mm.spread_bound. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A research quote with no fx is not this deny.",
+    hint: "A vendor cannot mint an FX window while a market maker sits. Have the maker quote. Quoting FX with no maker on the pit is not this deny — settle stays mm.known. A closed guest list stays market.invited_seller. A 200bps miss stays mm.spread_bound. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. A research quote with no fx is not this deny. An empty pit does not waive the band — that is market.rate_fresh.",
+  },
+  "market.rate_fresh": {
+    kind: "none",
+    hint: "An FX window cannot be born outside the 200bps band, even when no market maker sits. Name a nested rateE6 inside 980000–1020000. A maker's own off-band quote stays mm.spread_bound. A vendor conversion while a maker sits stays market.fx_party. A conversion that pays nothing stays market.payout_fresh. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq. An in-band guest quote with no maker still mints. The maker still mints in-band after sitting.",
   },
   "host.not_hosted": {
     kind: "none",
