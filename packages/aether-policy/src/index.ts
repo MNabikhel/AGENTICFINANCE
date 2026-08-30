@@ -1510,6 +1510,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.path_live", "deny", "speaker has no live incoming hop");
     },
   },
+  {
+    id: "mandate.child_currency",
+    evaluate: (ctx) => {
+      if (ctx.childCurrencyOk === undefined) return v("mandate.child_currency", "allow", "not a nested currency mint");
+      return ctx.childCurrencyOk
+        ? v("mandate.child_currency", "allow", "nested lid and coffer name the parent's currency")
+        : v("mandate.child_currency", "deny", "nested lid or coffer names a different currency than the parent");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1826,7 +1835,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.currency_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still names payment.currency_match. A closed coffer stays mandate.budget_fresh. A floor above the lid stays mandate.range_fresh. A closed hatch is mandate.lid_fresh. Mix TAP is a mixed journal. Ink TAP is cart vs hire.",
+    hint: "A slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still names payment.currency_match. A closed coffer stays mandate.budget_fresh. A floor above the lid stays mandate.range_fresh. A closed hatch is mandate.lid_fresh. Mix TAP is a mixed journal. Ink TAP is cart vs hire. A nested child in a different currency is mandate.child_currency.",
   },
   "mandate.lid_fresh": {
     kind: "none",
@@ -1851,6 +1860,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.path_live": {
     kind: "none",
     hint: "A handshake in another principal's name cannot be born without a live incoming hop from that principal. Attest the speaker under that principal, then nest. Speaker granting in their own name is not this deny. Ghost principal stays identity.known. An agent filling in another principal's id stays kya.party. A grant wider than a live incoming hop stays kya.path_tighter. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. A dead parentId stays kya.parent_fresh.",
+  },
+  "mandate.child_currency": {
+    kind: "none",
+    hint: "A nested slip cannot be born in a different currency than its parent. Name the parent's currency on the child's amount_range and payment.budget, or omit a constraint the parent also omitted. Same-slip lid vs coffer stays mandate.currency_fresh. A wider nested slip stays mandate.child_tighter. Matching USD still mints. Matching USDC still mints. Hire still names payment.currency_match. Ink TAP is cart vs hire. Mix TAP is a mixed journal. Clash TAP is a mixed envelope.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

@@ -128,6 +128,7 @@ export default defineConfig({
       "@aether/nest-tighter": path.resolve(__dirname, "packages/aether-runtime/src/nest-tighter.ts"),
       "@aether/path-tighter": path.resolve(__dirname, "packages/aether-runtime/src/path-tighter.ts"),
       "@aether/path-live": path.resolve(__dirname, "packages/aether-runtime/src/path-live.ts"),
+      "@aether/child-currency": path.resolve(__dirname, "packages/aether-runtime/src/child-currency.ts"),
     },
   },
 });

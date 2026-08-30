@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 106 rules", () => {
-    expect(RULE_IDS).toHaveLength(106);
+  it("has 107 rules", () => {
+    expect(RULE_IDS).toHaveLength(107);
   });
 
   it("denies frozen actors", () => {
@@ -3176,11 +3176,13 @@ describe("policy catalog", () => {
           { type: "payment.budget", currency: "USDC_SIM", max: 1000000 },
         ],
         currencyMintOk: false,
+        childCurrencyOk: false,
       }),
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.currency_fresh");
   });
 
@@ -4072,6 +4074,111 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.ruleId).toBe("identity.known");
   });
 
+  it("denies a nested child in a different currency as mandate.child_currency", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        childCurrencyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.range_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.lid_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "payment.currency_match")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_currency");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.child_currency when nested currencies match the parent", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        childCurrencyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.child_currency when the speaker is not minting a nested slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.child_tighter first when a nested child is also wider than the parent", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USDC_SIM", max: 500000 }],
+        childCurrencyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
+  });
+
+  it("still names mandate.known_parent first when a ghost parent is also a nested currency mint", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: false,
+        childCurrencyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
+  });
+
+  it("still names mandate.parent_fresh first when a dead parent is also a nested currency mint", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: false,
+        childCurrencyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.parent_fresh");
+  });
+
+  it("still names mandate.lid_fresh first when a nested child's hatch is also closed", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        lidMintOk: false,
+        childCurrencyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.lid_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.lid_fresh");
+  });
 
   it("still names identity.known first when a ghost subject is also born with no slots", () => {
     const d = evaluate(

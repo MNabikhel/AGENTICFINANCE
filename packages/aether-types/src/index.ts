@@ -1139,6 +1139,17 @@ export interface PolicyContext {
    */
   currencyMintOk?: boolean;
   /**
+   * False when mandate.issue_intent with a known parent would write an
+   * amount_range or payment.budget whose currency differs from the parent's
+   * matching constraint. Absent = not a nested mint, or parent unknown
+   * (`mandate.known_parent`). Missing currency keeps hire-time first deny.
+   * Matching USD still mints. Matching USDC still mints. Same-slip lid vs
+   * coffer stays `mandate.currency_fresh`. A wider nested slip stays
+   * `mandate.child_tighter`. Clash TAP is a mixed envelope. Header TAP is a
+   * nested child in a different currency.
+   */
+  childCurrencyOk?: boolean;
+  /**
    * False when mandate.issue_intent would write an amount_range whose max
    * cannot admit a positive hire (`max` ≤ 0). Absent = not issue_intent, or
    * no amount_range constraint. Missing/non-finite max keeps hire-time first

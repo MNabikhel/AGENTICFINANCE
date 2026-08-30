@@ -107,7 +107,8 @@
     "./grant-fresh": "./src/grant-fresh.ts",
     "./nest-tighter": "./src/nest-tighter.ts",
     "./path-tighter": "./src/path-tighter.ts",
-    "./path-live": "./src/path-live.ts"
+    "./path-live": "./src/path-live.ts",
+    "./child-currency": "./src/child-currency.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

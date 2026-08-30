@@ -119,6 +119,7 @@ pnpm demo sill            # a grant below the desk is not a handshake
 pnpm demo joist           # a nested grant wider than its parent is not a handshake
 pnpm demo stud            # a grant wider than the incoming hop is not a handshake
 pnpm demo plate           # an orphan hop is not a handshake
+pnpm demo header          # a USDC header under a USD plate is not a nested slip
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

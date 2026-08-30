@@ -710,6 +710,11 @@
       "name": "aether_demo_plate",
       "commandType": "demo.plate",
       "description": "Run the plate TAP: an orphan hop is not a handshake. kya.attest in another principal's name with no live incoming path is kya.path_live; a grant wider than the incoming hop, a nested parent hop, and whose name a handshake is in still allow; an exact path grant still mints; a tighter path grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_header",
+      "commandType": "demo.header",
+      "description": "Run the header TAP: a USDC header under a USD plate is not a nested slip. mandate.issue_intent nested under a parent in a different currency is mandate.child_currency; a mixed envelope, a wider nested slip, and hire-time currency still allow; matching USD still mints; matching USDC still mints; funded work still finishes."
     }
   ]
 }

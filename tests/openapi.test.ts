@@ -240,6 +240,9 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("grant wider than the incoming hop");
     expect(spec).toContain("/v1/demo/plate:");
     expect(spec).toContain("orphan hop");
+    expect(spec).toContain("/v1/demo/header:");
+    expect(spec).toContain("USDC header");
+    expect(spec).toContain("nested slip");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {

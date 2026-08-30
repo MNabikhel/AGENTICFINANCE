@@ -331,6 +331,9 @@ export const STUD_TLDR =
 export const PLATE_TLDR =
   "A founder funded an $800 hire. Minting a hop in another principal's name with no live incoming path was kya.path_live — not a grant wider than the incoming hop, not a nested parent hop, not whose name a handshake is in. An exact path grant still minted. A tighter path grant still minted. That funded work still released. An orphan hop is not a handshake.";
 
+export const HEADER_TLDR =
+  "A founder funded an $800 hire. Minting a nested USDC slip under a USD parent was mandate.child_currency — not a mixed envelope, not a wider nested slip, not hire-time currency. Matching USD still minted. Matching USDC still minted. That funded work still released. A USDC header under a USD plate is not a nested slip.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -668,6 +671,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a mixed envelope`,
           body: "A permission slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still checks currency when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.child_currency") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a USDC header under a USD plate`,
+          body: "A nested slip cannot be born in a different currency than its parent. Name the parent's currency on the child's lid and coffer. A mixed envelope is a different object. A wider nested slip is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1818,6 +1831,7 @@ export function analog(): Analog {
       "A nested grant wider than its parent is not a handshake. An exact nested grant still mints. A tighter nested grant still mints. A nested slip is a different object.",
       "A grant wider than the incoming hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A nested parent hop is a different object.",
       "An orphan hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A grant wider than the incoming hop is a different object.",
+      "A USDC header under a USD plate is not a nested slip. Matching USD still mints. Matching USDC still mints. A mixed envelope is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };
