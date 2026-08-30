@@ -182,10 +182,10 @@
       "required": ["rfqId", "price"],
       "properties": {
         "rfqId": { "type": "string" },
-        "price": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM." },
+        "price": { "type": "object", "description": "Integer minor units. currency is USD_SIM or USDC_SIM. An FX from-amount whose floor payout is 0 is market.payout_fresh." },
         "fx": {
           "type": "object",
-          "description": "FX window. Nested rateE6 is what the 200bps band binds and what settle uses.",
+          "description": "FX window. Nested rateE6 is what the 200bps band binds and what settle uses. A conversion whose floor payout is 0 is market.payout_fresh.",
           "properties": {
             "from": { "enum": ["USD_SIM", "USDC_SIM"] },
             "to": { "enum": ["USD_SIM", "USDC_SIM"] },

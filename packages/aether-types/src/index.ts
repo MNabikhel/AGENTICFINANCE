@@ -809,6 +809,15 @@ export interface PolicyContext {
    */
   fxMintFresh?: boolean;
   /**
+   * False when `market.quote` would write an FX window whose floor payout is 0
+   * (`floor(from * rateE6 / 1e6)`). Absent = not quoting with an `fx` object, or
+   * amount/rate missing (shape / other first denies). A 200bps miss stays
+   * `mm.spread_bound`. A dead window stays `market.fx_fresh`. A swapped pair
+   * stays `market.fx_pair`. A missing window stays `market.fx_window`. Ghost RFQ
+   * stays `market.known_rfq`. Pip TAP is a conversion that pays nothing.
+   */
+  fxPayoutOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

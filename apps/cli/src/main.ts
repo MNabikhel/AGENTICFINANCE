@@ -105,6 +105,7 @@ import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
 import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
 import { loadPathLive, runPathLive } from "@aether/path-live";
 import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
+import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -761,6 +762,12 @@ if (command === "demo" && (name === "header" || name === "cripple" || name === "
   process.exit(0);
 }
 
+if (command === "demo" && (name === "pip" || name === "tick" || name === "basis")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/pip/scenario.json");
+  printReport(runPayoutFresh(loadPayoutFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -888,6 +895,7 @@ usage:
   pnpm demo stud
   pnpm demo plate
   pnpm demo header
+  pnpm demo pip
   aether audit verify
   aether ledger replay
   pnpm mcp`);

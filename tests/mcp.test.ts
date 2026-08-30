@@ -123,6 +123,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_stud");
     expect(names).toContain("aether_demo_plate");
     expect(names).toContain("aether_demo_header");
+    expect(names).toContain("aether_demo_pip");
     expect(names).toContain("aether_identity_rotate");
     expect(names).toContain("aether_hire_void");
     expect(names).toContain("aether_market_withdraw");
@@ -1018,6 +1019,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("nested USDC slip under a USD parent");
+  });
+
+  it("runs the pip demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_pip", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("floor payout is 0");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

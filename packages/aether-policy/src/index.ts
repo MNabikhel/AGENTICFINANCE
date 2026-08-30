@@ -1519,6 +1519,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.child_currency", "deny", "nested lid or coffer names a different currency than the parent");
     },
   },
+  {
+    id: "market.payout_fresh",
+    evaluate: (ctx) => {
+      if (ctx.fxPayoutOk === undefined) return v("market.payout_fresh", "allow", "not an FX payout mint");
+      return ctx.fxPayoutOk
+        ? v("market.payout_fresh", "allow", "FX floor payout is a positive amount")
+        : v("market.payout_fresh", "deny", "FX floor payout is zero");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1876,7 +1885,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.fx_fresh": {
     kind: "none",
-    hint: "An FX window cannot be born dead. Name a validUntil strictly after now. An unparseable Instant is not a window. Settle of a window that lapses after mint stays market.not_expired. Ghost RFQ stays market.known_rfq. A missing window stays market.fx_window. A swapped pair stays market.fx_pair.",
+    hint: "An FX window cannot be born dead. Name a validUntil strictly after now. An unparseable Instant is not a window. Settle of a window that lapses after mint stays market.not_expired. Ghost RFQ stays market.known_rfq. A missing window stays market.fx_window. A swapped pair stays market.fx_pair. A conversion that pays nothing is market.payout_fresh.",
+  },
+  "market.payout_fresh": {
+    kind: "none",
+    hint: "An FX window cannot be born with a floor payout of 0. Name a from-amount whose floor(from * rateE6 / 1e6) is at least 1 cent, or a higher in-band rate. A 1-cent window at the low band is not a conversion. A 0-cent window is not a conversion. A 2-cent window at the low band still mints. A 1-cent window at par still mints. A 200bps miss stays mm.spread_bound. A dead window stays market.fx_fresh. A swapped pair stays market.fx_pair. A missing window stays market.fx_window. Ghost RFQ stays market.known_rfq.",
   },
   "host.not_hosted": {
     kind: "none",

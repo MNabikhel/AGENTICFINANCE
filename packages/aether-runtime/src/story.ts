@@ -334,6 +334,9 @@ export const PLATE_TLDR =
 export const HEADER_TLDR =
   "A founder funded an $800 hire. Minting a nested USDC slip under a USD parent was mandate.child_currency — not a mixed envelope, not a wider nested slip, not hire-time currency. Matching USD still minted. Matching USDC still minted. That funded work still released. A USDC header under a USD plate is not a nested slip.";
 
+export const PIP_TLDR =
+  "A founder funded an $800 hire. Minting an FX window whose floor payout is 0 was market.payout_fresh — not a dead window, not a swapped pair, not a 200bps band miss. A two-cent window at the low band still minted. A one-cent window at par still minted. That funded work still released. A conversion that pays nothing is not an FX window.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -912,6 +915,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} quoted a conversion window that was already closed`,
           body: "An FX window cannot be born dead. Name a validUntil after now. Settle of a window that later lapses is still market.not_expired.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "market.payout_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} quoted a conversion that pays nothing`,
+          body: "An FX window cannot be born with a floor payout of 0. Name a from-amount whose floor conversion is at least 1 cent. A 200bps miss is a different object. A dead window is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1832,6 +1845,7 @@ export function analog(): Analog {
       "A grant wider than the incoming hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A nested parent hop is a different object.",
       "An orphan hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A grant wider than the incoming hop is a different object.",
       "A USDC header under a USD plate is not a nested slip. Matching USD still mints. Matching USDC still mints. A mixed envelope is a different object.",
+      "A conversion that pays nothing is not an FX window. A two-cent window at the low band still mints. A one-cent window at par still mints. A dead window is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

@@ -243,6 +243,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("/v1/demo/header:");
     expect(spec).toContain("USDC header");
     expect(spec).toContain("nested slip");
+    expect(spec).toContain("/v1/demo/pip:");
+    expect(spec).toContain("pays nothing");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {

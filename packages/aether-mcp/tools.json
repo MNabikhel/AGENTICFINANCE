@@ -715,6 +715,11 @@
       "name": "aether_demo_header",
       "commandType": "demo.header",
       "description": "Run the header TAP: a USDC header under a USD plate is not a nested slip. mandate.issue_intent nested under a parent in a different currency is mandate.child_currency; a mixed envelope, a wider nested slip, and hire-time currency still allow; matching USD still mints; matching USDC still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_pip",
+      "commandType": "demo.pip",
+      "description": "Run the pip TAP: a conversion that pays nothing is not an FX window. market.quote of an FX window whose floor payout is 0 is market.payout_fresh; a dead window, a swapped pair, and a 200bps band miss still allow; a two-cent window at the low band still mints; a one-cent window at par still mints; funded work still finishes."
     }
   ]
 }

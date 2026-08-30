@@ -113,6 +113,7 @@
     "demo:stud": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo stud",
     "demo:plate": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo plate",
     "demo:header": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo header",
+    "demo:pip": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo pip",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

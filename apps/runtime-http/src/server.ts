@@ -117,6 +117,7 @@ import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
 import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
 import { loadPathLive, runPathLive } from "@aether/path-live";
 import { loadChildCurrency, runChildCurrency } from "@aether/child-currency";
+import { loadPayoutFresh, runPayoutFresh } from "@aether/payout-fresh";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -226,6 +227,7 @@ const joistFixture = join(process.cwd(), "fixtures/demo/joist/scenario.json");
 const studFixture = join(process.cwd(), "fixtures/demo/stud/scenario.json");
 const plateFixture = join(process.cwd(), "fixtures/demo/plate/scenario.json");
 const headerFixture = join(process.cwd(), "fixtures/demo/header/scenario.json");
+const pipFixture = join(process.cwd(), "fixtures/demo/pip/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1210,6 +1212,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runChildCurrency(loadChildCurrency(headerFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "header" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/pip") {
+        const report = runPayoutFresh(loadPayoutFresh(pipFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "pip" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }
