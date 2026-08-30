@@ -920,6 +920,12 @@ paths:
       responses:
         "200": { description: Pip TAP report. A conversion that pays nothing is not an FX window. }
         "500": { description: Assertions failed }
+  /v1/demo/quoin:
+    post:
+      operationId: demoQuoin
+      responses:
+        "200": { description: Quoin TAP report. A vendor's conversion is not a market-maker window. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

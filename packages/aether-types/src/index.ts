@@ -818,6 +818,18 @@ export interface PolicyContext {
    */
   fxPayoutOk?: boolean;
   /**
+   * False when `market.quote` would write an FX window as a non-maker while a
+   * `market_maker` already sits. Absent = not quoting with an `fx` object.
+   * A research quote with no `fx` is not this deny. Quoting FX with no maker
+   * on the pit is not this deny (Maker TAP still mints; settle stays `mm.known`).
+   * A closed guest list stays `market.invited_seller`. A 200bps miss stays
+   * `mm.spread_bound`. A conversion that pays nothing stays `market.payout_fresh`.
+   * A dead window stays `market.fx_fresh`. A swapped pair stays `market.fx_pair`.
+   * A missing window stays `market.fx_window`. Ghost RFQ stays `market.known_rfq`.
+   * Quoin TAP is a vendor's conversion while a maker sits.
+   */
+  fxPartyOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

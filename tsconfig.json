@@ -123,7 +123,8 @@
       "@aether/path-tighter": ["packages/aether-runtime/src/path-tighter.ts"],
       "@aether/path-live": ["packages/aether-runtime/src/path-live.ts"],
       "@aether/child-currency": ["packages/aether-runtime/src/child-currency.ts"],
-      "@aether/payout-fresh": ["packages/aether-runtime/src/payout-fresh.ts"]
+      "@aether/payout-fresh": ["packages/aether-runtime/src/payout-fresh.ts"],
+      "@aether/fx-maker": ["packages/aether-runtime/src/fx-maker.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

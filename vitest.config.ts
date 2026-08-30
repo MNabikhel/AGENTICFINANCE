@@ -130,6 +130,7 @@ export default defineConfig({
       "@aether/path-live": path.resolve(__dirname, "packages/aether-runtime/src/path-live.ts"),
       "@aether/child-currency": path.resolve(__dirname, "packages/aether-runtime/src/child-currency.ts"),
       "@aether/payout-fresh": path.resolve(__dirname, "packages/aether-runtime/src/payout-fresh.ts"),
+      "@aether/fx-maker": path.resolve(__dirname, "packages/aether-runtime/src/fx-maker.ts"),
     },
   },
 });

@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 108 rules", () => {
-    expect(RULE_IDS).toHaveLength(108);
+  it("has 109 rules", () => {
+    expect(RULE_IDS).toHaveLength(109);
   });
 
   it("denies frozen actors", () => {
@@ -5375,6 +5375,242 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.payout_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("denies quoting an FX window as a vendor while a maker sits as market.fx_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: false,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.payout_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.kind).toBe("none");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_party");
+  });
+
+  it("does not name market.fx_party when the market maker quotes", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name market.fx_party when the speaker is not quoting a window", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name market.fx_party when no maker sits", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+  });
+
+  it("still names market.invited_seller first when the vendor is not invited", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: false,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: false,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.invited_seller");
+  });
+
+  it("still names mm.spread_bound first when the maker is off-band", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: true,
+        fxRateE6: 500_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mm.spread_bound");
+  });
+
+  it("still names market.payout_fresh first when a vendor conversion pays nothing", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: true,
+        fxPayoutOk: false,
+        fxPartyOk: false,
+        fxRateE6: 980_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.payout_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.payout_fresh");
+  });
+
+  it("still names market.fx_fresh first when a vendor quotes a dead window", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: true,
+        fxMintFresh: false,
+        fxPayoutOk: true,
+        fxPartyOk: false,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_fresh");
+  });
+
+  it("still names market.fx_pair first when a vendor quotes a swapped pair", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: true,
+        fxPairOk: false,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: false,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_pair");
+  });
+
+  it("still names market.fx_window first when an FX SKU has no window", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        skuCurrencyOk: true,
+        sellerInvited: true,
+        marketFresh: true,
+        fxWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_window");
+  });
+
+  it("still names market.known_rfq first when the RFQ is a ghost", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.quote",
+        rfqKnown: false,
+        fxMintFresh: true,
+        fxPayoutOk: true,
+        fxPartyOk: false,
+        fxRateE6: 998_000,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
   });
 

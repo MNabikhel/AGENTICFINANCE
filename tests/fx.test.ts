@@ -1110,3 +1110,206 @@ describe("market.payout_fresh", () => {
   });
 });
 
+describe("market.fx_party", () => {
+  it("refuses a vendor in-band FX window while a maker sits as fx_party, not a written corpse", () => {
+    const rt = boot();
+    const { desk, vendor, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [mm.id, vendor.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const clockBefore = rt.clock.now();
+    const auditBefore = rt.audit.length;
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.payout_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_pair")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_party");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.quotes.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+    expect(rt.audit.length).toBeGreaterThan(auditBefore);
+  });
+
+  it("refuses a compute vendor in-band FX window while a maker sits as fx_party", () => {
+    const rt = boot();
+    const { desk, compute, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [mm.id, compute.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", compute.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 1_000_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_party");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("still mints when the market maker quotes", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 998_000,
+            validUntil: "2026-08-29T00:00:00.000Z",
+          },
+        }),
+      ),
+      "fx quote",
+    );
+    expect((quoted.data as { id: string }).id.startsWith("qte_")).toBe(true);
+    expect(quoted.decision.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+  });
+
+  it("still names invited_seller first when the vendor is not invited", () => {
+    const rt = boot();
+    const { desk, vendor, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 998_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.invited_seller");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("still names spread_bound first when the maker is off-band", () => {
+    const rt = boot();
+    const { desk, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, { sku: "fx.usd_sim.usdc_sim", spec: "window", invitedSellerIds: [mm.id] }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", mm.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 80_000, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 500_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("mm.spread_bound");
+    expect(rt.quotes.size).toBe(before);
+  });
+
+  it("still names payout_fresh first when a vendor conversion pays nothing", () => {
+    const rt = boot();
+    const { desk, vendor, mm } = economy(rt);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "window",
+          invitedSellerIds: [mm.id, vendor.id],
+        }),
+      ),
+      "fx rfq",
+    );
+    const before = rt.quotes.size;
+    const r = rt.dispatch(
+      cmd("market.quote", vendor.id, {
+        rfqId: (rfq.data as { id: string }).id,
+        price: { amount: 1, currency: "USD_SIM" },
+        fx: {
+          from: "USD_SIM",
+          to: "USDC_SIM",
+          rateE6: 980_000,
+          validUntil: "2026-08-29T00:00:00.000Z",
+        },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.payout_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_party")?.verdict).toBe("deny");
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.payout_fresh");
+    expect(rt.quotes.size).toBe(before);
+  });
+});
+

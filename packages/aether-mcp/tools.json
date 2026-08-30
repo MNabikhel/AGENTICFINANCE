@@ -720,6 +720,11 @@
       "name": "aether_demo_pip",
       "commandType": "demo.pip",
       "description": "Run the pip TAP: a conversion that pays nothing is not an FX window. market.quote of an FX window whose floor payout is 0 is market.payout_fresh; a dead window, a swapped pair, and a 200bps band miss still allow; a two-cent window at the low band still mints; a one-cent window at par still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_quoin",
+      "commandType": "demo.quoin",
+      "description": "Run the quoin TAP: a vendor's conversion is not a market-maker window. market.quote of an in-band FX window by a vendor while a market maker sits is market.fx_party; a closed guest list, a 200bps band miss, and a conversion that pays nothing still allow; the maker still mints an in-band window; a par window still mints; funded work still finishes."
     }
   ]
 }

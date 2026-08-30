@@ -121,3 +121,4 @@ jobs:
       - run: pnpm demo:plate
       - run: pnpm demo:header
       - run: pnpm demo:pip
+      - run: pnpm demo:quoin

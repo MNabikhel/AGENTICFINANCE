@@ -121,6 +121,7 @@ pnpm demo stud            # a grant wider than the incoming hop is not a handsha
 pnpm demo plate           # an orphan hop is not a handshake
 pnpm demo header          # a USDC header under a USD plate is not a nested slip
 pnpm demo pip             # a conversion that pays nothing is not an FX window
+pnpm demo quoin           # a vendor's conversion is not a market-maker window
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
