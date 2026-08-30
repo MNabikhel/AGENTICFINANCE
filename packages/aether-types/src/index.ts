@@ -1159,6 +1159,15 @@ export interface PolicyContext {
    */
   capMintOk?: boolean;
   /**
+   * False when kya.attest would write a maxAutonomy below the named delegate's
+   * live rung. Absent = not attest, omitted maxAutonomy (open ceiling / L5),
+   * or the delegate is unknown (`identity.known` handles that).
+   * Exact grant (max === rung) still mints. Hire still names
+   * `kya.capability_subset`. Climb TAP is a climb after mint.
+   * Eave TAP is a slip cap below the desk (`mandate.cap_fresh`).
+   */
+  grantMintOk?: boolean;
+  /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
    * Absent = no parent, or not those verbs (completing a funded hire after the parent

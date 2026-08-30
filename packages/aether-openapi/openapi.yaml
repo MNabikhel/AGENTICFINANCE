@@ -884,6 +884,12 @@ paths:
       responses:
         "200": { description: Eave TAP report. A cap below the desk is not a cap. }
         "500": { description: Assertions failed }
+  /v1/demo/sill:
+    post:
+      operationId: demoSill
+      responses:
+        "200": { description: Sill TAP report. A grant below the desk is not a handshake. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

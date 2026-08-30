@@ -690,6 +690,11 @@
       "name": "aether_demo_eave",
       "commandType": "demo.eave",
       "description": "Run the eave TAP: a cap below the desk is not a cap. mandate.issue_intent with aether.max_autonomy below the named subject's live rung is mandate.cap_fresh; a vacant slot, a closed hatch, and hire-time climb still allow; an exact cap still mints; an open ceiling still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_sill",
+      "commandType": "demo.sill",
+      "description": "Run the sill TAP: a grant below the desk is not a handshake. kya.attest with maxAutonomy below the named delegate's live rung is kya.grant_fresh; a dead handshake, a second live hop, and hire-time climb still allow; an exact grant still mints; an open ceiling still mints; funded work still finishes."
     }
   ]
 }

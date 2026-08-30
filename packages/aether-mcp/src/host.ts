@@ -107,6 +107,7 @@ import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
 import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
 import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
 import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
+import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -252,6 +253,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_clash",
   "aether_demo_hatch",
   "aether_demo_eave",
+  "aether_demo_sill",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -1014,6 +1016,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_eave") {
       const report = runCapFresh(loadCapFresh("fixtures/demo/eave/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_sill") {
+      const report = runGrantFresh(loadGrantFresh("fixtures/demo/sill/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

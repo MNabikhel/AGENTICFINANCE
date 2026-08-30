@@ -100,6 +100,7 @@ import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
 import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
 import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
 import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
+import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -726,6 +727,12 @@ if (command === "demo" && (name === "eave" || name === "ridge" || name === "gabl
   process.exit(0);
 }
 
+if (command === "demo" && (name === "sill" || name === "ledge" || name === "lintel")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/sill/scenario.json");
+  printReport(runGrantFresh(loadGrantFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -848,6 +855,7 @@ usage:
   pnpm demo clash
   pnpm demo hatch
   pnpm demo eave
+  pnpm demo sill
   aether audit verify
   aether ledger replay
   pnpm mcp`);

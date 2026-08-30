@@ -130,6 +130,7 @@ import {
   CLASH_TLDR,
   HATCH_TLDR,
   EAVE_TLDR,
+  SILL_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -314,6 +315,16 @@ function lidMintable(c: { min?: unknown; max?: unknown }): boolean {
 function capMintable(max: unknown, subjectLevel: number): boolean {
   if (typeof max !== "number" || !Number.isFinite(max)) return true;
   return subjectLevel <= max;
+}
+
+/**
+ * A handshake whose ceiling is below the named delegate's live rung cannot
+ * admit a hire by that delegate. Missing/non-finite max keeps hire-time first
+ * deny. Exact grant (max === rung) still mints. Omit is an open ceiling (L5).
+ */
+function grantMintable(max: unknown, delegateLevel: number): boolean {
+  if (typeof max !== "number" || !Number.isFinite(max)) return true;
+  return delegateLevel <= max;
 }
 
 /**
@@ -1444,6 +1455,11 @@ export class Runtime {
           name: "Eave TAP",
           description: "POST /v1/demo/eave — a cap below the desk is not a cap",
         },
+        {
+          id: "grant-fresh",
+          name: "Sill TAP",
+          description: "POST /v1/demo/sill — a grant below the desk is not a handshake",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2182,6 +2198,12 @@ export class Runtime {
       const now = Date.parse(this.clock.now());
       ctx.kyaMintFresh = exp > now;
       ctx.kyaMintWindowOk = Number.isFinite(exp) && exp <= now + KYA_TTL_MS;
+      if (typeof body.maxAutonomy === "number") {
+        const delegate = this.identity.get(body.delegateId as AgentId);
+        if (delegate) {
+          ctx.grantMintOk = grantMintable(body.maxAutonomy, delegate.autonomyLevel);
+        }
+      }
     }
     if (cmd.type === "kya.attest" && typeof body.parentId === "string") {
       const parentHop = this.kya.attestations.get(body.parentId as DelegationId);
@@ -3034,6 +3056,12 @@ export class Runtime {
     }
     if (Date.parse(att.expiresAt) > Date.parse(att.createdAt) + KYA_TTL_MS) {
       throw new Error("kya hop outlives one year");
+    }
+    if (typeof body.maxAutonomy === "number") {
+      const delegate = this.identity.get(delegateId);
+      if (delegate && !grantMintable(body.maxAutonomy, delegate.autonomyLevel)) {
+        throw new Error("kya grant below delegate");
+      }
     }
     if (typeof body.parentId === "string") {
       const parentHop = this.kya.attestations.get(body.parentId as DelegationId);
@@ -4231,7 +4259,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

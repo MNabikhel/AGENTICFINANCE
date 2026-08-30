@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 102 rules", () => {
-    expect(RULE_IDS).toHaveLength(102);
+  it("has 103 rules", () => {
+    expect(RULE_IDS).toHaveLength(103);
   });
 
   it("denies frozen actors", () => {
@@ -3413,6 +3413,189 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
+  });
+
+  it("denies a grant below the desk as kya.grant_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        grantMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.grant_fresh");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name kya.grant_fresh when the delegate's live rung is at or below the grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        grantMintOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.grant_fresh when the speaker is not attesting", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.unique_live first when a second hop is also a grant below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: false,
+        kyaMintFresh: true,
+        grantMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.unique_live");
+  });
+
+  it("still names kya.mint_fresh first when a corpse is also a grant below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: false,
+        grantMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.mint_fresh");
+  });
+
+  it("still names kya.mint_window first when a century mint is also a grant below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaMintWindowOk: false,
+        grantMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.mint_window");
+  });
+
+  it("denies a climb above the handshake at hire, not as kya.grant_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "hire.create",
+        intent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        grantMintOk: true,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 1,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          grantedMaxAutonomy: 3,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
+  });
+
+  it("still names kya.capability_subset first when an agent over-grant is also a grant below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 2 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        grantMintOk: false,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 0,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          proposedMaxAutonomy: 4,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
+  });
+
+  it("still names identity.known first when a ghost delegate is also a grant below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: false,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        grantMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("identity.known");
   });
 

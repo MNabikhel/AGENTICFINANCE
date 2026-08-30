@@ -1474,6 +1474,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.cap_fresh", "deny", "subject's live rung is above the cap");
     },
   },
+  {
+    id: "kya.grant_fresh",
+    evaluate: (ctx) => {
+      if (ctx.grantMintOk === undefined) return v("kya.grant_fresh", "allow", "not a grant mint");
+      return ctx.grantMintOk
+        ? v("kya.grant_fresh", "allow", "delegate's live rung is at or below the grant")
+        : v("kya.grant_fresh", "deny", "delegate's live rung is above the grant");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1554,7 +1563,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.capability_subset": {
     kind: "none",
-    hint: "Omitted maxAutonomy is L5. An agent may not grant a standing-mandate ceiling above its own rung, or spend above the handshake ceiling. Name a ceiling you hold. A human or treasury may grant L5. Completing a funded hire after a climb is legal; freeze and revoke still bind.",
+    hint: "Omitted maxAutonomy is L5. An agent may not grant a standing-mandate ceiling above its own rung, or spend above the handshake ceiling. Name a ceiling you hold. A human or treasury may grant L5. Completing a funded hire after a climb is legal; freeze and revoke still bind. A grant below the desk is kya.grant_fresh.",
   },
   "market.known_sku": {
     kind: "none",
@@ -1682,7 +1691,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.unique_live": {
     kind: "none",
-    hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant.",
+    hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant. A grant below the desk is kya.grant_fresh.",
   },
   "hire.unique_cart": {
     kind: "none",
@@ -1758,11 +1767,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.mint_fresh": {
     kind: "none",
-    hint: "A handshake cannot be born dead. Name an expiresAt strictly after now, or omit it for one year. An unparseable Instant is not a window. Ghost, self, party, a second live hop, and an over-grant keep first deny.",
+    hint: "A handshake cannot be born dead. Name an expiresAt strictly after now, or omit it for one year. An unparseable Instant is not a window. Ghost, self, party, a second live hop, and an over-grant keep first deny. A grant below the desk is kya.grant_fresh.",
   },
   "kya.mint_window": {
     kind: "none",
-    hint: "A handshake cannot outlive one year. Omit expiresAt for that ceiling, or name a sooner Instant. Year 9999 is not standing identity. A corpse mint stays kya.mint_fresh.",
+    hint: "A handshake cannot outlive one year. Omit expiresAt for that ceiling, or name a sooner Instant. Year 9999 is not standing identity. A corpse mint stays kya.mint_fresh. A grant below the desk is kya.grant_fresh.",
   },
   "mandate.window_fresh": {
     kind: "none",
@@ -1798,7 +1807,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.cap_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with an aether.max_autonomy below the named subject's live rung. Name max ≥ that rung, or omit the cap. Hire still names ladder.max_autonomy_constraint. A closed hatch stays mandate.lid_fresh. Ceiling TAP is a climb after mint. Grade TAP is a junior nested mint. Rung TAP is a skipped climb.",
+    hint: "A slip cannot be born with an aether.max_autonomy below the named subject's live rung. Name max ≥ that rung, or omit the cap. Hire still names ladder.max_autonomy_constraint. A closed hatch stays mandate.lid_fresh. Ceiling TAP is a climb after mint. Grade TAP is a junior nested mint. Rung TAP is a skipped climb. A grant below the desk is kya.grant_fresh.",
+  },
+  "kya.grant_fresh": {
+    kind: "none",
+    hint: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still names kya.capability_subset. A corpse mint stays kya.mint_fresh. A century mint stays kya.mint_window. A second live hop stays kya.unique_live. Climb TAP is a climb after mint. Eave TAP is a slip cap below the desk.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

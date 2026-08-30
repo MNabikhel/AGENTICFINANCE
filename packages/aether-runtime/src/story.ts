@@ -319,6 +319,9 @@ export const HATCH_TLDR =
 export const EAVE_TLDR =
   "A founder funded an $800 hire. Minting a cap below the desk's live rung was mandate.cap_fresh — not a vacant slot, not a closed hatch, not a climb after mint. An exact cap still minted. An open ceiling still minted. That funded work still released. A cap below the desk is not a cap.";
 
+export const SILL_TLDR =
+  "A founder funded an $800 hire. Minting a grant below the desk's live rung was kya.grant_fresh — not a vacant hop, not a dead handshake, not a climb after mint. An exact grant still minted. An open ceiling still minted. That funded work still released. A grant below the desk is not a handshake.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -676,6 +679,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a cap below the desk`,
           body: "A permission slip cannot be born with an aether.max_autonomy below the named subject's live rung. Name max ≥ that rung, or omit the cap. Hire still checks the ceiling when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.grant_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a grant below the desk`,
+          body: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still checks the handshake when money would move.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1742,6 +1755,7 @@ export function analog(): Analog {
       "A USDC coffer on a USD lid is not a budget. Matching USD still mints. Matching USDC still mints. Hire-time currency is a different object.",
       "A closed hatch is not a range. A zero lid is not a range. A live lid still mints. An open floor still mints. Hire-time max is a different object.",
       "A cap below the desk is not a cap. An exact cap still mints. An open ceiling still mints. Hire-time climb is a different object.",
+      "A grant below the desk is not a handshake. An exact grant still mints. An open ceiling still mints. Hire-time climb is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

@@ -124,6 +124,7 @@ export default defineConfig({
       "@aether/currency-fresh": path.resolve(__dirname, "packages/aether-runtime/src/currency-fresh.ts"),
       "@aether/hatch-fresh": path.resolve(__dirname, "packages/aether-runtime/src/hatch-fresh.ts"),
       "@aether/cap-fresh": path.resolve(__dirname, "packages/aether-runtime/src/cap-fresh.ts"),
+      "@aether/grant-fresh": path.resolve(__dirname, "packages/aether-runtime/src/grant-fresh.ts"),
     },
   },
 });

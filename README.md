@@ -115,6 +115,7 @@ pnpm demo coffer          # a closed coffer is not a budget
 pnpm demo clash           # a USDC coffer on a USD lid is not a budget
 pnpm demo hatch           # a closed hatch is not a range
 pnpm demo eave            # a cap below the desk is not a cap
+pnpm demo sill            # a grant below the desk is not a handshake
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
@@ -259,6 +260,8 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 
 **Spark:** a founder funds an $800 hire. A handshake born expired is refused — a century mint and a second live hop still allow. No handshake is written. A one-year hop still mints. That funded work still releases. A handshake cannot be born dead.
 
+**Sill:** a founder funds an $800 hire. Minting a grant below the desk's live rung is refused — a dead handshake, a second live hop, and hire-time climb still allow. An exact grant still mints. An open ceiling still mints. That funded work still releases. A grant below the desk is not a handshake.
+
 **Wilt:** a founder funds an $800 hire. A slip born with a closed calendar is refused — a window that opens after the slip dies and a hire-time calendar still allow. No slip is written. A live slip still mints. That funded work still releases. A permission slip cannot be born with a closed calendar.
 
 **Maker:** a founder funds an $800 hire. Settling a live FX window with no market maker is refused — empty inventory and a missing dest book still allow. The window stays unspent. A maker still sits and that same window still converts. That funded work still releases. A window is not a journal against nobody.
@@ -310,7 +313,7 @@ Human writes a permission slip (mandate)
 | Path | Role |
 |---|---|
 | `AGENTS.md` | How another agent talks to Aether |
-| `packages/aether-policy` | Referee. 93 ordered rules. No LLM. No I/O. |
+| `packages/aether-policy` | Referee. 103 ordered rules. No LLM. No I/O. |
 | `packages/aether-kya` | Know Your Agent. Principal → agent → sub-agent. Revoke cascades. |
 | `packages/aether-mcp` | Real MCP host. One Runtime. Tools are commands. |
 | `packages/aether-clearing` | Who owes whom. Bilateral exposure and netting views. |

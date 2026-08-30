@@ -882,11 +882,33 @@ describe("kya.unique_live", () => {
     must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })), "attest");
     must(rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id })), "revoke");
     const again = must(
-      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 })),
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
       "re-attest",
     );
-    expect((again.data as { maxAutonomy: number }).maxAutonomy).toBe(2);
+    expect((again.data as { maxAutonomy: number }).maxAutonomy).toBe(3);
     expect([...rt.kya.attestations.values()].filter((a) => !a.revokedAt)).toHaveLength(1);
+  });
+
+  it("refuses a grant below the desk as kya.grant_fresh, not a live mint", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 2 }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.grant_fresh");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
   });
 });
 
