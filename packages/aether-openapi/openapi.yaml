@@ -878,6 +878,12 @@ paths:
       responses:
         "200": { description: Hatch TAP report. A closed hatch is not a range. }
         "500": { description: Assertions failed }
+  /v1/demo/eave:
+    post:
+      operationId: demoEave
+      responses:
+        "200": { description: Eave TAP report. A cap below the desk is not a cap. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

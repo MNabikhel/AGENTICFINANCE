@@ -685,6 +685,11 @@
       "name": "aether_demo_hatch",
       "commandType": "demo.hatch",
       "description": "Run the hatch TAP: a closed hatch is not a range. mandate.issue_intent with amount_range max 0 or an exact zero lid is mandate.lid_fresh; a vacant slot, a floor above the lid, and hire-time max still allow; a live lid still mints; an open floor still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_eave",
+      "commandType": "demo.eave",
+      "description": "Run the eave TAP: a cap below the desk is not a cap. mandate.issue_intent with aether.max_autonomy below the named subject's live rung is mandate.cap_fresh; a vacant slot, a closed hatch, and hire-time climb still allow; an exact cap still mints; an open ceiling still mints; funded work still finishes."
     }
   ]
 }

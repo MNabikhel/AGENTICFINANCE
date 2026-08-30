@@ -1149,6 +1149,16 @@ export interface PolicyContext {
    */
   lidMintOk?: boolean;
   /**
+   * False when mandate.issue_intent would write an aether.max_autonomy below
+   * the named subject's live rung. Absent = not issue_intent, no max_autonomy
+   * constraint, or the subject is unknown (`identity.known` handles that).
+   * Exact cap (max === rung) still mints. An open ceiling (omit the constraint)
+   * still mints. Hire/fund still names `ladder.max_autonomy_constraint`.
+   * Ceiling TAP is a climb after mint. Grade TAP is a junior nested mint.
+   * A closed hatch stays `mandate.lid_fresh`.
+   */
+  capMintOk?: boolean;
+  /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
    * Absent = no parent, or not those verbs (completing a funded hire after the parent

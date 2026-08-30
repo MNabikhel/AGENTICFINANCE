@@ -102,7 +102,8 @@
     "./range-fresh": "./src/range-fresh.ts",
     "./budget-fresh": "./src/budget-fresh.ts",
     "./currency-fresh": "./src/currency-fresh.ts",
-    "./hatch-fresh": "./src/hatch-fresh.ts"
+    "./hatch-fresh": "./src/hatch-fresh.ts",
+    "./cap-fresh": "./src/cap-fresh.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

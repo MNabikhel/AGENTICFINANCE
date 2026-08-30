@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 101 rules", () => {
-    expect(RULE_IDS).toHaveLength(101);
+  it("has 102 rules", () => {
+    expect(RULE_IDS).toHaveLength(102);
   });
 
   it("denies frozen actors", () => {
@@ -3298,6 +3298,122 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.lid_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.lid_fresh");
+  });
+
+  it("denies a cap below the desk as mandate.cap_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        capMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.lid_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.cap_fresh");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.cap_fresh when the subject's live rung is at or below the cap", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        capMintOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.cap_fresh when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.lid_fresh first when a closed hatch is also a cap below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        lidMintOk: false,
+        capMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.lid_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.lid_fresh");
+  });
+
+  it("denies a climb above the slip ceiling at hire, not as mandate.cap_fresh", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.create",
+        amount: { amount: 80000, currency: "USD_SIM" },
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        intent: signedIntent([{ type: "aether.max_autonomy", max: 3 }]),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.max_autonomy_constraint")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.max_autonomy_constraint");
+  });
+
+  it("denies a nested child whose cap is below the desk as mandate.cap_fresh, not child_tighter", () => {
+    const parent = signedIntent([{ type: "aether.max_autonomy", max: 5 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "aether.max_autonomy", max: 2 }],
+        capMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.cap_fresh");
+  });
+
+  it("still names mandate.child_tighter first when a nested child cap is wider than the parent", () => {
+    const parent = signedIntent([{ type: "aether.max_autonomy", max: 2 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [{ type: "aether.max_autonomy", max: 5 }],
+        capMintOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
+  });
+
+  it("still names identity.known first when a ghost subject is also a cap below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: false,
+        capMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cap_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
   });
 
   it("still names identity.known first when a ghost subject is also born with no slots", () => {

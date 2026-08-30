@@ -1465,6 +1465,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.lid_fresh", "deny", "amount_range max cannot admit a positive hire");
     },
   },
+  {
+    id: "mandate.cap_fresh",
+    evaluate: (ctx) => {
+      if (ctx.capMintOk === undefined) return v("mandate.cap_fresh", "allow", "not a cap mint");
+      return ctx.capMintOk
+        ? v("mandate.cap_fresh", "allow", "subject's live rung is at or below the cap")
+        : v("mandate.cap_fresh", "deny", "subject's live rung is above the cap");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1785,7 +1794,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.lid_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with an amount_range whose max cannot admit a positive hire. Name max > 0, or omit the range. Hire still names payment.amount_range. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Lid TAP is hire-time max. A closed coffer is mandate.budget_fresh. A mixed envelope is mandate.currency_fresh.",
+    hint: "A slip cannot be born with an amount_range whose max cannot admit a positive hire. Name max > 0, or omit the range. Hire still names payment.amount_range. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Lid TAP is hire-time max. A closed coffer is mandate.budget_fresh. A mixed envelope is mandate.currency_fresh. A cap below the desk is mandate.cap_fresh.",
+  },
+  "mandate.cap_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an aether.max_autonomy below the named subject's live rung. Name max ≥ that rung, or omit the cap. Hire still names ladder.max_autonomy_constraint. A closed hatch stays mandate.lid_fresh. Ceiling TAP is a climb after mint. Grade TAP is a junior nested mint. Rung TAP is a skipped climb.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

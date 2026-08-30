@@ -316,6 +316,9 @@ export const CLASH_TLDR =
 export const HATCH_TLDR =
   "A founder funded an $800 hire. Minting a closed hatch or a zero lid was mandate.lid_fresh — not a vacant slot, not a floor above the lid, not hire-time max. A live lid still minted. An open floor still minted. That funded work still released. A closed hatch is not a range.";
 
+export const EAVE_TLDR =
+  "A founder funded an $800 hire. Minting a cap below the desk's live rung was mandate.cap_fresh — not a vacant slot, not a closed hatch, not a climb after mint. An exact cap still minted. An open ceiling still minted. That funded work still released. A cap below the desk is not a cap.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -663,6 +666,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a closed hatch`,
           body: "A permission slip cannot be born with an amount_range whose max cannot admit a positive hire. Name max > 0, or omit the range. Hire still checks the lid when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.cap_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a cap below the desk`,
+          body: "A permission slip cannot be born with an aether.max_autonomy below the named subject's live rung. Name max ≥ that rung, or omit the cap. Hire still checks the ceiling when money would move.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1728,6 +1741,7 @@ export function analog(): Analog {
       "A closed coffer is not a budget. A coffer below the floor is not a budget. A coffer that covers the floor still mints. Hire-time envelope is a different object.",
       "A USDC coffer on a USD lid is not a budget. Matching USD still mints. Matching USDC still mints. Hire-time currency is a different object.",
       "A closed hatch is not a range. A zero lid is not a range. A live lid still mints. An open floor still mints. Hire-time max is a different object.",
+      "A cap below the desk is not a cap. An exact cap still mints. An open ceiling still mints. Hire-time climb is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

@@ -99,6 +99,7 @@ import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
 import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
 import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
 import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
+import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -719,6 +720,12 @@ if (command === "demo" && (name === "hatch" || name === "flap" || name === "cork
   process.exit(0);
 }
 
+if (command === "demo" && (name === "eave" || name === "ridge" || name === "gable")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/eave/scenario.json");
+  printReport(runCapFresh(loadCapFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -840,6 +847,7 @@ usage:
   pnpm demo coffer
   pnpm demo clash
   pnpm demo hatch
+  pnpm demo eave
   aether audit verify
   aether ledger replay
   pnpm mcp`);

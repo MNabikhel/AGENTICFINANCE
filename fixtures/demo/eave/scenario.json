@@ -1,0 +1,29 @@
+{
+  "id": "cap-fresh",
+  "clockStart": "2026-08-28T00:00:00.000Z",
+  "genesisNonce": "01J6AETHERGENESIS0000000102",
+  "opening": {
+    "treasury:cash": { "amount": 500000, "currency": "USD_SIM" }
+  },
+  "circuit": { "dailyLimit": 10000000 },
+  "allocation": { "amount": 200000, "currency": "USD_SIM" },
+  "sneak": {
+    "task": "a cap below the desk is not a cap"
+  },
+  "legal": {
+    "task": "buy research under an exact L3 cap"
+  },
+  "open": {
+    "task": "buy research with an open ceiling"
+  },
+  "intent": {
+    "task": "A cap below the desk is not a cap. Completing funded work is legal. A vacant slot is a different object. A closed hatch is a different object. Hire-time climb is a different object.",
+    "constraints": [
+      { "type": "payment.amount_range", "currency": "USD_SIM", "max": 500000 },
+      { "type": "aether.allowed_skus", "allowed": ["research.brief"] }
+    ]
+  },
+  "quotes": {
+    "hire": { "amount": 80000, "currency": "USD_SIM" }
+  }
+}

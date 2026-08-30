@@ -230,6 +230,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("USDC coffer");
     expect(spec).toContain("/v1/demo/hatch:");
     expect(spec).toContain("closed hatch");
+    expect(spec).toContain("/v1/demo/eave:");
+    expect(spec).toContain("cap below the desk");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {
