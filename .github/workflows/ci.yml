@@ -128,3 +128,4 @@ jobs:
       - run: pnpm demo:poach
       - run: pnpm demo:guise
       - run: pnpm demo:cuckoo
+      - run: pnpm demo:forge

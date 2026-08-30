@@ -755,6 +755,11 @@
       "name": "aether_demo_cuckoo",
       "commandType": "demo.cuckoo",
       "description": "Run the cuckoo TAP: someone else's parent slip is not yours to nest under. mandate.issue_intent nested under another desk's live unused parent by a second desk is mandate.child_party; a missing parent, a dead parent, a wider nested slip, and a junior nested mint still allow first-deny elsewhere; no child written by the sneak; the parent subject still nests a tighter child; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_forge",
+      "commandType": "demo.forge",
+      "description": "Run the forge TAP: someone else's name is not a root slip to mint. mandate.issue_intent without parentId naming another desk is mandate.root_party; a missing subject, a nested child, a junior mint, and a vendor verb still allow first-deny elsewhere; no extra root written by the sneak; the named subject still mints a self-root; funded work still finishes."
     }
   ]
 }

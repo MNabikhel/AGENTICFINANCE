@@ -137,6 +137,7 @@ export default defineConfig({
       "@aether/hire-room-party": path.resolve(__dirname, "packages/aether-runtime/src/hire-room-party.ts"),
       "@aether/hire-slip-party": path.resolve(__dirname, "packages/aether-runtime/src/hire-slip-party.ts"),
       "@aether/child-party": path.resolve(__dirname, "packages/aether-runtime/src/child-party.ts"),
+      "@aether/root-party": path.resolve(__dirname, "packages/aether-runtime/src/root-party.ts"),
     },
   },
 });
