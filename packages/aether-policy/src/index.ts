@@ -1609,6 +1609,33 @@ export const RULES: readonly Rule[] = [
         : v("market.settle_party", "deny", "speaker is not this window's converter");
     },
   },
+  {
+    id: "mm.fx_only",
+    evaluate: (ctx) => {
+      if (ctx.makerQuoteOk === undefined) return v("mm.fx_only", "allow", "not a maker catalog quote");
+      return ctx.makerQuoteOk
+        ? v("mm.fx_only", "allow", "maker is quoting an FX window")
+        : v("mm.fx_only", "deny", "a maker's quote is a window, not a good");
+    },
+  },
+  {
+    id: "kya.revoke_state",
+    evaluate: (ctx) => {
+      if (ctx.revokeStateOk === undefined) return v("kya.revoke_state", "allow", "not a live tombstone");
+      return ctx.revokeStateOk
+        ? v("kya.revoke_state", "allow", "revoke tombstones a hop or blocks a new pair")
+        : v("kya.revoke_state", "deny", "a tombstone is not a second tombstone");
+    },
+  },
+  {
+    id: "clearing.settle_state",
+    evaluate: (ctx) => {
+      if (ctx.settleWindowOk === undefined) return v("clearing.settle_state", "allow", "not a settlement window");
+      return ctx.settleWindowOk
+        ? v("clearing.settle_state", "allow", "the open book has legs to photograph")
+        : v("clearing.settle_state", "deny", "an empty book is not a settlement photo");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -2007,6 +2034,18 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "market.settle_party": {
     kind: "none",
     hint: "Settle your own conversion window, or a maker's quoted window. Someone else's vendor window is not yours to convert. A maker settling is a wash, not a conversion. A missing quote is market.fx_quote. A missing maker is mm.known. A missing dest book is ledger.known_account. Minting FX while a maker sits stays market.fx_party. Folding a bid stays market.party. Completing funded work is legal. The named seller still converts. A maker window still converts for a non-maker with books.",
+  },
+  "mm.fx_only": {
+    kind: "none",
+    hint: "A maker's quote is a window, not a good. Makers have no accept or deliver verb, so a maker's good quote mints a hire no verb can advance. Quote FX, or let a vendor quote the good. A ghost room is market.known_rfq. A shut room is market.not_expired. An uninvited maker is market.invited_seller. A windowless FX quote is market.fx_window. A vendor minting FX while a maker sits stays market.fx_party. Vendors still quote goods. Makers still quote FX windows.",
+  },
+  "kya.revoke_state": {
+    kind: "none",
+    hint: "A tombstone is not a second tombstone. This handshake is already revoked (or this pair is already blocked with nothing left to tombstone) — a no-op revoke is not a notary line after yes. Re-attest, then revoke, to write a new tombstone. A ghost attestation is kya.known_attestation. A ghost agent is identity.known. Someone else's name is kya.party. A first delegate-wide revoke still blocks implicit grants. Revoking an expired unrevoked hop still tombstones. Unfreezing a live agent stays identity.freeze_state.",
+  },
+  "clearing.settle_state": {
+    kind: "none",
+    hint: "An empty book is not a settlement photo. The open exposure book for this currency has zero legs — a settle would photograph nothing, empty nothing, and still mint a window object in the notary book. Fund a hire or settle an FX window to put gross on the book, then settle. The other currency's legs are a different book. A system speaker is actor.system_scope. A junior speaker is actor.role_capability. A garbage currency is command.malformed before policy. Money already moved at escrow — a window is the CCP photo, not a second payment.",
   },
   "host.not_hosted": {
     kind: "none",

@@ -133,6 +133,9 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_cuckoo");
     expect(names).toContain("aether_demo_forge");
     expect(names).toContain("aether_demo_snare");
+    expect(names).toContain("aether_demo_hawk");
+    expect(names).toContain("aether_demo_tomb");
+    expect(names).toContain("aether_demo_film");
     expect(names).toContain("aether_identity_rotate");
     expect(names).toContain("aether_hire_void");
     expect(names).toContain("aether_market_withdraw");
@@ -1117,6 +1120,33 @@ describe("MCP host", () => {
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("settle_party");
     expect(report.tldr).toContain("not yours to settle");
+  });
+
+  it("runs the hawk demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_hawk", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("mm.fx_only");
+    expect(report.tldr).toContain("a window, not a good");
+  });
+
+  it("runs the tomb demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_tomb", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("kya.revoke_state");
+    expect(report.tldr).toContain("not a second tombstone");
+  });
+
+  it("runs the film demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_film", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("clearing.settle_state");
+    expect(report.tldr).toContain("not a settlement photo");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

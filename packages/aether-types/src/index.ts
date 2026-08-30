@@ -855,6 +855,42 @@ export interface PolicyContext {
    */
   settlePartyOk?: boolean;
   /**
+   * False when a market_maker submits `market.quote` for a listed non-FX SKU
+   * (a plain research/compute good). A maker's quote is a window, not a good:
+   * makers have no `hire.accept` / `hire.deliver` verb, so a maker's good
+   * quote mints a hire no verb can advance. Absent = not a maker catalog
+   * quote (vendors still quote goods; makers still quote FX windows). A ghost
+   * room stays `market.known_rfq`. A shut room stays `market.not_expired`. An
+   * uninvited maker stays `market.invited_seller`. A maker FX quote without a
+   * window stays `market.fx_window` (Pane TAP). A vendor minting FX while a
+   * maker sits stays `market.fx_party` (Quoin TAP).
+   */
+  makerQuoteOk?: boolean;
+  /**
+   * False when `kya.revoke` would tombstone nothing and block nothing new:
+   * the named attestation is already revoked, the named pair is already
+   * blocked with no unrevoked hop (and no cascade target), or the revoke
+   * names neither an attestation nor a delegate. A tombstone is not a second
+   * tombstone; a no-op revoke is not a notary line after yes. Absent = not a
+   * `kya.revoke`, a ghost attestation (`kya.known_attestation`), or a ghost
+   * agent (`identity.known`). A first delegate-wide revoke still blocks
+   * implicit grants even with no explicit hop. Revoking an expired unrevoked
+   * hop still tombstones (it still occupies `kya.unique_live`). Someone
+   * else's name stays `kya.party`. Thaw TAP is the freeze analog
+   * (`identity.freeze_state`).
+   */
+  revokeStateOk?: boolean;
+  /**
+   * False when `clearing.settle_window` names a currency whose open exposure
+   * book has zero legs: the settle would photograph nothing, empty nothing,
+   * and still mint a window object plus a CLEARING_WINDOW notary line. An
+   * empty book is not a settlement photo. Absent = not a settle command. A
+   * system speaker stays `actor.system_scope`. A junior speaker stays
+   * `actor.role_capability`. A garbage currency is `command.malformed` (400)
+   * before policy. The other currency's open legs are a different book.
+   */
+  settleWindowOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

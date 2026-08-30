@@ -498,6 +498,114 @@ describe("kya.known_attestation", () => {
   });
 });
 
+describe("kya.revoke_state", () => {
+  it("refuses a second tombstone by id as kya.revoke_state", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const live = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const liveId = (live.data as { id: string }).id;
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: liveId })), "first tombstone");
+    const deadAt = [...rt.kya.attestations.values()].find((a) => a.id === liveId)?.revokedAt;
+    const blockedBefore = rt.kya.blocked.size;
+    const tombstonesBefore = rt.audit.all().filter((r) => r.action === "KYA_REVOKE").length;
+    const r = rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: liveId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.revoke_state");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect([...rt.kya.attestations.values()].find((a) => a.id === liveId)?.revokedAt).toBe(deadAt);
+    expect(rt.kya.blocked.size).toBe(blockedBefore);
+    expect(rt.audit.all().filter((rec) => rec.action === "KYA_REVOKE").length).toBe(tombstonesBefore);
+  });
+
+  it("refuses a pair-wide revoke of an already-blocked pair with nothing left as kya.revoke_state", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const live = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const liveId = (live.data as { id: string }).id;
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: liveId })), "first tombstone");
+    const r = rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.revoke_state");
+  });
+
+  it("refuses a revoke that names neither a handshake nor a delegate as kya.revoke_state", () => {
+    const rt = boot();
+    const { founder } = economy(rt);
+    const r = rt.dispatch(cmd("kya.revoke", founder.id, {}));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.revoke_state");
+  });
+
+  it("still blocks a never-attested pair on a first pair-wide revoke, then refuses the second", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const blockedBefore = rt.kya.blocked.size;
+    const first = must(rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id })), "first block");
+    expect((first.data as { revoked: unknown[] }).revoked).toEqual([]);
+    expect(rt.kya.blocked.size).toBe(blockedBefore + 1);
+    const second = rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id }));
+    expect(second.ok).toBe(false);
+    if (second.ok) return;
+    expect(second.error.decision?.remediation?.ruleId).toBe("kya.revoke_state");
+  });
+
+  it("still writes a fresh tombstone after re-attesting a tombstoned pair", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const live = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "attest",
+    );
+    const liveId = (live.data as { id: string }).id;
+    must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: liveId })), "first tombstone");
+    const fresh = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "re-attest",
+    );
+    const freshId = (fresh.data as { id: string }).id;
+    expect(freshId).not.toBe(liveId);
+    const r = must(rt.dispatch(cmd("kya.revoke", founder.id, { delegateId: desk.id })), "fresh tombstone");
+    expect((r.data as { revoked: Array<{ id: string }> }).revoked.map((a) => a.id)).toEqual([freshId]);
+  });
+
+  it("still revokes an expired unrevoked hop — it still occupies the pair", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    const live = must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, {
+          delegateId: desk.id,
+          maxAutonomy: 3,
+          expiresAt: "2026-08-28T12:00:00.000Z",
+        }),
+      ),
+      "attest noon hop",
+    );
+    const liveId = (live.data as { id: string }).id;
+    rt.clock.set("2026-08-29T00:00:00.000Z");
+    expect(Date.parse(rt.clock.now())).toBeGreaterThan(
+      Date.parse([...rt.kya.attestations.values()].find((a) => a.id === liveId)!.expiresAt),
+    );
+    const r = must(rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: liveId })), "revoke expired hop");
+    expect((r.data as { revoked: Array<{ id: string }> }).revoked.map((a) => a.id)).toEqual([liveId]);
+  });
+});
+
 describe("kya.party", () => {
   it("refuses an L4 desk minting a founder handshake as kya.party", () => {
     const rt = boot();

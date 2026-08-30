@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 117 rules", () => {
-    expect(RULE_IDS).toHaveLength(117);
+  it("has 120 rules", () => {
+    expect(RULE_IDS).toHaveLength(120);
   });
 
   it("denies frozen actors", () => {
@@ -6978,6 +6978,270 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("actor.role_capability");
+  });
+
+  it("denies a maker quoting a good as mm.fx_only", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+        makerQuoteOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.known_sku")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.spread_bound")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mm.fx_only");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a maker quoting an FX window as mm.fx_only", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+        makerQuoteOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+  });
+
+  it("does not name mm.fx_only when a vendor quotes a good", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2, id: "aid_vendor" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+  });
+
+  it("still names market.known_rfq first when a ghost room would also be a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("still names market.not_expired first when a shut room would also be a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: false,
+        sellerInvited: true,
+        makerQuoteOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.not_expired");
+  });
+
+  it("still names market.invited_seller first when an uninvited maker would also be a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: false,
+        makerQuoteOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.invited_seller")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.invited_seller");
+  });
+
+  it("still names market.fx_window first when a windowless maker FX quote is not a hawk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "market_maker", autonomyLevel: 2, id: "aid_mm" }),
+        commandType: "market.quote",
+        rfqKnown: true,
+        skuListed: true,
+        marketFresh: true,
+        sellerInvited: true,
+        makerQuoteOk: true,
+        fxWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_window");
+  });
+
+  it("denies a second tombstone as kya.revoke_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.revoke",
+        kyaAttestationKnown: true,
+        revokeStateOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.freeze_state")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.revoke_state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a revoke that tombstones a hop or blocks a new pair as kya.revoke_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.revoke",
+        kyaAttestationKnown: true,
+        revokeStateOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.revoke_state on commands that are not a revoke", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.known_attestation first when a ghost handshake would also be a tomb", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.revoke",
+        kyaAttestationKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.known_attestation");
+  });
+
+  it("still names kya.party first when someone else's dead handshake would also be a tomb", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.revoke",
+        kyaPartyOk: false,
+        revokeStateOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.party");
+  });
+
+  it("denies settling an empty book as clearing.settle_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "clearing.settle_window",
+        settleWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "clearing.bilateral_limit")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("clearing.settle_state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows settling a book with open legs as clearing.settle_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "clearing.settle_window",
+        settleWindowOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("allow");
+  });
+
+  it("does not name clearing.settle_state on commands that are not a settle", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.balances",
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("allow");
+  });
+
+  it("still names actor.system_scope first when a system speaker would also be a film", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "clearing.settle_window",
+        systemOk: false,
+        settleWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("actor.system_scope");
+  });
+
+  it("still names actor.role_capability first when a junior speaker would also be a film", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "clearing.settle_window",
+        settleWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("actor.role_capability");
   });
 

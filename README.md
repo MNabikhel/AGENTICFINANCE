@@ -130,6 +130,9 @@ pnpm demo guise           # someone else's unused slip is not yours to hire agai
 pnpm demo cuckoo          # someone else's parent slip is not yours to nest under
 pnpm demo forge           # someone else's name is not a root slip to mint
 pnpm demo snare           # someone else's conversion window is not yours to settle
+pnpm demo hawk            # a maker's quote is a window, not a good
+pnpm demo tomb            # a tombstone is not a second tombstone
+pnpm demo film            # an empty book is not a settlement photo
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

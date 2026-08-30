@@ -194,6 +194,61 @@ export class DelegationGraph {
   }
 
   /**
+   * Pure preview of what `revoke()` would mutate: how many unrevoked hops
+   * (including cascades) would be tombstoned, and whether a pair block would
+   * be newly written. A revoke that would do neither is a no-op — a tombstone
+   * is not a second tombstone (`kya.revoke_state`).
+   */
+  revokePreview(opts: {
+    id?: DelegationId;
+    principalId: AgentId;
+    delegateId?: AgentId;
+  }): { revokes: number; newBlock: boolean } {
+    const targets = new Set<DelegationId>();
+    if (opts.id) {
+      const named = this.attestations.get(opts.id);
+      if (named && named.principalId === opts.principalId) targets.add(opts.id);
+    }
+    let newBlock = false;
+    if (opts.delegateId) {
+      for (const a of this.attestations.values()) {
+        if (a.principalId === opts.principalId && a.delegateId === opts.delegateId && !a.revokedAt) {
+          targets.add(a.id);
+        }
+      }
+      if (!this.blocked.has(pairKey(opts.principalId, opts.delegateId))) newBlock = true;
+    }
+
+    const revokedDelegates = new Set<AgentId>();
+    if (opts.delegateId) revokedDelegates.add(opts.delegateId);
+    for (const id of targets) {
+      const a = this.attestations.get(id);
+      if (a) revokedDelegates.add(a.delegateId);
+    }
+
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const a of this.attestations.values()) {
+        if (a.revokedAt || a.principalId !== opts.principalId) continue;
+        if (targets.has(a.id)) continue;
+        if ((a.parentId && targets.has(a.parentId)) || revokedDelegates.has(a.grantorId)) {
+          targets.add(a.id);
+          revokedDelegates.add(a.delegateId);
+          grew = true;
+        }
+      }
+    }
+
+    let revokes = 0;
+    for (const id of targets) {
+      const a = this.attestations.get(id);
+      if (a && !a.revokedAt) revokes += 1;
+    }
+    return { revokes, newBlock };
+  }
+
+  /**
    * Path principal → … → delegate. Revoked hops are never walked.
    * Expired hops are skipped unless `allowExpired` is set (so freshness can deny distinctly).
    */
