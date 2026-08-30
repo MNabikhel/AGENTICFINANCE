@@ -881,6 +881,16 @@ export interface PolicyContext {
    */
   revokeStateOk?: boolean;
   /**
+   * False when `clearing.settle_window` names a currency whose open exposure
+   * book has zero legs: the settle would photograph nothing, empty nothing,
+   * and still mint a window object plus a CLEARING_WINDOW notary line. An
+   * empty book is not a settlement photo. Absent = not a settle command. A
+   * system speaker stays `actor.system_scope`. A junior speaker stays
+   * `actor.role_capability`. A garbage currency is `command.malformed` (400)
+   * before policy. The other currency's open legs are a different book.
+   */
+  settleWindowOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

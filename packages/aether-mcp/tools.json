@@ -775,6 +775,11 @@
       "name": "aether_demo_tomb",
       "commandType": "demo.tomb",
       "description": "Run the tomb TAP: a tombstone is not a second tombstone. kya.revoke of an already-revoked handshake (or an already-blocked pair with nothing left to tombstone) is kya.revoke_state; a ghost handshake, a ghost agent, and someone else's name still allow first-deny elsewhere; no notary line written by the sneak; a first pair-wide revoke still blocks; re-attest then revoke still tombstones; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_film",
+      "commandType": "demo.film",
+      "description": "Run the film TAP: an empty book is not a settlement photo. clearing.settle_window of a currency with zero open legs is clearing.settle_state; a system speaker and a junior speaker still first-deny elsewhere; no window minted by the sneak; the funded USD book still settles once; the second photo right after is the same refuse; funded work still finishes."
     }
   ]
 }

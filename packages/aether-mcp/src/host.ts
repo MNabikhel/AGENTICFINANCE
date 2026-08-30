@@ -124,6 +124,7 @@ import { loadRootParty, runRootParty } from "@aether/root-party";
 import { loadSettleParty, runSettleParty } from "@aether/settle-party";
 import { loadFxOnly, runFxOnly } from "@aether/fx-only";
 import { loadRevokeState, runRevokeState } from "@aether/revoke-state";
+import { loadSettleState, runSettleState } from "@aether/settle-state";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -286,6 +287,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_snare",
   "aether_demo_hawk",
   "aether_demo_tomb",
+  "aether_demo_film",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -1133,6 +1135,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_tomb") {
       const report = runRevokeState(loadRevokeState("fixtures/demo/tomb/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_film") {
+      const report = runSettleState(loadSettleState("fixtures/demo/film/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

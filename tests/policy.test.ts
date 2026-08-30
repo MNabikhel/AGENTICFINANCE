@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 119 rules", () => {
-    expect(RULE_IDS).toHaveLength(119);
+  it("has 120 rules", () => {
+    expect(RULE_IDS).toHaveLength(120);
   });
 
   it("denies frozen actors", () => {
@@ -7176,6 +7176,73 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("kya.party");
+  });
+
+  it("denies settling an empty book as clearing.settle_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "clearing.settle_window",
+        settleWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "clearing.bilateral_limit")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("clearing.settle_state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows settling a book with open legs as clearing.settle_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "clearing.settle_window",
+        settleWindowOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("allow");
+  });
+
+  it("does not name clearing.settle_state on commands that are not a settle", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "ledger.balances",
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("allow");
+  });
+
+  it("still names actor.system_scope first when a system speaker would also be a film", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "treasury", autonomyLevel: 3 }),
+        commandType: "clearing.settle_window",
+        systemOk: false,
+        settleWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.system_scope")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("actor.system_scope");
+  });
+
+  it("still names actor.role_capability first when a junior speaker would also be a film", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "clearing.settle_window",
+        settleWindowOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "clearing.settle_state")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("actor.role_capability");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

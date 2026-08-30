@@ -120,7 +120,8 @@
     "./root-party": "./src/root-party.ts",
     "./settle-party": "./src/settle-party.ts",
     "./fx-only": "./src/fx-only.ts",
-    "./revoke-state": "./src/revoke-state.ts"
+    "./revoke-state": "./src/revoke-state.ts",
+    "./settle-state": "./src/settle-state.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

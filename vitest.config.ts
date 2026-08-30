@@ -141,6 +141,7 @@ export default defineConfig({
       "@aether/settle-party": path.resolve(__dirname, "packages/aether-runtime/src/settle-party.ts"),
       "@aether/fx-only": path.resolve(__dirname, "packages/aether-runtime/src/fx-only.ts"),
       "@aether/revoke-state": path.resolve(__dirname, "packages/aether-runtime/src/revoke-state.ts"),
+      "@aether/settle-state": path.resolve(__dirname, "packages/aether-runtime/src/settle-state.ts"),
     },
   },
 });

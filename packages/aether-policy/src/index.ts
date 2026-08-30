@@ -1627,6 +1627,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.revoke_state", "deny", "a tombstone is not a second tombstone");
     },
   },
+  {
+    id: "clearing.settle_state",
+    evaluate: (ctx) => {
+      if (ctx.settleWindowOk === undefined) return v("clearing.settle_state", "allow", "not a settlement window");
+      return ctx.settleWindowOk
+        ? v("clearing.settle_state", "allow", "the open book has legs to photograph")
+        : v("clearing.settle_state", "deny", "an empty book is not a settlement photo");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -2033,6 +2042,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.revoke_state": {
     kind: "none",
     hint: "A tombstone is not a second tombstone. This handshake is already revoked (or this pair is already blocked with nothing left to tombstone) — a no-op revoke is not a notary line after yes. Re-attest, then revoke, to write a new tombstone. A ghost attestation is kya.known_attestation. A ghost agent is identity.known. Someone else's name is kya.party. A first delegate-wide revoke still blocks implicit grants. Revoking an expired unrevoked hop still tombstones. Unfreezing a live agent stays identity.freeze_state.",
+  },
+  "clearing.settle_state": {
+    kind: "none",
+    hint: "An empty book is not a settlement photo. The open exposure book for this currency has zero legs — a settle would photograph nothing, empty nothing, and still mint a window object in the notary book. Fund a hire or settle an FX window to put gross on the book, then settle. The other currency's legs are a different book. A system speaker is actor.system_scope. A junior speaker is actor.role_capability. A garbage currency is command.malformed before policy. Money already moved at escrow — a window is the CCP photo, not a second payment.",
   },
   "host.not_hosted": {
     kind: "none",
