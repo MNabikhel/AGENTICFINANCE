@@ -146,6 +146,7 @@ import {
   FORGE_TLDR,
   SNARE_TLDR,
   HAWK_TLDR,
+  TOMB_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -1689,6 +1690,11 @@ export class Runtime {
           name: "Hawk TAP",
           description: "POST /v1/demo/hawk — a maker's quote is a window, not a good",
         },
+        {
+          id: "revoke-state",
+          name: "Tomb TAP",
+          description: "POST /v1/demo/tomb — a tombstone is not a second tombstone",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2483,10 +2489,28 @@ export class Runtime {
     if (cmd.type === "receipt.get") {
       ctx.receiptKnown = this.receipts.has(String(body.receiptId));
     }
-    if (cmd.type === "kya.revoke" && typeof body.attestationId === "string") {
-      const named = this.kya.attestations.get(body.attestationId as DelegationId);
+    if (cmd.type === "kya.revoke") {
       const principalId = this.kyaPrincipalId(body, actor);
-      ctx.kyaAttestationKnown = Boolean(named && named.principalId === principalId);
+      const named =
+        typeof body.attestationId === "string"
+          ? this.kya.attestations.get(body.attestationId as DelegationId)
+          : undefined;
+      if (typeof body.attestationId === "string") {
+        ctx.kyaAttestationKnown = Boolean(named && named.principalId === principalId);
+      }
+      const attestationOk =
+        typeof body.attestationId !== "string" || Boolean(named && named.principalId === principalId);
+      const delegateOk =
+        typeof body.delegateId !== "string" || Boolean(this.identity.get(body.delegateId as AgentId));
+      const principalOk = Boolean(this.identity.get(principalId));
+      if (attestationOk && delegateOk && principalOk) {
+        const preview = this.kya.revokePreview({
+          principalId,
+          ...(named ? { id: named.id } : {}),
+          ...(typeof body.delegateId === "string" ? { delegateId: body.delegateId as AgentId } : {}),
+        });
+        ctx.revokeStateOk = preview.revokes > 0 || preview.newBlock;
+      }
     }
     if (cmd.type === "ledger.transfer") {
       const fromAcct = this.ledger.accountsByName.get(String(body.fromAccount));
@@ -3420,6 +3444,12 @@ export class Runtime {
     };
     if (typeof body.attestationId === "string") opts.id = body.attestationId as DelegationId;
     if (typeof body.delegateId === "string") opts.delegateId = body.delegateId as AgentId;
+    const preview = this.kya.revokePreview({
+      principalId,
+      ...(opts.id ? { id: opts.id } : {}),
+      ...(opts.delegateId ? { delegateId: opts.delegateId } : {}),
+    });
+    if (preview.revokes === 0 && !preview.newBlock) throw new Error("revoke state");
     const revoked = this.kya.revoke(opts);
     this.audit.append({
       clock: this.clock,
@@ -4616,7 +4646,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, PLATE_TLDR, HEADER_TLDR, PIP_TLDR, QUOIN_TLDR, ASHLAR_TLDR, CORBEL_TLDR, TROLLEY_TLDR, POACH_TLDR, GUISE_TLDR, CUCKOO_TLDR, FORGE_TLDR, SNARE_TLDR, HAWK_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, PLATE_TLDR, HEADER_TLDR, PIP_TLDR, QUOIN_TLDR, ASHLAR_TLDR, CORBEL_TLDR, TROLLEY_TLDR, POACH_TLDR, GUISE_TLDR, CUCKOO_TLDR, FORGE_TLDR, SNARE_TLDR, HAWK_TLDR, TOMB_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

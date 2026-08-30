@@ -867,6 +867,20 @@ export interface PolicyContext {
    */
   makerQuoteOk?: boolean;
   /**
+   * False when `kya.revoke` would tombstone nothing and block nothing new:
+   * the named attestation is already revoked, the named pair is already
+   * blocked with no unrevoked hop (and no cascade target), or the revoke
+   * names neither an attestation nor a delegate. A tombstone is not a second
+   * tombstone; a no-op revoke is not a notary line after yes. Absent = not a
+   * `kya.revoke`, a ghost attestation (`kya.known_attestation`), or a ghost
+   * agent (`identity.known`). A first delegate-wide revoke still blocks
+   * implicit grants even with no explicit hop. Revoking an expired unrevoked
+   * hop still tombstones (it still occupies `kya.unique_live`). Someone
+   * else's name stays `kya.party`. Thaw TAP is the freeze analog
+   * (`identity.freeze_state`).
+   */
+  revokeStateOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

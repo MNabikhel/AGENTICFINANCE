@@ -128,6 +128,7 @@ import { loadChildParty, runChildParty } from "@aether/child-party";
 import { loadRootParty, runRootParty } from "@aether/root-party";
 import { loadSettleParty, runSettleParty } from "@aether/settle-party";
 import { loadFxOnly, runFxOnly } from "@aether/fx-only";
+import { loadRevokeState, runRevokeState } from "@aether/revoke-state";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -248,6 +249,7 @@ const cuckooFixture = join(process.cwd(), "fixtures/demo/cuckoo/scenario.json");
 const forgeFixture = join(process.cwd(), "fixtures/demo/forge/scenario.json");
 const snareFixture = join(process.cwd(), "fixtures/demo/snare/scenario.json");
 const hawkFixture = join(process.cwd(), "fixtures/demo/hawk/scenario.json");
+const tombFixture = join(process.cwd(), "fixtures/demo/tomb/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1309,6 +1311,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runFxOnly(loadFxOnly(hawkFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "hawk" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/tomb") {
+        const report = runRevokeState(loadRevokeState(tombFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "tomb" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

@@ -123,6 +123,7 @@ import { loadChildParty, runChildParty } from "@aether/child-party";
 import { loadRootParty, runRootParty } from "@aether/root-party";
 import { loadSettleParty, runSettleParty } from "@aether/settle-party";
 import { loadFxOnly, runFxOnly } from "@aether/fx-only";
+import { loadRevokeState, runRevokeState } from "@aether/revoke-state";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -284,6 +285,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_forge",
   "aether_demo_snare",
   "aether_demo_hawk",
+  "aether_demo_tomb",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -1126,6 +1128,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_hawk") {
       const report = runFxOnly(loadFxOnly("fixtures/demo/hawk/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_tomb") {
+      const report = runRevokeState(loadRevokeState("fixtures/demo/tomb/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

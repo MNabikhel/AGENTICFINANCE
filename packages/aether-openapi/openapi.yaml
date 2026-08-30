@@ -980,6 +980,12 @@ paths:
       responses:
         "200": { description: Hawk TAP report. A maker's quote is a window, not a good. }
         "500": { description: Assertions failed }
+  /v1/demo/tomb:
+    post:
+      operationId: demoTomb
+      responses:
+        "200": { description: Tomb TAP report. A tombstone is not a second tombstone. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

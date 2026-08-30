@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 118 rules", () => {
-    expect(RULE_IDS).toHaveLength(118);
+  it("has 119 rules", () => {
+    expect(RULE_IDS).toHaveLength(119);
   });
 
   it("denies frozen actors", () => {
@@ -7101,6 +7101,81 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "market.fx_window")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mm.fx_only")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("market.fx_window");
+  });
+
+  it("denies a second tombstone as kya.revoke_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.revoke",
+        kyaAttestationKnown: true,
+        revokeStateOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.freeze_state")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.revoke_state");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a revoke that tombstones a hop or blocks a new pair as kya.revoke_state", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.revoke",
+        kyaAttestationKnown: true,
+        revokeStateOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.revoke_state on commands that are not a revoke", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.known_attestation first when a ghost handshake would also be a tomb", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.revoke",
+        kyaAttestationKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_attestation")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.known_attestation");
+  });
+
+  it("still names kya.party first when someone else's dead handshake would also be a tomb", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.revoke",
+        kyaPartyOk: false,
+        revokeStateOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.revoke_state")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.party");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

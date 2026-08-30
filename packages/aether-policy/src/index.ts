@@ -1618,6 +1618,15 @@ export const RULES: readonly Rule[] = [
         : v("mm.fx_only", "deny", "a maker's quote is a window, not a good");
     },
   },
+  {
+    id: "kya.revoke_state",
+    evaluate: (ctx) => {
+      if (ctx.revokeStateOk === undefined) return v("kya.revoke_state", "allow", "not a live tombstone");
+      return ctx.revokeStateOk
+        ? v("kya.revoke_state", "allow", "revoke tombstones a hop or blocks a new pair")
+        : v("kya.revoke_state", "deny", "a tombstone is not a second tombstone");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -2020,6 +2029,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "mm.fx_only": {
     kind: "none",
     hint: "A maker's quote is a window, not a good. Makers have no accept or deliver verb, so a maker's good quote mints a hire no verb can advance. Quote FX, or let a vendor quote the good. A ghost room is market.known_rfq. A shut room is market.not_expired. An uninvited maker is market.invited_seller. A windowless FX quote is market.fx_window. A vendor minting FX while a maker sits stays market.fx_party. Vendors still quote goods. Makers still quote FX windows.",
+  },
+  "kya.revoke_state": {
+    kind: "none",
+    hint: "A tombstone is not a second tombstone. This handshake is already revoked (or this pair is already blocked with nothing left to tombstone) — a no-op revoke is not a notary line after yes. Re-attest, then revoke, to write a new tombstone. A ghost attestation is kya.known_attestation. A ghost agent is identity.known. Someone else's name is kya.party. A first delegate-wide revoke still blocks implicit grants. Revoking an expired unrevoked hop still tombstones. Unfreezing a live agent stays identity.freeze_state.",
   },
   "host.not_hosted": {
     kind: "none",
