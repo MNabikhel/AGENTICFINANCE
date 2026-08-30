@@ -1447,6 +1447,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.budget_fresh", "deny", "budget cannot admit an amount the lid would allow");
     },
   },
+  {
+    id: "mandate.currency_fresh",
+    evaluate: (ctx) => {
+      if (ctx.currencyMintOk === undefined) return v("mandate.currency_fresh", "allow", "not a paired money mint");
+      return ctx.currencyMintOk
+        ? v("mandate.currency_fresh", "allow", "lid and coffer name the same currency")
+        : v("mandate.currency_fresh", "deny", "lid and coffer name different currencies");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1759,7 +1768,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.budget_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with a payment.budget that cannot admit an amount the lid would allow. Name max > 0, and if a floor is named, max ≥ min. Hire still names payment.budget. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Purse TAP is hire-time envelope.",
+    hint: "A slip cannot be born with a payment.budget that cannot admit an amount the lid would allow. Name max > 0, and if a floor is named, max ≥ min. Hire still names payment.budget. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Purse TAP is hire-time envelope. A mixed envelope is mandate.currency_fresh.",
+  },
+  "mandate.currency_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still names payment.currency_match. A closed coffer stays mandate.budget_fresh. A floor above the lid stays mandate.range_fresh. Mix TAP is a mixed journal. Ink TAP is cart vs hire.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

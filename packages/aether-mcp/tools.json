@@ -675,6 +675,11 @@
       "name": "aether_demo_coffer",
       "commandType": "demo.coffer",
       "description": "Run the coffer TAP: a closed coffer is not a budget. mandate.issue_intent with budget max 0 or budget below the amount_range floor is mandate.budget_fresh; a vacant slot, a floor above the lid, and hire-time envelope still allow; a coffer that covers the floor still mints; an open floor still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_clash",
+      "commandType": "demo.clash",
+      "description": "Run the clash TAP: a USDC coffer on a USD lid is not a budget. mandate.issue_intent with amount_range and payment.budget in different currencies is mandate.currency_fresh; a vacant slot, a closed coffer, and hire-time currency still allow; matching USD still mints; matching USDC still mints; funded work still finishes."
     }
   ]
 }

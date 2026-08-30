@@ -105,6 +105,7 @@
     "demo:week": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo week",
     "demo:gulf": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo gulf",
     "demo:coffer": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo coffer",
+    "demo:clash": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo clash",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

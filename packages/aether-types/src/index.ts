@@ -1124,9 +1124,19 @@ export interface PolicyContext {
    * amount_range floor). Absent = not issue_intent, or no budget constraint.
    * A budget that covers the floor still mints. An open floor still mints.
    * Hire/fund still names `payment.budget`. Purse TAP is hire-time envelope.
-   * A floor above the lid stays `mandate.range_fresh`.
+   * A floor above the lid stays `mandate.range_fresh`. A mixed envelope is
+   * `mandate.currency_fresh`.
    */
   budgetMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an amount_range and a
+   * payment.budget in different currencies. Absent = not issue_intent, or
+   * only one of those constraints is present. Matching USD still mints.
+   * Matching USDC still mints. Hire/fund still names `payment.currency_match`.
+   * A closed coffer stays `mandate.budget_fresh`. A floor above the lid stays
+   * `mandate.range_fresh`. Mix TAP is a mixed journal. Ink TAP is cart vs hire.
+   */
+  currencyMintOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.

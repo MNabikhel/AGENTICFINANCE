@@ -104,6 +104,7 @@ import { loadPaymentParty, runPaymentParty } from "@aether/payment-party";
 import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
 import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
 import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
+import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -246,6 +247,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_week",
   "aether_demo_gulf",
   "aether_demo_coffer",
+  "aether_demo_clash",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -993,6 +995,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_coffer") {
       const report = runBudgetFresh(loadBudgetFresh("fixtures/demo/coffer/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_clash") {
+      const report = runCurrencyFresh(loadCurrencyFresh("fixtures/demo/clash/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

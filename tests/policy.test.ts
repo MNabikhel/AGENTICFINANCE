@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 99 rules", () => {
-    expect(RULE_IDS).toHaveLength(99);
+  it("has 100 rules", () => {
+    expect(RULE_IDS).toHaveLength(100);
   });
 
   it("denies frozen actors", () => {
@@ -3077,6 +3077,111 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.budget_fresh");
+  });
+
+  it("denies mixed lid and coffer currencies as mandate.currency_fresh", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        currencyMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.occurrence_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.range_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "payment.currency_match")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.currency_fresh");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name mandate.currency_fresh when lid and coffer name the same currency", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        currencyMintOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.currency_fresh when the speaker is not minting a slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.range_fresh first when an inverted range is also a mixed envelope", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        rangeMintOk: false,
+        currencyMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.range_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.range_fresh");
+  });
+
+  it("still names mandate.budget_fresh first when a closed coffer is also a mixed envelope", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        budgetMintOk: false,
+        currencyMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.budget_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.budget_fresh");
+  });
+
+  it("denies cart vs hire currency at hire, not as mandate.currency_fresh", () => {
+    const d = evaluate(
+      ctx({
+        commandType: "hire.fund",
+        amount: { amount: 80_000, currency: "USD_SIM" },
+        cart: signedCart({ total: { amount: 80_000, currency: "USDC_SIM" } }),
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "payment.currency_match")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("payment.currency_match");
+  });
+
+  it("denies a nested child whose lid and coffer clash as mandate.currency_fresh, not child_tighter", () => {
+    const parent = signedIntent([
+      { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+      { type: "payment.budget", currency: "USD_SIM", max: 1000000 },
+    ]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        parentIntent: parent,
+        proposedConstraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 500000 },
+          { type: "payment.budget", currency: "USDC_SIM", max: 1000000 },
+        ],
+        currencyMintOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.currency_fresh")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.currency_fresh");
   });
 
   it("still names identity.known first when a ghost subject is also born with no slots", () => {

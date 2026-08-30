@@ -112,6 +112,7 @@ pnpm demo spike           # someone else's unused payment is not yours to spike
 pnpm demo week            # a week is not a cadence on a seven-day slip
 pnpm demo gulf            # a floor above the lid is not a range
 pnpm demo coffer          # a closed coffer is not a budget
+pnpm demo clash           # a USDC coffer on a USD lid is not a budget
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
