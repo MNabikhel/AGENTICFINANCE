@@ -1347,6 +1347,8 @@ describe("HTTP command bus", () => {
     expect(r.body.demo).toBe("poach");
     expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
   });
+
+  it("POST /v1/payments/submit without PAYMENT-SIGNATURE is the command bus, not a missing header", async () => {
     await json("/v1/reset", { method: "POST" });
     const founder = await json("/v1/identities", {
       method: "POST",
