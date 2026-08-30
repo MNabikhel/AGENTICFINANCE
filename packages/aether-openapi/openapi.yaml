@@ -950,6 +950,12 @@ paths:
       responses:
         "200": { description: Poach TAP report. Someone else's room is not yours to hire from. }
         "500": { description: Assertions failed }
+  /v1/demo/guise:
+    post:
+      operationId: demoGuise
+      responses:
+        "200": { description: Guise TAP report. Someone else's unused slip is not yours to hire against. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

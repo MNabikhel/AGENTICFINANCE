@@ -126,3 +126,4 @@ jobs:
       - run: pnpm demo:corbel
       - run: pnpm demo:trolley
       - run: pnpm demo:poach
+      - run: pnpm demo:guise

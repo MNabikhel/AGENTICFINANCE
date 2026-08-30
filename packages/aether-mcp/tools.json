@@ -745,6 +745,11 @@
       "name": "aether_demo_poach",
       "commandType": "demo.poach",
       "description": "Run the poach TAP: someone else's room is not yours to hire from. hire.create of a live unused quote by a second desk is hire.room_party; a missing room, a spent quote, and shutting someone else's room still allow; no hire written by the sneak; the buyer still hires its own quote; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_guise",
+      "commandType": "demo.guise",
+      "description": "Run the guise TAP: someone else's unused slip is not yours to hire against. hire.create against a live unused intent by a second desk is hire.slip_party; a missing slip, a ripped slip, and hiring from someone else's room still allow; no hire written by the sneak; the named subject still hires against its own unused slip; funded work still finishes."
     }
   ]
 }

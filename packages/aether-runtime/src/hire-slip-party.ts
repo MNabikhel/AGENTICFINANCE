@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import type { MandateConstraint, MandateId } from "@aether/types";
 import { Runtime, cmd } from "./index.js";
-import { POACH_TLDR, analog } from "./story.js";
+import { GUISE_TLDR, analog } from "./story.js";
 import { fundHire, inviteQuote, mustDispatch, offerHire } from "./hire-flow.js";
 import type { TapResult } from "./sprint-procurement.js";
 
-export interface HireRoomPartyScenario {
+export interface HireSlipPartyScenario {
   id: string;
   clockStart: string;
   genesisNonce: string;
@@ -16,15 +16,15 @@ export interface HireRoomPartyScenario {
   quotes: Record<string, { amount: number; currency: "USD_SIM" }>;
 }
 
-export interface HireRoomPartyReport {
+export interface HireSlipPartyReport {
   ok: boolean;
   results: TapResult[];
   snapshot: ReturnType<Runtime["snapshotState"]>;
   runtime: Runtime;
 }
 
-export function loadHireRoomParty(path: string): HireRoomPartyScenario {
-  return JSON.parse(readFileSync(path, "utf8")) as HireRoomPartyScenario;
+export function loadHireSlipParty(path: string): HireSlipPartyScenario {
+  return JSON.parse(readFileSync(path, "utf8")) as HireSlipPartyScenario;
 }
 
 function expect(ok: boolean, id: number, name: string, detail?: string): TapResult {
@@ -41,13 +41,13 @@ function allowedRule(attempt: ReturnType<Runtime["dispatch"]>, ruleId: string): 
   return decision?.trace.some((t) => t.ruleId === ruleId && t.verdict === "allow") === true;
 }
 
-export function runHireRoomParty(scenario: HireRoomPartyScenario): HireRoomPartyReport {
+export function runHireSlipParty(scenario: HireSlipPartyScenario): HireSlipPartyReport {
   const rt = new Runtime({
     startIso: scenario.clockStart,
     genesisNonce: scenario.genesisNonce,
     dailyLimit: scenario.circuit.dailyLimit,
   });
-  rt.tldr = POACH_TLDR;
+  rt.tldr = GUISE_TLDR;
   rt.analogDoc = analog();
   const must = mustDispatch;
 
@@ -113,17 +113,42 @@ export function runHireRoomParty(scenario: HireRoomPartyScenario): HireRoomParty
   );
   const intentId = (intent.data as { payload: { id: MandateId } }).payload.id;
 
+  const unused = must(
+    rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "Someone else's unused slip is not yours to hire against.",
+        constraints: [...scenario.intent.constraints, payees],
+      }),
+    ),
+    "unused desk slip",
+  );
+  const unusedId = (unused.data as { payload: { id: MandateId } }).payload.id;
+
   const otherIntent = must(
     rt.dispatch(
       cmd("mandate.issue_intent", founder.id, {
         subjectId: otherDesk.id,
-        task: "Someone else's room is not yours to hire from.",
+        task: "Hiring from someone else's room is a different object.",
         constraints: [...scenario.intent.constraints, payees],
       }),
     ),
     "other intent",
   );
   const otherIntentId = (otherIntent.data as { payload: { id: MandateId } }).payload.id;
+
+  const ripped = must(
+    rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: desk.id,
+        task: "A ripped slip is a different object.",
+        constraints: [...scenario.intent.constraints, payees],
+      }),
+    ),
+    "rip target",
+  );
+  const rippedId = (ripped.data as { payload: { id: MandateId } }).payload.id;
+  must(rt.dispatch(cmd("mandate.revoke", founder.id, { intentId: rippedId })), "rip unused desk slip");
 
   must(
     rt.dispatch(
@@ -140,7 +165,7 @@ export function runHireRoomParty(scenario: HireRoomPartyScenario): HireRoomParty
     buyer: desk.id,
     seller: vendor.id,
     sku: "research.brief",
-    spec: "someone else's room is not yours to hire from",
+    spec: "someone else's unused slip is not yours to hire against",
     price: firstPrice,
     intentId,
   });
@@ -157,73 +182,93 @@ export function runHireRoomParty(scenario: HireRoomPartyScenario): HireRoomParty
   });
   const fundedState = rt.hires.get(hireId)?.state;
 
-  const second = inviteQuote(rt, {
-    buyer: desk.id,
+  const thiefRoom = inviteQuote(rt, {
+    buyer: otherDesk.id,
     seller: vendor.id,
     sku: "research.brief",
-    spec: "a live unused quote still on the table",
+    spec: "a live unused slip still on the table",
     price: livePrice,
   });
   const hiresBeforeSneak = rt.hires.size;
-  const quoteUnspentBefore = !rt.consumedQuotes.has(second.quoteId);
+  const quoteUnspentBefore = !rt.consumedQuotes.has(thiefRoom.quoteId);
 
-  const shutRoom = inviteQuote(rt, {
+  const ripRoom = inviteQuote(rt, {
+    buyer: otherDesk.id,
+    seller: vendor.id,
+    sku: "research.brief",
+    spec: "a ripped slip is not this deny",
+    price: livePrice,
+  });
+  const rippedAttempt = rt.dispatch(
+    cmd("hire.create", otherDesk.id, { quoteId: ripRoom.quoteId, intentId: rippedId }),
+  );
+
+  const poachRoom = inviteQuote(rt, {
     buyer: desk.id,
     seller: vendor.id,
     sku: "research.brief",
-    spec: "a shut room is not this deny",
+    spec: "someone else's room is a different object",
     price: livePrice,
   });
-  const shutRfqId = (shutRoom.rfq.data as { id: string }).id;
-  must(rt.dispatch(cmd("market.close", desk.id, { rfqId: shutRfqId })), "buyer shuts a spare room");
-  const shut = rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: shutRoom.quoteId, intentId: otherIntentId }));
+  const poach = rt.dispatch(
+    cmd("hire.create", otherDesk.id, { quoteId: poachRoom.quoteId, intentId: otherIntentId }),
+  );
 
   const ghost = rt.dispatch(
     cmd("hire.create", otherDesk.id, {
-      quoteId: "qte_01J6AETHERGHOSTQUOTE0000001",
-      intentId: otherIntentId,
+      quoteId: thiefRoom.quoteId,
+      intentId: "mid_01J6AETHERGHOSTINTENT00001",
     }),
   );
 
-  const sneak = rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: second.quoteId, intentId: otherIntentId }));
+  const sneak = rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: thiefRoom.quoteId, intentId: unusedId }));
   const afterSneak = {
-    denied: deniedRule(sneak, "hire.room_party"),
-    knownRfqAllows: allowedRule(sneak, "market.known_rfq"),
+    denied: deniedRule(sneak, "hire.slip_party"),
+    knownIntentAllows: allowedRule(sneak, "mandate.known_intent"),
+    roomAllows: allowedRule(sneak, "hire.room_party"),
     unspentAllows: allowedRule(sneak, "hire.quote_unspent"),
     freshAllows: allowedRule(sneak, "market.not_expired"),
     notFxAllows: allowedRule(sneak, "hire.not_fx"),
     selfAllows: allowedRule(sneak, "hire.no_self_deal"),
     roleAllows: allowedRule(sneak, "actor.role_capability"),
-    shutAllows: allowedRule(sneak, "market.rfq_party"),
     partyAllows: allowedRule(sneak, "hire.party"),
     subjectAllows: allowedRule(sneak, "mandate.subject_is_actor"),
     trolleyAllows: allowedRule(sneak, "mandate.checkout_party"),
-    knownIntentAllows: allowedRule(sneak, "mandate.known_intent"),
-    slipAllows: allowedRule(sneak, "hire.slip_party"),
+    ripAllows: allowedRule(sneak, "mandate.party"),
     firstDeny: sneak.ok ? undefined : sneak.error.decision?.remediation?.ruleId,
     hires: rt.hires.size,
-    quoteSpent: rt.consumedQuotes.has(second.quoteId),
+    quoteSpent: rt.consumedQuotes.has(thiefRoom.quoteId),
     funded: rt.hires.get(hireId)?.state,
     ghostFirst: ghost.ok ? undefined : ghost.error.decision?.remediation?.ruleId,
-    ghostRoomAllows: allowedRule(ghost, "hire.room_party"),
-    shutFirst: shut.ok ? undefined : shut.error.decision?.remediation?.ruleId,
-    shutRoomDenies: deniedRule(shut, "hire.room_party"),
+    ghostSlipAllows: allowedRule(ghost, "hire.slip_party"),
+    rippedFirst: rippedAttempt.ok ? undefined : rippedAttempt.error.decision?.remediation?.ruleId,
+    rippedSlipDenies: deniedRule(rippedAttempt, "hire.slip_party"),
+    poachFirst: poach.ok ? undefined : poach.error.decision?.remediation?.ruleId,
+    poachSlipAllows: allowedRule(poach, "hire.slip_party"),
   };
 
-  const legalAttempt = rt.dispatch(cmd("hire.create", desk.id, { quoteId: second.quoteId, intentId }));
-  const legal = must(legalAttempt, "buyer hire");
+  const legalRoom = inviteQuote(rt, {
+    buyer: desk.id,
+    seller: vendor.id,
+    sku: "research.brief",
+    spec: "the named subject still hires against its own unused slip",
+    price: livePrice,
+  });
+  const legalAttempt = rt.dispatch(cmd("hire.create", desk.id, { quoteId: legalRoom.quoteId, intentId: unusedId }));
+  const legal = must(legalAttempt, "subject hire");
   const unusedHireId = (legal.data as { id: string }).id;
   const afterLegal = {
-    roomAllows: allowedRule(legalAttempt, "hire.room_party"),
+    slipAllows: allowedRule(legalAttempt, "hire.slip_party"),
     hires: rt.hires.size,
-    quoteSpent: rt.consumedQuotes.has(second.quoteId),
+    quoteSpent: rt.consumedQuotes.has(legalRoom.quoteId),
+    thiefQuoteSpent: rt.consumedQuotes.has(thiefRoom.quoteId),
   };
 
-  must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver after poach deny");
+  must(rt.dispatch(cmd("hire.deliver", vendor.id, { hireId, deliverable: { n: 1 } })), "deliver after guise deny");
   must(rt.dispatch(cmd("envelope.require", vendor.id, { hireId })), "require");
   must(
     rt.dispatch(cmd("envelope.submit", desk.id, { hireId, nonce: `nonce-${hireId}` })),
-    "submit after poach deny",
+    "submit after guise deny",
   );
   const released = rt.hires.get(hireId)?.state === "released";
 
@@ -234,49 +279,52 @@ export function runHireRoomParty(scenario: HireRoomPartyScenario): HireRoomParty
     expect(
       hired.replayed !== true &&
         fundedState === "funded" &&
-        second.quoteId.startsWith("qte_") &&
+        unusedId.startsWith("mid_") &&
+        thiefRoom.quoteId.startsWith("qte_") &&
         hiresBeforeSneak === 1 &&
         quoteUnspentBefore,
       1,
-      "a listed seller still funds a hire, and a second quote sits unused on the research desk's room",
-      second.quoteId,
+      "a listed seller still funds a hire, and a second unused slip sits on the research desk",
+      unusedId,
     ),
     expect(
       afterSneak.denied &&
-        afterSneak.knownRfqAllows &&
+        afterSneak.knownIntentAllows &&
+        afterSneak.roomAllows &&
         afterSneak.unspentAllows &&
         afterSneak.freshAllows &&
         afterSneak.notFxAllows &&
         afterSneak.selfAllows &&
         afterSneak.roleAllows &&
-        afterSneak.shutAllows &&
         afterSneak.partyAllows &&
         afterSneak.subjectAllows &&
         afterSneak.trolleyAllows &&
-        afterSneak.knownIntentAllows &&
-        afterSneak.slipAllows &&
-        afterSneak.firstDeny === "hire.room_party" &&
+        afterSneak.ripAllows &&
+        afterSneak.firstDeny === "hire.slip_party" &&
         afterSneak.hires === hiresBeforeSneak &&
         afterSneak.quoteSpent === false &&
         afterSneak.funded === "funded" &&
-        afterSneak.ghostFirst === "market.known_rfq" &&
-        afterSneak.ghostRoomAllows &&
-        afterSneak.shutFirst === "market.not_expired" &&
-        afterSneak.shutRoomDenies,
+        afterSneak.ghostFirst === "mandate.known_intent" &&
+        afterSneak.ghostSlipAllows &&
+        afterSneak.rippedFirst === "mandate.not_expired" &&
+        afterSneak.rippedSlipDenies &&
+        afterSneak.poachFirst === "hire.room_party" &&
+        afterSneak.poachSlipAllows,
       2,
-      "hiring from someone else's room is hire.room_party — not a missing room, not a spent quote, not shutting someone else's room",
+      "hiring against someone else's unused slip is hire.slip_party — not a missing slip, not a ripped slip, not hiring from someone else's room",
     ),
     expect(
       legal.replayed !== true &&
-        afterLegal.roomAllows &&
+        afterLegal.slipAllows &&
         afterLegal.hires === hiresBeforeSneak + 1 &&
         afterLegal.quoteSpent &&
+        afterLegal.thiefQuoteSpent === false &&
         unusedHireId.startsWith("hid_"),
       3,
-      "the buyer still hired its own quote — the deny did not occupy the room",
+      "the named subject still hired against its own unused slip — the deny did not occupy the slip",
       unusedHireId,
     ),
-    expect(released && rt.hires.size === 2, 4, "that funded work still releases after the poach refuse", hireId),
+    expect(released && rt.hires.size === 2, 4, "that funded work still releases after the guise refuse", hireId),
     expect((verify.data as { ok: boolean }).ok === true && rt.audit.verify().ok, 5, "audit chain verifies"),
   ];
 

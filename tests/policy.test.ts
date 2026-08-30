@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 113 rules", () => {
-    expect(RULE_IDS).toHaveLength(113);
+  it("has 114 rules", () => {
+    expect(RULE_IDS).toHaveLength(114);
   });
 
   it("denies frozen actors", () => {
@@ -6331,6 +6331,7 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.subject_is_actor")?.verdict).toBe("allow");
     expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("hire.room_party");
     expect(remediationFor(d)?.kind).toBe("none");
   });
@@ -6466,6 +6467,136 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("hire.not_fx");
+  });
+
+  it("denies hiring against someone else's unused slip as hire.slip_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: true,
+        hireSlipPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.no_self_deal")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.subject_is_actor")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.slip_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a subject hiring against its own unused slip as hire.slip_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: true,
+        hireSlipPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
+  });
+
+  it("allows a human hiring against a slip as hire.slip_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: true,
+        hireSlipPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name hire.slip_party when the speaker is not hiring", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name hire.slip_party on rip or fund", () => {
+    const rip = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke",
+        intentKnown: true,
+        mandatePartyOk: true,
+      }),
+    );
+    expect(rip.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
+    const fund = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.fund",
+        intent: signedIntent([]),
+      }),
+    );
+    expect(fund.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_intent first when a ghost slip would also be a guise", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: false,
+        hireRoomPartyOk: true,
+        hireSlipPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_intent");
+  });
+
+  it("still names hire.room_party first when a foreign room would also wear a foreign slip", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: false,
+        hireSlipPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("hire.room_party");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

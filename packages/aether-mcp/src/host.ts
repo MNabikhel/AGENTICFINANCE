@@ -118,6 +118,7 @@ import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
 import { loadNestParty, runNestParty } from "@aether/nest-party";
 import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
 import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
+import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -274,6 +275,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_corbel",
   "aether_demo_trolley",
   "aether_demo_poach",
+  "aether_demo_guise",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -1091,6 +1093,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_poach") {
       const report = runHireRoomParty(loadHireRoomParty("fixtures/demo/poach/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_guise") {
+      const report = runHireSlipParty(loadHireSlipParty("fixtures/demo/guise/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }

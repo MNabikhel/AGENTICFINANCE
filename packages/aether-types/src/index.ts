@@ -1006,6 +1006,16 @@ export interface PolicyContext {
    */
   hireRoomPartyOk?: boolean;
   /**
+   * False when hire.create would bind an intent whose subject is not the
+   * speaker, and the speaker is not a human or treasury. Absent = not a
+   * hire.create, or the intent is unknown (`intentKnown` handles that).
+   * Named subject still hires. Human/treasury still hire. Ghost intent stays
+   * `mandate.known_intent`. A ripped unused slip stays `mandate.not_expired`.
+   * Poach TAP is hiring from someone else's room (`hire.room_party`). Rip TAP
+   * is tearing the slip (`mandate.party`). Subject TAP is fund/submit.
+   */
+  hireSlipPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.

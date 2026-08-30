@@ -455,6 +455,7 @@ describe("rfq hire party", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
     expect(rt.hires.size).toBe(before);
     expect(rt.consumedQuotes.has(invited.quoteId)).toBe(false);
     const legal = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "buyer hire");
@@ -540,6 +541,180 @@ describe("rfq hire party", () => {
     if (r.ok) return;
     expect(r.error.decision?.remediation?.ruleId).toBe("hire.quote_unspent");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
+  });
+
+  it("refuses a second desk hiring against a live unused slip as hire.slip_party", () => {
+    const rt = boot();
+    const { founder, vendor, intentId } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    const otherDesk = rt.alias("other-desk");
+    const invited = inviteQuote(rt, {
+      buyer: otherDesk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "own room, foreign slip",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const before = rt.hires.size;
+    const r = rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: invited.quoteId, intentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.slip_party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(rt.hires.size).toBe(before);
+    expect(rt.consumedQuotes.has(invited.quoteId)).toBe(false);
+    const own = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: otherDesk.id,
+          task: "own slip",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }],
+        }),
+      ),
+      "own slip",
+    );
+    const ownId = (own.data as { payload: { id: MandateId } }).payload.id;
+    const legal = must(
+      rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: invited.quoteId, intentId: ownId })),
+      "subject hire",
+    );
+    expect((legal.data as HireContract).id.startsWith("hid_")).toBe(true);
+  });
+
+  it("lets treasury hire against another desk's unused slip", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "treasury",
+          displayName: "Treasury",
+          role: "treasury",
+          autonomyLevel: 3,
+        }),
+      ),
+      "treasury",
+    );
+    const treasury = rt.alias("treasury");
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    const otherDesk = rt.alias("other-desk");
+    const invited = inviteQuote(rt, {
+      buyer: otherDesk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "treasury allocator slip",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const trea = must(
+      rt.dispatch(cmd("hire.create", treasury.id, { quoteId: invited.quoteId, intentId })),
+      "treasury slip hire",
+    );
+    expect((trea.data as HireContract).buyerId).toBe(treasury.id);
+    expect((trea.data as HireContract).intentId).toBe(intentId);
+    expect(desk.id).not.toBe(treasury.id);
+  });
+
+  it("still names hire.room_party first when a foreign room would also wear a foreign slip", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    const otherDesk = rt.alias("other-desk");
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "foreign room and foreign slip",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const r = rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: invited.quoteId, intentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.room_party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("deny");
+  });
+
+  it("still names mandate.known_intent first when a ghost slip would also be a guise", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    const otherDesk = rt.alias("other-desk");
+    const invited = inviteQuote(rt, {
+      buyer: otherDesk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "ghost slip",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const r = rt.dispatch(
+      cmd("hire.create", otherDesk.id, {
+        quoteId: invited.quoteId,
+        intentId: "mid_01J6AETHERGHOSTINTENT00001",
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.known_intent");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
+  });
+
+  it("still names actor.role_capability first when a founder would also wear a desk slip", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "founder cannot hire.create",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const r = rt.dispatch(cmd("hire.create", founder.id, { quoteId: invited.quoteId, intentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.role_capability");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
   });
 });
 

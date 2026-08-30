@@ -128,7 +128,8 @@
       "@aether/rate-fresh": ["packages/aether-runtime/src/rate-fresh.ts"],
       "@aether/nest-party": ["packages/aether-runtime/src/nest-party.ts"],
       "@aether/checkout-party": ["packages/aether-runtime/src/checkout-party.ts"],
-      "@aether/hire-room-party": ["packages/aether-runtime/src/hire-room-party.ts"]
+      "@aether/hire-room-party": ["packages/aether-runtime/src/hire-room-party.ts"],
+      "@aether/hire-slip-party": ["packages/aether-runtime/src/hire-slip-party.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

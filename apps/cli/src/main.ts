@@ -111,6 +111,7 @@ import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
 import { loadNestParty, runNestParty } from "@aether/nest-party";
 import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
 import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
+import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -803,6 +804,12 @@ if (command === "demo" && (name === "poach" || name === "raid" || name === "snat
   process.exit(0);
 }
 
+if (command === "demo" && (name === "guise" || name === "mask" || name === "cloak")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/guise/scenario.json");
+  printReport(runHireSlipParty(loadHireSlipParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -936,6 +943,7 @@ usage:
   pnpm demo corbel
   pnpm demo trolley
   pnpm demo poach
+  pnpm demo guise
   aether audit verify
   aether ledger replay
   pnpm mcp`);

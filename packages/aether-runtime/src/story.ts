@@ -352,6 +352,9 @@ export const TROLLEY_TLDR =
 export const POACH_TLDR =
   "A founder funded an $800 hire. A second desk hiring the research desk's live unused quote was hire.room_party — a missing room is not this deny, a spent quote is not this deny, shutting someone else's room is not this deny. No hire written. The buyer still hired its own quote. That funded work still released. Someone else's room is not yours to hire from.";
 
+export const GUISE_TLDR =
+  "A founder funded an $800 hire. A second desk hiring against the research desk's unused slip was hire.slip_party — a missing slip is not this deny, a ripped slip is not this deny, hiring from someone else's room is not this deny. No hire written. The named subject still hired against its own unused slip. That funded work still released. Someone else's unused slip is not yours to hire against.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1115,6 +1118,8 @@ export function autoBeat(input: {
         body = "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (the photo, not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.";
       } else if (ruleId === "hire.room_party") {
         body = "Someone else's room is not yours to hire from. Hire from your own RFQ, or ask a human or treasury. A missing room is a different object. A spent quote is a different object. Shutting someone else's room is a different object.";
+      } else if (ruleId === "hire.slip_party") {
+        body = "Someone else's unused slip is not yours to hire against. Hire against your own unused slip, or ask a human or treasury. A missing slip is a different object. A ripped slip is a different object. Hiring from someone else's room is a different object.";
       }
       return {
         seq: input.seq,
@@ -1128,7 +1133,9 @@ export function autoBeat(input: {
                 ? `${who} hired against a citation that is not a check`
                 : ruleId === "hire.room_party"
                   ? `${who} cannot hire from someone else's room`
-                  : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+                  : ruleId === "hire.slip_party"
+                    ? `${who} cannot hire against someone else's unused slip`
+                    : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
         body,
         tone: "deny",
         commandType: cmd.type,
@@ -1930,6 +1937,7 @@ export function analog(): Analog {
       "A nested hop under another principal is not a nested handshake. An exact same-principal nested grant still mints. A tighter same-principal nested grant still mints. A nested grant wider than its parent is a different object.",
       "Someone else's checkout is not yours to fill. The buyer still fills its own checkout. Dumping someone else's cart is a different object.",
       "Someone else's room is not yours to hire from. The buyer still hires its own quote. Shutting someone else's room is a different object.",
+      "Someone else's unused slip is not yours to hire against. The named subject still hires against its own unused slip. Tearing someone else's unused slip is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

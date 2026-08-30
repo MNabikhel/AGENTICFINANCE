@@ -1573,6 +1573,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.room_party", "deny", "speaker is not the named buyer");
     },
   },
+  {
+    id: "hire.slip_party",
+    evaluate: (ctx) => {
+      if (ctx.hireSlipPartyOk === undefined) return v("hire.slip_party", "allow", "not a slip hire");
+      return ctx.hireSlipPartyOk
+        ? v("hire.slip_party", "allow", "speaker is the named subject or a kill-switch role")
+        : v("hire.slip_party", "deny", "speaker is not the named subject");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1693,7 +1702,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_intent": {
     kind: "none",
-    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake. A missing handshake stays kya.chain_intact. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
+    hint: "That intent id is not in this world. Issue a real permission slip first. A missing slip is not a missing handshake. A missing handshake stays kya.chain_intact. A dead parent stays mandate.parent_fresh. Wearing someone else's unused slip stays hire.slip_party. Completing funded work is legal.",
   },
   "mandate.known_cart": {
     kind: "none",
@@ -1821,7 +1830,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.subject_is_actor": {
     kind: "none",
-    hint: "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row.",
+    hint: "This permission slip names a different subject. The speaker is not that agent. A live chain is not a shared checkbook. Party TAP is who sits on the hire. Name TAP is whose name a handshake is in. Seat TAP is a hosted subscribe row. Wearing someone else's unused slip at hire.create stays hire.slip_party.",
   },
   "mm.known": {
     kind: "none",
@@ -1954,7 +1963,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "hire.room_party": {
     kind: "none",
-    hint: "Hire from your own room, or ask a human or treasury. Someone else's quote is not yours to hire. A missing room is market.known_rfq. A spent quote is hire.quote_unspent. A shut or expired room is market.not_expired. An FX window is hire.not_fx. Shutting someone else's room is market.rfq_party. Folding someone else's bid is market.party. Completing funded work is legal. Buyer still hires its own quote.",
+    hint: "Hire from your own room, or ask a human or treasury. Someone else's quote is not yours to hire. A missing room is market.known_rfq. A spent quote is hire.quote_unspent. A shut or expired room is market.not_expired. An FX window is hire.not_fx. Shutting someone else's room is market.rfq_party. Folding someone else's bid is market.party. Wearing someone else's unused slip stays hire.slip_party. Completing funded work is legal. Buyer still hires its own quote.",
+  },
+  "hire.slip_party": {
+    kind: "none",
+    hint: "Hire against your own unused slip, or ask a human or treasury. Someone else's permission is not yours to wear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired. Hiring from someone else's room is hire.room_party. Tearing someone else's unused slip is mandate.party. Fund and submit stay mandate.subject_is_actor. Completing funded work is legal. The named subject still hires.",
   },
   "host.not_hosted": {
     kind: "none",
@@ -1979,7 +1992,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.party": {
     kind: "none",
-    hint: "Rip your own unused slip, or ask a human or treasury. Someone else's permission is not yours to tear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired on a new hire. Completing funded work is legal.",
+    hint: "Rip your own unused slip, or ask a human or treasury. Someone else's permission is not yours to tear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired on a new hire. Wearing someone else's unused slip stays hire.slip_party. Completing funded work is legal.",
   },
   "market.rfq_party": {
     kind: "none",
