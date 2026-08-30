@@ -968,6 +968,12 @@ paths:
       responses:
         "200": { description: Forge TAP report. Someone else's name is not a root slip to mint. }
         "500": { description: Assertions failed }
+  /v1/demo/snare:
+    post:
+      operationId: demoSnare
+      responses:
+        "200": { description: Snare TAP report. Someone else's conversion window is not yours to settle. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

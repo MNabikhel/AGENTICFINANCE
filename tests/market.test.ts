@@ -1126,6 +1126,207 @@ describe("mandate.root_party", () => {
   });
 });
 
+describe("market.settle_party", () => {
+  function settleWorld() {
+    const rt = boot();
+    must(
+      rt.dispatch(
+        cmd("identity.register", "system", {
+          key: "ops-human",
+          displayName: "Founder",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "founder",
+    );
+    const founder = rt.alias("ops-human");
+    for (const a of [
+      { key: "treasury", displayName: "Treasury", role: "treasury", autonomyLevel: 3 },
+      { key: "desk", displayName: "Desk", role: "procurement", autonomyLevel: 4 },
+      { key: "research-vendor", displayName: "Research Vendor", role: "data_vendor", autonomyLevel: 2 },
+      { key: "other-vendor", displayName: "Other Vendor", role: "data_vendor", autonomyLevel: 2 },
+    ] as const) {
+      must(
+        rt.dispatch(
+          cmd("identity.register", founder.id, {
+            key: a.key,
+            displayName: a.displayName,
+            role: a.role,
+            autonomyLevel: a.autonomyLevel,
+          }),
+        ),
+        a.key,
+      );
+    }
+    rt.seedOpening({
+      "treasury:cash": { amount: 500_000, currency: "USD_SIM" },
+      "research-vendor:cash": { amount: 200_000, currency: "USD_SIM" },
+      "other-vendor:cash": { amount: 200_000, currency: "USD_SIM" },
+    });
+    const desk = rt.alias("desk");
+    const vendor = rt.alias("research-vendor");
+    const other = rt.alias("other-vendor");
+    const treasury = rt.alias("treasury");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 4 })), "kya");
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "snare",
+          invitedSellerIds: [vendor.id, other.id],
+        }),
+      ),
+      "rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", vendor.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 80_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 1_000_000,
+            validUntil: "2026-08-29T00:00:00.000Z",
+          },
+        }),
+      ),
+      "vendor fx",
+    );
+    return {
+      rt,
+      founder,
+      desk,
+      vendor,
+      other,
+      treasury,
+      rfqId: (rfq.data as { id: string }).id,
+      quoteId: (quoted.data as { id: string }).id,
+    };
+  }
+
+  function sitMaker(rt: ReturnType<typeof boot>, founderId: string) {
+    must(
+      rt.dispatch(
+        cmd("identity.register", founderId, {
+          key: "mm",
+          displayName: "Market Maker",
+          role: "market_maker",
+          autonomyLevel: 2,
+        }),
+      ),
+      "mm",
+    );
+    rt.seedOpening({
+      "market_maker:cash_usd": { amount: 200_000, currency: "USD_SIM" },
+      "market_maker:cash_usdc": { amount: 1_000_000, currency: "USDC_SIM" },
+    });
+    return rt.alias("mm");
+  }
+
+  it("refuses a second vendor settling the research vendor's unused window as market.settle_party", () => {
+    const { rt, founder, other, quoteId } = settleWorld();
+    sitMaker(rt, founder.id);
+    const before = rt.consumedQuotes.size;
+    const r = rt.dispatch(cmd("market.fx_settle", other.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.settle_party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(rt.consumedQuotes.size).toBe(before);
+  });
+
+  it("still names mm.known first when an empty pit would also be a snare", () => {
+    const { rt, other, quoteId } = settleWorld();
+    const r = rt.dispatch(cmd("market.fx_settle", other.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mm.known");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
+  });
+
+  it("still names market.fx_quote first when a ghost quote would also be a snare", () => {
+    const { rt, founder, other } = settleWorld();
+    sitMaker(rt, founder.id);
+    const r = rt.dispatch(cmd("market.fx_settle", other.id, { quoteId: "qte_01J6AETHERGHOSTQUOTE0000001" }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.fx_quote");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("allow");
+  });
+
+  it("still names actor.role_capability first when a desk settle would also be a snare", () => {
+    const { rt, founder, desk, quoteId } = settleWorld();
+    sitMaker(rt, founder.id);
+    const r = rt.dispatch(cmd("market.fx_settle", desk.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("actor.role_capability");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
+  });
+
+  it("refuses a maker wash-settling a vendor window as market.settle_party", () => {
+    const { rt, founder, quoteId } = settleWorld();
+    const mm = sitMaker(rt, founder.id);
+    const before = rt.consumedQuotes.size;
+    const r = rt.dispatch(cmd("market.fx_settle", mm.id, { quoteId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("market.settle_party");
+    expect(rt.consumedQuotes.size).toBe(before);
+  });
+
+  it("allows the named seller converting its own window as market.settle_party", () => {
+    const { rt, founder, vendor, quoteId } = settleWorld();
+    sitMaker(rt, founder.id);
+    const r = rt.dispatch(cmd("market.fx_settle", vendor.id, { quoteId }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.decision.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("allow");
+    expect(rt.consumedQuotes.has(quoteId)).toBe(true);
+  });
+
+  it("allows a vendor converting a maker window as market.settle_party", () => {
+    const { rt, founder, vendor, other, desk } = settleWorld();
+    const mm = sitMaker(rt, founder.id);
+    const rfq = must(
+      rt.dispatch(
+        cmd("market.rfq", desk.id, {
+          sku: "fx.usd_sim.usdc_sim",
+          spec: "maker window",
+          invitedSellerIds: [mm.id, other.id],
+        }),
+      ),
+      "maker rfq",
+    );
+    const quoted = must(
+      rt.dispatch(
+        cmd("market.quote", mm.id, {
+          rfqId: (rfq.data as { id: string }).id,
+          price: { amount: 50_000, currency: "USD_SIM" },
+          fx: {
+            from: "USD_SIM",
+            to: "USDC_SIM",
+            rateE6: 1_000_000,
+            validUntil: "2026-08-29T00:00:00.000Z",
+          },
+        }),
+      ),
+      "maker fx",
+    );
+    const makerId = (quoted.data as { id: string }).id;
+    const r = rt.dispatch(cmd("market.fx_settle", other.id, { quoteId: makerId }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.decision.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("allow");
+    expect(rt.consumedQuotes.has(makerId)).toBe(true);
+    expect(vendor.id).not.toBe(other.id);
+  });
+});
+
 describe("command schema", () => {
   it("refuses missing required fields before policy or the clock", () => {
     const rt = boot();

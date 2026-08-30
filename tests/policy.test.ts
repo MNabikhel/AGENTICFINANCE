@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 116 rules", () => {
-    expect(RULE_IDS).toHaveLength(116);
+  it("has 117 rules", () => {
+    expect(RULE_IDS).toHaveLength(117);
   });
 
   it("denies frozen actors", () => {
@@ -6869,6 +6869,115 @@ describe("policy catalog", () => {
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.root_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("actor.role_capability");
+  });
+
+  it("denies settling someone else's vendor window as market.settle_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2, id: "aid_other" }),
+        commandType: "market.fx_settle",
+        settlePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.settle_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a vendor settling its own window as market.settle_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        settlePartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("allow");
+  });
+
+  it("allows a vendor settling a maker window as market.settle_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.fx_settle",
+        settlePartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name market.settle_party when the speaker is not settling FX", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("allow");
+  });
+
+  it("still names market.fx_quote first when a ghost quote would also be a snare", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2, id: "aid_other" }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.fx_quote")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("market.fx_quote");
+  });
+
+  it("still names mm.known first when an empty pit would also be a snare", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2, id: "aid_other" }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: true,
+        mmKnown: false,
+        settlePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mm.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mm.known");
+  });
+
+  it("still names ledger.known_account first when a missing dest book would also be a snare", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "compute_vendor", autonomyLevel: 2, id: "aid_compute" }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: true,
+        mmKnown: true,
+        accountsKnown: false,
+        settlePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ledger.known_account")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("ledger.known_account");
+  });
+
+  it("still names actor.role_capability first when a desk settle would also be a snare", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_desk" }),
+        commandType: "market.fx_settle",
+        fxQuoteLive: true,
+        mmKnown: true,
+        accountsKnown: true,
+        settlePartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.settle_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("actor.role_capability");
   });
 

@@ -842,6 +842,19 @@ export interface PolicyContext {
    */
   fxBandOk?: boolean;
   /**
+   * False when `market.fx_settle` would convert against an FX quote whose
+   * seller is another vendor, or when the speaker is the market maker
+   * (a wash is not a conversion). Absent = not an FX settle, or the quote
+   * has no `fx` (`market.fx_quote` handles ghost / paper / spent). A maker's
+   * quoted window still converts for a non-maker with books. The named
+   * vendor still converts its own window. Human/treasury still pass this
+   * flag (a missing dest book stays `ledger.known_account`). A missing
+   * maker stays `mm.known`. A compute vendor's USD cash stays
+   * `ledger.known_account`. Quoin TAP is minting FX while a maker sits
+   * (`market.fx_party`). Fold TAP is tearing a bid (`market.party`).
+   */
+  settlePartyOk?: boolean;
+  /**
    * False when `hire.create` or `market.withdraw` would reuse a quote that already
    * produced a hire, an FX settle, or is held by an open approval ticket.
    * Absent = not those commands, or the quote/RFQ is unknown (`rfqKnown` handles that).

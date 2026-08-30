@@ -129,6 +129,7 @@ pnpm demo poach           # someone else's room is not yours to hire from
 pnpm demo guise           # someone else's unused slip is not yours to hire against
 pnpm demo cuckoo          # someone else's parent slip is not yours to nest under
 pnpm demo forge           # someone else's name is not a root slip to mint
+pnpm demo snare           # someone else's conversion window is not yours to settle
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
