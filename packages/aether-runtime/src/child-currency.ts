@@ -56,7 +56,11 @@ function nestBody(
     subjectId: deskId,
     parentId,
     task,
-    constraints: [{ type: "payment.amount_range", currency, max: 100_000 }, payees],
+    constraints: [
+      { type: "payment.amount_range", currency, max: 100_000 },
+      { type: "aether.allowed_skus", allowed: ["research.brief"] },
+      payees,
+    ],
   });
 }
 
