@@ -110,6 +110,7 @@ import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
 import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
 import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
 import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
+import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -212,6 +213,7 @@ const weekFixture = join(process.cwd(), "fixtures/demo/week/scenario.json");
 const gulfFixture = join(process.cwd(), "fixtures/demo/gulf/scenario.json");
 const cofferFixture = join(process.cwd(), "fixtures/demo/coffer/scenario.json");
 const clashFixture = join(process.cwd(), "fixtures/demo/clash/scenario.json");
+const hatchFixture = join(process.cwd(), "fixtures/demo/hatch/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1147,6 +1149,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runCurrencyFresh(loadCurrencyFresh(clashFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "clash" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/hatch") {
+        const report = runHatchFresh(loadHatchFresh(hatchFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "hatch" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

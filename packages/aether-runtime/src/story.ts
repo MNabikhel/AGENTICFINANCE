@@ -313,6 +313,9 @@ export const COFFER_TLDR =
 export const CLASH_TLDR =
   "A founder funded an $800 hire. Minting a USDC coffer on a USD lid was mandate.currency_fresh — not a vacant slot, not a closed coffer, not hire-time currency. Matching USD still minted. Matching USDC still minted. That funded work still released. A USDC coffer on a USD lid is not a budget.";
 
+export const HATCH_TLDR =
+  "A founder funded an $800 hire. Minting a closed hatch or a zero lid was mandate.lid_fresh — not a vacant slot, not a floor above the lid, not hire-time max. A live lid still minted. An open floor still minted. That funded work still released. A closed hatch is not a range.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -650,6 +653,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot mint a mixed envelope`,
           body: "A permission slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still checks currency when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.lid_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a closed hatch`,
+          body: "A permission slip cannot be born with an amount_range whose max cannot admit a positive hire. Name max > 0, or omit the range. Hire still checks the lid when money would move.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1714,6 +1727,7 @@ export function analog(): Analog {
       "A floor above the lid is not a range. An exact band still mints. An open floor still mints. Hire-time max is a different object.",
       "A closed coffer is not a budget. A coffer below the floor is not a budget. A coffer that covers the floor still mints. Hire-time envelope is a different object.",
       "A USDC coffer on a USD lid is not a budget. Matching USD still mints. Matching USDC still mints. Hire-time currency is a different object.",
+      "A closed hatch is not a range. A zero lid is not a range. A live lid still mints. An open floor still mints. Hire-time max is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

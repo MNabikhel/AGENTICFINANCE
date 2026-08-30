@@ -128,6 +128,7 @@ import {
   GULF_TLDR,
   COFFER_TLDR,
   CLASH_TLDR,
+  HATCH_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -294,6 +295,15 @@ function rangeMintable(c: { min?: unknown; max?: unknown }): boolean {
   if (c.min === undefined) return true;
   if (typeof c.min !== "number" || !Number.isFinite(c.min)) return false;
   return c.min <= c.max;
+}
+
+/**
+ * A lid that cannot admit a positive hire is not a range. Missing/non-finite max
+ * keeps hire-time first deny. max ≤ 0 is empty even when min is omitted or equal.
+ */
+function lidMintable(c: { min?: unknown; max?: unknown }): boolean {
+  if (typeof c.max !== "number" || !Number.isFinite(c.max)) return true;
+  return c.max > 0;
 }
 
 /**
@@ -1414,6 +1424,11 @@ export class Runtime {
           name: "Clash TAP",
           description: "POST /v1/demo/clash — a USDC coffer on a USD lid is not a budget",
         },
+        {
+          id: "hatch-fresh",
+          name: "Hatch TAP",
+          description: "POST /v1/demo/hatch — a closed hatch is not a range",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2102,6 +2117,7 @@ export class Runtime {
       const range = ctx.proposedConstraints.find((c) => c.type === "payment.amount_range");
       if (range) {
         ctx.rangeMintOk = rangeMintable(range);
+        ctx.lidMintOk = lidMintable(range);
       }
       const budget = ctx.proposedConstraints.find((c) => c.type === "payment.budget");
       if (budget) {
@@ -3101,6 +3117,9 @@ export class Runtime {
     }
     if (range && budget && !moneyCurrenciesAligned(range, budget)) {
       throw new Error("intent currencies mixed");
+    }
+    if (range && !lidMintable(range)) {
+      throw new Error("intent lid empty");
     }
     const payload: IntentMandate = {
       vct: "aether.mandate.intent.open.1",
@@ -4183,7 +4202,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

@@ -1456,6 +1456,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.currency_fresh", "deny", "lid and coffer name different currencies");
     },
   },
+  {
+    id: "mandate.lid_fresh",
+    evaluate: (ctx) => {
+      if (ctx.lidMintOk === undefined) return v("mandate.lid_fresh", "allow", "not a lid mint");
+      return ctx.lidMintOk
+        ? v("mandate.lid_fresh", "allow", "amount_range can still admit a positive hire")
+        : v("mandate.lid_fresh", "deny", "amount_range max cannot admit a positive hire");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1764,7 +1773,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.range_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band (min === max). Hire still names payment.amount_range. A vacant cap stays mandate.occurrence_fresh. A week that cannot admit a second hire stays mandate.cadence_reach. Lid TAP is hire-time max. A closed coffer is mandate.budget_fresh.",
+    hint: "A slip cannot be born with an amount_range whose min exceeds max. Name min ≤ max, omit min, or name an exact band (min === max). Hire still names payment.amount_range. A vacant cap stays mandate.occurrence_fresh. A week that cannot admit a second hire stays mandate.cadence_reach. Lid TAP is hire-time max. A closed hatch is mandate.lid_fresh. A closed coffer is mandate.budget_fresh.",
   },
   "mandate.budget_fresh": {
     kind: "none",
@@ -1772,7 +1781,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.currency_fresh": {
     kind: "none",
-    hint: "A slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still names payment.currency_match. A closed coffer stays mandate.budget_fresh. A floor above the lid stays mandate.range_fresh. Mix TAP is a mixed journal. Ink TAP is cart vs hire.",
+    hint: "A slip cannot be born with an amount_range and a payment.budget in different currencies. Name the same currency on both, or omit one. Hire still names payment.currency_match. A closed coffer stays mandate.budget_fresh. A floor above the lid stays mandate.range_fresh. A closed hatch is mandate.lid_fresh. Mix TAP is a mixed journal. Ink TAP is cart vs hire.",
+  },
+  "mandate.lid_fresh": {
+    kind: "none",
+    hint: "A slip cannot be born with an amount_range whose max cannot admit a positive hire. Name max > 0, or omit the range. Hire still names payment.amount_range. A floor above the lid stays mandate.range_fresh. A vacant cap stays mandate.occurrence_fresh. Lid TAP is hire-time max. A closed coffer is mandate.budget_fresh. A mixed envelope is mandate.currency_fresh.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

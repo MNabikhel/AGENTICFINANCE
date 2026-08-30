@@ -872,6 +872,12 @@ paths:
       responses:
         "200": { description: Clash TAP report. A USDC coffer on a USD lid is not a budget. }
         "500": { description: Assertions failed }
+  /v1/demo/hatch:
+    post:
+      operationId: demoHatch
+      responses:
+        "200": { description: Hatch TAP report. A closed hatch is not a range. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

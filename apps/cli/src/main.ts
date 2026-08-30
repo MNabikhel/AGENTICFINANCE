@@ -98,6 +98,7 @@ import { loadCadenceReach, runCadenceReach } from "@aether/cadence-reach";
 import { loadRangeFresh, runRangeFresh } from "@aether/range-fresh";
 import { loadBudgetFresh, runBudgetFresh } from "@aether/budget-fresh";
 import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
+import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -712,6 +713,12 @@ if (command === "demo" && (name === "clash" || name === "jolt" || name === "snag
   process.exit(0);
 }
 
+if (command === "demo" && (name === "hatch" || name === "flap" || name === "cork")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/hatch/scenario.json");
+  printReport(runHatchFresh(loadHatchFresh(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -832,6 +839,7 @@ usage:
   pnpm demo gulf
   pnpm demo coffer
   pnpm demo clash
+  pnpm demo hatch
   aether audit verify
   aether ledger replay
   pnpm mcp`);

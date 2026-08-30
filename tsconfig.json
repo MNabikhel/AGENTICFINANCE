@@ -115,7 +115,8 @@
       "@aether/cadence-reach": ["packages/aether-runtime/src/cadence-reach.ts"],
       "@aether/range-fresh": ["packages/aether-runtime/src/range-fresh.ts"],
       "@aether/budget-fresh": ["packages/aether-runtime/src/budget-fresh.ts"],
-      "@aether/currency-fresh": ["packages/aether-runtime/src/currency-fresh.ts"]
+      "@aether/currency-fresh": ["packages/aether-runtime/src/currency-fresh.ts"],
+      "@aether/hatch-fresh": ["packages/aether-runtime/src/hatch-fresh.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

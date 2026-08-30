@@ -1114,8 +1114,8 @@ export interface PolicyContext {
    * Omit min is an open floor and still mints. min === max still mints (exact).
    * Hire/fund still names `payment.amount_range`. A vacant cap stays
    * `mandate.occurrence_fresh`. A week that cannot admit a second hire stays
-   * `mandate.cadence_reach`. Lid TAP is hire-time max. A closed coffer is
-   * `mandate.budget_fresh`.
+   * `mandate.cadence_reach`. Lid TAP is hire-time max. A closed hatch is
+   * `mandate.lid_fresh`. A closed coffer is `mandate.budget_fresh`.
    */
   rangeMintOk?: boolean;
   /**
@@ -1135,8 +1135,19 @@ export interface PolicyContext {
    * Matching USDC still mints. Hire/fund still names `payment.currency_match`.
    * A closed coffer stays `mandate.budget_fresh`. A floor above the lid stays
    * `mandate.range_fresh`. Mix TAP is a mixed journal. Ink TAP is cart vs hire.
+   * A closed hatch is `mandate.lid_fresh`.
    */
   currencyMintOk?: boolean;
+  /**
+   * False when mandate.issue_intent would write an amount_range whose max
+   * cannot admit a positive hire (`max` ≤ 0). Absent = not issue_intent, or
+   * no amount_range constraint. Missing/non-finite max keeps hire-time first
+   * deny. A live lid still mints. An open floor with max > 0 still mints.
+   * Hire/fund still names `payment.amount_range`. Lid TAP is hire-time max.
+   * A floor above the lid stays `mandate.range_fresh`. A closed coffer is
+   * `mandate.budget_fresh`. A mixed envelope is `mandate.currency_fresh`.
+   */
+  lidMintOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
