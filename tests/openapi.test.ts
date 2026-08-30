@@ -238,6 +238,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("nested grant wider than its parent");
     expect(spec).toContain("/v1/demo/stud:");
     expect(spec).toContain("grant wider than the incoming hop");
+    expect(spec).toContain("/v1/demo/plate:");
+    expect(spec).toContain("orphan hop");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {

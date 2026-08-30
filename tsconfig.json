@@ -120,7 +120,8 @@
       "@aether/cap-fresh": ["packages/aether-runtime/src/cap-fresh.ts"],
       "@aether/grant-fresh": ["packages/aether-runtime/src/grant-fresh.ts"],
       "@aether/nest-tighter": ["packages/aether-runtime/src/nest-tighter.ts"],
-      "@aether/path-tighter": ["packages/aether-runtime/src/path-tighter.ts"]
+      "@aether/path-tighter": ["packages/aether-runtime/src/path-tighter.ts"],
+      "@aether/path-live": ["packages/aether-runtime/src/path-live.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"]

@@ -328,6 +328,9 @@ export const JOIST_TLDR =
 export const STUD_TLDR =
   "A founder funded an $800 hire. Minting a grant wider than the incoming hop was kya.path_tighter — not a nested parent hop, not a grant below the desk, not a climb after mint. An exact path grant still minted. A tighter path grant still minted. That funded work still released. A grant wider than the incoming hop is not a handshake.";
 
+export const PLATE_TLDR =
+  "A founder funded an $800 hire. Minting a hop in another principal's name with no live incoming path was kya.path_live — not a grant wider than the incoming hop, not a nested parent hop, not whose name a handshake is in. An exact path grant still minted. A tighter path grant still minted. That funded work still released. An orphan hop is not a handshake.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1664,7 +1667,17 @@ export function autoBeat(input: {
           seq: input.seq,
           at: input.at,
           headline: `${who} cannot mint a grant wider than the incoming hop`,
-          body: "A handshake in another principal's name cannot be born wider than the speaker's live incoming hop. Name max ≤ that hop, or omit only when the incoming hop is already L5. A nested parent hop is a different object. A grant below the desk is a different object.",
+          body: "A handshake in another principal's name cannot be born wider than the speaker's live incoming hop. Name max ≤ that hop, or omit only when the incoming hop is already L5. A nested parent hop is a different object. A grant below the desk is a different object. An orphan hop is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.path_live") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint an orphan hop`,
+          body: "A handshake in another principal's name cannot be born without a live incoming hop from that principal. Attest the speaker under that principal, then nest. A grant wider than the incoming hop is a different object. Whose name a handshake is in is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1804,6 +1817,7 @@ export function analog(): Analog {
       "A grant below the desk is not a handshake. An exact grant still mints. An open ceiling still mints. Hire-time climb is a different object.",
       "A nested grant wider than its parent is not a handshake. An exact nested grant still mints. A tighter nested grant still mints. A nested slip is a different object.",
       "A grant wider than the incoming hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A nested parent hop is a different object.",
+      "An orphan hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A grant wider than the incoming hop is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

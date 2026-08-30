@@ -1180,12 +1180,22 @@ export interface PolicyContext {
    * False when kya.attest would write a hop in another principal's name
    * whose ceiling is wider than the speaker's live incoming hop from that
    * principal. Absent = not attest, speaker is the principal, or no live
-   * path from that principal. Omitted maxAutonomy is L5. Exact match
+   * path from that principal (`kya.path_live`). Omitted maxAutonomy is L5. Exact match
    * (child === incoming) still mints. A tighter child still mints.
    * A nested grant wider than its parentId hop stays `kya.nest_tighter`.
    * A grant below the desk stays `kya.grant_fresh`.
    */
   pathTighterOk?: boolean;
+  /**
+   * False when kya.attest would write a hop in another known principal's
+   * name and the speaker has no live path from that principal. Absent = not
+   * attest, speaker is the principal, principal unknown (`identity.known`),
+   * or a live incoming hop exists (`kya.path_tighter` owns width). An agent
+   * filling in another principal's id stays `kya.party`. Speaker granting in
+   * their own name is not this deny. A dead incoming hop is this deny, not
+   * `kya.parent_fresh` (that rule is an explicit parentId).
+   */
+  pathLiveOk?: boolean;
   /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.

@@ -1501,6 +1501,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.path_tighter", "deny", "path grant is wider than the incoming hop");
     },
   },
+  {
+    id: "kya.path_live",
+    evaluate: (ctx) => {
+      if (ctx.pathLiveOk === undefined) return v("kya.path_live", "allow", "not an orphan hop mint");
+      return ctx.pathLiveOk
+        ? v("kya.path_live", "allow", "speaker has a live incoming hop")
+        : v("kya.path_live", "deny", "speaker has no live incoming hop");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1837,7 +1846,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.path_tighter": {
     kind: "none",
-    hint: "A handshake in another principal's name cannot be born wider than the speaker's live incoming hop from that principal. Name max ≤ that hop's maxAutonomy, or omit only when the incoming hop is already L5. Hire still names kya.capability_subset. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. An agent over-grant stays kya.capability_subset. Well TAP equal hops still mint. A speaker granting in their own name is not this deny.",
+    hint: "A handshake in another principal's name cannot be born wider than the speaker's live incoming hop from that principal. Name max ≤ that hop's maxAutonomy, or omit only when the incoming hop is already L5. Hire still names kya.capability_subset. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. An agent over-grant stays kya.capability_subset. Well TAP equal hops still mint. A speaker granting in their own name is not this deny. An orphan hop is kya.path_live.",
+  },
+  "kya.path_live": {
+    kind: "none",
+    hint: "A handshake in another principal's name cannot be born without a live incoming hop from that principal. Attest the speaker under that principal, then nest. Speaker granting in their own name is not this deny. Ghost principal stays identity.known. An agent filling in another principal's id stays kya.party. A grant wider than a live incoming hop stays kya.path_tighter. A nested grant wider than its parent stays kya.nest_tighter. A grant below the desk stays kya.grant_fresh. A dead parentId stays kya.parent_fresh.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",

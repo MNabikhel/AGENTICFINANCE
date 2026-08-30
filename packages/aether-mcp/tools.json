@@ -705,6 +705,11 @@
       "name": "aether_demo_stud",
       "commandType": "demo.stud",
       "description": "Run the stud TAP: a grant wider than the incoming hop is not a handshake. kya.attest in another principal's name with maxAutonomy above the speaker's live incoming hop is kya.path_tighter; a nested parent hop, a grant below the desk, and a climb after mint still allow; an exact path grant still mints; a tighter path grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_plate",
+      "commandType": "demo.plate",
+      "description": "Run the plate TAP: an orphan hop is not a handshake. kya.attest in another principal's name with no live incoming path is kya.path_live; a grant wider than the incoming hop, a nested parent hop, and whose name a handshake is in still allow; an exact path grant still mints; a tighter path grant still mints; funded work still finishes."
     }
   ]
 }

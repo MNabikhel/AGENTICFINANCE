@@ -527,6 +527,7 @@ describe("kya.party", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.chain_intact")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
     expect(r.error.decision?.remediation?.ruleId).toBe("kya.party");
@@ -1040,6 +1041,7 @@ describe("kya.path_tighter", () => {
     expect(r.error.error.status).toBe(422);
     expect(r.error.error.type).toContain("policy.deny");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
@@ -1160,6 +1162,210 @@ describe("kya.path_tighter", () => {
       "own-name grant",
     );
     expect((r.data as { principalId: string }).principalId).toBe(hopA.id);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before + 1);
+  });
+});
+
+describe("kya.path_live", () => {
+  function hopA(rt: Runtime) {
+    const { founder, desk, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "hop-a",
+          displayName: "Hop A",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "hop-a",
+    );
+    return { founder, desk, vendor, hopA: rt.alias("hop-a") };
+  }
+
+  it("refuses a hop in another principal's name with no live incoming path as kya.path_live, not a live mint", () => {
+    const rt = boot();
+    const { founder, desk, hopA: speaker } = hopA(rt);
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 4 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.path_live");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses an omitted path ceiling with no live incoming hop as kya.path_live", () => {
+    const rt = boot();
+    const { founder, desk, hopA: speaker } = hopA(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: founder.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.path_live");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("refuses a hop after the incoming path expires as kya.path_live", () => {
+    const rt = boot();
+    const { founder, desk, hopA: speaker } = hopA(rt);
+    must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, {
+          delegateId: speaker.id,
+          maxAutonomy: 3,
+          expiresAt: "2026-08-28T12:00:00.000Z",
+        }),
+      ),
+      "incoming",
+    );
+    rt.clock.set("2026-08-29T00:00:00.000Z");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.path_live");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("refuses a hop after the incoming path is revoked as kya.path_live", () => {
+    const rt = boot();
+    const { founder, desk, hopA: speaker } = hopA(rt);
+    const incoming = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: speaker.id, maxAutonomy: 3 })),
+      "incoming",
+    );
+    must(
+      rt.dispatch(cmd("kya.revoke", founder.id, { attestationId: (incoming.data as { id: string }).id })),
+      "revoke incoming",
+    );
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.path_live");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.path_tighter first when a live incoming hop is also wider than the grant", () => {
+    const rt = boot();
+    const { founder, desk, hopA: speaker } = hopA(rt);
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: speaker.id, maxAutonomy: 3 })), "incoming");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 4 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.path_tighter");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.party first when an L4 desk fills in the founder’s id without a live incoming hop", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 4,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", scout.id, { delegateId: vendor.id, principalId: founder.id, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.unique_live first when a second hop is also an orphan hop", () => {
+    const rt = boot();
+    const { founder, desk, hopA: speaker } = hopA(rt);
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })), "first");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.unique_live");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names identity.known first when a ghost principal would also be an orphan hop", () => {
+    const rt = boot();
+    const { desk, hopA: speaker } = hopA(rt);
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: GHOST, maxAutonomy: 3 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("identity.known");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still mints when the speaker grants in their own name with no incoming hop", () => {
+    const rt = boot();
+    const { desk, hopA: speaker } = hopA(rt);
+    const before = rt.kya.attestations.size;
+    const r = must(
+      rt.dispatch(cmd("kya.attest", speaker.id, { delegateId: desk.id, maxAutonomy: 4 })),
+      "own-name grant",
+    );
+    expect((r.data as { principalId: string }).principalId).toBe(speaker.id);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before + 1);
+  });
+
+  it("still mints an exact path grant after a live incoming hop exists", () => {
+    const rt = boot();
+    const { founder, desk, hopA: speaker } = hopA(rt);
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: speaker.id, maxAutonomy: 3 })), "incoming");
+    const before = rt.kya.attestations.size;
+    const r = must(
+      rt.dispatch(
+        cmd("kya.attest", speaker.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 3 }),
+      ),
+      "exact path grant",
+    );
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
     expect(r.decision.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
     expect(rt.kya.attestations.size).toBe(before + 1);
   });
@@ -1527,6 +1733,7 @@ describe("kya.mint_fresh", () => {
     if (r.ok) return;
     expect(r.error.decision?.remediation?.ruleId).toBe("kya.party");
     expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
     expect(rt.kya.attestations.size).toBe(before);
   });
 });

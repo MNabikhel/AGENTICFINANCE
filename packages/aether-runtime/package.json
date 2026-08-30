@@ -106,7 +106,8 @@
     "./cap-fresh": "./src/cap-fresh.ts",
     "./grant-fresh": "./src/grant-fresh.ts",
     "./nest-tighter": "./src/nest-tighter.ts",
-    "./path-tighter": "./src/path-tighter.ts"
+    "./path-tighter": "./src/path-tighter.ts",
+    "./path-live": "./src/path-live.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

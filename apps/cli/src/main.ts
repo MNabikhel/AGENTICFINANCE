@@ -103,6 +103,7 @@ import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
 import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
 import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
 import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
+import { loadPathLive, runPathLive } from "@aether/path-live";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -747,6 +748,12 @@ if (command === "demo" && (name === "stud" || name === "noggin" || name === "dwa
   process.exit(0);
 }
 
+if (command === "demo" && (name === "plate" || name === "sole" || name === "shoe")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/plate/scenario.json");
+  printReport(runPathLive(loadPathLive(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -872,6 +879,7 @@ usage:
   pnpm demo sill
   pnpm demo joist
   pnpm demo stud
+  pnpm demo plate
   aether audit verify
   aether ledger replay
   pnpm mcp`);

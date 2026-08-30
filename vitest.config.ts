@@ -127,6 +127,7 @@ export default defineConfig({
       "@aether/grant-fresh": path.resolve(__dirname, "packages/aether-runtime/src/grant-fresh.ts"),
       "@aether/nest-tighter": path.resolve(__dirname, "packages/aether-runtime/src/nest-tighter.ts"),
       "@aether/path-tighter": path.resolve(__dirname, "packages/aether-runtime/src/path-tighter.ts"),
+      "@aether/path-live": path.resolve(__dirname, "packages/aether-runtime/src/path-live.ts"),
     },
   },
 });

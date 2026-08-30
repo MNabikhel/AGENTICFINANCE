@@ -121,6 +121,7 @@ describe("MCP host", () => {
     expect(names).toContain("aether_demo_sill");
     expect(names).toContain("aether_demo_joist");
     expect(names).toContain("aether_demo_stud");
+    expect(names).toContain("aether_demo_plate");
     expect(names).toContain("aether_identity_rotate");
     expect(names).toContain("aether_hire_void");
     expect(names).toContain("aether_market_withdraw");
@@ -1000,6 +1001,14 @@ describe("MCP host", () => {
     expect(report.ok).toBe(true);
     expect(report.results.every((r) => r.ok)).toBe(true);
     expect(report.tldr).toContain("grant wider than the incoming hop");
+  });
+
+  it("runs the plate demo over the tool bus", () => {
+    const mcp = new AetherMcp();
+    const report = mcp.callTool("aether_demo_plate", {}) as { ok: boolean; results: { ok: boolean }[]; tldr: string };
+    expect(report.ok).toBe(true);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.tldr).toContain("no live incoming path");
   });
 
   it("refuses an unknown actor alias as actor.known, not silent system", () => {

@@ -115,6 +115,7 @@ import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
 import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
 import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
 import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
+import { loadPathLive, runPathLive } from "@aether/path-live";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -222,6 +223,7 @@ const eaveFixture = join(process.cwd(), "fixtures/demo/eave/scenario.json");
 const sillFixture = join(process.cwd(), "fixtures/demo/sill/scenario.json");
 const joistFixture = join(process.cwd(), "fixtures/demo/joist/scenario.json");
 const studFixture = join(process.cwd(), "fixtures/demo/stud/scenario.json");
+const plateFixture = join(process.cwd(), "fixtures/demo/plate/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1192,6 +1194,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runPathTighter(loadPathTighter(studFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "stud" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/plate") {
+        const report = runPathLive(loadPathLive(plateFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "plate" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 105 rules", () => {
-    expect(RULE_IDS).toHaveLength(105);
+  it("has 106 rules", () => {
+    expect(RULE_IDS).toHaveLength(106);
   });
 
   it("denies frozen actors", () => {
@@ -3939,6 +3939,137 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
+  });
+
+  it("denies an orphan hop as kya.path_live", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        grantMintOk: true,
+        pathLiveOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.path_live");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name kya.path_live when the speaker has a live incoming hop", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        pathTighterOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.path_live when the speaker is not attesting", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.path_tighter first when a wider path grant also has a live incoming hop", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        grantMintOk: true,
+        pathTighterOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.path_tighter");
+  });
+
+  it("still names kya.party first when an agent filling in another principal is also an orphan hop", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: false,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        grantMintOk: true,
+        pathLiveOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.party");
+  });
+
+  it("still names kya.unique_live first when a second hop is also an orphan hop", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: false,
+        kyaMintFresh: true,
+        grantMintOk: true,
+        pathLiveOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.unique_live");
+  });
+
+  it("still names identity.known first when a ghost principal is also an orphan hop", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: false,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        pathLiveOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.path_live")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("identity.known");
   });
 
 

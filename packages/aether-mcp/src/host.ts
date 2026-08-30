@@ -110,6 +110,7 @@ import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
 import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
 import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
 import { loadPathTighter, runPathTighter } from "@aether/path-tighter";
+import { loadPathLive, runPathLive } from "@aether/path-live";
 import { PROTOCOL, type AgentId, type CommandType } from "@aether/types";
 
 export type JsonRpcId = string | number | null;
@@ -258,6 +259,7 @@ const DEMO_TOOLS = new Set([
   "aether_demo_sill",
   "aether_demo_joist",
   "aether_demo_stud",
+  "aether_demo_plate",
 ]);
 
 const ACTOR_PROPERTIES = {
@@ -1035,6 +1037,11 @@ export class AetherMcp {
     }
     if (name === "aether_demo_stud") {
       const report = runPathTighter(loadPathTighter("fixtures/demo/stud/scenario.json"));
+      this.runtime = report.runtime;
+      return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
+    }
+    if (name === "aether_demo_plate") {
+      const report = runPathLive(loadPathLive("fixtures/demo/plate/scenario.json"));
       this.runtime = report.runtime;
       return { ok: report.ok, results: report.results, tldr: report.snapshot.tldr };
     }
