@@ -113,6 +113,7 @@ import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
 import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
 import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
 import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
+import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -218,6 +219,7 @@ const clashFixture = join(process.cwd(), "fixtures/demo/clash/scenario.json");
 const hatchFixture = join(process.cwd(), "fixtures/demo/hatch/scenario.json");
 const eaveFixture = join(process.cwd(), "fixtures/demo/eave/scenario.json");
 const sillFixture = join(process.cwd(), "fixtures/demo/sill/scenario.json");
+const joistFixture = join(process.cwd(), "fixtures/demo/joist/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1174,6 +1176,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runGrantFresh(loadGrantFresh(sillFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "sill" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/joist") {
+        const report = runNestTighter(loadNestTighter(joistFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "joist" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

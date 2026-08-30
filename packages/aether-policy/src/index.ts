@@ -1483,6 +1483,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.grant_fresh", "deny", "delegate's live rung is above the grant");
     },
   },
+  {
+    id: "kya.nest_tighter",
+    evaluate: (ctx) => {
+      if (ctx.nestTighterOk === undefined) return v("kya.nest_tighter", "allow", "not a nested grant mint");
+      return ctx.nestTighterOk
+        ? v("kya.nest_tighter", "allow", "nested grant is at or below the parent hop")
+        : v("kya.nest_tighter", "deny", "nested grant is wider than the parent hop");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1691,7 +1700,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.unique_live": {
     kind: "none",
-    hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant. A grant below the desk is kya.grant_fresh.",
+    hint: "That principal already has a live handshake with this delegate. Revoke it, then attest again. A second live hop is not a tighter grant. A grant below the desk is kya.grant_fresh. A nested grant wider than its parent is kya.nest_tighter.",
   },
   "hire.unique_cart": {
     kind: "none",
@@ -1811,7 +1820,11 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.grant_fresh": {
     kind: "none",
-    hint: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still names kya.capability_subset. A corpse mint stays kya.mint_fresh. A century mint stays kya.mint_window. A second live hop stays kya.unique_live. Climb TAP is a climb after mint. Eave TAP is a slip cap below the desk.",
+    hint: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still names kya.capability_subset. A corpse mint stays kya.mint_fresh. A century mint stays kya.mint_window. A second live hop stays kya.unique_live. Climb TAP is a climb after mint. Eave TAP is a slip cap below the desk. A nested grant wider than its parent is kya.nest_tighter.",
+  },
+  "kya.nest_tighter": {
+    kind: "none",
+    hint: "A nested handshake cannot be born wider than its parent hop. Name max ≤ the parent's maxAutonomy, or omit only when the parent is already L5. Hire still names kya.capability_subset. A grant below the desk stays kya.grant_fresh. A dead parent stays kya.parent_fresh. A ghost parent stays kya.known_parent. A second live hop stays kya.unique_live. An agent over-grant stays kya.capability_subset. Mandate child_tighter is a nested slip, not a nested hop.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",
@@ -1820,7 +1833,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "kya.parent_fresh": {
     kind: "none",
-    hint: "A dead parent hop is not a parent. Attest a live parent, then nest. A new hire or fund against a nested hop whose parent died is a refuse. Completing a funded hire after that is legal. Ghost parent stays kya.known_parent. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
+    hint: "A dead parent hop is not a parent. Attest a live parent, then nest. A new hire or fund against a nested hop whose parent died is a refuse. Completing a funded hire after that is legal. Ghost parent stays kya.known_parent. A nested grant wider than its parent stays kya.nest_tighter. Unique_live, mint_fresh, mint_window, party, not_self, and an over-grant keep first deny.",
   },
   "market.fx_fresh": {
     kind: "none",

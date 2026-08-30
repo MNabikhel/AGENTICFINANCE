@@ -101,6 +101,7 @@ import { loadCurrencyFresh, runCurrencyFresh } from "@aether/currency-fresh";
 import { loadHatchFresh, runHatchFresh } from "@aether/hatch-fresh";
 import { loadCapFresh, runCapFresh } from "@aether/cap-fresh";
 import { loadGrantFresh, runGrantFresh } from "@aether/grant-fresh";
+import { loadNestTighter, runNestTighter } from "@aether/nest-tighter";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -733,6 +734,12 @@ if (command === "demo" && (name === "sill" || name === "ledge" || name === "lint
   process.exit(0);
 }
 
+if (command === "demo" && (name === "joist" || name === "strut" || name === "brace")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/joist/scenario.json");
+  printReport(runNestTighter(loadNestTighter(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -856,6 +863,7 @@ usage:
   pnpm demo hatch
   pnpm demo eave
   pnpm demo sill
+  pnpm demo joist
   aether audit verify
   aether ledger replay
   pnpm mcp`);

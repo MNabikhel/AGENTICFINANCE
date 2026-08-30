@@ -1168,6 +1168,15 @@ export interface PolicyContext {
    */
   grantMintOk?: boolean;
   /**
+   * False when kya.attest would write a nested hop whose ceiling is wider
+   * than its live parent's maxAutonomy. Absent = not attest, no parentId,
+   * parent unknown (`kya.known_parent`), or parent not live (`kya.parent_fresh`).
+   * Omitted maxAutonomy is L5. Exact match (child === parent) still mints.
+   * A tighter child still mints. A grant below the desk stays `kya.grant_fresh`.
+   * Mandate `child_tighter` is a nested slip, not a nested hop.
+   */
+  nestTighterOk?: boolean;
+  /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
    * Absent = no parent, or not those verbs (completing a funded hire after the parent

@@ -116,6 +116,7 @@ pnpm demo clash           # a USDC coffer on a USD lid is not a budget
 pnpm demo hatch           # a closed hatch is not a range
 pnpm demo eave            # a cap below the desk is not a cap
 pnpm demo sill            # a grant below the desk is not a handshake
+pnpm demo joist           # a nested grant wider than its parent is not a handshake
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```
@@ -261,6 +262,8 @@ AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 **Spark:** a founder funds an $800 hire. A handshake born expired is refused — a century mint and a second live hop still allow. No handshake is written. A one-year hop still mints. That funded work still releases. A handshake cannot be born dead.
 
 **Sill:** a founder funds an $800 hire. Minting a grant below the desk's live rung is refused — a dead handshake, a second live hop, and hire-time climb still allow. An exact grant still mints. An open ceiling still mints. That funded work still releases. A grant below the desk is not a handshake.
+
+**Joist:** a founder funds an $800 hire. Minting a nested grant wider than its parent hop is refused — a dead parent hop, a grant below the desk, and a nested slip still allow. An exact nested grant still mints. A tighter nested grant still mints. That funded work still releases. A nested grant wider than its parent is not a handshake.
 
 **Wilt:** a founder funds an $800 hire. A slip born with a closed calendar is refused — a window that opens after the slip dies and a hire-time calendar still allow. No slip is written. A live slip still mints. That funded work still releases. A permission slip cannot be born with a closed calendar.
 

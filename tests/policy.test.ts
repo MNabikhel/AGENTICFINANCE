@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 103 rules", () => {
-    expect(RULE_IDS).toHaveLength(103);
+  it("has 104 rules", () => {
+    expect(RULE_IDS).toHaveLength(104);
   });
 
   it("denies frozen actors", () => {
@@ -3598,6 +3598,201 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("identity.known");
+  });
+
+  it("denies a nested grant wider than its parent as kya.nest_tighter", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaParentKnown: true,
+        kyaParentFresh: true,
+        grantMintOk: true,
+        nestTighterOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.mint_window")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.not_self")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "identity.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.nest_tighter");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("does not name kya.nest_tighter when the nested grant is at or below the parent hop", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaParentKnown: true,
+        kyaParentFresh: true,
+        nestTighterOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+  });
+
+  it("does not name kya.nest_tighter when the speaker is not attesting", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+  });
+
+  it("still names kya.grant_fresh first when a nested grant is also below the desk", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaParentKnown: true,
+        kyaParentFresh: true,
+        grantMintOk: false,
+        nestTighterOk: true,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("kya.grant_fresh");
+  });
+
+  it("still names kya.parent_fresh first when a dead parent is also a wider nested grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaParentKnown: true,
+        kyaParentFresh: false,
+        grantMintOk: true,
+        nestTighterOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.parent_fresh");
+  });
+
+  it("still names kya.known_parent first when a ghost parent is also a wider nested grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaParentKnown: false,
+        grantMintOk: true,
+        nestTighterOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.known_parent");
+  });
+
+  it("still names kya.unique_live first when a second hop is also a wider nested grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: false,
+        kyaMintFresh: true,
+        kyaParentKnown: true,
+        kyaParentFresh: true,
+        grantMintOk: true,
+        nestTighterOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.unique_live");
+  });
+
+  it("still names kya.capability_subset first when an agent over-grant is also a wider nested grant", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "kya.attest",
+        targetKnown: true,
+        kyaNotSelf: true,
+        kyaPartyOk: true,
+        kyaLiveFree: true,
+        kyaMintFresh: true,
+        kyaParentKnown: true,
+        kyaParentFresh: true,
+        grantMintOk: true,
+        nestTighterOk: false,
+        kya: {
+          required: true,
+          pathOk: true,
+          implicit: false,
+          depth: 0,
+          maxDepth: 3,
+          principalFrozen: false,
+          expired: false,
+          revoked: false,
+          hops: [],
+          proposedMaxAutonomy: 5,
+        },
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
+  });
+
+  it("still names mandate.child_tighter first when a wider nested slip is also a wider nested hop", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentIntent: signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }]),
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 200_000 }],
+        nestTighterOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
   });
 
   it("still names identity.known first when a ghost subject is also born with no slots", () => {

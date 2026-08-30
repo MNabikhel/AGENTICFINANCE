@@ -890,6 +890,12 @@ paths:
       responses:
         "200": { description: Sill TAP report. A grant below the desk is not a handshake. }
         "500": { description: Assertions failed }
+  /v1/demo/joist:
+    post:
+      operationId: demoJoist
+      responses:
+        "200": { description: Joist TAP report. A nested grant wider than its parent is not a handshake. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

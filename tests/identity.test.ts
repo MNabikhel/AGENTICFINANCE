@@ -912,6 +912,107 @@ describe("kya.unique_live", () => {
   });
 });
 
+describe("kya.nest_tighter", () => {
+  it("refuses a nested grant wider than its parent as kya.nest_tighter, not a live mint", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const parent = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "parent hop",
+    );
+    const parentId = (parent.data as { id: string }).id;
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId, maxAutonomy: 4 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.parent_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.known_parent")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.nest_tighter");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses an omitted nested ceiling under a tighter parent as kya.nest_tighter", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const parent = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3 })),
+      "parent hop",
+    );
+    const parentId = (parent.data as { id: string }).id;
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.nest_tighter");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.grant_fresh first when a nested grant is also below the desk", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "scout",
+          displayName: "Scout",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "scout",
+    );
+    const scout = rt.alias("scout");
+    const parent = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: scout.id, maxAutonomy: 3 })),
+      "parent hop",
+    );
+    const parentId = (parent.data as { id: string }).id;
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: desk.id, parentId, maxAutonomy: 2 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.grant_fresh");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.parent_fresh first when a dead parent is also a wider nested grant", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    const parent = must(
+      rt.dispatch(
+        cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 3, expiresAt: "2026-08-28T12:00:00.000Z" }),
+      ),
+      "parent hop",
+    );
+    rt.clock.set("2026-08-29T00:00:00.000Z");
+    const parentId = (parent.data as { id: string }).id;
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", founder.id, { delegateId: vendor.id, parentId, maxAutonomy: 4 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.parent_fresh");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+});
+
 describe("kya.capability_subset", () => {
   it("refuses an L4 desk omitting maxAutonomy as kya.capability_subset, not an L5 grant", () => {
     const rt = boot();
