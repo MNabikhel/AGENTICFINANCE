@@ -718,6 +718,195 @@ describe("rfq hire party", () => {
   });
 });
 
+describe("mandate.child_party", () => {
+  function nestWorld() {
+    const rt = boot();
+    must(
+      rt.dispatch(
+        cmd("identity.register", "system", {
+          key: "ops-human",
+          displayName: "Founder",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "founder",
+    );
+    const founder = rt.alias("ops-human");
+    for (const a of [
+      { key: "desk", displayName: "Desk", role: "procurement", autonomyLevel: 4 },
+      { key: "other-desk", displayName: "Other Desk", role: "procurement", autonomyLevel: 4 },
+      { key: "vendor", displayName: "Vendor", role: "data_vendor", autonomyLevel: 2 },
+    ] as const) {
+      must(rt.dispatch(cmd("identity.register", founder.id, { ...a })), a.key);
+    }
+    const desk = rt.alias("desk");
+    const otherDesk = rt.alias("other-desk");
+    const vendor = rt.alias("vendor");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: desk.id, maxAutonomy: 4 })), "kya desk");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: otherDesk.id, maxAutonomy: 4 })), "kya other");
+    const payees = {
+      type: "payment.allowed_payees" as const,
+      allowed: [{ id: vendor.id, name: vendor.displayName, website: "https://data_vendor.aether.test" }],
+    };
+    const parent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: desk.id,
+          task: "parent",
+          constraints: [
+            { type: "payment.amount_range", currency: "USD_SIM", max: 500_000 },
+            { type: "aether.allowed_skus", allowed: ["research.brief"] },
+            payees,
+          ],
+        }),
+      ),
+      "parent",
+    );
+    return {
+      rt,
+      founder,
+      desk,
+      otherDesk,
+      parentId: (parent.data as { payload: { id: MandateId } }).payload.id,
+      payees,
+    };
+  }
+
+  it("refuses a second desk nesting under the research desk's parent as mandate.child_party", () => {
+    const { rt, otherDesk, parentId, payees } = nestWorld();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", otherDesk.id, {
+        subjectId: otherDesk.id,
+        parentId,
+        task: "cuckoo",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.allowed_skus", allowed: ["research.brief"] },
+          payees,
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.child_party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(rt.intents.size).toBe(1);
+  });
+
+  it("still names mandate.known_parent first when a ghost parent would also be a cuckoo", () => {
+    const { rt, otherDesk, payees } = nestWorld();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", otherDesk.id, {
+        subjectId: otherDesk.id,
+        parentId: "mid_01J6AETHERGHOSTPARENT00001",
+        task: "ghost",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.allowed_skus", allowed: ["research.brief"] },
+          payees,
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.known_parent");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+  });
+
+  it("allows a founder nesting under a desk parent as mandate.child_party", () => {
+    const { rt, founder, parentId, payees } = nestWorld();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", founder.id, {
+        subjectId: founder.id,
+        parentId,
+        task: "founder nest",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.allowed_skus", allowed: ["research.brief"] },
+          payees,
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.decision.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+  });
+
+  it("allows the parent subject nesting a tighter child as mandate.child_party", () => {
+    const { rt, desk, parentId, payees } = nestWorld();
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", desk.id, {
+        subjectId: desk.id,
+        parentId,
+        task: "subject nest",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.allowed_skus", allowed: ["research.brief"] },
+          payees,
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.decision.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+  });
+
+  it("allows treasury nesting under a desk parent as mandate.child_party", () => {
+    const { rt, founder, parentId, payees } = nestWorld();
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "treasury",
+          displayName: "Treasury",
+          role: "treasury",
+          autonomyLevel: 3,
+        }),
+      ),
+      "treasury",
+    );
+    const treasury = rt.alias("treasury");
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", treasury.id, {
+        subjectId: treasury.id,
+        parentId,
+        task: "treasury nest",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.allowed_skus", allowed: ["research.brief"] },
+          payees,
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.decision.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.parent_fresh first when a dead parent would also be a cuckoo", () => {
+    const { rt, founder, otherDesk, parentId, payees } = nestWorld();
+    must(rt.dispatch(cmd("mandate.revoke", founder.id, { intentId: parentId })), "rip parent");
+    const r = rt.dispatch(
+      cmd("mandate.issue_intent", otherDesk.id, {
+        subjectId: otherDesk.id,
+        parentId,
+        task: "ripped",
+        constraints: [
+          { type: "payment.amount_range", currency: "USD_SIM", max: 100_000 },
+          { type: "aether.allowed_skus", allowed: ["research.brief"] },
+          payees,
+        ],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("mandate.parent_fresh");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
+  });
+});
+
 describe("command schema", () => {
   it("refuses missing required fields before policy or the clock", () => {
     const rt = boot();

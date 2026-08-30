@@ -956,6 +956,12 @@ paths:
       responses:
         "200": { description: Guise TAP report. Someone else's unused slip is not yours to hire against. }
         "500": { description: Assertions failed }
+  /v1/demo/cuckoo:
+    post:
+      operationId: demoCuckoo
+      responses:
+        "200": { description: Cuckoo TAP report. Someone else's parent slip is not yours to nest under. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

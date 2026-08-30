@@ -355,6 +355,9 @@ export const POACH_TLDR =
 export const GUISE_TLDR =
   "A founder funded an $800 hire. A second desk hiring against the research desk's unused slip was hire.slip_party — a missing slip is not this deny, a ripped slip is not this deny, hiring from someone else's room is not this deny. No hire written. The named subject still hired against its own unused slip. That funded work still released. Someone else's unused slip is not yours to hire against.";
 
+export const CUCKOO_TLDR =
+  "A founder funded an $800 hire. A second desk nesting under the research desk's unused parent was mandate.child_party — a missing parent is not this deny, a dead parent is not this deny, a wider nested slip is not this deny, a junior nested mint is not this deny. No child written. The parent subject still nested a tighter child. That funded work still released. Someone else's parent slip is not yours to nest under.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -792,6 +795,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} cannot hand down a slip whose parent is dead`,
           body: "A dead parent is not a parent. Issue a new parent permission slip, then a tighter child. Completing a funded hire after the parent dies is still legal.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.child_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot nest under someone else's parent`,
+          body: "Someone else's parent slip is not yours to nest under. Nest under your own parent, or ask a human or treasury. A missing parent is a different object. A dead parent is a different object. A wider nested slip is a different object. A junior nested mint is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1938,6 +1951,7 @@ export function analog(): Analog {
       "Someone else's checkout is not yours to fill. The buyer still fills its own checkout. Dumping someone else's cart is a different object.",
       "Someone else's room is not yours to hire from. The buyer still hires its own quote. Shutting someone else's room is a different object.",
       "Someone else's unused slip is not yours to hire against. The named subject still hires against its own unused slip. Tearing someone else's unused slip is a different object.",
+      "Someone else's parent slip is not yours to nest under. The parent subject still nests a tighter child. A wider nested slip is a different object. A junior nested mint is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

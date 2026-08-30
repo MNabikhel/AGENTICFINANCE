@@ -112,6 +112,7 @@ import { loadNestParty, runNestParty } from "@aether/nest-party";
 import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
 import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
 import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
+import { loadChildParty, runChildParty } from "@aether/child-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -810,6 +811,12 @@ if (command === "demo" && (name === "guise" || name === "mask" || name === "cloa
   process.exit(0);
 }
 
+if (command === "demo" && (name === "cuckoo" || name === "brood" || name === "changeling")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/cuckoo/scenario.json");
+  printReport(runChildParty(loadChildParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -944,6 +951,7 @@ usage:
   pnpm demo trolley
   pnpm demo poach
   pnpm demo guise
+  pnpm demo cuckoo
   aether audit verify
   aether ledger replay
   pnpm mcp`);

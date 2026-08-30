@@ -750,6 +750,11 @@
       "name": "aether_demo_guise",
       "commandType": "demo.guise",
       "description": "Run the guise TAP: someone else's unused slip is not yours to hire against. hire.create against a live unused intent by a second desk is hire.slip_party; a missing slip, a ripped slip, and hiring from someone else's room still allow; no hire written by the sneak; the named subject still hires against its own unused slip; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_cuckoo",
+      "commandType": "demo.cuckoo",
+      "description": "Run the cuckoo TAP: someone else's parent slip is not yours to nest under. mandate.issue_intent nested under another desk's live unused parent by a second desk is mandate.child_party; a missing parent, a dead parent, a wider nested slip, and a junior nested mint still allow first-deny elsewhere; no child written by the sneak; the parent subject still nests a tighter child; funded work still finishes."
     }
   ]
 }

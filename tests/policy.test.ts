@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 114 rules", () => {
-    expect(RULE_IDS).toHaveLength(114);
+  it("has 115 rules", () => {
+    expect(RULE_IDS).toHaveLength(115);
   });
 
   it("denies frozen actors", () => {
@@ -6597,6 +6597,167 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "hire.slip_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("hire.room_party");
+  });
+
+  it("denies nesting under someone else's parent as mandate.child_party", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: true,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        childPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a parent subject nesting a tighter child as mandate.child_party", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: true,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        childPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+  });
+
+  it("allows a human nesting under a desk parent as mandate.child_party", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: true,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        childPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.child_party when the speaker is not minting a nested slip", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+  });
+
+  it("still names mandate.known_parent first when a ghost parent would also be a cuckoo", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_parent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_parent");
+  });
+
+  it("still names mandate.parent_fresh first when a dead parent would also be a cuckoo", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: false,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        childPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.parent_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.parent_fresh");
+  });
+
+  it("still names mandate.child_tighter first when a wider child would also be a cuckoo", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: true,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 600_000 }],
+        childPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_tighter")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_tighter");
+  });
+
+  it("still names ladder.min_level first when a junior nest would also be a cuckoo", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3, id: "aid_scout" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: true,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 100_000 }],
+        childPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("ladder.min_level");
+  });
+
+  it("still names mandate.child_currency first when a mixed child would also be a cuckoo", () => {
+    const parent = signedIntent([{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }]);
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 4, id: "aid_other" }),
+        commandType: "mandate.issue_intent",
+        targetKnown: true,
+        parentKnown: true,
+        parentFresh: true,
+        parentIntent: parent,
+        proposedConstraints: [{ type: "payment.amount_range", currency: "USDC_SIM", max: 100_000 }],
+        childCurrencyOk: false,
+        childPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_currency")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.child_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.child_currency");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

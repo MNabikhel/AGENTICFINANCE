@@ -1016,6 +1016,18 @@ export interface PolicyContext {
    */
   hireSlipPartyOk?: boolean;
   /**
+   * False when issue_intent with a known parentId would nest under a parent
+   * whose subject and issuer are not the speaker, and the speaker is not a
+   * human or treasury. Absent = not a nested issue_intent, or the parent is
+   * unknown (`parentKnown` handles that). Parent subject and issuer still nest.
+   * Human/treasury still nest. Ghost parent stays `mandate.known_parent`.
+   * A dead parent stays `mandate.parent_fresh`. A wider child stays
+   * `mandate.child_tighter`. A junior nested mint stays `ladder.min_level`.
+   * Grade TAP is L3 (`ladder.min_level`). Header TAP is mixed currency
+   * (`mandate.child_currency`). Sub-hire TAP is the parent subject nesting.
+   */
+  childPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.

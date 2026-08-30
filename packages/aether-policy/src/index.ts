@@ -1582,6 +1582,15 @@ export const RULES: readonly Rule[] = [
         : v("hire.slip_party", "deny", "speaker is not the named subject");
     },
   },
+  {
+    id: "mandate.child_party",
+    evaluate: (ctx) => {
+      if (ctx.childPartyOk === undefined) return v("mandate.child_party", "allow", "not a nested slip");
+      return ctx.childPartyOk
+        ? v("mandate.child_party", "allow", "speaker is the parent subject, issuer, or a kill-switch role")
+        : v("mandate.child_party", "deny", "speaker is not the parent subject or issuer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1634,7 +1643,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "ladder.min_level": {
     kind: "none",
-    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter.",
+    hint: "Issuing a sub-intent is L4. A junior desk cannot mint a nested slip. A grown-up ticket does not waive that verb. Climb with ladder.set, then issue. Completing funded work is legal. A skipped rung stays ladder.legal. A handshake ceiling stays kya.capability_subset. A wider child stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party.",
   },
   "circuit.daily": {
     kind: "reset_circuit",
@@ -1726,7 +1735,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.known_parent": {
     kind: "none",
-    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child. A dead parent stays mandate.parent_fresh. Completing funded work is legal.",
+    hint: "That parentId is not in this world. Issue the parent slip first. A missing parent is not a tighter child. A dead parent stays mandate.parent_fresh. Nesting under someone else's parent stays mandate.child_party. Completing funded work is legal.",
   },
   "identity.known": {
     kind: "none",
@@ -1926,12 +1935,12 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "mandate.child_currency": {
     kind: "none",
-    hint: "A nested slip cannot be born in a different currency than its parent. Name the parent's currency on the child's amount_range and payment.budget, or omit a constraint the parent also omitted. Same-slip lid vs coffer stays mandate.currency_fresh. A wider nested slip stays mandate.child_tighter. Matching USD still mints. Matching USDC still mints. Hire still names payment.currency_match. Ink TAP is cart vs hire. Mix TAP is a mixed journal. Clash TAP is a mixed envelope.",
+    hint: "A nested slip cannot be born in a different currency than its parent. Name the parent's currency on the child's amount_range and payment.budget, or omit a constraint the parent also omitted. Same-slip lid vs coffer stays mandate.currency_fresh. A wider nested slip stays mandate.child_tighter. Nesting under someone else's parent stays mandate.child_party. Matching USD still mints. Matching USDC still mints. Hire still names payment.currency_match. Ink TAP is cart vs hire. Mix TAP is a mixed journal. Clash TAP is a mixed envelope.",
   },
   "mandate.parent_fresh": {
     kind: "issue_intent",
     commandType: "mandate.issue_intent",
-    hint: "A dead parent is not a parent. Issue a new parent slip, then a tighter child. Completing a funded hire after the parent dies is legal. Ghost parent stays mandate.known_parent. The child's own expiry stays mandate.not_expired.",
+    hint: "A dead parent is not a parent. Issue a new parent slip, then a tighter child. Completing a funded hire after the parent dies is legal. Ghost parent stays mandate.known_parent. Nesting under someone else's parent stays mandate.child_party. The child's own expiry stays mandate.not_expired.",
   },
   "kya.parent_fresh": {
     kind: "none",
@@ -1968,6 +1977,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "hire.slip_party": {
     kind: "none",
     hint: "Hire against your own unused slip, or ask a human or treasury. Someone else's permission is not yours to wear. A missing slip is mandate.known_intent. A ripped unused slip is mandate.not_expired. Hiring from someone else's room is hire.room_party. Tearing someone else's unused slip is mandate.party. Fund and submit stay mandate.subject_is_actor. Completing funded work is legal. The named subject still hires.",
+  },
+  "mandate.child_party": {
+    kind: "none",
+    hint: "Nest under your own parent slip, or ask a human or treasury. Someone else's parent is not yours to hang a child on. A missing parent is mandate.known_parent. A dead parent is mandate.parent_fresh. A wider nested slip is mandate.child_tighter. A junior nested mint is ladder.min_level. A mixed nested currency is mandate.child_currency. Completing funded work is legal. The parent subject still nests. Human/treasury still nest.",
   },
   "host.not_hosted": {
     kind: "none",

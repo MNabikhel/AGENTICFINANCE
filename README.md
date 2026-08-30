@@ -127,6 +127,7 @@ pnpm demo corbel          # a nested hop under another principal is not a nested
 pnpm demo trolley         # someone else's checkout is not yours to fill
 pnpm demo poach           # someone else's room is not yours to hire from
 pnpm demo guise           # someone else's unused slip is not yours to hire against
+pnpm demo cuckoo          # someone else's parent slip is not yours to nest under
 pnpm mcp                  # stdio MCP — this is the agent face
 AETHER_DATA_DIR=./data pnpm mcp   # same, but the economy survives restart
 ```

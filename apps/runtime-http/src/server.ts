@@ -124,6 +124,7 @@ import { loadNestParty, runNestParty } from "@aether/nest-party";
 import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
 import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
 import { loadHireSlipParty, runHireSlipParty } from "@aether/hire-slip-party";
+import { loadChildParty, runChildParty } from "@aether/child-party";
 import { type AgentId, type CommandType } from "@aether/types";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -240,6 +241,7 @@ const corbelFixture = join(process.cwd(), "fixtures/demo/corbel/scenario.json");
 const trolleyFixture = join(process.cwd(), "fixtures/demo/trolley/scenario.json");
 const poachFixture = join(process.cwd(), "fixtures/demo/poach/scenario.json");
 const guiseFixture = join(process.cwd(), "fixtures/demo/guise/scenario.json");
+const cuckooFixture = join(process.cwd(), "fixtures/demo/cuckoo/scenario.json");
 
 let runtime = boot();
 let lastDemo: unknown = null;
@@ -1273,6 +1275,13 @@ export function start(port = Number(process.env.PORT ?? 8787)) {
         const report = runHireSlipParty(loadHireSlipParty(guiseFixture));
         runtime = report.runtime;
         lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "guise" };
+        json(res, report.ok ? 200 : 500, lastDemo);
+        return;
+      }
+      if (req.method === "POST" && path === "/v1/demo/cuckoo") {
+        const report = runChildParty(loadChildParty(cuckooFixture));
+        runtime = report.runtime;
+        lastDemo = { ok: report.ok, results: report.results, snapshot: report.snapshot, demo: "cuckoo" };
         json(res, report.ok ? 200 : 500, lastDemo);
         return;
       }

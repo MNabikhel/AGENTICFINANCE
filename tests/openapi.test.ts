@@ -259,6 +259,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("/v1/demo/poach:");
     expect(spec).toContain("/v1/demo/guise:");
     expect(spec).toContain("not yours to hire against");
+    expect(spec).toContain("/v1/demo/cuckoo:");
+    expect(spec).toContain("not yours to nest under");
     expect(spec).toContain("not yours to hire from");
   });
 
