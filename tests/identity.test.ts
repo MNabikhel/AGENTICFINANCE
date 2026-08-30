@@ -1013,6 +1013,158 @@ describe("kya.nest_tighter", () => {
   });
 });
 
+describe("kya.path_tighter", () => {
+  it("refuses a grant wider than the incoming hop as kya.path_tighter, not a live mint", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "hop-a",
+          displayName: "Hop A",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "hop-a",
+    );
+    const hopA = rt.alias("hop-a");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: hopA.id, maxAutonomy: 3 })), "incoming");
+    const before = rt.kya.attestations.size;
+    const clockBefore = rt.clock.now();
+    const r = rt.dispatch(
+      cmd("kya.attest", hopA.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 4 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.error.status).toBe(422);
+    expect(r.error.error.type).toContain("policy.deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("deny");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.nest_tighter")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.unique_live")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("allow");
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.path_tighter");
+    expect(r.error.decision?.remediation?.kind).toBe("none");
+    expect(rt.kya.attestations.size).toBe(before);
+    expect(rt.clock.now()).not.toBe(clockBefore);
+  });
+
+  it("refuses an omitted path ceiling under a tighter incoming hop as kya.path_tighter", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "hop-a",
+          displayName: "Hop A",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "hop-a",
+    );
+    const hopA = rt.alias("hop-a");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: hopA.id, maxAutonomy: 3 })), "incoming");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(cmd("kya.attest", hopA.id, { delegateId: desk.id, principalId: founder.id }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.path_tighter");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.grant_fresh first when a path grant is also below the desk", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "hop-a",
+          displayName: "Hop A",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "hop-a",
+    );
+    const hopA = rt.alias("hop-a");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: hopA.id, maxAutonomy: 3 })), "incoming");
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", hopA.id, { delegateId: desk.id, principalId: founder.id, maxAutonomy: 2 }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.grant_fresh");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still names kya.nest_tighter first when a nested grant is also wider than the incoming hop", () => {
+    const rt = boot();
+    const { founder, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "hop-a",
+          displayName: "Hop A",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "hop-a",
+    );
+    const hopA = rt.alias("hop-a");
+    const incoming = must(
+      rt.dispatch(cmd("kya.attest", founder.id, { delegateId: hopA.id, maxAutonomy: 3 })),
+      "incoming",
+    );
+    const parentId = (incoming.data as { id: string }).id;
+    const before = rt.kya.attestations.size;
+    const r = rt.dispatch(
+      cmd("kya.attest", hopA.id, {
+        delegateId: vendor.id,
+        principalId: founder.id,
+        parentId,
+        maxAutonomy: 4,
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("kya.nest_tighter");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("deny");
+    expect(rt.kya.attestations.size).toBe(before);
+  });
+
+  it("still mints when the speaker grants in their own name above an incoming hop they hold for someone else", () => {
+    const rt = boot();
+    const { founder, desk } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "hop-a",
+          displayName: "Hop A",
+          role: "human_operator",
+          autonomyLevel: 0,
+        }),
+      ),
+      "hop-a",
+    );
+    const hopA = rt.alias("hop-a");
+    must(rt.dispatch(cmd("kya.attest", founder.id, { delegateId: hopA.id, maxAutonomy: 3 })), "incoming");
+    const before = rt.kya.attestations.size;
+    const r = must(
+      rt.dispatch(cmd("kya.attest", hopA.id, { delegateId: desk.id, maxAutonomy: 4 })),
+      "own-name grant",
+    );
+    expect((r.data as { principalId: string }).principalId).toBe(hopA.id);
+    expect(r.decision.trace.find((t) => t.ruleId === "kya.path_tighter")?.verdict).toBe("allow");
+    expect(rt.kya.attestations.size).toBe(before + 1);
+  });
+});
+
 describe("kya.capability_subset", () => {
   it("refuses an L4 desk omitting maxAutonomy as kya.capability_subset, not an L5 grant", () => {
     const rt = boot();

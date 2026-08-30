@@ -126,6 +126,7 @@ export default defineConfig({
       "@aether/cap-fresh": path.resolve(__dirname, "packages/aether-runtime/src/cap-fresh.ts"),
       "@aether/grant-fresh": path.resolve(__dirname, "packages/aether-runtime/src/grant-fresh.ts"),
       "@aether/nest-tighter": path.resolve(__dirname, "packages/aether-runtime/src/nest-tighter.ts"),
+      "@aether/path-tighter": path.resolve(__dirname, "packages/aether-runtime/src/path-tighter.ts"),
     },
   },
 });

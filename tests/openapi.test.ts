@@ -236,6 +236,8 @@ describe("OpenAPI honesty", () => {
     expect(spec).toContain("grant below the desk");
     expect(spec).toContain("/v1/demo/joist:");
     expect(spec).toContain("nested grant wider than its parent");
+    expect(spec).toContain("/v1/demo/stud:");
+    expect(spec).toContain("grant wider than the incoming hop");
   });
 
   it("lists PAYMENT-SIGNATURE as optional; the JSON body is the bus", () => {

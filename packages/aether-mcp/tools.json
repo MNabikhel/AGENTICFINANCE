@@ -700,6 +700,11 @@
       "name": "aether_demo_joist",
       "commandType": "demo.joist",
       "description": "Run the joist TAP: a nested grant wider than its parent is not a handshake. kya.attest with parentId and maxAutonomy above the parent hop is kya.nest_tighter; a dead parent hop, a grant below the desk, and a nested slip still allow; an exact nested grant still mints; a tighter nested grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_stud",
+      "commandType": "demo.stud",
+      "description": "Run the stud TAP: a grant wider than the incoming hop is not a handshake. kya.attest in another principal's name with maxAutonomy above the speaker's live incoming hop is kya.path_tighter; a nested parent hop, a grant below the desk, and a climb after mint still allow; an exact path grant still mints; a tighter path grant still mints; funded work still finishes."
     }
   ]
 }

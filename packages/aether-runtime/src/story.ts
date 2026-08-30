@@ -325,6 +325,9 @@ export const SILL_TLDR =
 export const JOIST_TLDR =
   "A founder funded an $800 hire. Minting a nested grant wider than its parent hop was kya.nest_tighter — not a dead parent hop, not a grant below the desk, not a nested slip. An exact nested grant still minted. A tighter nested grant still minted. That funded work still released. A nested grant wider than its parent is not a handshake.";
 
+export const STUD_TLDR =
+  "A founder funded an $800 hire. Minting a grant wider than the incoming hop was kya.path_tighter — not a nested parent hop, not a grant below the desk, not a climb after mint. An exact path grant still minted. A tighter path grant still minted. That funded work still released. A grant wider than the incoming hop is not a handshake.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1636,6 +1639,36 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "kya.grant_fresh") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a grant below the desk`,
+          body: "A handshake cannot be born with a maxAutonomy below the named delegate's live rung. Name max ≥ that rung, or omit the ceiling. Hire still checks the handshake when money would move.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.nest_tighter") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a nested grant wider than its parent`,
+          body: "A nested handshake cannot be born wider than its parent hop. Name max ≤ the parent's ceiling, or omit only when the parent is already L5. A grant below the desk is a different object. A nested slip is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "kya.path_tighter") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot mint a grant wider than the incoming hop`,
+          body: "A handshake in another principal's name cannot be born wider than the speaker's live incoming hop. Name max ≤ that hop, or omit only when the incoming hop is already L5. A nested parent hop is a different object. A grant below the desk is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
       return {
         seq: input.seq,
         at: input.at,
@@ -1770,6 +1803,7 @@ export function analog(): Analog {
       "A cap below the desk is not a cap. An exact cap still mints. An open ceiling still mints. Hire-time climb is a different object.",
       "A grant below the desk is not a handshake. An exact grant still mints. An open ceiling still mints. Hire-time climb is a different object.",
       "A nested grant wider than its parent is not a handshake. An exact nested grant still mints. A tighter nested grant still mints. A nested slip is a different object.",
+      "A grant wider than the incoming hop is not a handshake. An exact path grant still mints. A tighter path grant still mints. A nested parent hop is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

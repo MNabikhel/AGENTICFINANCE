@@ -1177,6 +1177,16 @@ export interface PolicyContext {
    */
   nestTighterOk?: boolean;
   /**
+   * False when kya.attest would write a hop in another principal's name
+   * whose ceiling is wider than the speaker's live incoming hop from that
+   * principal. Absent = not attest, speaker is the principal, or no live
+   * path from that principal. Omitted maxAutonomy is L5. Exact match
+   * (child === incoming) still mints. A tighter child still mints.
+   * A nested grant wider than its parentId hop stays `kya.nest_tighter`.
+   * A grant below the desk stays `kya.grant_fresh`.
+   */
+  pathTighterOk?: boolean;
+  /**
    * False when the parent intent is past `exp` (unix seconds).
    * Set on `mandate.issue_intent`, `hire.create`, and `hire.fund` when a parent exists.
    * Absent = no parent, or not those verbs (completing a funded hire after the parent

@@ -1267,6 +1267,15 @@ describe("HTTP command bus", () => {
     expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
   });
 
+  it("POST /v1/demo/stud is the stud TAP", async () => {
+    await json("/v1/reset", { method: "POST" });
+    const r = await json("/v1/demo/stud", { method: "POST" });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+    expect(r.body.demo).toBe("stud");
+    expect((r.body.results as { ok: boolean }[]).every((row) => row.ok)).toBe(true);
+  });
+
   it("POST /v1/payments/submit without PAYMENT-SIGNATURE is the command bus, not a missing header", async () => {
     await json("/v1/reset", { method: "POST" });
     const founder = await json("/v1/identities", {

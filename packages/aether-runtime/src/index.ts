@@ -132,6 +132,7 @@ import {
   EAVE_TLDR,
   SILL_TLDR,
   JOIST_TLDR,
+  STUD_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -336,6 +337,17 @@ function grantMintable(max: unknown, delegateLevel: number): boolean {
 function nestTighterMintable(childMax: unknown, parentMax: number): boolean {
   const ceiling = typeof childMax === "number" && Number.isFinite(childMax) ? childMax : 5;
   return ceiling <= parentMax;
+}
+
+/**
+ * A hop in another principal's name whose ceiling is wider than the
+ * speaker's live incoming hop is not sitting under that handshake.
+ * Omitted maxAutonomy is L5 (same mutate default). Exact match still mints.
+ * A tighter child still mints. Speaker-as-principal and no live path keep
+ * first deny (not this flag).
+ */
+function pathTighterMintable(childMax: unknown, incomingMax: number): boolean {
+  return nestTighterMintable(childMax, incomingMax);
 }
 
 /**
@@ -1476,6 +1488,11 @@ export class Runtime {
           name: "Joist TAP",
           description: "POST /v1/demo/joist — a nested grant wider than its parent is not a handshake",
         },
+        {
+          id: "path-tighter",
+          name: "Stud TAP",
+          description: "POST /v1/demo/stud — a grant wider than the incoming hop is not a handshake",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2228,6 +2245,15 @@ export class Runtime {
         ctx.kyaParentFresh = hopStatus(parentHop, this.clock.now()) === "live";
         if (ctx.kyaParentFresh) {
           ctx.nestTighterOk = nestTighterMintable(body.maxAutonomy, parentHop.maxAutonomy);
+        }
+      }
+    }
+    if (cmd.type === "kya.attest") {
+      const principalId = this.kyaPrincipalId(body, actor);
+      if (principalId !== actor.id && this.identity.get(principalId)) {
+        const incoming = this.incomingHopCeiling(principalId, actor.id);
+        if (incoming !== undefined) {
+          ctx.pathTighterOk = pathTighterMintable(body.maxAutonomy, incoming);
         }
       }
     }
@@ -3092,6 +3118,12 @@ export class Runtime {
         throw new Error("kya nested grant wider than parent");
       }
       att.parentId = body.parentId as DelegationId;
+    }
+    if (principalId !== actor.id) {
+      const incoming = this.incomingHopCeiling(principalId, actor.id);
+      if (incoming !== undefined && !pathTighterMintable(body.maxAutonomy, incoming)) {
+        throw new Error("kya grant wider than incoming hop");
+      }
     }
     this.kya.attest(att);
     this.audit.append({
@@ -4200,6 +4232,14 @@ export class Runtime {
     return typeof body.principalId === "string" ? (body.principalId as AgentId) : actor.id;
   }
 
+  /** Leaf maxAutonomy on the live grantor path from principal to speaker. */
+  private incomingHopCeiling(principalId: AgentId, speakerId: AgentId): number | undefined {
+    if (principalId === speakerId) return undefined;
+    const hops = this.kya.path(principalId, speakerId, this.clock.now());
+    const leaf = hops?.[hops.length - 1];
+    return leaf?.maxAutonomy;
+  }
+
   /** Omitted expiresAt is one year from now. Snapshot and mutate share this. */
   private kyaExpiresAt(body: Record<string, unknown>): string {
     return typeof body.expiresAt === "string"
@@ -4283,7 +4323,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

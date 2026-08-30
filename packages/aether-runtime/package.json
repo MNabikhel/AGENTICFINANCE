@@ -105,7 +105,8 @@
     "./hatch-fresh": "./src/hatch-fresh.ts",
     "./cap-fresh": "./src/cap-fresh.ts",
     "./grant-fresh": "./src/grant-fresh.ts",
-    "./nest-tighter": "./src/nest-tighter.ts"
+    "./nest-tighter": "./src/nest-tighter.ts",
+    "./path-tighter": "./src/path-tighter.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",
