@@ -3549,10 +3549,10 @@ describe("policy catalog", () => {
     expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
   });
 
-  it("still names kya.capability_subset first when an agent over-grant is also a grant below the desk", () => {
+  it("still names kya.capability_subset first when an L4 over-grant is also a grant below the desk", () => {
     const d = evaluate(
       ctx({
-        actor: agent({ role: "procurement", autonomyLevel: 2 }),
+        actor: agent({ role: "procurement", autonomyLevel: 4 }),
         commandType: "kya.attest",
         targetKnown: true,
         kyaNotSelf: true,
@@ -3570,13 +3570,14 @@ describe("policy catalog", () => {
           expired: false,
           revoked: false,
           hops: [],
-          proposedMaxAutonomy: 4,
+          proposedMaxAutonomy: 5,
         },
       }),
     );
     expect(d.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.capability_subset")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.grant_fresh")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "ladder.min_level")?.verdict).toBe("allow");
     expect(remediationFor(d)?.ruleId).toBe("kya.capability_subset");
   });
 
