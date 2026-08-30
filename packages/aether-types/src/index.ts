@@ -986,6 +986,16 @@ export interface PolicyContext {
    */
   paymentPartyOk?: boolean;
   /**
+   * False when issue_cart / issue_payment would write a checkout whose hire buyer
+   * (or intent subject) is not the speaker, and the speaker is not a human or treasury.
+   * Absent = not those verbs, or hire/intent/cart unknown (`hire.known` /
+   * `mandate.known_intent` / `mandate.known_cart` handle those). Buyer still mints.
+   * Human/treasury still mint. Dump stays `mandate.cart_party`. Spike stays
+   * `mandate.payment_party`. A second cart stays `hire.unique_cart`. A cheaper
+   * cart stays `hire.cart_matches`.
+   */
+  checkoutPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.

@@ -938,6 +938,12 @@ paths:
       responses:
         "200": { description: Corbel TAP report. A nested hop under another principal is not a nested handshake. }
         "500": { description: Assertions failed }
+  /v1/demo/trolley:
+    post:
+      operationId: demoTrolley
+      responses:
+        "200": { description: Trolley TAP report. Someone else's checkout is not yours to fill. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard

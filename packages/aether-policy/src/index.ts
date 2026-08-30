@@ -1555,6 +1555,15 @@ export const RULES: readonly Rule[] = [
         : v("kya.nest_party", "deny", "nested hop is under another principal");
     },
   },
+  {
+    id: "mandate.checkout_party",
+    evaluate: (ctx) => {
+      if (ctx.checkoutPartyOk === undefined) return v("mandate.checkout_party", "allow", "not a checkout mint");
+      return ctx.checkoutPartyOk
+        ? v("mandate.checkout_party", "allow", "speaker is the hire buyer, intent subject, or a kill-switch role")
+        : v("mandate.checkout_party", "deny", "speaker is not the hire buyer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1929,6 +1938,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   "kya.nest_party": {
     kind: "none",
     hint: "A nested handshake cannot be born under another principal's parent hop. Nest under a hop in this principal's name, or omit parentId. A nested grant wider than its parent stays kya.nest_tighter. A dead parent stays kya.parent_fresh. A ghost parent stays kya.known_parent. An orphan hop stays kya.path_live. Whose name a handshake is in stays kya.party. A grant below the desk stays kya.grant_fresh. Speaker granting in their own name without parentId is not this deny. Exact same-principal nest still mints. A tighter same-principal nest still mints.",
+  },
+  "mandate.checkout_party": {
+    kind: "none",
+    hint: "Fill your own checkout, or ask a human or treasury. Someone else's cart is not yours to fill. A missing cart is mandate.known_cart. A missing hire is hire.known. A cheaper cart is hire.cart_matches. A second cart is hire.unique_cart. A second payment is mandate.unique_payment. Dumping someone else's cart is mandate.cart_party. Spiking someone else's check is mandate.payment_party. Completing funded work is legal. Buyer still fills its own checkout.",
   },
   "host.not_hosted": {
     kind: "none",

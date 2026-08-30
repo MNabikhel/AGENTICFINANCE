@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 111 rules", () => {
-    expect(RULE_IDS).toHaveLength(111);
+  it("has 112 rules", () => {
+    expect(RULE_IDS).toHaveLength(112);
   });
 
   it("denies frozen actors", () => {
@@ -6085,6 +6085,225 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "kya.party")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "kya.nest_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("kya.party");
+  });
+
+  it("denies filling someone else's checkout as mandate.checkout_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_cart",
+        hireKnown: true,
+        intentKnown: true,
+        cartMatchesHire: true,
+        cartUnbound: true,
+        checkoutPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.unique_cart")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_intent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.checkout_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("denies filling someone else's payment as mandate.checkout_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_payment",
+        cartKnown: true,
+        paymentUnbound: true,
+        checkoutPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.checkout_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a buyer filling its own checkout as mandate.checkout_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_cart",
+        hireKnown: true,
+        intentKnown: true,
+        cartMatchesHire: true,
+        cartUnbound: true,
+        checkoutPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+  });
+
+  it("allows a human filling a checkout as mandate.checkout_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "mandate.issue_cart",
+        hireKnown: true,
+        intentKnown: true,
+        cartMatchesHire: true,
+        cartUnbound: true,
+        checkoutPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.checkout_party when the speaker is not minting a checkout", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name mandate.checkout_party on dump or spike", () => {
+    const dump = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: true,
+        cartWindowLive: true,
+        cartPartyOk: true,
+      }),
+    );
+    expect(dump.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+    const spike = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: true,
+        paymentWindowLive: true,
+        paymentPartyOk: true,
+      }),
+    );
+    expect(spike.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+  });
+
+  it("still names hire.unique_cart first when a second cart is also someone else's checkout", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_cart",
+        hireKnown: true,
+        intentKnown: true,
+        cartMatchesHire: true,
+        cartUnbound: false,
+        checkoutPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.unique_cart")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("hire.unique_cart");
+  });
+
+  it("still names mandate.known_cart first when filling a missing cart", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_payment",
+        cartKnown: false,
+        checkoutPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.known_cart")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.known_cart");
+  });
+
+  it("still names hire.cart_matches first when a cheaper cart is also someone else's checkout", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_cart",
+        hireKnown: true,
+        intentKnown: true,
+        cartMatchesHire: false,
+        cartUnbound: true,
+        checkoutPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("hire.cart_matches");
+  });
+
+  it("still names mandate.cart_party first when dumping someone else's unused checkout", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_cart",
+        cartKnown: true,
+        cartWindowLive: true,
+        cartPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.cart_party");
+  });
+
+  it("still names mandate.payment_party first when spiking someone else's unused payment", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.revoke_payment",
+        paymentKnown: true,
+        paymentWindowLive: true,
+        paymentPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.payment_party");
+  });
+
+  it("still names hire.known first when filling a missing hire", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_cart",
+        hireKnown: false,
+        intentKnown: true,
+        checkoutPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.known")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("hire.known");
+  });
+
+  it("still names mandate.unique_payment first when a second payment is also someone else's checkout", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "mandate.issue_payment",
+        cartKnown: true,
+        paymentUnbound: false,
+        checkoutPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("mandate.unique_payment");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

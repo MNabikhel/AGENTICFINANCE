@@ -117,6 +117,7 @@
     "demo:quoin": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo quoin",
     "demo:ashlar": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo ashlar",
     "demo:corbel": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo corbel",
+    "demo:trolley": "tsx --tsconfig tsconfig.json apps/cli/src/main.ts demo trolley",
     "dev": "tsx --tsconfig tsconfig.json apps/runtime-http/src/server.ts",
     "test": "vitest run",
     "mcp": "tsx --tsconfig tsconfig.json packages/aether-mcp/src/server.ts"

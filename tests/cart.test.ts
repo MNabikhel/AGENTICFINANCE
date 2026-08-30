@@ -599,3 +599,152 @@ describe("payment exp", () => {
     expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.not_expired")?.verdict).toBe("allow");
   });
 });
+
+describe("checkout party", () => {
+  function matchingLines() {
+    return [
+      {
+        sku: "research.brief",
+        description: "page 1",
+        quantity: 1,
+        unitAmount: { amount: 80_000, currency: "USD_SIM" as const },
+      },
+    ];
+  }
+
+  function roster(rt: Runtime) {
+    const { desk, vendor, intentId } = economy(rt);
+    const founder = rt.alias("ops-human");
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "treasury",
+          displayName: "Treasury",
+          role: "treasury",
+          autonomyLevel: 3,
+        }),
+      ),
+      "treasury",
+    );
+    return { desk, vendor, intentId, founder, otherDesk: rt.alias("other-desk"), treasury: rt.alias("treasury") };
+  }
+
+  function acceptedHire(rt: Runtime, desk: ReturnType<Runtime["alias"]>, vendor: ReturnType<Runtime["alias"]>, intentId: MandateId) {
+    const offered = offerHire(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "one pager",
+      price: { amount: 80_000, currency: "USD_SIM" },
+      intentId,
+    });
+    expect(offered.attempt.ok).toBe(true);
+    if (!offered.attempt.ok) throw new Error("offer");
+    const hireId = (offered.attempt.value.data as HireContract).id;
+    must(rt.dispatch(cmd("hire.accept", vendor.id, { hireId })), "accept");
+    return hireId;
+  }
+
+  it("refuses another desk filling a live hire as mandate.checkout_party, not a mint", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, otherDesk } = roster(rt);
+    const hireId = acceptedHire(rt, desk, vendor, intentId);
+    const before = rt.carts.size;
+    const sneak = rt.dispatch(
+      cmd("mandate.issue_cart", otherDesk.id, {
+        intentId,
+        merchantId: vendor.id,
+        hireId,
+        line_items: matchingLines(),
+      }),
+    );
+    expect(sneak.ok).toBe(false);
+    if (sneak.ok) return;
+    expect(sneak.error.decision?.remediation?.ruleId).toBe("mandate.checkout_party");
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.unique_cart")?.verdict).toBe("allow");
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "hire.cart_matches")?.verdict).toBe("allow");
+    expect(sneak.error.decision?.trace.find((t) => t.ruleId === "mandate.cart_party")?.verdict).toBe("allow");
+    expect(rt.carts.size).toBe(before);
+    expect(rt.hires.get(hireId)?.cartId).toBeUndefined();
+    const cart = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          hireId,
+          line_items: matchingLines(),
+        }),
+      ),
+      "buyer cart",
+    );
+    const cartId = (cart.data as { payload: { id: string } }).payload.id;
+    const paymentsBefore = rt.payments.size;
+    const floor = rt.dispatch(cmd("mandate.issue_payment", otherDesk.id, { cartId }));
+    expect(floor.ok).toBe(false);
+    if (floor.ok) return;
+    expect(floor.error.decision?.remediation?.ruleId).toBe("mandate.checkout_party");
+    expect(floor.error.decision?.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("allow");
+    expect(floor.error.decision?.trace.find((t) => t.ruleId === "mandate.payment_party")?.verdict).toBe("allow");
+    expect(rt.payments.size).toBe(paymentsBefore);
+    must(rt.dispatch(cmd("mandate.issue_payment", desk.id, { cartId })), "buyer payment");
+    expect(rt.payments.size).toBe(paymentsBefore + 1);
+  });
+
+  it("lets treasury fill the buyer's unused checkout", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, treasury } = roster(rt);
+    const hireId = acceptedHire(rt, desk, vendor, intentId);
+    const trea = must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", treasury.id, {
+          intentId,
+          merchantId: vendor.id,
+          hireId,
+          line_items: matchingLines(),
+        }),
+      ),
+      "treasury cart",
+    );
+    expect((trea.data as { payload: { id: string } }).payload.id.startsWith("mid_")).toBe(true);
+  });
+
+  it("still names hire.unique_cart first when a stranger's second cart would also fill", () => {
+    const rt = boot();
+    const { desk, vendor, intentId, otherDesk } = roster(rt);
+    const hireId = acceptedHire(rt, desk, vendor, intentId);
+    must(
+      rt.dispatch(
+        cmd("mandate.issue_cart", desk.id, {
+          intentId,
+          merchantId: vendor.id,
+          hireId,
+          line_items: matchingLines(),
+        }),
+      ),
+      "buyer cart",
+    );
+    const r = rt.dispatch(
+      cmd("mandate.issue_cart", otherDesk.id, {
+        intentId,
+        merchantId: vendor.id,
+        hireId,
+        line_items: matchingLines(),
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.unique_cart");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
+  });
+});

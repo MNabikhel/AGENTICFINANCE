@@ -735,6 +735,11 @@
       "name": "aether_demo_corbel",
       "commandType": "demo.corbel",
       "description": "Run the corbel TAP: a nested hop under another principal is not a nested handshake. kya.attest with parentId whose principal is not the speaker's principal is kya.nest_party; a nested grant wider than its parent, a dead parent hop, and whose name a handshake is in still allow; an exact same-principal nested grant still mints; a tighter same-principal nested grant still mints; funded work still finishes."
+    },
+    {
+      "name": "aether_demo_trolley",
+      "commandType": "demo.trolley",
+      "description": "Run the trolley TAP: someone else's checkout is not yours to fill. mandate.issue_cart of a live unused hire by a second desk is mandate.checkout_party; mandate.issue_payment of that cart by a second desk is mandate.checkout_party; a missing cart, dumping someone else's cart, and a second cart still allow; no cart or payment written by the sneak; the buyer still fills its own checkout; funded work still finishes."
     }
   ]
 }

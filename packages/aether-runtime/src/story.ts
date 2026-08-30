@@ -346,6 +346,9 @@ export const ASHLAR_TLDR =
 export const CORBEL_TLDR =
   "A founder funded an $800 hire. Minting a nested hop under another principal's parent hop was kya.nest_party — not a nested grant wider than its parent, not a dead parent hop, not whose name a handshake is in. An exact same-principal nested grant still minted. A tighter same-principal nested grant still minted. That funded work still released. A nested hop under another principal is not a nested handshake.";
 
+export const TROLLEY_TLDR =
+  "A founder funded an $800 hire. A second desk filling the research desk's unused checkout was mandate.checkout_party — a missing cart is not this deny, dumping someone else's cart is not this deny, a second cart on the same hire is not this deny. No cart/payment written. The buyer still filled its own checkout. That funded work still released. Someone else's checkout is not yours to fill.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -484,6 +487,16 @@ export function autoBeat(input: {
           commandType: cmd.type,
         };
       }
+      if (rule?.ruleId === "mandate.checkout_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot fill someone else's checkout`,
+          body: "Someone else's checkout is not yours to fill. Fill your own checkout, or ask a human or treasury. A missing cart is a different object. Dumping someone else's cart is a different object. A second cart is a different object.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
     }
     return undefined;
   }
@@ -506,6 +519,16 @@ export function autoBeat(input: {
           at: input.at,
           headline: `${who} could not mint a second payment`,
           body: "A cart takes one payment. A second payment is not a second check.",
+          tone: "deny",
+          commandType: cmd.type,
+        };
+      }
+      if (rule?.ruleId === "mandate.checkout_party") {
+        return {
+          seq: input.seq,
+          at: input.at,
+          headline: `${who} cannot fill someone else's checkout`,
+          body: "Someone else's checkout is not yours to fill. Fill your own checkout, or ask a human or treasury. A missing cart is a different object. Spiking someone else's check is a different object. A second payment is a different object.",
           tone: "deny",
           commandType: cmd.type,
         };
@@ -1898,6 +1921,7 @@ export function analog(): Analog {
       "A vendor's conversion is not a market-maker window. The maker still mints an in-band window. A par window still mints. A closed guest list is a different object.",
       "An empty pit does not waive the band. The maker still mints an in-band window after sitting. A par window still mints. A 200bps miss by the maker is a different object.",
       "A nested hop under another principal is not a nested handshake. An exact same-principal nested grant still mints. A tighter same-principal nested grant still mints. A nested grant wider than its parent is a different object.",
+      "Someone else's checkout is not yours to fill. The buyer still fills its own checkout. Dumping someone else's cart is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };
