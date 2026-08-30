@@ -122,8 +122,8 @@ function signedPayment(over: Partial<PaymentMandate> = {}): Signed<PaymentMandat
 }
 
 describe("policy catalog", () => {
-  it("has 112 rules", () => {
-    expect(RULE_IDS).toHaveLength(112);
+  it("has 113 rules", () => {
+    expect(RULE_IDS).toHaveLength(113);
   });
 
   it("denies frozen actors", () => {
@@ -6304,6 +6304,168 @@ describe("policy catalog", () => {
     expect(d.trace.find((t) => t.ruleId === "mandate.unique_payment")?.verdict).toBe("deny");
     expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("deny");
     expect(remediationFor(d)?.ruleId).toBe("mandate.unique_payment");
+  });
+
+  it("denies hiring from someone else's room as hire.room_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.no_self_deal")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "actor.role_capability")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "hire.party")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.subject_is_actor")?.verdict).toBe("allow");
+    expect(d.trace.find((t) => t.ruleId === "mandate.checkout_party")?.verdict).toBe("allow");
+    expect(remediationFor(d)?.ruleId).toBe("hire.room_party");
+    expect(remediationFor(d)?.kind).toBe("none");
+  });
+
+  it("allows a buyer hiring from its own room as hire.room_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+  });
+
+  it("allows a human hiring from a room as hire.room_party", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "human_operator", autonomyLevel: 0 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: true,
+      }),
+    );
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name hire.room_party when the speaker is not hiring", () => {
+    const d = evaluate(ctx({ commandType: "ledger.balances" }));
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+  });
+
+  it("does not name hire.room_party on shut or fold", () => {
+    const shut = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "market.close",
+        rfqKnown: true,
+        marketFresh: true,
+        rfqPartyOk: true,
+      }),
+    );
+    expect(shut.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+    const fold = evaluate(
+      ctx({
+        actor: agent({ role: "data_vendor", autonomyLevel: 2 }),
+        commandType: "market.withdraw",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        marketPartyOk: true,
+      }),
+    );
+    expect(fold.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+  });
+
+  it("still names market.known_rfq first when hiring a missing quote from someone else's room", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: false,
+        hireRoomPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.known_rfq");
+  });
+
+  it("still names hire.quote_unspent first when a spent quote is also someone else's room", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: false,
+        marketFresh: true,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("hire.quote_unspent");
+  });
+
+  it("still names market.not_expired first when a shut room is also someone else's hire", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: false,
+        hireNotFx: true,
+        intentKnown: true,
+        hireRoomPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("market.not_expired");
+  });
+
+  it("still names hire.not_fx first when an FX window is also someone else's room", () => {
+    const d = evaluate(
+      ctx({
+        actor: agent({ role: "procurement", autonomyLevel: 3 }),
+        commandType: "hire.create",
+        rfqKnown: true,
+        quoteUnspent: true,
+        marketFresh: true,
+        hireNotFx: false,
+        intentKnown: true,
+        hireRoomPartyOk: false,
+      }),
+    );
+    expect(d.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.not_fx")?.verdict).toBe("deny");
+    expect(d.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
+    expect(remediationFor(d)?.ruleId).toBe("hire.not_fx");
   });
 
   it("does not escalate velocity.window on release after a hot settle hour", () => {

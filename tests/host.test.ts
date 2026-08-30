@@ -306,6 +306,8 @@ describe("host card", () => {
     expect(card.skills.find((s) => s.id === "nest-party")?.description).toContain("POST /v1/demo/corbel");
     expect(card.skills.some((s) => s.id === "checkout-party")).toBe(true);
     expect(card.skills.find((s) => s.id === "checkout-party")?.description).toContain("POST /v1/demo/trolley");
+    expect(card.skills.some((s) => s.id === "hire-room-party")).toBe(true);
+    expect(card.skills.find((s) => s.id === "hire-room-party")?.description).toContain("POST /v1/demo/poach");
   });
 
   it("lets a registered desk read the same card", () => {

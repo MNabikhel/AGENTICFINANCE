@@ -110,6 +110,7 @@ import { loadFxMaker, runFxMaker } from "@aether/fx-maker";
 import { loadRateFresh, runRateFresh } from "@aether/rate-fresh";
 import { loadNestParty, runNestParty } from "@aether/nest-party";
 import { loadCheckoutParty, runCheckoutParty } from "@aether/checkout-party";
+import { loadHireRoomParty, runHireRoomParty } from "@aether/hire-room-party";
 import { bootCliRuntime, cliAuditVerify, cliLedgerReplay } from "./bus.ts";
 
 const [, , command, name] = process.argv;
@@ -796,6 +797,12 @@ if (command === "demo" && (name === "trolley" || name === "basket" || name === "
   process.exit(0);
 }
 
+if (command === "demo" && (name === "poach" || name === "raid" || name === "snatch")) {
+  const fixture = resolve(process.cwd(), "fixtures/demo/poach/scenario.json");
+  printReport(runHireRoomParty(loadHireRoomParty(fixture)));
+  process.exit(0);
+}
+
 if (command === "audit" && process.argv[3] === "verify") {
   const result = cliAuditVerify(bootCliRuntime());
   if (!result.ok) {
@@ -928,6 +935,7 @@ usage:
   pnpm demo ashlar
   pnpm demo corbel
   pnpm demo trolley
+  pnpm demo poach
   aether audit verify
   aether ledger replay
   pnpm mcp`);

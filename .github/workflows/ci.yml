@@ -125,3 +125,4 @@ jobs:
       - run: pnpm demo:ashlar
       - run: pnpm demo:corbel
       - run: pnpm demo:trolley
+      - run: pnpm demo:poach

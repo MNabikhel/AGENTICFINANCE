@@ -349,6 +349,9 @@ export const CORBEL_TLDR =
 export const TROLLEY_TLDR =
   "A founder funded an $800 hire. A second desk filling the research desk's unused checkout was mandate.checkout_party — a missing cart is not this deny, dumping someone else's cart is not this deny, a second cart on the same hire is not this deny. No cart/payment written. The buyer still filled its own checkout. That funded work still released. Someone else's checkout is not yours to fill.";
 
+export const POACH_TLDR =
+  "A founder funded an $800 hire. A second desk hiring the research desk's live unused quote was hire.room_party — a missing room is not this deny, a spent quote is not this deny, shutting someone else's room is not this deny. No hire written. The buyer still hired its own quote. That funded work still released. Someone else's room is not yours to hire from.";
+
 function dollars(minor: number): string {
   return `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -1110,6 +1113,8 @@ export function autoBeat(input: {
         body = "An FX window is a conversion, not a good. Settle it. A deny does not consume or reserve the window.";
       } else if (ruleId === "clearing.bilateral_limit") {
         body = "This pair’s open gross would exceed the bilateral credit limit. Close a settlement window (the photo, not a second payment) or hire a smaller amount. Money already moved at escrow stays moved.";
+      } else if (ruleId === "hire.room_party") {
+        body = "Someone else's room is not yours to hire from. Hire from your own RFQ, or ask a human or treasury. A missing room is a different object. A spent quote is a different object. Shutting someone else's room is a different object.";
       }
       return {
         seq: input.seq,
@@ -1121,7 +1126,9 @@ export function autoBeat(input: {
               ? `${who} hired down a chain that is too long`
               : ruleId === "payment.reference"
                 ? `${who} hired against a citation that is not a check`
-                : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
+                : ruleId === "hire.room_party"
+                  ? `${who} cannot hire from someone else's room`
+                  : `Stopped. ${who} was not allowed to hire${other ? ` ${other}` : ""} for ${amt ?? "that amount"}`,
         body,
         tone: "deny",
         commandType: cmd.type,
@@ -1922,6 +1929,7 @@ export function analog(): Analog {
       "An empty pit does not waive the band. The maker still mints an in-band window after sitting. A par window still mints. A 200bps miss by the maker is a different object.",
       "A nested hop under another principal is not a nested handshake. An exact same-principal nested grant still mints. A tighter same-principal nested grant still mints. A nested grant wider than its parent is a different object.",
       "Someone else's checkout is not yours to fill. The buyer still fills its own checkout. Dumping someone else's cart is a different object.",
+      "Someone else's room is not yours to hire from. The buyer still hires its own quote. Shutting someone else's room is a different object.",
       "Other agents find this referee by pinning the host card. Self-host is free. A hosted operator records a unique subscriber against a live human-issued intent. This public kernel is not that operator. GitHub is not a checkout.",
     ],
   };

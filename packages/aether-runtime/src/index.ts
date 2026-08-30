@@ -140,6 +140,7 @@ import {
   ASHLAR_TLDR,
   CORBEL_TLDR,
   TROLLEY_TLDR,
+  POACH_TLDR,
   nightWatchAnalog,
   type Analog,
   type StoryBeat,
@@ -360,6 +361,14 @@ function nestPartyMintable(childPrincipal: AgentId, parentPrincipal: AgentId): b
  */
 function checkoutMintable(actor: Agent, ownerId: AgentId): boolean {
   return actor.role === "human_operator" || actor.role === "treasury" || actor.id === ownerId;
+}
+
+/**
+ * Hiring a quote whose RFQ buyer is not the speaker is not a mint.
+ * Human/treasury still hire. Ghost quote/RFQ keep first deny.
+ */
+function hireRoomMintable(actor: Agent, ownerId: AgentId): boolean {
+  return checkoutMintable(actor, ownerId);
 }
 
 /**
@@ -1600,6 +1609,11 @@ export class Runtime {
           name: "Trolley TAP",
           description: "POST /v1/demo/trolley — someone else's checkout is not yours to fill",
         },
+        {
+          id: "hire-room-party",
+          name: "Poach TAP",
+          description: "POST /v1/demo/poach — someone else's room is not yours to hire from",
+        },
       ],
       defaultInputModes: ["application/json"],
       defaultOutputModes: ["application/json"],
@@ -2563,6 +2577,13 @@ export class Runtime {
       const owner = occupying?.buyerId ?? slip?.payload.subjectId;
       if (typeof owner === "string") {
         ctx.checkoutPartyOk = checkoutMintable(actor, owner);
+      }
+    }
+    if (cmd.type === "hire.create") {
+      const quoted = this.quoteOf(body);
+      const room = quoted ? this.rfqs.get(quoted.rfqId) : undefined;
+      if (room) {
+        ctx.hireRoomPartyOk = hireRoomMintable(actor, room.buyerId);
       }
     }
     if (
@@ -3684,6 +3705,7 @@ export class Runtime {
       throw new Error("sku currency");
     }
     if (quote.fx || isFxSku(rfq.sku)) throw new Error("fx hire");
+    if (!hireRoomMintable(actor, rfq.buyerId)) throw new Error("hire room party");
     const hireId = this.ids.next("hid") as HireId;
     const escrow = this.ledger.openAccount({
       id: this.ids.next("acct") as AccountId,
@@ -4489,7 +4511,7 @@ function skillsFor(role: AgentRole): Array<{ id: string; name: string; descripti
   return skills[role];
 }
 
-export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, PLATE_TLDR, HEADER_TLDR, PIP_TLDR, QUOIN_TLDR, ASHLAR_TLDR, CORBEL_TLDR, TROLLEY_TLDR, nightWatchAnalog };
+export { analog, IDLE_TLDR, NIGHT_WATCH_TLDR, SPRINT_TLDR, SUBHIRE_TLDR, CLEARING_TLDR, REFUND_TLDR, REPLAY_TLDR, NONCE_TLDR, DENY_CACHE_TLDR, RECURRENCE_TLDR, CALENDAR_TLDR, SLOT_TLDR, DAILY_TLDR, CART_TLDR, VELOCITY_TLDR, DOOR_TLDR, MATCH_TLDR, ROOM_TLDR, CONVERSION_TLDR, PAIR_TLDR, BAND_TLDR, NEST_TLDR, HEIR_TLDR, STOCK_TLDR, PURSE_TLDR, SEAT_TLDR, COVER_TLDR, MINT_TLDR, PAYEE_TLDR, CLIMB_TLDR, BORN_TLDR, REACH_TLDR, YEAR_TLDR, FUSE_TLDR, SKU_TLDR, PRICED_TLDR, PARTY_TLDR, CASH_TLDR, STALE_TLDR, CHAIN_TLDR, ARROW_TLDR, WALLET_TLDR, NAME_TLDR, PANE_TLDR, SUBJECT_TLDR, PAPER_TLDR, MIX_TLDR, RUNG_TLDR, GRADE_TLDR, CRADLE_TLDR, CEILING_TLDR, LAPSE_TLDR, PAUSE_TLDR, MIRROR_TLDR, WARRANT_TLDR, VACANT_TLDR, BADGE_TLDR, LID_TLDR, BARE_TLDR, SHELF_TLDR, HALL_TLDR, WRIT_TLDR, CRATE_TLDR, PACT_TLDR, ROOT_TLDR, DOCKET_TLDR, GRAFT_TLDR, SEAL_TLDR, GUEST_TLDR, DUST_TLDR, THAW_TLDR, TWIN_TLDR, FENCE_TLDR, MUTE_TLDR, NIL_TLDR, SPARK_TLDR, WILT_TLDR, MAKER_TLDR, INK_TLDR, BRIM_TLDR, SWAP_TLDR, SOUR_TLDR, CUT_TLDR, ICE_TLDR, RAIL_TLDR, PEN_TLDR, WELL_TLDR, CITE_TLDR, LOCK_TLDR, VOID_TLDR, FOLD_TLDR, RIP_TLDR, SHUT_TLDR, DUMP_TLDR, SPIKE_TLDR, WEEK_TLDR, GULF_TLDR, COFFER_TLDR, CLASH_TLDR, HATCH_TLDR, EAVE_TLDR, SILL_TLDR, JOIST_TLDR, STUD_TLDR, PLATE_TLDR, HEADER_TLDR, PIP_TLDR, QUOIN_TLDR, ASHLAR_TLDR, CORBEL_TLDR, TROLLEY_TLDR, POACH_TLDR, nightWatchAnalog };
 export type { Analog, StoryBeat };
 export { WORLD_VERSION };
 export type { WorldState };

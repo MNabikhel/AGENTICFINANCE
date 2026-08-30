@@ -113,7 +113,8 @@
     "./fx-maker": "./src/fx-maker.ts",
     "./rate-fresh": "./src/rate-fresh.ts",
     "./nest-party": "./src/nest-party.ts",
-    "./checkout-party": "./src/checkout-party.ts"
+    "./checkout-party": "./src/checkout-party.ts",
+    "./hire-room-party": "./src/hire-room-party.ts"
   },
   "dependencies": {
     "@aether/audit": "workspace:*",

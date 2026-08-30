@@ -134,6 +134,7 @@ export default defineConfig({
       "@aether/rate-fresh": path.resolve(__dirname, "packages/aether-runtime/src/rate-fresh.ts"),
       "@aether/nest-party": path.resolve(__dirname, "packages/aether-runtime/src/nest-party.ts"),
       "@aether/checkout-party": path.resolve(__dirname, "packages/aether-runtime/src/checkout-party.ts"),
+      "@aether/hire-room-party": path.resolve(__dirname, "packages/aether-runtime/src/hire-room-party.ts"),
     },
   },
 });

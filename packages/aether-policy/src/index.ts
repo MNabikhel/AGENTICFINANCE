@@ -1564,6 +1564,15 @@ export const RULES: readonly Rule[] = [
         : v("mandate.checkout_party", "deny", "speaker is not the hire buyer");
     },
   },
+  {
+    id: "hire.room_party",
+    evaluate: (ctx) => {
+      if (ctx.hireRoomPartyOk === undefined) return v("hire.room_party", "allow", "not a room hire");
+      return ctx.hireRoomPartyOk
+        ? v("hire.room_party", "allow", "speaker is the named buyer or a kill-switch role")
+        : v("hire.room_party", "deny", "speaker is not the named buyer");
+    },
+  },
 ];
 
 export const RULE_IDS = RULES.map((r) => r.id);
@@ -1943,6 +1952,10 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
     kind: "none",
     hint: "Fill your own checkout, or ask a human or treasury. Someone else's cart is not yours to fill. A missing cart is mandate.known_cart. A missing hire is hire.known. A cheaper cart is hire.cart_matches. A second cart is hire.unique_cart. A second payment is mandate.unique_payment. Dumping someone else's cart is mandate.cart_party. Spiking someone else's check is mandate.payment_party. Completing funded work is legal. Buyer still fills its own checkout.",
   },
+  "hire.room_party": {
+    kind: "none",
+    hint: "Hire from your own room, or ask a human or treasury. Someone else's quote is not yours to hire. A missing room is market.known_rfq. A spent quote is hire.quote_unspent. A shut or expired room is market.not_expired. An FX window is hire.not_fx. Shutting someone else's room is market.rfq_party. Folding someone else's bid is market.party. Completing funded work is legal. Buyer still hires its own quote.",
+  },
   "host.not_hosted": {
     kind: "none",
     hint: "This instance is the public kernel. Self-host is free. A hosted operator constructs Runtime({ hosted: true }) and records subscribe against a live human-issued intent. GitHub is not a checkout. Read host.card.",
@@ -1970,7 +1983,7 @@ const REMEDIATION_BY_RULE: Record<string, Omit<Remediation, "ruleId">> = {
   },
   "market.rfq_party": {
     kind: "none",
-    hint: "Shut your own room, or ask a human or treasury. Someone else's RFQ is not yours to close. A missing room is market.known_rfq. A shut room is market.not_expired on quote or hire.create.",
+    hint: "Shut your own room, or ask a human or treasury. Someone else's RFQ is not yours to close. A missing room is market.known_rfq. A shut room is market.not_expired on quote or hire.create. Hiring from someone else's room stays hire.room_party.",
   },
   "mandate.cart_party": {
     kind: "none",

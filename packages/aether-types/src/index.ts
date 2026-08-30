@@ -996,6 +996,16 @@ export interface PolicyContext {
    */
   checkoutPartyOk?: boolean;
   /**
+   * False when hire.create would consume a quote whose RFQ buyer is not the
+   * speaker, and the speaker is not a human or treasury. Absent = not a
+   * hire.create, or the quote/RFQ is unknown (`rfqKnown` handles that).
+   * Buyer still hires. Human/treasury still hire. Ghost quote stays
+   * `market.known_rfq`. A spent quote stays `hire.quote_unspent`. A shut
+   * room stays `market.not_expired`. Shut TAP is tearing the room
+   * (`market.rfq_party`). Fold TAP is tearing the bid (`market.party`).
+   */
+  hireRoomPartyOk?: boolean;
+  /**
    * False when mandate.revoke names an intent whose issuer is not the speaker,
    * and the speaker is not a human or treasury. Absent = not a revoke, or the
    * intent is unknown (`intentKnown` handles that). A desk cannot rip someone else's slip.

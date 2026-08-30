@@ -408,6 +408,138 @@ describe("rfq close", () => {
     if (hire.ok) return;
     expect(hire.error.decision?.remediation?.ruleId).toBe("market.not_expired");
     expect(hire.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(hire.error.decision?.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("allow");
+  });
+});
+
+describe("rfq hire party", () => {
+  it("refuses a second desk hiring a live unused quote as hire.room_party", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    const otherDesk = rt.alias("other-desk");
+    const otherIntent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: otherDesk.id,
+          task: "poach",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }],
+        }),
+      ),
+      "other intent",
+    );
+    const otherIntentId = (otherIntent.data as { payload: { id: MandateId } }).payload.id;
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "live unused quote",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const before = rt.hires.size;
+    const r = rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: invited.quoteId, intentId: otherIntentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.room_party");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.known_rfq")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.quote_unspent")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.not_expired")?.verdict).toBe("allow");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "market.rfq_party")?.verdict).toBe("allow");
+    expect(rt.hires.size).toBe(before);
+    expect(rt.consumedQuotes.has(invited.quoteId)).toBe(false);
+    const legal = must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "buyer hire");
+    expect((legal.data as HireContract).id.startsWith("hid_")).toBe(true);
+  });
+
+  it("lets treasury hire from the buyer's live room", () => {
+    const rt = boot();
+    const { founder, desk, vendor } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "treasury",
+          displayName: "Treasury",
+          role: "treasury",
+          autonomyLevel: 3,
+        }),
+      ),
+      "treasury",
+    );
+    const treasury = rt.alias("treasury");
+    const treaIntent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: treasury.id,
+          task: "allocator hire",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }],
+        }),
+      ),
+      "treasury intent",
+    );
+    const treaIntentId = (treaIntent.data as { payload: { id: MandateId } }).payload.id;
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "treasury may hire",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    const trea = must(
+      rt.dispatch(cmd("hire.create", treasury.id, { quoteId: invited.quoteId, intentId: treaIntentId })),
+      "treasury hire",
+    );
+    expect((trea.data as HireContract).buyerId).toBe(treasury.id);
+  });
+
+  it("still names hire.quote_unspent first when a stranger's second hire would also poach", () => {
+    const rt = boot();
+    const { founder, desk, vendor, intentId } = economy(rt);
+    must(
+      rt.dispatch(
+        cmd("identity.register", founder.id, {
+          key: "other-desk",
+          displayName: "Other Desk",
+          role: "procurement",
+          autonomyLevel: 3,
+        }),
+      ),
+      "other-desk",
+    );
+    const otherDesk = rt.alias("other-desk");
+    const otherIntent = must(
+      rt.dispatch(
+        cmd("mandate.issue_intent", founder.id, {
+          subjectId: otherDesk.id,
+          task: "poach spent",
+          constraints: [{ type: "payment.amount_range", currency: "USD_SIM", max: 500_000 }],
+        }),
+      ),
+      "other intent",
+    );
+    const otherIntentId = (otherIntent.data as { payload: { id: MandateId } }).payload.id;
+    const invited = inviteQuote(rt, {
+      buyer: desk.id,
+      seller: vendor.id,
+      sku: "research.brief",
+      spec: "already hired",
+      price: { amount: 40_000, currency: "USD_SIM" },
+    });
+    must(rt.dispatch(cmd("hire.create", desk.id, { quoteId: invited.quoteId, intentId })), "buyer hire");
+    const r = rt.dispatch(cmd("hire.create", otherDesk.id, { quoteId: invited.quoteId, intentId: otherIntentId }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.decision?.remediation?.ruleId).toBe("hire.quote_unspent");
+    expect(r.error.decision?.trace.find((t) => t.ruleId === "hire.room_party")?.verdict).toBe("deny");
   });
 });
 
