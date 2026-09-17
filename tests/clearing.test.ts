@@ -51,6 +51,16 @@ describe("clearing book", () => {
     expect(tight.wouldExceed("aid_A", "aid_B", "USD_SIM", 20000)).toBe(false);
   });
 
+  it("counts open legs per currency", () => {
+    const book = new ExposureBook();
+    expect(book.openLegs("USD_SIM")).toBe(0);
+    book.record("aid_A", "aid_B", 80000, "USD_SIM");
+    expect(book.openLegs("USD_SIM")).toBe(1);
+    expect(book.openLegs("USDC_SIM")).toBe(0);
+    book.settleWindow({ id: "win_01J6AETHERWINDOW00000000002", at: "2026-08-28T00:00:00.000Z", currency: "USD_SIM" });
+    expect(book.openLegs("USD_SIM")).toBe(0);
+  });
+
   it("snapshot is a photo, not a live view of the open book", () => {
     const book = new ExposureBook();
     book.record("aid_A", "aid_B", 80000, "USD_SIM");

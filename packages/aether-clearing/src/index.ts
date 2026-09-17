@@ -61,6 +61,11 @@ export class ExposureBook {
     return window;
   }
 
+  /** Open (unsettled) legs for one currency. Zero means a settle would photograph nothing. */
+  openLegs(currency: CurrencyCode): number {
+    return this.legs.filter((l) => l.currency === currency).length;
+  }
+
   gross(payer: AgentId, payee: AgentId, currency: CurrencyCode): number {
     return this.legs
       .filter((l) => l.payer === payer && l.payee === payee && l.currency === currency)

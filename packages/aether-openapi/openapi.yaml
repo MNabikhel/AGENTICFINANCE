@@ -974,6 +974,24 @@ paths:
       responses:
         "200": { description: Snare TAP report. Someone else's conversion window is not yours to settle. }
         "500": { description: Assertions failed }
+  /v1/demo/hawk:
+    post:
+      operationId: demoHawk
+      responses:
+        "200": { description: Hawk TAP report. A maker's quote is a window, not a good. }
+        "500": { description: Assertions failed }
+  /v1/demo/tomb:
+    post:
+      operationId: demoTomb
+      responses:
+        "200": { description: Tomb TAP report. A tombstone is not a second tombstone. }
+        "500": { description: Assertions failed }
+  /v1/demo/film:
+    post:
+      operationId: demoFilm
+      responses:
+        "200": { description: Film TAP report. An empty book is not a settlement photo. }
+        "500": { description: Assertions failed }
   /v1/protocol:
     get:
       operationId: protocolCard
